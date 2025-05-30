@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'xplanung_light',
     'debug_toolbar',
+    'django_bootstrap5',
 ]
 
 MIDDLEWARE = [
