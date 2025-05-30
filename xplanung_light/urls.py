@@ -1,6 +1,7 @@
 from django.urls import path
 from xplanung_light import views
 from django.contrib.auth import views as auth_views
+from xplanung_light.views import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -9,4 +10,8 @@ urlpatterns = [
     # https://dev.to/donesrom/how-to-set-up-django-built-in-registration-in-2023-41hg
     path("register/", views.register, name = "register"),
     path("about/", views.about, name="about"),
+    path("bplan/", BPlanListView.as_view(), name="bplan-list"),
+    path("bplan/create/", BPlanCreateView.as_view(), name="bplan-create"),
+    path("bplan/<int:pk>/update/", BPlanUpdateView.as_view(), name="bplan-update"),
+    path("bplan/<int:pk>/delete/", BPlanDeleteView.as_view(), name="bplan-delete"),
 ]

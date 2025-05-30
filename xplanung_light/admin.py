@@ -1,3 +1,6 @@
 from django.contrib import admin
+from leaflet.admin import LeafletGeoAdmin
+from xplanung_light.models import BPlan
 
-# Register your models here.
+admin.site.register(BPlan, LeafletGeoAdmin)
+
