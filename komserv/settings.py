@@ -136,4 +136,12 @@ INTERNAL_IPS = [
     "127.0.0.1",
     # ...
 ]
-
+LEAFLET_CONFIG = {
+    # conf here
+    'SPATIAL_EXTENT': (6.0, 49.0, 8.5, 52),
+    'DEFAULT_CENTER': (7.0, 50.0),
+    'DEFAULT_ZOOM': 7,
+    'MIN_ZOOM': 2,
+    'MAX_ZOOM': 20,
+    'DEFAULT_PRECISION': 6,
+}
