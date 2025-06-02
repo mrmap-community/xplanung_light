@@ -16,6 +16,7 @@ apt install binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatiali
 
 Als normaler Nutzer
 
+Vorbereitung
 ```shell
 git clone https://github.com/mrmap-community/xplanung_light.git
 cd xplanung_light/
@@ -29,6 +30,18 @@ cd ../../../../../
 python3 manage.py migrate
 python3 manage.py collectstatic
 python3 manage.py createsuperuser
+python3 manage.py shell
+```
+
+Importieren der Gebietsköperschaften via django-shell ~10min
+```python
+from xplanung_light.views import import_organisations
+import_organisations()
+quit()
+```
+
+Start des dev-Servers
+```shell
 python3 manage.py runserver
 ```
 
