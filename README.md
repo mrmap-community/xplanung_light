@@ -14,4 +14,26 @@ Als root
 apt install binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite python3-mapscript
 ```
 
+Als normaler Nutzer
 
+```shell
+git clone https://github.com/mrmap-community/xplanung_light.git
+cd xplanung_light/
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
+cd .venv/lib64/python3.9/site-packages/mapscript
+cp /usr/lib/python3/dist-packages/mapscript/_mapscript.cpython-39-x86_64-linux-gnu.so _mapscript.so
+cd ../../../../../
+python3 manage.py migrate
+python3 manage.py collectstatic
+python3 manage.py createsuperuser
+python3 manage.py runserver
+```
+
+# Ausprobieren
+
+[Startseite](http://127.0.0.1:8000/)
+
+**Viel Spass**
