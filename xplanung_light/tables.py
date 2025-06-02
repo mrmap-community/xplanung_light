@@ -6,6 +6,8 @@ from django_tables2.utils import A
 class BPlanTable(tables.Table):
     #download = tables.LinkColumn('gedis-document-pdf', text='Download', args=[A('pk')], \
     #                     orderable=False, empty_values=())
+    xplan_gml = tables.LinkColumn('bplan-export-xplan-raster-6', text='Exportieren', args=[A('pk')], \
+                         orderable=False, empty_values=())
     edit = tables.LinkColumn('bplan-update', text='Bearbeiten', args=[A('pk')], \
                          orderable=False, empty_values=())
     delete = tables.LinkColumn('bplan-delete', text='Löschen', args=[A('pk')], \
@@ -21,4 +23,4 @@ class BPlanTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("name", "gemeinde", "edit", "delete")
+        fields = ("name", "gemeinde", "planart", "xplan_gml", "edit", "delete")

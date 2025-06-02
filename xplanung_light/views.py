@@ -13,6 +13,12 @@ from django.urls import reverse_lazy
 from leaflet.forms.widgets import LeafletWidget
 from django_tables2 import SingleTableView
 from xplanung_light.tables import BPlanTable
+from django.views.generic import DetailView
+from django.contrib.gis.db.models.functions import AsGML, Transform
+from django.contrib.gis.gdal import CoordTransform, SpatialReference
+from django.contrib.gis.gdal import OGRGeometry
+import uuid
+import xml.etree.ElementTree as ET
 """
 PROXIES = {
     'http_proxy': 'http://xxx:8080',
@@ -258,3 +264,78 @@ class BPlanListView(SingleTableView):
     table_class = BPlanTable
     success_url = reverse_lazy("bplan-list") 
 
+
+class BPlanDetailView(DetailView):
+    model = BPlan
+
+
+class BPlanDetailXmlRasterView(BPlanDetailView):  
+
+    def get_queryset(self):
+        # Erweiterung der auszulesenden Objekte um eine transformierte Geomtrie im Format GML 3
+        queryset = super().get_queryset().annotate(geltungsbereich_gml_25832=AsGML(Transform("geltungsbereich", 25832), version=3))
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Um einen XPlanung-konformen Auszug zu bekommen, werden gml_id(s) verwendet.
+        # Es handelt sich um uuids, die noch das Prefix "GML_" bekommen. Grundsätzlich sollten die 
+        # aus den Daten in der DB stammen und dort vergeben werden. 
+        # Im ersten Schritt synthetisieren wir sie einfach ;-)
+        context['auszug_uuid'] = "GML_" + str(uuid.uuid4())
+        context['bplan_uuid'] = "GML_" + str(uuid.uuid4())
+        # Irgendwie gibt es keine django model function um direkt den Extent der Geometrie zu erhalten. Daher nutzen wir hier gdal
+        # und Transformieren die Daten erneut im RAM
+        # Definition der Transformation (Daten sind immer in WGS 84 - 4326)
+        ct = CoordTransform(SpatialReference(4326, srs_type='epsg'), SpatialReference(25832, srs_type='epsg'))
+        # OGRGeoemtry Objekt erstellen
+        ogr_geom = OGRGeometry(str(context['bplan'].geltungsbereich), srs=4326)
+        # Transformation nach EPSG:25832
+        ogr_geom.transform(ct)
+        # Speichern des Extents in den Context
+        context['extent'] = ogr_geom.extent
+        # Ausgabe der GML Variante zu Testzwecken 
+        # print(context['bplan'].geltungsbereich_gml_25832)
+        # Da die GML Daten nicht alle Attribute beinhalten, die XPlanung fordert, müssen wir sie anpassen, bzw. umschreiben
+        # Hierzu nutzen wir etree
+        ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
+        root = ET.fromstring("<?xml version='1.0' encoding='UTF-8'?><snippet xmlns:gml='http://www.opengis.net/gml/3.2'>" + context['bplan'].geltungsbereich_gml_25832 + "</snippet>")
+        ns = {'gml': 'http://www.opengis.net/gml/3.2',
+        }
+        # print("<?xml version='1.0' encoding='UTF-8'?><snippet xmlns:gml='http://www.opengis.net/gml/3.2'>" + context['bplan'].geltungsbereich_gml_25832 + "</snippet>")
+        # Test ob ein Polygon zurück kommt - damit wäre nur ein einziges Polygon im geometry Field
+        polygons = root.findall('gml:Polygon', ns)
+        # print(len(polygons))
+        if len(polygons) == 0:
+            # print("Kein Polygon auf oberer Ebene gefunden - es sind wahrscheinlich mehrere!")
+            multi_polygon_element = root.find('gml:MultiSurface', ns)
+            uuid_multisurface = uuid.uuid4()
+            multi_polygon_element.set("gml:id", "GML_" + str(uuid_multisurface))
+            # Füge gml_id Attribute hinzu - besser diese als Hash aus den Geometrien zu rechnen, oder in Zukunft generic_ids der Bereiche zu verwenden 
+            polygons = root.findall('gml:MultiSurface/gml:surfaceMember/gml:Polygon', ns)
+            for polygon in polygons:
+                uuid_polygon = uuid.uuid4()
+                polygon.set("gml:id", "GML_" + str(uuid_polygon))
+            context['multisurface_geometry_25832'] = ET.tostring(multi_polygon_element, encoding="utf-8", method="xml").decode('utf8')
+        else:
+            polygon_element = root.find('gml:Polygon', ns)
+            #polygon_element.set("xmlns:gml", "http://www.opengis.net/gml/3.2")   
+            uuid_polygon = uuid.uuid4()
+            polygon_element.set("gml:id", "GML_" + str(uuid_polygon))
+            # Ausgabe der Geometrie in ein XML-Snippet - erweitert um den MultiSurface/surfaceMember Rahmen
+            ET.dump(polygon_element) 
+            context['multisurface_geometry_25832'] = '<gml:MultiSurface srsName="EPSG:25832"><gml:surfaceMember>' + ET.tostring(polygon_element, encoding="utf-8", method="xml").decode('utf8') + '</gml:surfaceMember></gml:MultiSurface>'
+        return context
+
+    """"
+    def get_object(self):
+        single_object = super().get_object(self.get_queryset())
+        # print(single_object.geltungsbereich)
+        # print(single_object.geltungsbereich_gml_25832)
+        return single_object
+    """
+
+    def dispatch(self, *args, **kwargs):
+        response = super().dispatch(*args, **kwargs)
+        response['Content-type'] = "application/xml"  # set header
+        return response

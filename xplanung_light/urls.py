@@ -2,6 +2,7 @@ from django.urls import path
 from xplanung_light import views
 from django.contrib.auth import views as auth_views
 from xplanung_light.views import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView
+from xplanung_light.views import BPlanDetailXmlRasterView
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -14,4 +15,5 @@ urlpatterns = [
     path("bplan/create/", BPlanCreateView.as_view(), name="bplan-create"),
     path("bplan/<int:pk>/update/", BPlanUpdateView.as_view(), name="bplan-update"),
     path("bplan/<int:pk>/delete/", BPlanDeleteView.as_view(), name="bplan-delete"),
+    path("bplan/<int:pk>/xplan/", BPlanDetailXmlRasterView.as_view(template_name="xplanung_light/bplan_template_xplanung_raster_6.xml"), name="bplan-export-xplan-raster-6"),
 ]
