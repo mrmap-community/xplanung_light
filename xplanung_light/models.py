@@ -57,6 +57,10 @@ class AdministrativeOrganization(GenericMetadata):
     geometry = models.GeometryField(blank=True, null=True, verbose_name='Gebiet')
     history = HistoricalRecords()
 
+    @property
+    def ags(self):
+        return self.ls + self.ks + self.vs + self.gs
+
     def __str__(self):
         """Returns a string representation of a administrative unit."""
         return f"'{self.type}' '{self.name}'"

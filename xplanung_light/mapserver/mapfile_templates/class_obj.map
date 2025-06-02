@@ -1,0 +1,10 @@
+        CLASS
+			NAME 'Bebauungsplan'
+			GROUP "default"
+ 			#EXPRESSION ([planart] = 1000)
+			STYLE
+				WIDTH 3
+                COLOR 155 155 155
+				OUTLINECOLOR 0 0 255
+			END
+		END

@@ -28,7 +28,15 @@ from xplanung_light.helper.xplanung import XPlanung
 from django.contrib import messages
 from xplanung_light.forms import RegistrationForm, BPlanImportForm
 from django.db.models import Subquery, OuterRef
-
+from django.http import HttpResponse
+import mapscript
+from urllib.parse import parse_qs
+from xplanung_light.helper.mapfile import MapfileGenerator
+# for caching mapfiles ;-)
+from django.core.cache import cache
+from django.conf import settings
+from xplanung_light.tables import BPlanTable, AdministrativeOrganizationPublishingTable
+from django.db.models import Count
 """
 PROXIES = {
     'http_proxy': 'http://xxx:8080',
@@ -36,6 +44,72 @@ PROXIES = {
 }
 """
 PROXIES = None
+
+def ows(request, pk:int):
+    orga = AdministrativeOrganization.objects.get(pk=pk)
+    req =  mapscript.OWSRequest()
+    """
+    req.setParameter( 'SERVICE', 'WMS' )
+    req.setParameter( 'VERSION', '1.1.0' )
+    req.setParameter( 'REQUEST', 'GetCapabilities' )
+    """
+    #print(request.META['QUERY_STRING'])
+    qs = parse_qs(request.META['QUERY_STRING'])
+    for k, v in qs.items():
+        #print(k)
+        #print(v)
+        req.setParameter(k, ','.join(v))
+    #print(req)
+
+    # test wfs http://127.0.0.1:8000/organization/1/ows/?REQUEST=GetFeature&VERSION=1.1.0&SERVICE=wfs&typename=BPlan.0723507001.12
+    ## first variant - fast - 0.07 seconds
+    
+    #map = mapscript.mapObj( '/home/armin/devel/django/komserv2/test.map' )
+    
+    ## alternative approach - read from file into string and then from string with special path - also fast - 0.1 seconds
+    
+    #with open('/home/armin/devel/django/komserv2/test.map') as file:
+        #map_file_string = file.read()
+    #map = mapscript.msLoadMapFromString(map_file_string, '/home/armin/devel/django/komserv2/')
+    
+    ## next alternative - slowest - 1.1 seconds
+    #mapfile = mappyfile.open("/home/armin/devel/django/komserv2/test.map")
+    #map = mapscript.msLoadMapFromString(mappyfile.dumps(mapfile), '/home/armin/devel/django/komserv2/')
+
+    ## next alternative - load from dynamically generated mapfile ;-)
+    mapfile_generator = MapfileGenerator()
+    metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000}))
+    # test to read mapfile from cache
+    if cache.get("mapfile_" + orga.ags):
+        cache.touch("mapfile_" + orga.ags, 10)
+        mapfile = cache.get("mapfile_" + orga.ags)
+    else:
+        mapfile = mapfile_generator.generate_mapfile(pk, request.build_absolute_uri(reverse('ows', kwargs={"pk": pk})), metadata_uri)
+        cache.set("mapfile_" + orga.ags, mapfile, 10)
+    #print(mapfile)
+    map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
+    mapscript.msIO_installStdoutToBuffer()
+    dispatch_status = map.OWSDispatch(req)
+
+    if dispatch_status != mapscript.MS_SUCCESS:
+        if dispatch_status == mapscript.MS_DONE:
+            return HttpResponse("No valid OWS Request!")
+        if dispatch_status == mapscript.MS_FAILURE:
+            return HttpResponse("No valid OWS Request not successfully processed!")
+    
+    content_type = mapscript.msIO_stripStdoutBufferContentType()
+    mapscript.msIO_stripStdoutBufferContentHeaders()
+    result = mapscript.msIO_getStdoutBufferBytes()
+    # [('Content-Type', 'application/vnd.ogc.wms_xml; charset=UTF-8'), ('Content-Length', '11385')]
+    response_headers = [('Content-Type', content_type),
+                        ('Content-Length', str(len(result)))]
+
+    assert int(response_headers[1][1]) > 0
+
+    http_response = HttpResponse(result)
+    http_response.headers['Content-Type'] = content_type
+    http_response.headers['Content-Length'] = str(len(result))
+    return http_response
 
 def bplan_import(request):
     if request.method == "POST":
@@ -406,3 +480,14 @@ class BPlanDetailXmlRasterView(BPlanDetailView):
         response = super().dispatch(*args, **kwargs)
         response['Content-type'] = "application/xml"  # set header
         return response
+
+
+class AdministrativeOrganizationPublishingListView(SingleTableView):
+    model = AdministrativeOrganization
+    table_class = AdministrativeOrganizationPublishingTable
+    template_name = 'xplanung_light/orga_publishing_list.html'
+    success_url = reverse_lazy("orga-publishing-list") 
+
+    def get_queryset(self):
+        qs = AdministrativeOrganization.objects.filter(bplan__isnull=False).distinct().annotate(num_bplan=Count('bplan'))
+        return qs

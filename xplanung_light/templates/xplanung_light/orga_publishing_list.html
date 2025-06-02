@@ -1,0 +1,12 @@
+{% extends "xplanung_light/layout.html" %}
+{% load leaflet_tags %}
+{% block title %}
+    Liste der Publizierenden Organisationen
+{% endblock %}
+{% load render_table from django_tables2 %}
+{% block content %}
+<!-- add boostrap form css -->
+{% load django_bootstrap5 %}
+{% render_table table %}
+<p>Anzahl: {{ object_list.count }}</p>
+{% endblock %}
