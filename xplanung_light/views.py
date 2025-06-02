@@ -21,6 +21,8 @@ import uuid
 import xml.etree.ElementTree as ET
 from django.core.serializers import serialize
 import json
+from .filter import BPlanFilter
+from django_filters.views import FilterView
 """
 PROXIES = {
     'http_proxy': 'http://xxx:8080',
@@ -261,10 +263,12 @@ class BPlanDeleteView(DeleteView):
         return reverse_lazy("bplan-list")
 
 
-class BPlanListView(SingleTableView):
+class BPlanListView(FilterView, SingleTableView):
     model = BPlan
     table_class = BPlanTable
+    template_name = 'xplanung_light/bplan_list.html'
     success_url = reverse_lazy("bplan-list") 
+    filterset_class = BPlanFilter
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -272,6 +276,12 @@ class BPlanListView(SingleTableView):
             serialize("geojson", context['table'].page.object_list.data, geometry_field='geltungsbereich')
         )
         return context
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        self.filter_set = BPlanFilter(self.request.GET, queryset=qs)
+        return self.filter_set.qs
+    
 
 class BPlanDetailView(DetailView):
     model = BPlan

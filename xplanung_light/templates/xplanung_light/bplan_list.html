@@ -102,6 +102,13 @@ let mapGlobal = {};
     }
 </script>
 {% leaflet_map "bplan_list_map" callback="window.map_init_basic" %}
+Filter
+<!-- add boostrap form css - if wished -->
+{% load django_bootstrap5 %}
+<form method="get" action="">
+    {{ filter.form.as_p }}
+    <input type="submit" /><a href="{% url 'bplan-list' %}">Filter löschen</a>.</p>
+</form>
 <p><a href="{% url 'bplan-create' %}">BPlan anlegen</a></p>
 {% render_table table %}
 <p>Anzahl: {{ object_list.count }}</p>

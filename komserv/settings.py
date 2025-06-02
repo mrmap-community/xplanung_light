@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'simple_history',
     'leaflet',
     'django_tables2',
+    'django_filters',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,28 @@
+from django_filters import FilterSet, CharFilter, ModelChoiceFilter
+from .models import BPlan, AdministrativeOrganization
+from django.contrib.gis.geos import Polygon
+from django.db.models import Q
+
+def bbox_filter(queryset, value):
+    #print("value from bbox_filter: " + value)
+    # extract bbox from cs numerical values
+    geom = Polygon.from_bbox(value.split(','))
+    #print(geom)
+    # 7.51461,50.31417,7.51563,50.31544
+    return queryset.filter(geltungsbereich__bboverlaps=geom)
+
+
+# https://stackoverflow.com/questions/68592837/custom-filter-with-django-filters
+class BPlanFilter(FilterSet):
+
+    name = CharFilter(lookup_expr='icontains')
+    bbox = CharFilter(method='bbox_filter', label='BBOX')
+    gemeinde = ModelChoiceFilter(queryset=AdministrativeOrganization.objects.only("pk", "name", "type"))
+
+    class Meta:
+        model = BPlan
+        fields = ["name", "gemeinde", "planart", "bbox"]
+
+    def bbox_filter(self, queryset, name, value):
+        #print("name from DocumentFilter.bbox_filter: " + name)
+        return bbox_filter(queryset, value)
