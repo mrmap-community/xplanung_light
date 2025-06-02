@@ -17,4 +17,5 @@ urlpatterns = [
     path("bplan/<int:pk>/delete/", BPlanDeleteView.as_view(), name="bplan-delete"),
     path("bplan/<int:pk>/xplan/", BPlanDetailXmlRasterView.as_view(template_name="xplanung_light/bplan_template_xplanung_raster_6.xml"), name="bplan-export-xplan-raster-6"),
     path("bplan/<int:pk>/iso19139/", BPlanDetailXmlRasterView.as_view(template_name="xplanung_light/bplan_template_iso19139.xml"), name="bplan-export-iso19139"),
+    path("bplan/import/", views.bplan_import, name="bplan-import"),
 ]

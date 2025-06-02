@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'leaflet',
     'django_tables2',
     'django_filters',
+    'crispy_forms',
+    'crispy_bootstrap5',
 ]
 
 MIDDLEWARE = [
@@ -151,3 +153,6 @@ LEAFLET_CONFIG = {
 SERIALIZATION_MODULES = {
     "geojson": "django.contrib.gis.serializers.geojson", 
 }
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"

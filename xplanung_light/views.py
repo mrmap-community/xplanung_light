@@ -24,6 +24,11 @@ import json
 from .filter import BPlanFilter
 from django_filters.views import FilterView
 from django.urls import reverse_lazy, reverse
+from xplanung_light.helper.xplanung import XPlanung
+from django.contrib import messages
+from xplanung_light.forms import RegistrationForm, BPlanImportForm
+from django.db.models import Subquery, OuterRef
+
 """
 PROXIES = {
     'http_proxy': 'http://xxx:8080',
@@ -31,6 +36,41 @@ PROXIES = {
 }
 """
 PROXIES = None
+
+def bplan_import(request):
+    if request.method == "POST":
+        form = BPlanImportForm(request.POST, request.FILES)
+        #print("bplan_import: form rendered")
+        if form.is_valid():
+            #print("bplan_import: form valid")
+            # https://stackoverflow.com/questions/44722885/reading-inmemoryuploadedfile-twice
+            # pointer muss auf Dateianfang gesetzt sein!
+            request.FILES['file'].seek(0)
+            xplanung = XPlanung(request.FILES["file"])
+            # import xml file after prevalidation - check is done, if object already exists
+            overwrite = form.cleaned_data['confirm']
+            #print(overwrite)
+            bplan_created = xplanung.import_bplan(overwrite=overwrite)
+            if bplan_created == False:
+                messages.error(request, 'Bebauungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
+                # extent form  with confirmation field!
+                # https://amgcomputing.blogspot.com/2015/11/django-form-confirm-before-saving.html
+                # reload form
+                form = BPlanImportForm()
+                return render(request, "xplanung_light/bplan_import.html", {"form": form})
+            else:
+                if overwrite:
+                    messages.success(request, 'Bebauungsplan wurde erfolgreich aktualisiert!')
+                else:
+                    messages.success(request, 'Bebauungsplan wurde erfolgreich importiert!')
+            #print("bplan_import: import done")
+            return redirect(reverse('bplan-list'))
+        else:
+            print("bplan_import: form invalid")
+    else:
+        #print("bplan_import: no post")
+        form = BPlanImportForm()
+    return render(request, "xplanung_light/bplan_import.html", {"form": form})
 
 def qualify_gml_geometry(gml_from_db:str):
     ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
@@ -294,7 +334,6 @@ class BPlanDeleteView(DeleteView):
     def get_success_url(self):
         return reverse_lazy("bplan-list")
 
-
 class BPlanListView(FilterView, SingleTableView):
     model = BPlan
     table_class = BPlanTable
@@ -310,10 +349,17 @@ class BPlanListView(FilterView, SingleTableView):
         return context
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        #qs = super().get_queryset()
+        #https://github.com/jazzband/django-simple-history/issues/407
+        # https://stackoverflow.com/questions/43364451/how-to-get-the-last-changed-object-in-django-simple-history
+        
+        qs = BPlan.objects.select_related('gemeinde').annotate(last_changed=Subquery(
+            BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+        )).order_by('-last_changed')
+
         self.filter_set = BPlanFilter(self.request.GET, queryset=qs)
         return self.filter_set.qs
-    
+
 
 class BPlanDetailView(DetailView):
     model = BPlan
