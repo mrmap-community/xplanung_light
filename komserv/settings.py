@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django_bootstrap5',
     'simple_history',
     'leaflet',
+    'django_tables2',
 ]
 
 MIDDLEWARE = [

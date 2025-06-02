@@ -2,6 +2,10 @@
 {% block title %}
     Liste der Bebauungspläne
 {% endblock %}
+{% load render_table from django_tables2 %}
+{% load django_bootstrap5 %}
 {% block content %}
+<p><a href="{% url 'bplan-create' %}">BPlan anlegen</a></p>
+{% render_table table %}
 <p>Treffer: {{ object_list.count }} Bebauungspläne</p>
 {% endblock %}

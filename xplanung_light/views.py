@@ -10,7 +10,9 @@ import requests
 from django.views.generic import (ListView, CreateView, UpdateView, DeleteView)
 from xplanung_light.models import AdministrativeOrganization, BPlan
 from django.urls import reverse_lazy
-
+from leaflet.forms.widgets import LeafletWidget
+from django_tables2 import SingleTableView
+from xplanung_light.tables import BPlanTable
 """
 PROXIES = {
     'http_proxy': 'http://xxx:8080',
@@ -219,16 +221,29 @@ def register(request):
     context = {'form': form}
     return render(request, 'registration/register.html', context)
 
+
 class BPlanCreateView(CreateView):
     model = BPlan
     fields = ["name", "nummer", "geltungsbereich", "gemeinde", "planart"]
     success_url = reverse_lazy("bplan-list") 
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.only("pk", "name", "type")
+        form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '500px', 'map_width': '50%','MINIMAP': True})
+        return form
 
 
 class BPlanUpdateView(UpdateView):
     model = BPlan
     fields = ["name", "nummer", "geltungsbereich", "gemeinde", "planart"] 
     success_url = reverse_lazy("bplan-list") 
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.only("pk", "name", "type")
+        form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '500px', 'map_width': '50%','MINIMAP': True})
+        return form
 
 
 class BPlanDeleteView(DeleteView):
@@ -238,6 +253,8 @@ class BPlanDeleteView(DeleteView):
         return reverse_lazy("bplan-list")
 
 
-class BPlanListView(ListView):
+class BPlanListView(SingleTableView):
     model = BPlan
-    success_url = reverse_lazy("bplan-list")
+    table_class = BPlanTable
+    success_url = reverse_lazy("bplan-list") 
+
