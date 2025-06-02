@@ -19,6 +19,8 @@ from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.gdal import OGRGeometry
 import uuid
 import xml.etree.ElementTree as ET
+from django.core.serializers import serialize
+import json
 """
 PROXIES = {
     'http_proxy': 'http://xxx:8080',
@@ -264,6 +266,12 @@ class BPlanListView(SingleTableView):
     table_class = BPlanTable
     success_url = reverse_lazy("bplan-list") 
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["markers"] = json.loads(
+            serialize("geojson", context['table'].page.object_list.data, geometry_field='geltungsbereich')
+        )
+        return context
 
 class BPlanDetailView(DetailView):
     model = BPlan

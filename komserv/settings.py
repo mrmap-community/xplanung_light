@@ -136,6 +136,7 @@ INTERNAL_IPS = [
     "127.0.0.1",
     # ...
 ]
+
 LEAFLET_CONFIG = {
     # conf here
     'SPATIAL_EXTENT': (6.0, 49.0, 8.5, 52),
@@ -144,4 +145,8 @@ LEAFLET_CONFIG = {
     'MIN_ZOOM': 2,
     'MAX_ZOOM': 20,
     'DEFAULT_PRECISION': 6,
+}
+
+SERIALIZATION_MODULES = {
+    "geojson": "django.contrib.gis.serializers.geojson", 
 }
