@@ -23,7 +23,7 @@
       </xplan:raeumlicherGeltungsbereich>
       <xplan:gemeinde>
         <xplan:XP_Gemeinde>
-          <xplan:ags>{{ bplan.gemeinde.ls }}{{ bplan.gemeinde.ks }}{{ bplan.gemeinde.vs }}{{ bplan.gemeinde.gs }}</xplan:ags>
+          <xplan:ags>{{ bplan.gemeinde.ls }}{{ bplan.gemeinde.ks }}{{ bplan.gemeinde.gs }}</xplan:ags>
           <xplan:gemeindeName>{{ bplan.gemeinde.name }}</xplan:gemeindeName>
         </xplan:XP_Gemeinde>
       </xplan:gemeinde>

@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 from django import forms
-from django.contrib.gis.geos import GEOSGeometry
+from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
 from xplanung_light.models import BPlan, AdministrativeOrganization
 
 class XPlanung():
@@ -35,10 +35,12 @@ class XPlanung():
         # Auslesen der Pflichtelemente aus der GML-Datei - Prüfung erfolgte bereits im Formular
         name = root.find("gml:featureMember/xplan:BP_Plan/xplan:name", ns).text
         planart = root.find("gml:featureMember/xplan:BP_Plan/xplan:planArt", ns).text
-        geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/gml:MultiSurface", ns)        
+        geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/*", ns)        
         geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()  
         # Bauen eines GEOS-Geometrie Objektes aus dem GML
         geometry = GEOSGeometry.from_gml(geltungsbereich_text)
+        if geometry.geom_type == "Polygon":
+            geometry = MultiPolygon(geometry)
         # Definition des Koordinatenreferenzsystems
         geometry.srid = 25832
         #print(geometry.wkt)
@@ -56,7 +58,7 @@ class XPlanung():
         #0723507001
         #print(gemeinde_ags[:2] + " - " + gemeinde_ags[2:5] + " - " + gemeinde_ags[5:7] + " - " + gemeinde_ags[7:10])
         # Selektion einer Organisation anhand des AGS - Existenz wurde vorher schon durch Validierung geprüft
-        orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], vs=gemeinde_ags[5:7], gs=gemeinde_ags[7:10])
+        orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
         # Test, ob ein BPlan mit gleichem name und gemeinde schon existiert
         try:
             existing_bplan = BPlan.objects.get(name=name, gemeinde=orga)

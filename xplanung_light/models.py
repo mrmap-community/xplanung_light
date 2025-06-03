@@ -42,7 +42,7 @@ class AdministrativeOrganization(GenericMetadata):
 
     ls = models.CharField(max_length=2, verbose_name='Landesschlüssel', help_text='Eindeutiger zweistelliger Schlüssel für das Bundesland - RLP: 07', default='07')
     ks = models.CharField(max_length=3, verbose_name='Kreisschlüssel', help_text='Eindeutiger dreistelliger Schlüssel für den Landkreis', default='000')
-    vs = models.CharField(max_length=2, verbose_name='Gemeindeverbandsschlüssel', help_text='Eindeutiger zweistelliger Schlüssel für den Gemeindeverband', default='00')
+    vs = models.CharField(blank=True, null=True, max_length=2, verbose_name='Gemeindeverbandsschlüssel', help_text='Eindeutiger zweistelliger Schlüssel für den Gemeindeverband', default='00')
     gs = models.CharField(max_length=3, verbose_name='Gemeindeschlüssel', help_text='Eindeutiger dreistelliger Schlüssel für die Gemeinde', default='000')
     name = models.CharField(max_length=1024, verbose_name='Name der Gebietskörperschaft', help_text='Offizieller Name der Gebietskörperschaft - z.B. Rhein-Lahn-Kreis')
     type = models.CharField(max_length=3, choices=ADMIN_CLASS_CHOICES, default='UK', verbose_name='Typ der Gebietskörperschaft', db_index=True)
@@ -60,6 +60,10 @@ class AdministrativeOrganization(GenericMetadata):
     @property
     def ags(self):
         return self.ls + self.ks + self.vs + self.gs
+    
+    @property
+    def ags_8(self):
+        return self.ls + self.ks + self.gs
 
     def __str__(self):
         """Returns a string representation of a administrative unit."""

@@ -142,9 +142,13 @@ INTERNAL_IPS = [
 
 LEAFLET_CONFIG = {
     # conf here
-    'SPATIAL_EXTENT': (6.0, 49.0, 8.5, 52),
-    'DEFAULT_CENTER': (7.0, 50.0),
-    'DEFAULT_ZOOM': 7,
+    # RLP
+    #'SPATIAL_EXTENT': (6.0, 49.0, 8.5, 52),
+    #'DEFAULT_CENTER': (7.0, 50.0),
+    # Deutschland
+    'SPATIAL_EXTENT': (5.67, 47.44, 14.86, 55.67),
+    'DEFAULT_CENTER': (9.55, 51.68),
+    'DEFAULT_ZOOM': 5,
     'MIN_ZOOM': 2,
     'MAX_ZOOM': 20,
     'DEFAULT_PRECISION': 6,

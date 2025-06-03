@@ -24,7 +24,7 @@ def xplan_content_validator(xplan_file):
         root_element_name = root.tag.__str__()
         supported_element_names = ["{http://www.xplanung.de/xplangml/6/0}XPlanAuszug", ]
         if root_element_name not in supported_element_names:
-            validation_error_messages.append("XML-Dokument mit root-Element *" + root_element_name + "* wird nicht unterstützt!")
+            validation_error_messages.append(forms.ValidationError("XML-Dokument mit root-Element *" + root_element_name + "* wird nicht unterstützt!"))
         else:
             # check Pflichtfelder
             # check zusätzliche Pflichtfelder aus eigenem Standard - nummer, rechtsstand, ...
@@ -44,45 +44,46 @@ def xplan_content_validator(xplan_file):
                 'gemeinde_ags': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:ags'},
             }
             # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
-            gemeinde_ags = "000000000000"
+            gemeinde_ags = "0000000000"
             for key, value in mandatory_fields.items():
                 if value['type'] == 'text':
-                    try: 
-                        test = root.find(value['xpath'] + value['xplan_element'], ns).text
+                    test = root.find(value['xpath'] + value['xplan_element'], ns).text
+                    if test != None:
                         if value['xplan_element'] == 'xplan:ags':
-                            if len(test) == 10:
+                            if len(test) == 8:
                                 gemeinde_ags = test
                             else:
-                                raise forms.ValidationError("Die gefundene AGS im Dokument hat keine 10 Stellen - es werden nur 10-stellige AGS akzeptiert!")
-                    except:
-                       validation_error_messages.append("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!") 
-            
-            geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/gml:MultiSurface", ns)        
+                                validation_error_messages.append(forms.ValidationError("Die gefundene AGS im Dokument hat keine 8 Stellen - es werden nur 8-stellige AGS akzeptiert!"))
+                    else:
+                       validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!")) 
+            # Test auf MultiSurface oder Polygon
+            #geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/gml:MultiSurface", ns) 
+            geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/*", ns) 
+            if geltungsbereich_element == None:
+                validation_error_messages.append(forms.ValidationError("Geltungsbereich nicht gefunden!"))
+            #if geltungsbereich_element == None:
+            #    geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/gml:Polygon", ns)
             geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()  
             # Bauen eines GEOS-Geometrie Objektes aus dem GML
-            geometry = GEOSGeometry.from_gml(geltungsbereich_text)
+            try:
+                geometry = GEOSGeometry.from_gml(geltungsbereich_text)
+            except:
+                validation_error_messages.append(forms.ValidationError("GEOS kann Geometrie des Geltungsbereichs nicht interpretieren!"))
             # Definition des Koordinatenreferenzsystems
             geometry.srid = 25832
             # Transformation in WGS84 für die Ablage im System
-            geometry.transform(4326)
-            # DEBUG Ausgaben
-            #print("Name des BPlans: " + name)
-            #print("Gemeinde des BPlans: " + gemeinde_name)
-            #print("AGS der Gemeinde: " + gemeinde_ags)
-            #print("Geltungsbereich: " + geltungsbereich_text)
-            #print("geometry: " + geometry.wkt)
-            #0723507001
-            #print(gemeinde_ags[:2] + " - " + gemeinde_ags[2:5] + " - " + gemeinde_ags[5:7] + " - " + gemeinde_ags[7:10])
-            # check zusätzliche Pflichtfelder aus eigenem Standard - nummer, rechtsstand, ...
-
-            # Zuordnung einer Organisation aus den vorhandenen AdministrativeOrganizations über AGS
             try:
-                orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], vs=gemeinde_ags[5:7], gs=gemeinde_ags[7:10])
+                geometry.transform(4326)
             except:
-                validation_error_messages.append("Es wurde keine Organisation mit dem AGS *" + gemeinde_ags + "* im System gefunden!")
+                validation_error_messages.append(forms.ValidationError("Geoemtrie des Geltungsbereichs lässt sich nicht in EPSG:4326 transformieren!"))
+            # Test, ob eine Organisation mit dem im GML vorhandenen AGS in der Datenbank vorhanden ist 
+            try:
+                orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
+            except:
+                validation_error_messages.append(forms.ValidationError("Es wurde keine Organisation mit dem AGS *" + gemeinde_ags + "* im System gefunden!"))
     except:
-        validation_error_messages.append("XML-Dokument konnte nicht geparsed werden!")
+        validation_error_messages.append(forms.ValidationError("XML-Dokument konnte nicht geparsed werden!"))
 
 
     if len(validation_error_messages) > 0:
-        raise forms.ValidationError(" ".join(validation_error_messages))
+        raise forms.ValidationError(validation_error_messages)
