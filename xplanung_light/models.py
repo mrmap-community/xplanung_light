@@ -58,11 +58,11 @@ class AdministrativeOrganization(GenericMetadata):
     history = HistoricalRecords()
 
     @property
-    def ags(self):
+    def ags_10(self):
         return self.ls + self.ks + self.vs + self.gs
     
     @property
-    def ags_8(self):
+    def ags(self):
         return self.ls + self.ks + self.gs
 
     def __str__(self):

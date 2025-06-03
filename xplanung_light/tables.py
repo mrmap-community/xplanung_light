@@ -50,4 +50,4 @@ class AdministrativeOrganizationPublishingTable(tables.Table):
     class Meta:
         model = AdministrativeOrganization
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("name", "ags_8", "num_bplan", "wms", "wfs", )
+        fields = ("name", "ags", "num_bplan", "wms", "wfs", )
