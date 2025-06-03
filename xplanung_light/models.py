@@ -63,9 +63,10 @@ class AdministrativeOrganization(GenericMetadata):
 
     def __str__(self):
         """Returns a string representation of a administrative unit."""
-        return f"'{self.type}' '{self.name}'"
+        return f"{self.name} ({self.get_type_display()})"
     
-    """
+
+"""
 https://xleitstelle.de/releases/objektartenkatalog_6_0
 """
 class XPlan(models.Model):
@@ -163,4 +164,4 @@ class BPlan(XPlan):
 
     def __str__(self):
         """Returns a string representation of a BPlan."""
-        return f"'{self.planart}': '{self.name}'"
+        return f"{self.name} ({self.get_planart_display()}) - {self.gemeinde}"
