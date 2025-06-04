@@ -14,7 +14,7 @@ from leaflet.forms.widgets import LeafletWidget
 from django_tables2 import SingleTableView
 from xplanung_light.tables import BPlanTable
 from django.views.generic import DetailView
-from django.contrib.gis.db.models.functions import AsGML, Transform
+from django.contrib.gis.db.models.functions import AsGML, Transform, Envelope
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.gdal import OGRGeometry
 import uuid
@@ -417,9 +417,11 @@ class BPlanListView(FilterView, SingleTableView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # TODO: Anstatt object_list.data vlt. table.data? ... - dann haben wir mehr Einfluss auf die Darstellung im Leaflet Client
         context["markers"] = json.loads(
             serialize("geojson", context['table'].page.object_list.data, geometry_field='geltungsbereich')
         )
+        #print(context["markers"])
         return context
 
     def get_queryset(self):
@@ -429,7 +431,7 @@ class BPlanListView(FilterView, SingleTableView):
         
         qs = BPlan.objects.select_related('gemeinde').annotate(last_changed=Subquery(
             BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-        )).order_by('-last_changed')
+        )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
 
         self.filter_set = BPlanFilter(self.request.GET, queryset=qs)
         return self.filter_set.qs

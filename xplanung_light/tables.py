@@ -4,6 +4,7 @@ from django_tables2.utils import A
 from .models import BPlan, AdministrativeOrganization
 from django.urls import reverse
 from django.utils.html import format_html
+from django.contrib.gis.gdal import OGRGeometry
 
 class BPlanTable(tables.Table):
     #download = tables.LinkColumn('gedis-document-pdf', text='Download', args=[A('pk')], \
@@ -16,6 +17,14 @@ class BPlanTable(tables.Table):
                          orderable=False, empty_values=())
     delete = tables.LinkColumn('bplan-delete', text='Löschen', args=[A('pk')], \
                          orderable=False, empty_values=())
+    planart = tables.Column(verbose_name="Planart")
+    zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
+
+    def render_zoom(self, value):
+        ogr_geom = OGRGeometry(str(value), srs=4326)
+        extent = ogr_geom.extent
+        # lat/lon !
+        return format_html('<i class="fa fa-search-plus" aria-hidden="true" onclick="mapGlobal.fitBounds([[{}, {}], [{}, {}]]);"></i>', extent[1], extent[0], extent[3], extent[2])
     """
     geojson = Column(
         accessor=A('geojson'),
@@ -27,7 +36,7 @@ class BPlanTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("name", "gemeinde", "planart", "xplan_gml", "iso_metadata", "edit", "delete")
+        fields = ( "zoom", "last_changed", "name", "gemeinde", "planart", "xplan_gml", "iso_metadata", "edit", "delete")
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):
