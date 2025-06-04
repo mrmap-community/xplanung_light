@@ -16,6 +16,7 @@ class XPlanung():
     def __init__(self, xml_file):
         """Constructor method
         """
+        #self.xml_file = xml_file
         self.xml_string = xml_file.read().decode('UTF-8')
 
     def import_bplan(self, overwrite=False):
@@ -66,6 +67,8 @@ class XPlanung():
             if overwrite:
                 existing_bplan.planart = planart
                 existing_bplan.geltungsbereich = geometry
+                existing_bplan.xplan_gml = self.xml_string.strip()
+                existing_bplan.xplan_gml_version = "6.0"
                 existing_bplan.save()
                 return True
             #raise forms.ValidationError("Plan existiert bereits - bitte Überschreiben wählen!")
@@ -80,6 +83,8 @@ class XPlanung():
         bplan.planart = planart
         bplan.geltungsbereich = geometry
         bplan.gemeinde = orga
+        bplan.xplan_gml = self.xml_string.strip()
+        bplan.xplan_gml_version = "6.0"
         try:
             bplan.save()
         except:

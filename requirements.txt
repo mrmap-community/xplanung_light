@@ -11,3 +11,4 @@ requests==2.32.3
 openpyxl==3.1.5
 mappyfile==1.0.2
 mapscript==7.6.0
+slugify==0.0.1

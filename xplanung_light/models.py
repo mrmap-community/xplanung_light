@@ -1,8 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
-import uuid
+import uuid, os
 from simple_history.models import HistoricalRecords
 from django.contrib.gis.db import models
+import slugify
 
 # generic meta model
 class GenericMetadata(models.Model):
@@ -73,7 +74,13 @@ class AdministrativeOrganization(GenericMetadata):
 """
 https://xleitstelle.de/releases/objektartenkatalog_6_0
 """
-class XPlan(models.Model):
+class XPlan(GenericMetadata):
+
+    # https://gist.github.com/chhantyal/5370749
+    # Aktuell nicht verwendet - Dateien werden in DB abgelegt
+    def get_upload_path(self, filename):
+        name, ext = os.path.splitext(filename)
+        return os.path.join('uploads', 'gml' , str(self.generic_id) + "_" + slugify(name)) + ext
 
     name = models.CharField(null=False, blank=False, max_length=2048, verbose_name='Name des Plans', help_text='Offizieller Name des raumbezogenen Plans')
     #nummer [0..1]
@@ -100,6 +107,9 @@ class XPlan(models.Model):
     #texte [0..*], XP_TextAbschnitt
     #begruendungsTexte [0..*], XP_BegruendungAbschnitt
     history = HistoricalRecords(inherit=True)
+
+    xplan_gml = models.FileField(null = True, blank = True, verbose_name="XPlan GML-Dokument", help_text="")
+    xplan_gml_version = models.CharField(null=True, blank=True, max_length=5, verbose_name='XPlan GML-Dokument Version', help_text='')
 
     class Meta:
         abstract = True
@@ -137,7 +147,8 @@ class BPlan(XPlan):
         (SONSTIGES, "Sonstiges"),
     ]
 
-    #gemeinde [1], XP_Gemeinde
+    #gemeinde [1..n], XP_Gemeinde
+    # Zur Vereinfachung zunächst nur Kardinalität 1 implementieren
     gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
     #planaufstellendeGemeinde [0..*], XP_Gemeinde
     #plangeber [0..*], XP_Plangeber

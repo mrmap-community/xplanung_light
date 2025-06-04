@@ -1,3 +1,5 @@
+{% if bplan.xplan_gml %}{{ bplan.xplan_gml|safe|escape }}
+{% else %}
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <xplan:XPlanAuszug xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="{{ auszug_uuid }}">
   <gml:boundedBy>
@@ -35,3 +37,4 @@
     </xplan:BP_Plan>
   </gml:featureMember>
 </xplan:XPlanAuszug>
+{% endif %}
