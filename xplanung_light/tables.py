@@ -45,6 +45,7 @@ class AdministrativeOrganizationPublishingTable(tables.Table):
                          orderable=False, empty_values=())
     wfs = tables.LinkColumn('ows', text='WFS', args=[A('pk')], \
                          orderable=False, empty_values=())
+    ags = tables.Column(verbose_name="AGS", orderable=False)
 
     # https://stackoverflow.com/questions/36698387/how-to-add-get-parameters-to-django-tables2-linkcolumn
     def render_wms(self, record):

@@ -1,4 +1,5 @@
 {% extends "xplanung_light/layout.html" %}
+{% load crispy_forms_tags %}
 {% block title %}
     Bebauungsplan anlegen
 {% endblock %}
@@ -14,12 +15,17 @@
                 maxZoom: 20,
                 transparent: true,
             }).addTo(map);
-            // and many more
         }, false
     ); //end of window.addEventListener
+    // function for zooming to some extent - https://django-leaflet.readthedocs.io/en/latest/widget.html#programmatically-appended-maps
+    function zoomToExtent(select) {
+        var selectedOption = select.options[select.selectedIndex];
+        var bbox = selectedOption.getAttribute('bbox');
+        bbox = bbox.replace("(", "").replace(")", "").split(",");
+        console.log(bbox)
+        window['leafletmapid_geltungsbereich-map'].fitBounds([[ bbox[1], bbox[0] ], [bbox[3], bbox[2]]]);
+    }
 </script>
-    <form method="post" class="geocoding-form">{% csrf_token %}
-        {{ form.as_p }}
-        <input type="submit" value="Speichern">
-    </form>
+<!-- https://simpleisbetterthancomplex.com/tutorial/2018/11/28/advanced-form-rendering-with-django-crispy-forms.html -->
+{% crispy form %}
 {% endblock %}

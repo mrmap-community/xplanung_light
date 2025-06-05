@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 import uuid, os
 from simple_history.models import HistoricalRecords
 from django.contrib.gis.db import models
+from django.contrib.gis.db.models.functions import Envelope
+
 import slugify
 
 # generic meta model
@@ -147,7 +149,7 @@ class BPlan(XPlan):
         (SONSTIGES, "Sonstiges"),
     ]
 
-    #gemeinde [1..n], XP_Gemeinde
+    #gemeinde [1..*], XP_Gemeinde
     # Zur Vereinfachung zunächst nur Kardinalität 1 implementieren
     gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
     #planaufstellendeGemeinde [0..*], XP_Gemeinde
@@ -159,19 +161,28 @@ class BPlan(XPlan):
     #status [0..1], BP_Status
     #aenderungenBisDatum [0..1], Date
     #aufstellungsbeschlussDatum [0..1], Date
+    aufstellungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Aufstellungsbeschlusses", help_text="Datum des Aufstellungsbeschlusses")
     #veraenderungssperre [0..1], BP_VeraenderungssperreDaten
     #auslegungsStartDatum [0..*], Date
     #auslegungsEndDatum [0..*], Date
     #traegerbeteiligungsStartDatum [0..*], Date
     #traegerbeteiligungsEndDatum [0..*], Date
     #satzungsbeschlussDatum [0..1], Date
+    satzungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Satzungsbeschlusses", help_text="Datum des Satzungsbeschlusses")
     #rechtsverordnungsDatum [0..1], Date
+    rechtsverordnungs_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Rechtsverordnung", help_text="Datum der Rechtsverordnung")
     #inkrafttretensDatum [0..1], Date
+    inkrafttretens_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Inkrafttretens", help_text="Datum des Inkrafttretens")
     #ausfertigungsDatum [0..1], Date
+    ausfertigungs_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Ausfertigung", help_text="Datum der Ausfertigung")
     #staedtebaulicherVertrag [0..1], Boolean
+    staedtebaulicher_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Städtebaulicher Vertrag", help_text="Gibt an, ob es zum Plan einen städtebaulichen Vertrag gibt.")
     #erschliessungsVertrag [0..1], Boolean
+    erschliessungs_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Erschließungsvertrag", help_text="Gibt an, ob es für den Plan einen Erschließungsvertrag gibt.")
     #durchfuehrungsVertrag [0..1], Boolean
+    durchfuehrungs_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Durchführungsvertrag", help_text="Gibt an, ob für das Planungsgebiet einen Durchführungsvertrag (Kombination aus Städtebaulichen Vertrag und Erschließungsvertrag) gibt.")
     #gruenordnungsplan [0..1], Boolean
+    gruenordnungsplan = models.BooleanField(null=False, blank=False, default=False, verbose_name="Grünordnungsplan", help_text="Gibt an, ob für den Plan ein zugehöriger Grünordnungsplan existiert.")
     #versionBauNVO [0..1], XP_GesetzlicheGrundlage
     #versionBauGB [0..1], XP_GesetzlicheGrundlage
     #versionSonstRechtsgrundlage [0..*], XP_GesetzlicheGrundlage

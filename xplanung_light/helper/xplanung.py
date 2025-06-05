@@ -12,7 +12,6 @@ class XPlanung():
     xplan_name:str
     xplan_orga:AdministrativeOrganization
 
-
     def __init__(self, xml_file):
         """Constructor method
         """
@@ -71,11 +70,8 @@ class XPlanung():
                 existing_bplan.xplan_gml_version = "6.0"
                 existing_bplan.save()
                 return True
-            #raise forms.ValidationError("Plan existiert bereits - bitte Überschreiben wählen!")
             return False
-            #return False
         except:
-            #print("BPlan not found - will be created!")
             pass
         # Erstellen eines neuen BPlan-Objektes
         bplan = BPlan()
@@ -88,5 +84,5 @@ class XPlanung():
         try:
             bplan.save()
         except:
-            raise forms.ValidationError("Fehler beim Abspeichern des BPlan-Objekts")
+            raise forms.ValidationError("Fehler beim Abspeichern des neuen BPlan-Objekts!")
         return True

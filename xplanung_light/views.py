@@ -1,6 +1,6 @@
 from django.http import HttpResponse
 from django.shortcuts import render
-from xplanung_light.forms import RegistrationForm
+from xplanung_light.forms import RegistrationForm, BPlanCreateForm, BPlanUpdateForm
 from django.shortcuts import redirect
 from django.contrib.auth import login
 from xplanung_light.models import AdministrativeOrganization
@@ -36,7 +36,8 @@ from xplanung_light.helper.mapfile import MapfileGenerator
 from django.core.cache import cache
 from django.conf import settings
 from xplanung_light.tables import BPlanTable, AdministrativeOrganizationPublishingTable
-from django.db.models import Count
+from django.db.models import Count, F
+from django.contrib.gis.db.models import Extent
 """
 PROXIES = {
     'http_proxy': 'http://xxx:8080',
@@ -379,26 +380,28 @@ def register(request):
 
 
 class BPlanCreateView(CreateView):
+    form_class = BPlanCreateForm
     model = BPlan
-    fields = ["name", "nummer", "geltungsbereich", "gemeinde", "planart"]
+    # copy fields to form class - cause form class will handle the form now!
+    #fields = ["name", "nummer", "geltungsbereich", "gemeinde", "planart", "inkrafttretens_datum", "staedtebaulicher_vetrag"]
     success_url = reverse_lazy("bplan-list") 
 
     def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.only("pk", "name", "type")
-        form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '500px', 'map_width': '50%','MINIMAP': True})
+        form = super().get_form(self.form_class)
+        form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+        form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
         return form
-
+    
 
 class BPlanUpdateView(UpdateView):
+    form_class = BPlanUpdateForm
     model = BPlan
-    fields = ["name", "nummer", "geltungsbereich", "gemeinde", "planart"] 
     success_url = reverse_lazy("bplan-list") 
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.only("pk", "name", "type")
-        form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '500px', 'map_width': '50%','MINIMAP': True})
+        form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+        form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
         return form
 
 
@@ -407,6 +410,7 @@ class BPlanDeleteView(DeleteView):
 
     def get_success_url(self):
         return reverse_lazy("bplan-list")
+
 
 class BPlanListView(FilterView, SingleTableView):
     model = BPlan

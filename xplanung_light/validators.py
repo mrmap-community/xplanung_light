@@ -46,7 +46,8 @@ def xplan_content_validator(xplan_file):
                 'gemeinde_ags': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:ags'},
             }
             # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
-            gemeinde_ags = "0000000000"
+            # Dummy gemeinde_ags
+            gemeinde_ags = "00000000"
             for key, value in mandatory_fields.items():
                 if value['type'] == 'text':
                     test = root.find(value['xpath'] + value['xplan_element'], ns).text
@@ -77,7 +78,7 @@ def xplan_content_validator(xplan_file):
                     try:
                         geometry.transform(4326)
                     except:
-                        validation_error_messages.append(forms.ValidationError("Geoemtrie des Geltungsbereichs lässt sich nicht in EPSG:4326 transformieren!"))
+                        validation_error_messages.append(forms.ValidationError("Geometrie des Geltungsbereichs lässt sich nicht in EPSG:4326 transformieren!"))
             # Test, ob eine Organisation mit dem im GML vorhandenen AGS in der Datenbank vorhanden ist 
             try:
                 orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
