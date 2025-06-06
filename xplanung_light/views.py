@@ -8,7 +8,7 @@ from django.contrib.gis.geos import GEOSGeometry
 from openpyxl import Workbook, load_workbook
 import requests
 from django.views.generic import (ListView, CreateView, UpdateView, DeleteView)
-from xplanung_light.models import AdministrativeOrganization, BPlan
+from xplanung_light.models import AdministrativeOrganization, BPlan, BPlanSpezExterneReferenz
 from django.urls import reverse_lazy
 from leaflet.forms.widgets import LeafletWidget
 from django_tables2 import SingleTableView
@@ -35,9 +35,12 @@ from xplanung_light.helper.mapfile import MapfileGenerator
 # for caching mapfiles ;-)
 from django.core.cache import cache
 from django.conf import settings
-from xplanung_light.tables import BPlanTable, AdministrativeOrganizationPublishingTable
+from xplanung_light.tables import BPlanTable, AdministrativeOrganizationPublishingTable, BPlanSpezExterneReferenzTable
 from django.db.models import Count, F
 from django.contrib.gis.db.models import Extent
+from django.http import FileResponse
+import os
+
 """
 PROXIES = {
     'http_proxy': 'http://xxx:8080',
@@ -45,6 +48,22 @@ PROXIES = {
 }
 """
 PROXIES = None
+
+def get_bplan_attachment(request, pk):
+    try:
+        #attachment = BPlanSpezExterneReferenz.objects.get(owned_by_user=request.user, pk=pk)
+        attachment = BPlanSpezExterneReferenz.objects.get(pk=pk)
+    except BPlanSpezExterneReferenz.DoesNotExist:
+        attachment = None
+    print(str(attachment))
+    if attachment:
+        if os.path.exists(attachment.attachment.file.name):
+            response = FileResponse(attachment.attachment)
+            return response
+        else:
+           return HttpResponse("File not found", status=404) 
+    else:
+        return HttpResponse("Object not found", status=404)
 
 def ows(request, pk:int):
     orga = AdministrativeOrganization.objects.get(pk=pk)
@@ -435,7 +454,7 @@ class BPlanListView(FilterView, SingleTableView):
         
         qs = BPlan.objects.select_related('gemeinde').annotate(last_changed=Subquery(
             BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-        )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
+        )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).prefetch_related('attachments')
 
         self.filter_set = BPlanFilter(self.request.GET, queryset=qs)
         return self.filter_set.qs
@@ -497,3 +516,92 @@ class AdministrativeOrganizationPublishingListView(SingleTableView):
     def get_queryset(self):
         qs = AdministrativeOrganization.objects.filter(bplan__isnull=False).distinct().annotate(num_bplan=Count('bplan'))
         return qs
+    
+
+class BPlanSpezExterneReferenzCreateView(CreateView):
+    model = BPlanSpezExterneReferenz
+    fields = ["typ", "name", "attachment"]
+    
+    def get_context_data(self, **kwargs):
+        bplanid = self.kwargs['bplanid']
+        context = super().get_context_data(**kwargs)
+        context['bplan'] = BPlan.objects.get(pk=bplanid)
+        return context
+
+    # reduce choices for invoice to own invoices    
+    # https://stackoverflow.com/questions/48089590/limiting-choices-in-foreign-key-dropdown-in-django-using-generic-views-createv
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class=None)
+        #form.fields['bplan'].queryset = form.fields['bplan'].queryset.filter(owned_by_user=self.request.user.id)
+        #https://django-bootstrap-datepicker-plus.readthedocs.io/en/latest/Walkthrough.html
+        #form.fields['issue_date'].widget = DatePickerInput()
+        #form.fields['due_date'].widget = DatePickerInput()
+        #form.fields['actual_delivery_date'].widget = DatePickerInput()
+        return form
+    
+    def get_form_kwargs(self):
+        form = super().get_form_kwargs()
+        bplanid = self.kwargs['bplanid']
+        
+        form['initial'].update({'bplan': BPlan.objects.get(pk=bplanid)})
+        #form['initial'].update({'owned_by_user': self.request.user})
+        return form
+        #return super().get_form_kwargs()
+
+    def form_valid(self, form):
+        bplanid = self.kwargs['bplanid']
+        form.instance.bplan = BPlan.objects.get(pk=bplanid)
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("bplanattachment-list", kwargs={'bplanid': self.kwargs['bplanid']})   
+    
+
+class BPlanSpezExterneReferenzListView(SingleTableView):
+    model = BPlanSpezExterneReferenz
+    table_class = BPlanSpezExterneReferenzTable
+    template_name = 'xplanung_light/bplanspezexternereferenz_list.html'
+    success_url = reverse_lazy("bplanattachment-list") 
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data()
+        context['bplanid'] = self.kwargs['bplanid']
+        context['bplan'] = BPlan.objects.get(pk=self.kwargs['bplanid'])
+        return context
+    
+    def get_queryset(self):
+        # reduce queryset to those invoicelines which came from the invoice
+        bplanid = self.kwargs['bplanid']
+        if bplanid:
+            return self.model.objects.filter(
+            bplan=BPlan.objects.get(pk=bplanid)
+        )#.order_by('-created')
+        else:
+            return self.model.objects#.order_by('-created')
+        
+
+class BPlanSpezExterneReferenzUpdateView(UpdateView):
+    model = BPlanSpezExterneReferenz
+    fields = ["typ", "name", "attachment"]
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class=None)
+        #form.fields['bplan'].queryset = form.fields['bplan'].queryset.filter(owned_by_user=self.request.user.id)
+        return form 
+    
+    def form_valid(self, form):
+        bplanid = self.kwargs['bplanid']
+        form.instance.bplan = BPlan.objects.get(pk=bplanid)
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("bplanattachment-list", kwargs={'bplanid': self.kwargs['bplanid']})
+
+
+class BPlanSpezExterneReferenzDeleteView(DeleteView):
+    model = BPlanSpezExterneReferenz
+
+    def get_success_url(self):
+        return reverse_lazy("bplanattachment-list", kwargs={'bplanid': self.kwargs['bplanid']})
+    
+

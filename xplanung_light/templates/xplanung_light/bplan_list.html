@@ -83,7 +83,7 @@ let mapGlobal = {};
                     bounds = polygonsClicked[id].getBounds();
                     //console.log(bounds);
                     popupContent += "<a onclick='mapGlobal.fitBounds([[" + bounds._southWest.lat + ", " + bounds._southWest.lng + "], [" + bounds._northEast.lat + ", " + bounds._northEast.lng + "]]);'>+</a> ";
-                    popupContent += "<b>" + polygonsClicked[id].feature.properties.name + "</b>; ID: " + polygonsClicked[id].feature.properties.pk + "; Planart: " + polygonsClicked[id].feature.properties.planart;
+                    popupContent += "<a href='" + polygonsClicked[id].feature.properties.pk + "/update/'><b>" + polygonsClicked[id].feature.properties.name + " (" + polygonsClicked[id].feature.properties.pk + ")</b></a>; Planart: " + polygonsClicked[id].feature.properties.planart;
                     popupContent += " - <a href='" + polygonsClicked[id].feature.properties.pk + "/xplan/' target='_blank'>XPlan-GML" + "</a><br>";
                 }
                 popup

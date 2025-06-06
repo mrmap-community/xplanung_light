@@ -1,0 +1,15 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% bootstrap_css %}
+{% block title %}
+    Anlage zum Bebauungsplan
+{% endblock %}
+{% block content %}
+<p>Anlage zum Bebauungsplan <b>{{ bplan.name }}</b> der Kommune <b>{{ bplan.gemeinde }}</b></p>
+    <form action="" method="POST" class="bplanattachment-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.media }}
+        {% bootstrap_form form %}
+        <input type="submit" class="save btn btn-default"value="Speichern">
+    </form>
+{% endblock %}

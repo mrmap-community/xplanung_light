@@ -172,7 +172,7 @@ class BPlanCreateForm(ModelForm):
                             "gruenordnungsplan",
                         ),
                     ),
-                ),     
+                ), 
             ),
             Submit("submit", "Erstellen")
         )

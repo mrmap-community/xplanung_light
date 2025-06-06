@@ -1,0 +1,12 @@
+{% extends "xplanung_light/layout.html" %}
+{% block title %}
+    Anlagen zum Bebauungsplan
+{% endblock %}
+{% load render_table from django_tables2 %}
+{% load django_bootstrap5 %}
+{% block content %}
+<p>Anlagen zum Bebauungsplan <b>{{ bplan.name }}</b> der Kommune <b>{{ bplan.gemeinde }}</b></p>
+<p><a href="{% url 'bplanattachment-create' bplanid=bplanid %}">Anlage erstellen</a></p>
+{% render_table table %}
+<p>Anzahl: {{ bplanspezexternereferenz_list.count }}</p>
+{% endblock %}

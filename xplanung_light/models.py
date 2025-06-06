@@ -191,3 +191,88 @@ class BPlan(XPlan):
     def __str__(self):
         """Returns a string representation of a BPlan."""
         return f"{self.name} ({self.get_planart_display()}) - {self.gemeinde}"
+    
+    
+class BPlanSpezExterneReferenz(GenericMetadata):
+
+    # https://gist.github.com/chhantyal/5370749
+    def get_upload_path(self, filename):
+        name, ext = os.path.splitext(filename)
+        return os.path.join('uploads', 'attachments' , str(self.generic_id) + "_" + slugify(name)) + ext
+
+    BESCHREIBUNG = "1000"
+    BEGRUENDUNG = "1010"
+    LEGENDE = "1020"
+    RECHTSPLAN = "1030"
+    PLANGRUNDLAGE = "1040"
+    UMWELTBERICHT = "1050"
+    SATZUNG = "1060"
+    VERORDNUNG = "1065"
+    KARTE = "1070"
+    ERLAEUTERUNG = "1080"
+    ZUSAMMENFASSENDEERKLAERUNG = "1090"
+    KOORDINATENLISTE = "2000"
+    GRUNDSTUECKSVERZEICHNIS = "2100"
+    PLANZLISTE = "2200"
+    GRUENORDNUNGSPLAN = "2300"
+    ERSCHLIESSUNGSVERTRAG = "2400"
+    DURCHFUEHRUNGSVERTRAG = "2500"
+    STAEDTEBAULICHERVERTRAG  = "2600"
+    UMWELTBEZOGENESTELLUNGNAHMEN = "2700"
+    BESCHLUSS = "2800"
+    VORHABENUNDERSCHLIESSUNGSPLAN = "2900"
+    METADATENPLAN = "3000"
+    STAEDTEBAUENTWICKLUNGSKONZEPTINNENENTWICKLUNG = "3100"
+    GENEHMIGUNG = "4000"
+    BEKANNTMACHUNG = "5000"
+    SCHUTZGEBIETSVERORDNUNG = "6000"
+    RECHTSVERBINDLICH = "9998"
+    INFORMELL = "9999"
+
+    REF_TYPE_CHOICES = [
+        (BESCHREIBUNG,  "Beschreibung"),
+        (BEGRUENDUNG, "Begruendung"),
+        (LEGENDE, "Legende"),
+        (RECHTSPLAN, "Rechtsplan"),
+        (PLANGRUNDLAGE, "Plangrundlage"),
+        (UMWELTBERICHT, "Umweltbericht"),
+        (SATZUNG, "Satzung"),
+        (VERORDNUNG, "Verordnung"),
+        (KARTE, "Karte"),
+        (ERLAEUTERUNG, "Erlaeuterung"),
+        (ZUSAMMENFASSENDEERKLAERUNG, "ZusammenfassendeErklaerung"),
+        (KOORDINATENLISTE, "Koordinatenliste"),
+        (GRUNDSTUECKSVERZEICHNIS, "Grundstuecksverzeichnis"),
+        (PLANZLISTE, "Pflanzliste"),
+        (GRUENORDNUNGSPLAN, "Gruenordnungsplan"),
+        (ERSCHLIESSUNGSVERTRAG, "Erschliessungsvertrag"),
+        (DURCHFUEHRUNGSVERTRAG, "Durchfuehrungsvertrag"),
+        (STAEDTEBAULICHERVERTRAG, "StaedtebaulicherVertrag"),
+        (UMWELTBEZOGENESTELLUNGNAHMEN, "UmweltbezogeneStellungnahmen"),
+        (BESCHLUSS, "Beschluss"),
+        (VORHABENUNDERSCHLIESSUNGSPLAN, "VorhabenUndErschliessungsplan"),
+        (METADATENPLAN, "MetadatenPlan"),
+        (STAEDTEBAUENTWICKLUNGSKONZEPTINNENENTWICKLUNG, "StaedtebaulEntwicklungskonzeptInnenentwicklung"),
+        (GENEHMIGUNG, "Genehmigung"),
+        (BEKANNTMACHUNG, "Bekanntmachung"),
+        (SCHUTZGEBIETSVERORDNUNG, "Schutzgebietsverordnung"),
+        (RECHTSVERBINDLICH, "Rechtsverbindlich"),
+        (INFORMELL, "Informell"),
+    ]
+
+    #georefURL [0..1], URI
+    #art [0..1], XP_ExterneReferenzArt
+    #referenzName [1], CharacterString
+    name = models.CharField(null=False, blank=False, default="Unbekannt", max_length=2048, verbose_name='Name des Dokumentes', help_text='Name bzw. Titel des referierten Dokuments. Der Standardname ist "Unbekannt".')
+    #referenzURL [1], URI
+    #referenzMimeType [0..1], XP_MimeTypes
+    #beschreibung [0..1], CharacterString
+    #datum [0..1], Date
+    #typ [1], XP_ExterneReferenzTyp
+    typ = models.CharField(null=False, blank=False, max_length=5, choices=REF_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des referierten Dokuments oder Rasterplans', help_text="Typ / Inhalt des referierten Dokuments oder Rasterplans", db_index=True)
+    attachment = models.FileField(null = True, blank = True, upload_to='uploads', verbose_name="Dokument")
+    bplan = models.ForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
+
+def __str__(self):
+        """Returns a string representation of SpezExterneReferenz."""
+        return f"{self.name} ({self.get_typ_display()})"
