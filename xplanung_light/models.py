@@ -75,6 +75,8 @@ class AdministrativeOrganization(GenericMetadata):
 
 """
 https://xleitstelle.de/releases/objektartenkatalog_6_0
+Achtung neu: https://xleitstelle.de/releases/objektartenkatalog_6_1
+2025-04-01
 """
 class XPlan(GenericMetadata):
 
@@ -222,7 +224,7 @@ class BPlanSpezExterneReferenz(GenericMetadata):
     BESCHLUSS = "2800"
     VORHABENUNDERSCHLIESSUNGSPLAN = "2900"
     METADATENPLAN = "3000"
-    STAEDTEBAUENTWICKLUNGSKONZEPTINNENENTWICKLUNG = "3100"
+    STAEDTEBAULENTWICKLUNGSKONZEPTINNENENTWICKLUNG = "3100"
     GENEHMIGUNG = "4000"
     BEKANNTMACHUNG = "5000"
     SCHUTZGEBIETSVERORDNUNG = "6000"
@@ -252,7 +254,7 @@ class BPlanSpezExterneReferenz(GenericMetadata):
         (BESCHLUSS, "Beschluss"),
         (VORHABENUNDERSCHLIESSUNGSPLAN, "VorhabenUndErschliessungsplan"),
         (METADATENPLAN, "MetadatenPlan"),
-        (STAEDTEBAUENTWICKLUNGSKONZEPTINNENENTWICKLUNG, "StaedtebaulEntwicklungskonzeptInnenentwicklung"),
+        (STAEDTEBAULENTWICKLUNGSKONZEPTINNENENTWICKLUNG, "StaedtebaulEntwicklungskonzeptInnenentwicklung"),
         (GENEHMIGUNG, "Genehmigung"),
         (BEKANNTMACHUNG, "Bekanntmachung"),
         (SCHUTZGEBIETSVERORDNUNG, "Schutzgebietsverordnung"),
@@ -276,3 +278,16 @@ class BPlanSpezExterneReferenz(GenericMetadata):
 def __str__(self):
         """Returns a string representation of SpezExterneReferenz."""
         return f"{self.name} ({self.get_typ_display()})"
+
+
+"""
+    Angabe eines referenzierten Scans - aus dem Beispiel von Hamburg / XLeitstelle - ist aber veraltet!
+
+      <xplan:refScan>
+        <xplan:XP_ExterneReferenz>
+          <xplan:georefURL>BPlan004_6-0.pgw</xplan:georefURL>
+          <xplan:referenzName>BPlan004_6-0</xplan:referenzName>
+          <xplan:referenzURL>BPlan004_6-0.png</xplan:referenzURL>
+        </xplan:XP_ExterneReferenz>
+      </xplan:refScan>
+"""

@@ -29,10 +29,28 @@
         </xplan:XP_Gemeinde>
       </xplan:gemeinde>
       <xplan:planArt>{{ bplan.planart }}</xplan:planArt>
-      <xplan:staedtebaulicherVertrag>false</xplan:staedtebaulicherVertrag>
-      <xplan:erschliessungsVertrag>false</xplan:erschliessungsVertrag>
-      <xplan:durchfuehrungsVertrag>false</xplan:durchfuehrungsVertrag>
-      <xplan:gruenordnungsplan>false</xplan:gruenordnungsplan>
+      {% if bplan.rechtsstand %}
+      <xplan:rechtsstand>{{ bplan.rechtsstand }}</xplan:rechtsstand>
+      {% endif %}
+      {% if bplan.aufstellungsbeschluss_datum %}
+      <xplan:aufstellungsbeschlussDatum>{{ bplan.aufstellungsbeschluss_datum|date:"Y-m-d" }}</xplan:aufstellungsbeschlussDatum>
+      {% endif %}
+      {% if bplan.satzungsbeschluss_datum %}
+      <xplan:satzungsbeschlussDatum>{{ bplan.satzungsbeschluss_datum|date:"Y-m-d" }}</xplan:satzungsbeschlussDatum>
+      {% endif %}
+      {% if bplan.rechtsverordnungs_datum %}
+      <xplan:rechtsverordnungsDatum>{{ bplan.rechtsverordnungs_datum|date:"Y-m-d" }}</xplan:rechtsverordnungsDatum>
+      {% endif %}
+      {% if bplan.inkrafttretens_datum %}
+      <xplan:inkrafttretensDatum>{{ bplan.inkrafttretens_datum|date:"Y-m-d" }}</xplan:inkrafttretensDatum>
+      {% endif %}
+      {% if bplan.ausfertigungs_datum %}
+      <xplan:ausfertigungsDatum>{{ bplan.ausfertigungs_datum|date:"Y-m-d" }}</xplan:ausfertigungsDatum>
+      {% endif %}
+      <xplan:staedtebaulicherVertrag>{{ bplan.staedtebaulicher_vertrag|lower }}</xplan:staedtebaulicherVertrag>
+      <xplan:erschliessungsVertrag> {{ bplan.erschliessungs_vertrag|lower }}</xplan:erschliessungsVertrag>
+      <xplan:durchfuehrungsVertrag>{{ bplan.durchfuehrungs_vertrag|lower }}</xplan:durchfuehrungsVertrag>
+      <xplan:gruenordnungsplan>{{ bplan.gruenordnungsplan|lower }}</xplan:gruenordnungsplan>
     </xplan:BP_Plan>
   </gml:featureMember>
 </xplan:XPlanAuszug>
