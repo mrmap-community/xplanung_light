@@ -4,8 +4,13 @@ import uuid, os
 from simple_history.models import HistoricalRecords
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models.functions import Envelope
-
+from django.contrib.gis.gdal.raster.source import GDALRaster
+from django.contrib.gis.gdal import SpatialReference
+from django.core.files import File
+from django.core.files.base import ContentFile
 import slugify
+from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
+from io import BytesIO
 
 # generic meta model
 class GenericMetadata(models.Model):
@@ -275,19 +280,61 @@ class BPlanSpezExterneReferenz(GenericMetadata):
     attachment = models.FileField(null = True, blank = True, upload_to='uploads', verbose_name="Dokument")
     bplan = models.ForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
 
-def __str__(self):
-        """Returns a string representation of SpezExterneReferenz."""
-        return f"{self.name} ({self.get_typ_display()})"
+    
+    def save(self, *args, **kwargs):
+        # https://stackoverflow.com/questions/7514964/django-how-to-create-a-file-and-save-it-to-a-models-filefield
+        if self.typ == '1070': # Karte
+            #raster_file = self.attachment.file.read()
+            try:
+                # https://dev.to/doridoro/what-is-contentfile-in-django-6nm
+                raster = GDALRaster(self.attachment.file.temporary_file_path()) 
+                target_srs = SpatialReference(25832)
+                if raster.srs.srid != 25832:
+                    target = raster.transform(target_srs)
+                    # Was fehlt: Kompression und Overviews - müssten neu generiert werden!
+                    # https://gis.stackexchange.com/questions/457264/save-a-gdal-dataset-to-django-file-field
+                    #print(target.srs.srid)
+                    #print(target.extent)
+                    #print(target.name)
+                    #print(target.is_vsi_based)
+                    # Save the BytesIO object to the ImageField with the new filename
+                    # Change name of attachment
+                    new_name = self.attachment.name.lower()[0:-4] + "_transformed.tif"
+                    if target.is_vsi_based:
+                        #print("vsi_based")
+                        # TODO: Problem - von Datei wird nur ein erster Teil geschrieben - ggf. ckunk Problem - Problem war dass das Raster erst geschlossen werden musste :-(
+                        temp_raster = BytesIO()
+                        temp_raster.write(target.vsi_buffer)
+                        temp_raster.seek(0)
+                        self.attachment.save(new_name, ContentFile(temp_raster.getvalue()), save=False)
+                        temp_raster.close()
+                    else:
+                        temp_file_name = target.name
+                        target = None # extremly needed !
+                        # load from file
+                        with open(temp_file_name, "rb") as f:
+                            # test Dateigröße
+                            #f.seek(0,2) # move the cursor to the end of the file
+                            #print(f.tell())
+                            #binary_file = f.read()
+                            self.attachment.save(new_name, File(f), save=False)
+                # https://stackoverflow.com/questions/67750359/typeerror-a-bytes-like-object-is-required-not-io-bytesio-django-pillow
+            except (IOError, SyntaxError) as e:
+                raise ValueError(f"Konnte GeoTIFF nicht nach UTM32 transformieren. -- {e}")
+        super().save(*args, **kwargs)
 
+    def __str__(self):
+            """Returns a string representation of SpezExterneReferenz."""
+            return f"{self.name} ({self.get_typ_display()})"
 
-"""
-    Angabe eines referenzierten Scans - aus dem Beispiel von Hamburg / XLeitstelle - ist aber veraltet!
+    """
+        Angabe eines referenzierten Scans - aus dem Beispiel von Hamburg / XLeitstelle - ist aber veraltet!
 
-      <xplan:refScan>
-        <xplan:XP_ExterneReferenz>
-          <xplan:georefURL>BPlan004_6-0.pgw</xplan:georefURL>
-          <xplan:referenzName>BPlan004_6-0</xplan:referenzName>
-          <xplan:referenzURL>BPlan004_6-0.png</xplan:referenzURL>
-        </xplan:XP_ExterneReferenz>
-      </xplan:refScan>
-"""
+        <xplan:refScan>
+            <xplan:XP_ExterneReferenz>
+            <xplan:georefURL>BPlan004_6-0.pgw</xplan:georefURL>
+            <xplan:referenzName>BPlan004_6-0</xplan:referenzName>
+            <xplan:referenzURL>BPlan004_6-0.png</xplan:referenzURL>
+            </xplan:XP_ExterneReferenz>
+        </xplan:refScan>
+    """

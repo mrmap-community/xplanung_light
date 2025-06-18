@@ -17,6 +17,7 @@ from django.views.generic import DetailView
 from django.contrib.gis.db.models.functions import AsGML, Transform, Envelope
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.gdal import OGRGeometry
+from django.contrib.gis.gdal.raster.source import GDALRaster
 import uuid
 import xml.etree.ElementTree as ET
 from django.core.serializers import serialize
@@ -26,7 +27,7 @@ from django_filters.views import FilterView
 from django.urls import reverse_lazy, reverse
 from xplanung_light.helper.xplanung import XPlanung
 from django.contrib import messages
-from xplanung_light.forms import RegistrationForm, BPlanImportForm
+from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanSpezExterneReferenzForm
 from django.db.models import Subquery, OuterRef
 from django.http import HttpResponse
 import mapscript
@@ -39,6 +40,10 @@ from xplanung_light.tables import BPlanTable, AdministrativeOrganizationPublishi
 from django.db.models import Count, F
 from django.contrib.gis.db.models import Extent
 from django.http import FileResponse
+from django.contrib.gis.gdal.raster.source import GDALRaster
+import magic, json
+
+
 import os
 
 """
@@ -208,6 +213,7 @@ def get_geometry(type, ags):
         base_uri = "https://www.geoportal.rlp.de/spatial-objects/314/collections/vermkv:gemeinde_rlp"
         param_dict = {'f': 'json', 'ags': "*7" + ags}
     resp = requests.get(url=base_uri, params=param_dict, proxies=PROXIES)
+    #resp = requests.get(url=base_uri, params=param_dict)
     print(base_uri)
     print(str(param_dict))
     data = resp.json() 
@@ -520,7 +526,8 @@ class AdministrativeOrganizationPublishingListView(SingleTableView):
 
 class BPlanSpezExterneReferenzCreateView(CreateView):
     model = BPlanSpezExterneReferenz
-    fields = ["typ", "name", "attachment"]
+    form_class = BPlanSpezExterneReferenzForm
+    #fields = ["typ", "name", "attachment"]
     
     def get_context_data(self, **kwargs):
         bplanid = self.kwargs['bplanid']
@@ -551,6 +558,7 @@ class BPlanSpezExterneReferenzCreateView(CreateView):
     def form_valid(self, form):
         bplanid = self.kwargs['bplanid']
         form.instance.bplan = BPlan.objects.get(pk=bplanid)
+        # TODO: check ob der Extent des Rasterbilds innerhalb der Abgrenzung der AdministrativeUnit liegt ...  
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -582,7 +590,14 @@ class BPlanSpezExterneReferenzListView(SingleTableView):
 
 class BPlanSpezExterneReferenzUpdateView(UpdateView):
     model = BPlanSpezExterneReferenz
-    fields = ["typ", "name", "attachment"]
+    #fields = ["typ", "name", "attachment"]
+    form_class = BPlanSpezExterneReferenzForm
+
+    def get_context_data(self, **kwargs):
+        bplanid = self.kwargs['bplanid']
+        context = super().get_context_data(**kwargs)
+        context['bplan'] = BPlan.objects.get(pk=bplanid)
+        return context
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class=None)

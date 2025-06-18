@@ -4,8 +4,8 @@ from django.utils import timezone
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
-from xplanung_light.models import BPlan
-from xplanung_light.validators import xplan_content_validator
+from xplanung_light.models import BPlan, BPlanSpezExterneReferenz
+from xplanung_light.validators import xplan_content_validator, geotiff_raster_validator
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Row, Column, Field
 from crispy_forms.bootstrap import TabHolder, Tab, AccordionGroup, Accordion
@@ -21,6 +21,32 @@ class BPlanImportForm(forms.Form):
         super(BPlanImportForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.layout = Layout(Fieldset("Bebauungsplan importieren", "file", "confirm"), Submit("submit", "Hochladen"))
+
+
+class BPlanSpezExterneReferenzForm(forms.ModelForm):
+    #typ = forms.CharField(required=True, label="Typ des Anhangs")
+    #name = forms.CharField
+    #attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super(BPlanSpezExterneReferenzForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.layout = Layout(Fieldset("Anlage hochladen", "typ", "name", "attachment"), Submit("submit", "Hochladen/Aktualisieren"))
+
+    # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+    def clean(self):
+        cleaned_data = super().clean()
+        print(self.cleaned_data['typ'])
+        # check if karte should be uploaded
+        if cleaned_data['typ'] == '1070': # Karte
+            # Validierung der Rasterdatei 
+            test = geotiff_raster_validator(cleaned_data['attachment'])
+
+    class Meta:
+       model = BPlanSpezExterneReferenz
+       fields = ["typ", "name", "attachment"] # list of fields you want from model
 
 
 class RegistrationForm(UserCreationForm):

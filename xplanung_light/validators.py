@@ -2,8 +2,77 @@ from django import forms
 import xml.etree.ElementTree as ET
 from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.models import AdministrativeOrganization
+from django.contrib.gis.gdal.raster.source import GDALRaster
 #https://www.tommygeorge.com/blog/validating-content-of-django-file-uploads/
+import magic, json
 
+"""
+Funktion zur Validierung von GeoTIFF Dateien, die als Anlage zur Darstellung des Plangebietes beigefügt
+werden. 
+
+Validierungen:
+
+* Mimetype 'image/tiff'
+* Dateigröße nicht überschritten
+* Overviews existieren
+* Datei mit LZW komprimiert
+* SRS vorhanden
+* Extent vorhanden
+
+"""
+
+def geotiff_raster_validator(geotiff_file):
+    geotiff = geotiff_file.read()
+    validation_error_messages = []
+    # check mimetype
+    """
+    Get MIME by reading the header of the file
+    """
+    initial_pos = geotiff_file.tell()
+    geotiff_file.seek(0)
+    mime_type = magic.from_buffer(geotiff_file.read(2048), mime=True)
+    geotiff_file.seek(initial_pos)
+    if mime_type != 'image/tiff':
+        validation_error_messages.append("Es werden nur Bilder im Format 'image/tiff' unterstützt!")
+    # check filesize
+    size = geotiff_file.size
+    if size > 40000000:
+        validation_error_messages.append("Dateigröße übersteigt die zugelassene Größe von 40MB!")
+    # check to open with gdal
+    try:
+        raster = GDALRaster(geotiff)
+        #print(raster)
+    except:
+        validation_error_messages.append("GDAL kann Datenquelle nicht als Raster interpretieren!")
+        raise forms.ValidationError(validation_error_messages)
+    info = raster.info
+    if info.find("Overviews:") == -1:
+        validation_error_messages.append("Es werden nur Bilder mit internen Overviews untertützt, bitte erstellen sie diese vor dem  Hochladen!")
+    if info.find("COMPRESSION=LZW") == -1:
+        validation_error_messages.append("Es werden nur LZW-komprimierte Bilder unterstützt - bitte komprimieren sie ihr Bild vor dem Hochladen!")
+    #if raster.metadata['IMAGE_STRUCTURE']['COMPRESSION'] != 'LZW':
+    #    validation_error_messages.append("Es werden nur LZW-komprimierte Bilder unterstützt - bitte komprimieren sie ihr Bild vor dem Hochladen!")
+    # check srid - with gdal
+    # https://gis.stackexchange.com/questions/267321/extracting-epsg-from-a-raster-using-gdal-bindings-in-python
+    # django gdal raster has only some of these features !!!!
+    # check srid and extent
+    try: 
+        srid = raster.srs.srid
+        print(srid)
+    except:
+        validation_error_messages.append("Datenquelle beinhaltet keine Informationen zum Koordinatenreferenzsystem!")
+    try: 
+        extent = raster.extent
+        print(extent)
+    except:
+        validation_error_messages.append("Datenquelle beinhaltet keine räumliche Ausdehnung!")
+    # check extent - should cover extent of geltungsbereich 
+    # print(raster.extent)
+    # srid lost during transformation!
+    # debug
+    # validation_error_messages.append(raster.info)
+    if len(validation_error_messages) > 0:
+        raise forms.ValidationError(validation_error_messages)
 
 """
 Funktion zur Validierung der zu importierenden XPlan-GML Datei.

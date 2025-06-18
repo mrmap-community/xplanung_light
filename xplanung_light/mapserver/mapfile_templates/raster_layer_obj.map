@@ -1,13 +1,10 @@
 LAYER
-        COMPOSITE
-            OPACITY 70
-        END # COMPOSITE
     	STATUS      ON
-        NAME        "BPlan.0723507001.12"
+        NAME        "BPlan.0723507001.12_raster"
         GROUP "BPlan.0723507001"
         METADATA
             #"wms_layer_group"           "/Bebauungsplaene"
-            "wms_group_title"     "Bebauungspläne" 
+            "wms_group_title"           "Bebauungspläne"
             "wms_include_items"         "all"
             "ows_title"                 "testplan ohne rechtsstand"
             "ows_srs"                   "EPSG:25832 EPSG:31467 EPSG:31466 EPSG:4326 EPSG:3857"
@@ -20,16 +17,9 @@ LAYER
             "ows_metadataurl_type"      "TC211"
             #"ows_enable_request" "* !GetCapabilities"
         END
-        DUMP TRUE
-        TEMPLATE        "xplanung_light/mapserver/templates/bplan.html"
-        TYPE            POLYGON
-        CONNECTIONTYPE 	OGR
-   	    CONNECTION 	"db.sqlite3"
+        TYPE            RASTER
    	    DATA 		"xplanung_light_bplan"
-   	    FILTER 		('[id]' = '10')
-   	    PROCESSING 	"CLOSE_CONNECTION=DEFER" # for maximum performance
         PROJECTION
-            "init=epsg:4326"
+            "init=epsg:25832"
         END
-        CLASSGROUP  "default"
     END
