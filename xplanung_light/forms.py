@@ -5,7 +5,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz
-from xplanung_light.validators import xplan_content_validator, geotiff_raster_validator
+from xplanung_light.validators import xplan_content_validator, xplan_upload_file_validator, geotiff_raster_validator
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Row, Column, Field
 from crispy_forms.bootstrap import TabHolder, Tab, AccordionGroup, Accordion
@@ -21,6 +21,17 @@ class BPlanImportForm(forms.Form):
         super(BPlanImportForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.layout = Layout(Fieldset("Bebauungsplan importieren", "file", "confirm"), Submit("submit", "Hochladen"))
+
+class BPlanImportArchivForm(forms.Form):
+    confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
+    file = forms.FileField(required=True, label="BPlan ZIP-Archiv", validators=[xplan_upload_file_validator])
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super(BPlanImportArchivForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.layout = Layout(Fieldset("Bebauungsplanarchiv importieren", "file", "confirm"), Submit("submit", "Hochladen"))
 
 
 class BPlanSpezExterneReferenzForm(forms.ModelForm):

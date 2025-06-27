@@ -27,7 +27,7 @@ from django_filters.views import FilterView
 from django.urls import reverse_lazy, reverse
 from xplanung_light.helper.xplanung import XPlanung
 from django.contrib import messages
-from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanSpezExterneReferenzForm
+from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanSpezExterneReferenzForm, BPlanImportArchivForm
 from django.db.models import Subquery, OuterRef
 from django.http import HttpResponse
 import mapscript
@@ -42,8 +42,8 @@ from django.contrib.gis.db.models import Extent
 from django.http import FileResponse
 from django.contrib.gis.gdal.raster.source import GDALRaster
 import magic, json
-
-
+import io, zipfile
+from pathlib import Path
 import os
 
 """
@@ -170,6 +170,39 @@ def bplan_import(request):
         #print("bplan_import: no post")
         form = BPlanImportForm()
     return render(request, "xplanung_light/bplan_import.html", {"form": form})
+
+def bplan_import_archiv(request):
+    if request.method == "POST":
+        form = BPlanImportArchivForm(request.POST, request.FILES)
+        if form.is_valid():
+            # https://stackoverflow.com/questions/44722885/reading-inmemoryuploadedfile-twice
+            # pointer muss auf Dateianfang gesetzt sein!
+            request.FILES['file'].seek(0)
+            xplanung = XPlanung(request.FILES["file"])
+            # import xml file after prevalidation - check is done, if object already exists
+            overwrite = form.cleaned_data['confirm']
+            # print(overwrite)
+            bplan_created = xplanung.import_bplan_archiv(overwrite=overwrite)
+            if bplan_created == False:
+                messages.error(request, 'Bebauungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
+                # extent form  with confirmation field!
+                # https://amgcomputing.blogspot.com/2015/11/django-form-confirm-before-saving.html
+                # reload form
+                form = BPlanImportArchivForm()
+                return render(request, "xplanung_light/bplan_import_archiv.html", {"form": form})
+            else:
+                if overwrite:
+                    messages.success(request, 'Bebauungsplan wurde erfolgreich aktualisiert!')
+                else:
+                    messages.success(request, 'Bebauungsplan wurde erfolgreich importiert!')
+            #print("bplan_import: import done")
+            return redirect(reverse('bplan-list'))
+        else:
+            print("bplan_import_archiv: form invalid")
+    else:
+        # print("bplan_import: no post")
+        form = BPlanImportArchivForm()
+    return render(request, "xplanung_light/bplan_import_archiv.html", {"form": form})
 
 def qualify_gml_geometry(gml_from_db:str):
     ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
@@ -460,7 +493,8 @@ class BPlanListView(FilterView, SingleTableView):
         
         qs = BPlan.objects.select_related('gemeinde').annotate(last_changed=Subquery(
             BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-        )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).prefetch_related('attachments')
+        )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
+        #.prefetch_related('attachments')
 
         self.filter_set = BPlanFilter(self.request.GET, queryset=qs)
         return self.filter_set.qs
@@ -470,7 +504,7 @@ class BPlanDetailView(DetailView):
     model = BPlan
 
 
-class BPlanDetailXmlRasterView(BPlanDetailView):  
+class BPlanDetailXPlanLightView(BPlanDetailView):  
 
     def get_queryset(self):
         # Erweiterung der auszulesenden Objekte um eine transformierte Geomtrie im Format GML 3
@@ -505,12 +539,54 @@ class BPlanDetailXmlRasterView(BPlanDetailView):
 
         relative_url = reverse('bplan-export-xplan-raster-6', kwargs={'pk': context['bplan'].id})
         context['iso19139_url']= self.request.build_absolute_uri(relative_url)
+        # Übergabe der attachments
+        context['attachments'] = BPlanSpezExterneReferenz.objects.filter(bplan=self.kwargs['pk'])
+        # TODO: Überschreiben des xplan gml mit neuen Inhalten - Anlagen, Datumswerten, ...
+        if context['bplan'].xplan_gml:
+            print("Ausgabe des gespeicherten/hochgeladenen GML - danach Überschreiben mit Inhalten aus der Datenbank")
+            context['bplan'].xplan_gml = XPlanung.proxy_bplan_gml(context['bplan'].id)
         return context
 
     def dispatch(self, *args, **kwargs):
         response = super().dispatch(*args, **kwargs)
         response['Content-type'] = "application/xml"  # set header
         return response
+    
+
+class BPlanDetailXPlanLightZipView(BPlanDetailView):  
+    """
+    Erzeugt eine ZIP-Datei mit allen für XPlanung relevanten Dateien.
+
+    Die GML-Datei wird über die Class-based View BPlanDetailXPlanLightView erzeugt.
+    Die Anhänge werden automatisch aus den BPlanSpezExterneReferenz-Objekten generiert.
+    """
+    def dispatch(self, *args, **kwargs):
+        response = super().dispatch(*args, **kwargs)
+        response['Content-type'] = "application/zip"  # setzen des headers
+        bplan_gml_view = BPlanDetailXPlanLightView.as_view(template_name="xplanung_light/bplan_template_xplanung_light_6.xml")(pk=self.kwargs['pk'], request=self.request).render()
+        # Alle Anhaenge ziehen
+        attachments = BPlanSpezExterneReferenz.objects.filter(bplan=self.kwargs['pk'])
+        # https://stackoverflow.com/questions/2463770/python-in-memory-zip-library
+        zip_buffer = io.BytesIO()
+        file_array = []
+        #file_array.append(('bplan.gml', io.BytesIO(bplan_gml_view.content)))
+        for attachment in attachments:
+            # typ key
+            #print(attachment.typ)
+            # typ Display
+            #print(attachment.get_typ_display())
+            # full path
+            #print(attachment.attachment.file.name)
+            # only filename
+            #print(Path(attachment.attachment.file.name).name)
+            #file_array.append(('bplan_referenz_' + attachment.get_typ_display() + '_' + Path(attachment.attachment.file.name).name, attachment.attachment.file.read()))
+            file_array.append((Path(attachment.attachment.file.name).name, attachment.attachment.file.read()))
+        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+            zip_file.writestr('bplan.gml', bplan_gml_view.content)
+            for file_name, data in file_array:
+                zip_file.writestr(file_name, data)  
+        zip_buffer.seek(0)
+        return FileResponse(zip_buffer, as_attachment=False, filename="bebauungsplan_" + str(self.kwargs['pk']) + ".zip")
 
 
 class AdministrativeOrganizationPublishingListView(SingleTableView):

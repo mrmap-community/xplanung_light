@@ -1,5 +1,4 @@
 import django_tables2 as tables
-from django_tables2 import Column
 from django_tables2.utils import A
 from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz
 from django.urls import reverse
@@ -21,15 +20,18 @@ class BPlanSpezExterneReferenzTable(tables.Table):
     class Meta:
         model = BPlanSpezExterneReferenz
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "name", "typ", "attachment", "download", "edit", "delete")
+        fields = ( "id", "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
 
 
 class BPlanTable(tables.Table):
     #download = tables.LinkColumn('gedis-document-pdf', text='Download', args=[A('pk')], \
     #                     orderable=False, empty_values=())
-    xplan_gml = tables.LinkColumn('bplan-export-xplan-raster-6', text='Exportieren', args=[A('pk')], \
+
+    xplan_gml_export = tables.LinkColumn('bplan-export-xplan-raster-6', verbose_name='XPlan-GML', text='Exportieren', args=[A('pk')], \
                          orderable=False, empty_values=())
-    iso_metadata = tables.LinkColumn('bplan-export-iso19139', text='Exportieren', args=[A('pk')], \
+    xplan_zip_export = tables.LinkColumn('bplan-export-xplan-raster-6-zip', verbose_name='XPlan-ZIP', text='Exportieren', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    iso_metadata = tables.LinkColumn('bplan-export-iso19139', verbose_name='Geo-Metadaten', text='Exportieren', args=[A('pk')], \
                          orderable=False, empty_values=())
     edit = tables.LinkColumn('bplan-update', text='Bearbeiten', args=[A('pk')], \
                          orderable=False, empty_values=())
@@ -38,7 +40,14 @@ class BPlanTable(tables.Table):
     planart = tables.Column(verbose_name="Planart")
     zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
     attachments = tables.Column(verbose_name="Anlagen", accessor='attachments', orderable=False)
+    xplangml = tables.Column(verbose_name="GML Uploaded", accessor='xplan_gml', empty_values=())
 
+    def render_xplangml(self, value, record):
+        if value:
+            return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
+        else:
+            return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
+    
     def render_zoom(self, value):
         ogr_geom = OGRGeometry(str(value), srs=4326)
         extent = ogr_geom.extent
@@ -46,6 +55,9 @@ class BPlanTable(tables.Table):
         return format_html('<i class="fa fa-search-plus" aria-hidden="true" onclick="mapGlobal.fitBounds([[{}, {}], [{}, {}]]);"></i>', extent[1], extent[0], extent[3], extent[2])
     
     def render_attachments(self, value, record):
+        print(record)
+        print(record.attachments.count())
+        print(value)
         number_of_attachments = value.count()
         try:
             bplanid = value.first().bplan.id
@@ -63,7 +75,7 @@ class BPlanTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "name", "gemeinde", "planart", "attachments", "xplan_gml", "iso_metadata", "edit", "delete")
+        fields = ( "zoom", "last_changed", "name", "gemeinde", "planart", "attachments", "xplangml", "xplan_gml_export", "xplan_zip_export", "iso_metadata", "edit", "delete")
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):

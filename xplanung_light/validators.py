@@ -5,6 +5,8 @@ from xplanung_light.models import AdministrativeOrganization
 from django.contrib.gis.gdal.raster.source import GDALRaster
 #https://www.tommygeorge.com/blog/validating-content-of-django-file-uploads/
 import magic, json
+from io import BytesIO
+from zipfile import ZipFile
 
 """
 Funktion zur Validierung von GeoTIFF Dateien, die als Anlage zur Darstellung des Plangebietes beigefügt
@@ -74,6 +76,63 @@ def geotiff_raster_validator(geotiff_file):
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
 
+
+"""
+Funktion zur Validierung eines hochzuladenen ZIP-Archivs
+
+Prüfungen:
+
+* MimeType: application/zip
+* Zugelassene Dateien: GML, TIFF, pdf
+* Maximale Größe einzelner unkomprimierter Datei 40MB
+* nur eine GML-Datei zulässig
+* Überprüfen der GML-Datei mit xplan_content_validator
+
+"""
+
+def xplan_upload_file_validator(xplan_file):
+    # check type
+    validation_error_messages = []
+    print(xplan_file.content_type)
+    if xplan_file.content_type not in ('application/zip'):
+        validation_error_messages.append("Es handelt sich nicht um ein ZIP-Archiv!")
+    else:
+        bytes_content = xplan_file.read()
+        file_like_object = BytesIO(bytes_content)
+        zipfile_ob = ZipFile(file_like_object)
+        gml_files = 0
+        allowed_mimetypes = ('application/gml', 'application/pdf', 'image/tiff', 'text/xml', 'text/plain', 'application/gml+xml')
+        allowed_gml_mimetypes = ('application/gml', 'application/gml+xml', 'text/xml', 'text/plain')
+        # Über einzelne Dateien iterieren
+        for file in zipfile_ob.infolist():
+            print(file.filename)
+            file_bytes = zipfile_ob.read(file.filename)
+            file_file = BytesIO(file_bytes)
+            # check MimeType
+            mime_type = magic.from_buffer(file_file.read(2048), mime=True)
+            file_file.seek(0)
+            print(mime_type)
+            if mime_type not in allowed_mimetypes:
+                validation_error_messages.append("ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
+            # check unkomprimierte Dateigröße 
+            size = file.file_size
+            print(size)
+            if size > 40000000:
+                validation_error_messages.append("Einzelne unkomprimierte Dateigröße übersteigt 40MB!")
+            # TODO: ggf. Virenscanner über Datei laufen lassen!
+            # check GML-Datei
+            if file.filename.endswith('.gml') and mime_type in allowed_gml_mimetypes:
+                gml_files = gml_files + 1
+                print("some gml file found")
+                xplan_content_validator(file_file)
+        if gml_files == 0:
+            validation_error_messages.append("ZIP-Archiv beinhaltet keine GML-Datei!")
+        if gml_files > 1:
+            validation_error_messages.append("ZIP-Archiv beinhaltet mehrere GML-Dateien - es ist aber nur eine zulässig!")   
+    #validation_error_messages.append("Error occured - level 1!")
+    if len(validation_error_messages) > 0:
+        raise forms.ValidationError(validation_error_messages)
+
 """
 Funktion zur Validierung der zu importierenden XPlan-GML Datei.
 
@@ -88,6 +147,8 @@ Validierungen:
 def xplan_content_validator(xplan_file):
     xml_string = xplan_file.read().decode('UTF-8')
     validation_error_messages = []
+    #print(xml_string)
+    #validation_error_messages.append('test')
     try:
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
         root = ET.fromstring(xml_string)

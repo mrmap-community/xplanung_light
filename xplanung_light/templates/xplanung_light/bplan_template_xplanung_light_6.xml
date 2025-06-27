@@ -18,10 +18,16 @@
       <xplan:name>{{ bplan.name }}</xplan:name>
       <xplan:erstellungsMassstab>1000</xplan:erstellungsMassstab>
       <xplan:raeumlicherGeltungsbereich>
-            {% autoescape off %}
-            {{ multisurface_geometry_25832 }}
-            {% endautoescape %}
+        {% autoescape off %}{{ multisurface_geometry_25832 }}{% endautoescape %}
       </xplan:raeumlicherGeltungsbereich>
+      {% for attachment in attachments %}<xplan:externeReferenz>
+        <xplan:XP_SpezExterneReferenz>
+          <!--<xplan:art>Dokument</xplan:art>-->
+          <xplan:referenzName>{{ attachment.name }}</xplan:referenzName>
+          <xplan:referenzURL>{{ attachment.file_name }}</xplan:referenzURL>
+          <xplan:typ>{{ attachment.typ }}</xplan:typ>
+        </xplan:XP_SpezExterneReferenz>
+      </xplan:externeReferenz>{% endfor %}
       <xplan:gemeinde>
         <xplan:XP_Gemeinde>
           <xplan:ags>{{ bplan.gemeinde.ls }}{{ bplan.gemeinde.ks }}{{ bplan.gemeinde.gs }}</xplan:ags>
@@ -29,24 +35,12 @@
         </xplan:XP_Gemeinde>
       </xplan:gemeinde>
       <xplan:planArt>{{ bplan.planart }}</xplan:planArt>
-      {% if bplan.rechtsstand %}
-      <xplan:rechtsstand>{{ bplan.rechtsstand }}</xplan:rechtsstand>
-      {% endif %}
-      {% if bplan.aufstellungsbeschluss_datum %}
-      <xplan:aufstellungsbeschlussDatum>{{ bplan.aufstellungsbeschluss_datum|date:"Y-m-d" }}</xplan:aufstellungsbeschlussDatum>
-      {% endif %}
-      {% if bplan.satzungsbeschluss_datum %}
-      <xplan:satzungsbeschlussDatum>{{ bplan.satzungsbeschluss_datum|date:"Y-m-d" }}</xplan:satzungsbeschlussDatum>
-      {% endif %}
-      {% if bplan.rechtsverordnungs_datum %}
-      <xplan:rechtsverordnungsDatum>{{ bplan.rechtsverordnungs_datum|date:"Y-m-d" }}</xplan:rechtsverordnungsDatum>
-      {% endif %}
-      {% if bplan.inkrafttretens_datum %}
-      <xplan:inkrafttretensDatum>{{ bplan.inkrafttretens_datum|date:"Y-m-d" }}</xplan:inkrafttretensDatum>
-      {% endif %}
-      {% if bplan.ausfertigungs_datum %}
-      <xplan:ausfertigungsDatum>{{ bplan.ausfertigungs_datum|date:"Y-m-d" }}</xplan:ausfertigungsDatum>
-      {% endif %}
+      {% if bplan.rechtsstand %}<xplan:rechtsstand>{{ bplan.rechtsstand }}</xplan:rechtsstand>{% else %}<!-- rechtsstand nicht angegeben -->{% endif %}
+      {% if bplan.aufstellungsbeschluss_datum %}<xplan:aufstellungsbeschlussDatum>{{ bplan.aufstellungsbeschluss_datum|date:"Y-m-d" }}</xplan:aufstellungsbeschlussDatum>{% else %}<!-- aufstellungsbeschlussDatum nicht angegeben -->{% endif %}
+      {% if bplan.satzungsbeschluss_datum %}<xplan:satzungsbeschlussDatum>{{ bplan.satzungsbeschluss_datum|date:"Y-m-d" }}</xplan:satzungsbeschlussDatum>{% else %}<!-- satzungsbeschlussDatum nicht angegeben -->{% endif %}
+      {% if bplan.rechtsverordnungs_datum %}<xplan:rechtsverordnungsDatum>{{ bplan.rechtsverordnungs_datum|date:"Y-m-d" }}</xplan:rechtsverordnungsDatum>{% else %}<!-- rechtsverordnungsDatum nicht angegeben -->{% endif %}
+      {% if bplan.inkrafttretens_datum %}<xplan:inkrafttretensDatum>{{ bplan.inkrafttretens_datum|date:"Y-m-d" }}</xplan:inkrafttretensDatum>{% else %}<!-- inkrafttretensDatum nicht angegeben -->{% endif %}
+      {% if bplan.ausfertigungs_datum %}<xplan:ausfertigungsDatum>{{ bplan.ausfertigungs_datum|date:"Y-m-d" }}</xplan:ausfertigungsDatum>{% else %}<!-- ausfertigungsDatum nicht angegeben -->{% endif %}
       <xplan:staedtebaulicherVertrag>{{ bplan.staedtebaulicher_vertrag|lower }}</xplan:staedtebaulicherVertrag>
       <xplan:erschliessungsVertrag> {{ bplan.erschliessungs_vertrag|lower }}</xplan:erschliessungsVertrag>
       <xplan:durchfuehrungsVertrag>{{ bplan.durchfuehrungs_vertrag|lower }}</xplan:durchfuehrungsVertrag>

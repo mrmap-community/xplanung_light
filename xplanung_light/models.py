@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 import uuid, os
-from simple_history.models import HistoricalRecords
+from simple_history.models import HistoricalRecords, HistoricForeignKey
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models.functions import Envelope
 from django.contrib.gis.gdal.raster.source import GDALRaster
@@ -28,6 +28,23 @@ class GenericMetadata(models.Model):
         self.owned_by_user= self.request.user
         super().save(*args, **kwargs)"""
 
+"""
+Klasse um die Kontaktdaten über eine Relation zu Verwalten
+"""
+"""
+class ContactOrganization(GenericMetadata):
+
+    name = models.CharField(max_length=1024, verbose_name='Name der Kontaktorganisation', help_text='Offizieller Name der Organisation - z.B. Bauamt Pirmasens')
+    unit = models.CharField(max_length=1024, verbose_name='Name der Einheit/Referat', help_text='Name der zuständigen Einheit innerhalb der Organisation - z.B. Auskunftsstelle Bauleitplanung')
+    phone = models.CharField(max_length=256, blank=True, null=True, verbose_name='Telefon')
+    facsimile = models.CharField(max_length=256, blank=True, null=True, verbose_name='Fax')
+    email = models.EmailField(max_length=512, blank=True, null=True, verbose_name='EMail')
+    homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
+
+    def __str__(self):
+        # Returns a string representation of a contact organization.
+        return f"{self.name} ({self.unit})"
+"""
 
 # administrative organizations
 class AdministrativeOrganization(GenericMetadata):
@@ -278,12 +295,17 @@ class BPlanSpezExterneReferenz(GenericMetadata):
     #typ [1], XP_ExterneReferenzTyp
     typ = models.CharField(null=False, blank=False, max_length=5, choices=REF_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des referierten Dokuments oder Rasterplans', help_text="Typ / Inhalt des referierten Dokuments oder Rasterplans", db_index=True)
     attachment = models.FileField(null = True, blank = True, upload_to='uploads', verbose_name="Dokument")
-    bplan = models.ForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
-
+    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
+    #bplan = models.ForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
     
+    # Anwendungsspezifische Felder
+    aus_archiv = models.BooleanField(null=False, blank=False, default=False, verbose_name="Anhang stammt aus hochgeladenem ZIP-Archiv", help_text="Gibt an, ob der Anhang ursprünglich aus einem hochgeladenem ZIP-Archiv stammt.")
+    history = HistoricalRecords()
+
     def save(self, *args, **kwargs):
         # https://stackoverflow.com/questions/7514964/django-how-to-create-a-file-and-save-it-to-a-models-filefield
-        if self.typ == '1070': # Karte
+        # TODO - check if really needed - cause reading files from zip don't allow to have a temporary_file_path for each zipped file!
+        if self.typ == '****': # 1070 Karte
             #raster_file = self.attachment.file.read()
             try:
                 # https://dev.to/doridoro/what-is-contentfile-in-django-6nm
@@ -322,6 +344,10 @@ class BPlanSpezExterneReferenz(GenericMetadata):
             except (IOError, SyntaxError) as e:
                 raise ValueError(f"Konnte GeoTIFF nicht nach UTM32 transformieren. -- {e}")
         super().save(*args, **kwargs)
+
+    @property
+    def file_name(self):
+        return os.path.basename(self.attachment.file.name)
 
     def __str__(self):
             """Returns a string representation of SpezExterneReferenz."""
