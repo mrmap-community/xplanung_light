@@ -1,6 +1,6 @@
 import django_tables2 as tables
 from django_tables2.utils import A
-from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz
+from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung
 from django.urls import reverse
 from django.utils.html import format_html
 from django.contrib.gis.gdal import OGRGeometry
@@ -23,6 +23,24 @@ class BPlanSpezExterneReferenzTable(tables.Table):
         fields = ( "id", "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
 
 
+class BPlanBeteiligungTable(tables.Table):
+
+    edit = tables.LinkColumn('bplanbeteiligung-update', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
+                         orderable=False, empty_values=())
+    delete = tables.LinkColumn('bplanbeteiligung-delete', text='Löschen', args=[A('bplan.id'), A('pk')], \
+                         orderable=False, empty_values=())
+    #attachment = tables.Column(verbose_name="Ablage", orderable=False)
+    #download = tables.LinkColumn('bplanbeteiligung-download', text='Download', args=[A('pk')], \
+    #                     orderable=False, empty_values=())
+    #name = tables.Column(verbose_name="Name/Bezeichnung")
+    typ = tables.Column(verbose_name="Art der Beteiligung")
+
+    class Meta:
+        model = BPlanBeteiligung
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "edit", "delete")
+
+
 class BPlanTable(tables.Table):
     #download = tables.LinkColumn('gedis-document-pdf', text='Download', args=[A('pk')], \
     #                     orderable=False, empty_values=())
@@ -40,6 +58,7 @@ class BPlanTable(tables.Table):
     planart = tables.Column(verbose_name="Planart")
     zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
     attachments = tables.Column(verbose_name="Anlagen", accessor='attachments', orderable=False)
+    beteiligungen = tables.Column(verbose_name="Beteiligungen", accessor='beteiligungen', orderable=False)
     xplangml = tables.Column(verbose_name="GML Uploaded", accessor='xplan_gml', empty_values=())
 
     def render_xplangml(self, value, record):
@@ -55,15 +74,24 @@ class BPlanTable(tables.Table):
         return format_html('<i class="fa fa-search-plus" aria-hidden="true" onclick="mapGlobal.fitBounds([[{}, {}], [{}, {}]]);"></i>', extent[1], extent[0], extent[3], extent[2])
     
     def render_attachments(self, value, record):
-        print(record)
-        print(record.attachments.count())
-        print(value)
+        #print(record)
+        #print(record.attachments.count())
+        #print(value)
         number_of_attachments = value.count()
         try:
             bplanid = value.first().bplan.id
         except:
             return format_html('<a href="' + reverse('bplanattachment-create', kwargs={'bplanid': record.pk}) + '">' +  str(number_of_attachments) + '</a>')
         return format_html('<a href="' + reverse('bplanattachment-list', kwargs={'bplanid': bplanid}) + '">' +  str(number_of_attachments) + '</a>')
+    
+    def render_beteiligungen(self, value, record):
+        number_of_beteiligungen = value.count()
+        try:
+            bplanid = value.first().bplan.id
+        except:
+            return format_html('<a href="' + reverse('bplanbeteiligung-create', kwargs={'bplanid': record.pk}) + '">' +  str(number_of_beteiligungen) + '</a>')
+        return format_html('<a href="' + reverse('bplanbeteiligung-list', kwargs={'bplanid': bplanid}) + '">' +  str(number_of_beteiligungen) + '</a>')
+
     """
     geojson = Column(
         accessor=A('geojson'),

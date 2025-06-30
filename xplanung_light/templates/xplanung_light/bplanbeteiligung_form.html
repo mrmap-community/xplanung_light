@@ -1,0 +1,11 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% load crispy_forms_tags %}
+{% bootstrap_css %}
+{% block title %}
+    Beteiligungsverfahren zum Bebauungsplan
+{% endblock %}
+{% block content %}
+<p>Beteiligung zum Bebauungsplan <b>{{ bplan.name }}</b> der Kommune <b>{{ bplan.gemeinde }}</b></p>
+{% crispy form %}
+{% endblock %}

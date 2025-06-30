@@ -1,6 +1,6 @@
 from django.http import HttpResponse
 from django.shortcuts import render
-from xplanung_light.forms import RegistrationForm, BPlanCreateForm, BPlanUpdateForm
+from xplanung_light.forms import RegistrationForm, BPlanCreateForm, BPlanUpdateForm, BPlanBeteiligungForm
 from django.shortcuts import redirect
 from django.contrib.auth import login
 from xplanung_light.models import AdministrativeOrganization
@@ -8,11 +8,11 @@ from django.contrib.gis.geos import GEOSGeometry
 from openpyxl import Workbook, load_workbook
 import requests
 from django.views.generic import (ListView, CreateView, UpdateView, DeleteView)
-from xplanung_light.models import AdministrativeOrganization, BPlan, BPlanSpezExterneReferenz
+from xplanung_light.models import AdministrativeOrganization, BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung
 from django.urls import reverse_lazy
 from leaflet.forms.widgets import LeafletWidget
 from django_tables2 import SingleTableView
-from xplanung_light.tables import BPlanTable
+from xplanung_light.tables import BPlanTable, BPlanBeteiligungTable
 from django.views.generic import DetailView
 from django.contrib.gis.db.models.functions import AsGML, Transform, Envelope
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
@@ -603,7 +603,6 @@ class AdministrativeOrganizationPublishingListView(SingleTableView):
 class BPlanSpezExterneReferenzCreateView(CreateView):
     model = BPlanSpezExterneReferenz
     form_class = BPlanSpezExterneReferenzForm
-    #fields = ["typ", "name", "attachment"]
     
     def get_context_data(self, **kwargs):
         bplanid = self.kwargs['bplanid']
@@ -696,3 +695,99 @@ class BPlanSpezExterneReferenzDeleteView(DeleteView):
         return reverse_lazy("bplanattachment-list", kwargs={'bplanid': self.kwargs['bplanid']})
     
 
+"""
+Klassen zur Verwaltung von Beteiligungen
+"""
+class BPlanBeteiligungCreateView(CreateView):
+    model = BPlanBeteiligung
+    form_class = BPlanBeteiligungForm
+    
+    def get_context_data(self, **kwargs):
+        bplanid = self.kwargs['bplanid']
+        context = super().get_context_data(**kwargs)
+        context['bplan'] = BPlan.objects.get(pk=bplanid)
+        return context
+
+    # reduce choices for invoice to own invoices    
+    # https://stackoverflow.com/questions/48089590/limiting-choices-in-foreign-key-dropdown-in-django-using-generic-views-createv
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class=None)
+        #form.fields['bplan'].queryset = form.fields['bplan'].queryset.filter(owned_by_user=self.request.user.id)
+        #https://django-bootstrap-datepicker-plus.readthedocs.io/en/latest/Walkthrough.html
+        #form.fields['issue_date'].widget = DatePickerInput()
+        #form.fields['due_date'].widget = DatePickerInput()
+        #form.fields['actual_delivery_date'].widget = DatePickerInput()
+        return form
+    
+    def get_form_kwargs(self):
+        form = super().get_form_kwargs()
+        bplanid = self.kwargs['bplanid']
+        
+        form['initial'].update({'bplan': BPlan.objects.get(pk=bplanid)})
+        #form['initial'].update({'owned_by_user': self.request.user})
+        return form
+        #return super().get_form_kwargs()
+
+    def form_valid(self, form):
+        bplanid = self.kwargs['bplanid']
+        form.instance.bplan = BPlan.objects.get(pk=bplanid)
+        # TODO: check ob der Extent des Rasterbilds innerhalb der Abgrenzung der AdministrativeUnit liegt ...  
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("bplanbeteiligung-list", kwargs={'bplanid': self.kwargs['bplanid']})   
+    
+
+class BPlanBeteiligungListView(SingleTableView):
+    model = BPlanBeteiligung
+    table_class = BPlanBeteiligungTable
+    template_name = 'xplanung_light/bplanbeteiligung_list.html'
+    success_url = reverse_lazy("bplanbeteiligung-list") 
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data()
+        context['bplanid'] = self.kwargs['bplanid']
+        context['bplan'] = BPlan.objects.get(pk=self.kwargs['bplanid'])
+        return context
+    
+    def get_queryset(self):
+        bplanid = self.kwargs['bplanid']
+        if bplanid:
+            return self.model.objects.filter(
+            bplan=BPlan.objects.get(pk=bplanid)
+        )#.order_by('-created')
+        else:
+            return self.model.objects#.order_by('-created')
+        
+
+class BPlanBeteiligungUpdateView(UpdateView):
+    model = BPlanBeteiligung
+    #fields = ["typ", "name", "attachment"]
+    form_class = BPlanBeteiligungForm
+
+    def get_context_data(self, **kwargs):
+        bplanid = self.kwargs['bplanid']
+        context = super().get_context_data(**kwargs)
+        context['bplan'] = BPlan.objects.get(pk=bplanid)
+        return context
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class=None)
+        #form.fields['bplan'].queryset = form.fields['bplan'].queryset.filter(owned_by_user=self.request.user.id)
+        return form 
+    
+    def form_valid(self, form):
+        bplanid = self.kwargs['bplanid']
+        form.instance.bplan = BPlan.objects.get(pk=bplanid)
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("bplanbeteiligung-list", kwargs={'bplanid': self.kwargs['bplanid']})
+
+
+class BPlanBeteiligungDeleteView(DeleteView):
+    model = BPlanBeteiligung
+
+    def get_success_url(self):
+        return reverse_lazy("bplanbeteiligung-list", kwargs={'bplanid': self.kwargs['bplanid']})
+    

@@ -216,6 +216,31 @@ class BPlan(XPlan):
         """Returns a string representation of a BPlan."""
         return f"{self.name} ({self.get_planart_display()}) - {self.gemeinde}"
     
+"""
+Um die verschieden Beteiligungsverfahren abbilden zu können, macht es Sinn die Verfahren über einen ForeignKey an die 
+jeweilige Planung zu hängen. Das erfolgt ähnlich wie bei den Anlagen. In XPlanung gibt es 4 Datumsfelder, die der jeweiligen 
+Kardinalität von 0..*. Diese können aus 
+"""
+class BPlanBeteiligung(GenericMetadata):
+
+    AUSLEGUNG = "1000"
+    TOEB = "2000"
+    TYPE_CHOICES = [
+        (AUSLEGUNG,  "Öffentliche Auslegung"),
+        (TOEB, "Träger öffentlicher Belange"),
+    ]
+    bekanntmachung_datum = models.DateField(null=False, blank=False, verbose_name="Datum der Bekanntmachung", help_text="Datum der Bekanntmachung des Verfahrens")
+    start_datum = models.DateField(null=False, blank=False, verbose_name="Beginn der Beteiligung", help_text="Datum des Beginns des Beteiligungsverfahrens")
+    end_datum = models.DateField(null=False, blank=False, verbose_name="Ende der Beteiligung", help_text="Enddatum des Beteiligungsverfahrens")
+    typ = models.CharField(null=False, blank=False, max_length=5, choices=TYPE_CHOICES, default='1000', verbose_name='Typ des Beteiligungsverfahrens', help_text="Typ des Beteiligungsverfahrens - aktuell Auslegung oder TÖB", db_index=True)
+    publikation_internet = models.URLField(null=True, blank=True, verbose_name="Publikation im Internet", help_text="Link zur Publikation auf der Hompage der jeweiligen Organisation")
+    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="beteiligungen")
+    history = HistoricalRecords()
+
+    def __str__(self):
+            """Returns a string representation of Beteiligung."""
+            return f"{self.get_typ_display()} - vom {self.bekanntmachung_datum}"
+
     
 class BPlanSpezExterneReferenz(GenericMetadata):
 

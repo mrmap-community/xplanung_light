@@ -4,7 +4,7 @@ from django.utils import timezone
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
-from xplanung_light.models import BPlan, BPlanSpezExterneReferenz
+from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung
 from xplanung_light.validators import xplan_content_validator, xplan_upload_file_validator, geotiff_raster_validator
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Row, Column, Field
@@ -58,6 +58,68 @@ class BPlanSpezExterneReferenzForm(forms.ModelForm):
     class Meta:
        model = BPlanSpezExterneReferenz
        fields = ["typ", "name", "attachment"] # list of fields you want from model
+
+
+class BPlanBeteiligungForm(forms.ModelForm):
+    #typ = forms.CharField(required=True, label="Typ des Anhangs")
+    #name = forms.CharField
+    #attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super(BPlanBeteiligungForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.fields['bekanntmachung_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date() + timedelta(days=30)),
+                }
+        )
+        self.fields['start_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date() + timedelta(days=30)),
+                }
+        )
+        self.fields['end_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date() + timedelta(days=30)),
+                }
+        )
+        self.helper.layout = Layout(
+            Fieldset("Information zur Beteiligung / Offenlage", 
+                "typ",
+                Fieldset(
+                    "Datumsfelder",
+                    Row(
+                        Column(
+                            "bekanntmachung_datum",
+                        ),
+                        Column(
+                            "start_datum",
+                        ),
+                        Column(
+                            "end_datum",
+                        ),
+                    ),
+                ),
+                Fieldset(
+                    "Weitere Informationen",
+                    "publikation_internet",
+                ),
+            ),
+            Submit("submit", "Anlegen/Aktualisieren")
+        )
+        
+
+    class Meta:
+       model = BPlanBeteiligung
+       fields = ["typ", "bekanntmachung_datum", "start_datum", "end_datum", "publikation_internet"] # list of fields you want from model
 
 
 class RegistrationForm(UserCreationForm):

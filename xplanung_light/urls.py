@@ -3,6 +3,7 @@ from xplanung_light import views
 from django.contrib.auth import views as auth_views
 from xplanung_light.views import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView
 from xplanung_light.views import BPlanSpezExterneReferenzCreateView, BPlanSpezExterneReferenzUpdateView, BPlanSpezExterneReferenzDeleteView, BPlanSpezExterneReferenzListView
+from xplanung_light.views import BPlanBeteiligungCreateView, BPlanBeteiligungUpdateView, BPlanBeteiligungDeleteView, BPlanBeteiligungListView
 from xplanung_light.views import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views import AdministrativeOrganizationPublishingListView
 
@@ -30,6 +31,11 @@ urlpatterns = [
     path("bplan/<int:bplanid>/attachment/<int:pk>/update/", BPlanSpezExterneReferenzUpdateView.as_view(), name="bplanattachment-update"),
     path("bplan/<int:bplanid>/attachment/<int:pk>/delete/", BPlanSpezExterneReferenzDeleteView.as_view(), name="bplanattachment-delete"),
     path("bplanattachment/<int:pk>/", views.get_bplan_attachment, name="bplanattachment-download"),
+    # BPlan Beteiligungen
+    path("bplan/<int:bplanid>/beteiligung/create/", BPlanBeteiligungCreateView.as_view(), name="bplanbeteiligung-create"),
+    path("bplan/<int:bplanid>/beteiligung/", BPlanBeteiligungListView.as_view(), name="bplanbeteiligung-list"),
+    path("bplan/<int:bplanid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(), name="bplanbeteiligung-update"),
+    path("bplan/<int:bplanid>/beteiligung/<int:pk>/delete/", BPlanBeteiligungDeleteView.as_view(), name="bplanbeteiligung-delete"),
     # Organisationen
     path("organization/<int:pk>/ows/", views.ows, name="ows"),
     path("organization/publishing/", AdministrativeOrganizationPublishingListView.as_view(), name="organization-publishing-list"),
