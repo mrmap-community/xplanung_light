@@ -28,12 +28,12 @@
           <xplan:typ>{{ attachment.typ }}</xplan:typ>
         </xplan:XP_SpezExterneReferenz>
       </xplan:externeReferenz>{% endfor %}
-      <xplan:gemeinde>
+      {% for single_gemeinde in bplan.gemeinde.all %}<xplan:gemeinde>
         <xplan:XP_Gemeinde>
-          <xplan:ags>{{ bplan.gemeinde.ls }}{{ bplan.gemeinde.ks }}{{ bplan.gemeinde.gs }}</xplan:ags>
-          <xplan:gemeindeName>{{ bplan.gemeinde.name }}</xplan:gemeindeName>
+          <xplan:ags>{{ single_gemeinde.ls }}{{ single_gemeinde.ks }}{{ single_gemeinde.gs }}</xplan:ags>
+          <xplan:gemeindeName>{{ single_gemeinde.name }}</xplan:gemeindeName>
         </xplan:XP_Gemeinde>
-      </xplan:gemeinde>
+      </xplan:gemeinde>{% endfor %}
       <xplan:planArt>{{ bplan.planart }}</xplan:planArt>
       {% if bplan.rechtsstand %}<xplan:rechtsstand>{{ bplan.rechtsstand }}</xplan:rechtsstand>{% else %}<!-- rechtsstand nicht angegeben -->{% endif %}
       {% if bplan.aufstellungsbeschluss_datum %}<xplan:aufstellungsbeschlussDatum>{{ bplan.aufstellungsbeschluss_datum|date:"Y-m-d" }}</xplan:aufstellungsbeschlussDatum>{% else %}<!-- aufstellungsbeschlussDatum nicht angegeben -->{% endif %}

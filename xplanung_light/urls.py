@@ -6,6 +6,8 @@ from xplanung_light.views import BPlanSpezExterneReferenzCreateView, BPlanSpezEx
 from xplanung_light.views import BPlanBeteiligungCreateView, BPlanBeteiligungUpdateView, BPlanBeteiligungDeleteView, BPlanBeteiligungListView
 from xplanung_light.views import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views import AdministrativeOrganizationPublishingListView
+from xplanung_light.views import AdministrativeOrganizationAutocomplete
+from django.urls import re_path as url
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -39,4 +41,9 @@ urlpatterns = [
     # Organisationen
     path("organization/<int:pk>/ows/", views.ows, name="ows"),
     path("organization/publishing/", AdministrativeOrganizationPublishingListView.as_view(), name="organization-publishing-list"),
+    url(
+        r'^administrativeorganization-autocomplete/$',
+        AdministrativeOrganizationAutocomplete.as_view(),
+        name='administrativeorganization-autocomplete',
+    ),
 ]

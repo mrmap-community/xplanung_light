@@ -45,6 +45,7 @@ import magic, json
 import io, zipfile
 from pathlib import Path
 import os
+from dal import autocomplete
 
 """
 PROXIES = {
@@ -437,6 +438,17 @@ def register(request):
     return render(request, 'registration/register.html', context)
 
 
+class AdministrativeOrganizationAutocomplete(autocomplete.Select2QuerySetView):
+    def get_queryset(self):
+        # Don't forget to filter out results depending on the visitor !
+        if not self.request.user.is_authenticated:
+            return AdministrativeOrganization.objects.none()
+        qs = AdministrativeOrganization.objects.all()
+        if self.q:
+            qs = qs.filter(name__istartswith=self.q)
+        return qs
+
+
 class BPlanCreateView(CreateView):
     form_class = BPlanCreateForm
     model = BPlan
@@ -491,7 +503,7 @@ class BPlanListView(FilterView, SingleTableView):
         #https://github.com/jazzband/django-simple-history/issues/407
         # https://stackoverflow.com/questions/43364451/how-to-get-the-last-changed-object-in-django-simple-history
         
-        qs = BPlan.objects.select_related('gemeinde').annotate(last_changed=Subquery(
+        qs = BPlan.objects.prefetch_related('gemeinde').annotate(last_changed=Subquery(
             BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
         )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
         #.prefetch_related('attachments')

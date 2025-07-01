@@ -59,6 +59,8 @@ class BPlanTable(tables.Table):
     zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
     attachments = tables.Column(verbose_name="Anlagen", accessor='attachments', orderable=False)
     beteiligungen = tables.Column(verbose_name="Beteiligungen", accessor='beteiligungen', orderable=False)
+    # manytomany relations are handled automatically!
+    #gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
     xplangml = tables.Column(verbose_name="GML Uploaded", accessor='xplan_gml', empty_values=())
 
     def render_xplangml(self, value, record):

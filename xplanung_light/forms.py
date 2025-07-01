@@ -4,12 +4,14 @@ from django.utils import timezone
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
-from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung
+from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization
 from xplanung_light.validators import xplan_content_validator, xplan_upload_file_validator, geotiff_raster_validator
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Row, Column, Field
 from crispy_forms.bootstrap import TabHolder, Tab, AccordionGroup, Accordion
 from django.forms import ModelForm
+from django_select2.forms import Select2MultipleWidget
+from dal import autocomplete
 
 class BPlanImportForm(forms.Form):
     confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
@@ -131,7 +133,28 @@ class RegistrationForm(UserCreationForm):
         fields = ['username', 'email', 'password1', 'password2']
 
 # https://docs.djangoproject.com/en/5.2/ref/forms/fields/
-class GemeindeSelect(forms.Select):
+# https://stackoverflow.com/questions/72004112/how-do-i-use-a-select2-multiple-select-in-a-django-crispy-form
+class GemeindeSelect(forms.SelectMultiple):
+
+    def create_option(
+        self, name, value, label, selected, index, subindex=None, attrs=None
+    ):
+        option = super().create_option(
+            name, value, label, selected, index, subindex, attrs
+        )
+        if value:
+            option["attrs"]["bbox"] = value.instance.bbox
+        return option
+
+"""
+Neue Klasse zur Verbesserung des Formulars der Zuordnung mehrerer Gebietskörperschaften zu einem 
+XPlan. Ist abhängig von django-autocomplete-light und select2
+"""
+class GemeindeSelect2(autocomplete.ModelSelect2Multiple):
+
+    def _init_(self):
+        self.url = 'administrativeorganization-autocomplete'
+
 
     def create_option(
         self, name, value, label, selected, index, subindex=None, attrs=None
@@ -145,7 +168,6 @@ class GemeindeSelect(forms.Select):
 
 
 class BPlanCreateForm(ModelForm):
-
     """
     for crispy-forms
     """
@@ -192,7 +214,12 @@ class BPlanCreateForm(ModelForm):
                 }
         )
         # https://forum.djangoproject.com/t/model-choice-field-how-to-add-attributes-to-the-options/37782
-        self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
+        # https://django-autocomplete-light.readthedocs.io/en/master/_modules/dal_select2/widgets.html#ModelSelect2Multiple
+        # mixin - erbt von 3 Kassen !
+        # alter Weg (einfache Select option Liste):
+        # self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
+        # Neuer Weg - django-autocomplete-light/select2
+        self.fields['gemeinde'].widget = GemeindeSelect2(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
         """
         self.helper.layout = Layout(
             TabHolder(
@@ -293,6 +320,10 @@ class BPlanCreateForm(ModelForm):
                   "durchfuehrungs_vertrag",
                   "gruenordnungsplan",
                 ]
+        # alternative to invokation above - but no possibility to have further attributes?
+        #widgets = {
+        #    'gemeinde': autocomplete.ModelSelect2Multiple(url='administrativeorganization-autocomplete')
+        #}
 
 
 class BPlanUpdateForm(ModelForm):
@@ -343,7 +374,8 @@ class BPlanUpdateForm(ModelForm):
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
+        self.fields['gemeinde'].widget = GemeindeSelect2(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
+        #self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
         self.helper.layout = Layout(
             Fieldset(
                 "Pflichtfelder XPlanung",

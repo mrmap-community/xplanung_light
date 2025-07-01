@@ -75,6 +75,23 @@ class XPlanung():
         # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
         gemeinde_name = root.find("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/xplan:gemeindeName", ns).text
         gemeinde_ags = root.find("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/xplan:ags", ns).text
+
+        gemeinden = root.findall("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde", ns)
+        all_administrativeorganizations_exists = True
+        orgas = []
+        # Problem: Funktioniert nicht für Verbandsgemeinden! - Die dürfen nicht in Liste auftauchen!
+        for gemeinde in gemeinden:
+            #print("Name: " + gemeinde.find("xplan:gemeindeName", ns).text)
+            #print("AGS: " + gemeinde.find("xplan:ags", ns).text)
+            single_gemeinde_ags = gemeinde.find("xplan:ags", ns).text
+            single_gemeinde_name = gemeinde.find("xplan:gemeindeName", ns).text
+            try:
+                orga = AdministrativeOrganization.objects.get(name=single_gemeinde_name, ls=single_gemeinde_ags[:2], ks=single_gemeinde_ags[2:5], gs=single_gemeinde_ags[5:8])
+                orgas.append(orga)
+            except:
+                all_administrativeorganizations_exists = False
+                raise forms.ValidationError("Fehler beim Abspeichern des neuen BPlan-Objekts - nicht alle angegebenen Gemeinden wurden in der Datenbank gefunden!")
+                return False
         # DEBUG Ausgaben
         #print("Name des BPlans: " + name)
         #print("Gemeinde des BPlans: " + gemeinde_name)
@@ -84,10 +101,15 @@ class XPlanung():
         #0723507001
         #print(gemeinde_ags[:2] + " - " + gemeinde_ags[2:5] + " - " + gemeinde_ags[5:7] + " - " + gemeinde_ags[7:10])
         # Selektion einer Organisation anhand des AGS - Existenz wurde vorher schon durch Validierung geprüft
-        orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
+        #orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
         # Test, ob ein BPlan mit gleichem name und gemeinde schon existiert
         try:
-            existing_bplan = BPlan.objects.get(name=name, gemeinde=orga)
+            #existing_bplan = BPlan.objects.get(name=name, gemeinde=orgas)
+            existing_bplan_query = BPlan.objects.filter(name=name)
+            for orga in orgas:
+                existing_bplan_query = existing_bplan_query.filter(gemeinde=orga)
+            existing_bplan = existing_bplan_query.get()
+            # TODO testen ob mehrere zurückgeliefert werden ...
             #print(existing_bplan)
             if overwrite:
                 existing_bplan.planart = planart
@@ -104,7 +126,8 @@ class XPlanung():
         bplan.name = name
         bplan.planart = planart
         bplan.geltungsbereich = geometry
-        bplan.gemeinde = orga
+        bplan.save()
+        bplan.gemeinde.set(orgas)
         bplan.xplan_gml = self.xml_string.strip()
         bplan.xplan_gml_version = "6.0"
         try:
@@ -144,6 +167,24 @@ class XPlanung():
         # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
         gemeinde_name = root.find("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/xplan:gemeindeName", ns).text
         gemeinde_ags = root.find("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/xplan:ags", ns).text
+
+        gemeinden = root.findall("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde", ns)
+        all_administrativeorganizations_exists = True
+        orgas = []
+        # Problem: Funktioniert nicht für Verbandsgemeinden! - Die dürfen nicht in Liste auftauchen!
+        for gemeinde in gemeinden:
+            #print("Name: " + gemeinde.find("xplan:gemeindeName", ns).text)
+            #print("AGS: " + gemeinde.find("xplan:ags", ns).text)
+            single_gemeinde_ags = gemeinde.find("xplan:ags", ns).text
+            single_gemeinde_name = gemeinde.find("xplan:gemeindeName", ns).text
+            try:
+                orga = AdministrativeOrganization.objects.get(name=single_gemeinde_name, ls=single_gemeinde_ags[:2], ks=single_gemeinde_ags[2:5], gs=single_gemeinde_ags[5:8])
+                orgas.append(orga)
+            except:
+                all_administrativeorganizations_exists = False
+                raise forms.ValidationError("Fehler beim Abspeichern des neuen BPlan-Objekts - nicht alle angegebenen Gemeinden wurden in der Datenbank gefunden!")
+                return False
+
         referenzen = root.findall("gml:featureMember/xplan:BP_Plan/xplan:externeReferenz", ns)
         #print(referenzen)
         # DEBUG Ausgaben
@@ -155,11 +196,14 @@ class XPlanung():
         #0723507001
         #print(gemeinde_ags[:2] + " - " + gemeinde_ags[2:5] + " - " + gemeinde_ags[5:7] + " - " + gemeinde_ags[7:10])
         # Selektion einer Organisation anhand des AGS - Existenz wurde vorher schon durch Validierung geprüft
-        orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
+        #orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
         # Test, ob ein BPlan mit gleichem name und gemeinde schon existiert
         try:
-            existing_bplan = BPlan.objects.get(name=name, gemeinde=orga)
-            print(existing_bplan)
+            existing_bplan_query = BPlan.objects.filter(name=name)
+            for orga in orgas:
+                existing_bplan_query = existing_bplan_query.filter(gemeinde=orga)
+            existing_bplan = existing_bplan_query.get()
+            # TODO testen ob mehrere zurückgeliefert werden ...
             if overwrite:
                 existing_bplan.planart = planart
                 existing_bplan.geltungsbereich = geometry
@@ -178,7 +222,8 @@ class XPlanung():
         bplan.name = name
         bplan.planart = planart
         bplan.geltungsbereich = geometry
-        bplan.gemeinde = orga
+        bplan.save()
+        bplan.gemeinde.set(orgas)
         bplan.xplan_gml = self.xml_string.strip()
         bplan.xplan_gml_version = "6.0"
         try:

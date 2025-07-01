@@ -132,8 +132,9 @@ class XPlan(GenericMetadata):
     #externeReferenz, [0..*], XP_SpezExterneReferenz
     #texte [0..*], XP_TextAbschnitt
     #begruendungsTexte [0..*], XP_BegruendungAbschnitt
-    history = HistoricalRecords(inherit=True)
-
+    # https://stackoverflow.com/questions/35312334/how-can-i-store-history-of-manytomanyfield-using-django-simple-history
+    #history = HistoricalRecords(inherit=True, m2m_fields=)
+    #history = HistoricalRecords(inherit=True)
     xplan_gml = models.FileField(null = True, blank = True, verbose_name="XPlan GML-Dokument", help_text="")
     xplan_gml_version = models.CharField(null=True, blank=True, max_length=5, verbose_name='XPlan GML-Dokument Version', help_text='')
 
@@ -175,7 +176,9 @@ class BPlan(XPlan):
 
     #gemeinde [1..*], XP_Gemeinde
     # Zur Vereinfachung zunächst nur Kardinalität 1 implementieren
-    gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
+    #gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
+    gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
+    history = HistoricalRecords(m2m_fields=[gemeinde])
     #planaufstellendeGemeinde [0..*], XP_Gemeinde
     #plangeber [0..*], XP_Plangeber
     #planArt [1..*], BP_PlanArt
@@ -214,7 +217,7 @@ class BPlan(XPlan):
 
     def __str__(self):
         """Returns a string representation of a BPlan."""
-        return f"{self.name} ({self.get_planart_display()}) - {self.gemeinde}"
+        return f"{self.name} ({self.get_planart_display()})"
     
 """
 Um die verschieden Beteiligungsverfahren abbilden zu können, macht es Sinn die Verfahren über einen ForeignKey an die 
@@ -230,8 +233,8 @@ class BPlanBeteiligung(GenericMetadata):
         (TOEB, "Träger öffentlicher Belange"),
     ]
     bekanntmachung_datum = models.DateField(null=False, blank=False, verbose_name="Datum der Bekanntmachung", help_text="Datum der Bekanntmachung des Verfahrens")
-    start_datum = models.DateField(null=False, blank=False, verbose_name="Beginn der Beteiligung", help_text="Datum des Beginns des Beteiligungsverfahrens")
-    end_datum = models.DateField(null=False, blank=False, verbose_name="Ende der Beteiligung", help_text="Enddatum des Beteiligungsverfahrens")
+    start_datum = models.DateField(null=False, blank=False, verbose_name="Beginn", help_text="Datum des Beginns des Beteiligungsverfahrens")
+    end_datum = models.DateField(null=False, blank=False, verbose_name="Ende", help_text="Enddatum des Beteiligungsverfahrens")
     typ = models.CharField(null=False, blank=False, max_length=5, choices=TYPE_CHOICES, default='1000', verbose_name='Typ des Beteiligungsverfahrens', help_text="Typ des Beteiligungsverfahrens - aktuell Auslegung oder TÖB", db_index=True)
     publikation_internet = models.URLField(null=True, blank=True, verbose_name="Publikation im Internet", help_text="Link zur Publikation auf der Hompage der jeweiligen Organisation")
     bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="beteiligungen")

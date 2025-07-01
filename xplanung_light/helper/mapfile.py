@@ -120,7 +120,10 @@ class MapfileGenerator():
         # TODO Metadatengenerator für "Alle BPläne der Kommune X"
         metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + "umring" + "/")
         umring_layer["metadata"] = metadata
-        umring_layer["filter"] = "( '[gemeinde_id]' = '" + str(orga.pk) + "' )"
+        #umring_layer["filter"] = "( '[gemeinde_id]' = '" + str(orga.pk) + "' )"
+        umring_layer["filter"] = ""
+        umring_layer["data"] = "SELECT bplan.* FROM xplanung_light_bplan bplan INNER JOIN xplanung_light_bplan_gemeinde gemeinde ON bplan.id = gemeinde.bplan_id WHERE gemeinde.administrativeorganization_id = " + str(orga.pk)
+        # TODO: add active Filter when it will be available
         umring_layer["classes"] = []
         umring_layer["classes"].append(layer_class)
         map["layers"].append(umring_layer)

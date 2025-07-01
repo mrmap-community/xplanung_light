@@ -168,14 +168,16 @@ def xplan_content_validator(xplan_file):
                 'xsd': 'http://www.w3.org/2001/XMLSchema',
             }
             result = {}
-            # check Pflichtfelder aus XPlannung Standard - name, geltungsbereich, gemeinde, planart
+            # check Pflichtfelder aus XPlanung Standard - name, geltungsbereich, gemeinde, planart
             mandatory_fields = {
                 'name': {'xpath': 'gml:featureMember/xplan:BP_Plan/', 'type': 'text', 'xplan_element': 'xplan:name'},
                 'planart': {'xpath': 'gml:featureMember/xplan:BP_Plan/', 'type': 'text', 'xplan_element': 'xplan:planArt'},
-                'gemeinde_name': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:gemeindeName'},
-                'gemeinde_ags': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:ags'},
+                'gemeinde': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde', 'type': 'array'},
+                #'gemeinde_name': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:gemeindeName'},
+                #'gemeinde_ags': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:ags'},
             }
             # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
+            # TODO - check für mehrere XP_Gemeinde-Objekte
             # Dummy gemeinde_ags
             gemeinde_ags = "00000000"
             for key, value in mandatory_fields.items():
@@ -190,7 +192,31 @@ def xplan_content_validator(xplan_file):
                         result[key] = test
                     else:
                        validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!")) 
-            #Erst mal alle Geometrietypen erlauben - ggf. Einschränkung auf MultiPolygon und Polygon
+                else:
+                    # kein direktes text Element
+                    if value['type'] == 'array':
+                        test = root.findall(value['xpath'], ns)
+                        if len(test) == 0:
+                            validation_error_messages.append(forms.ValidationError("Es wurden keine Pflichtelemente für *" + key +  "* gefunden!"))
+                        else:
+                            if key == 'gemeinde':
+                                for gemeinde in test:
+                                    # Prüfen, ob die Pflichtattribute für das Objekt XP_Gemeinde im XML vorhanden sind und die zugehörigen AdministrativeOrganizations auch 
+                                    # in der DB existieren
+                                    gemeinde_name = gemeinde.find('xplan:gemeindeName', ns).text
+                                    gemeinde_ags = gemeinde.find('xplan:ags', ns).text
+                                    if gemeinde_ags:
+                                        try:
+                                            orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
+                                        except:
+                                            orga = None
+                                            validation_error_messages.append(forms.ValidationError("Es wurden kein Eintrag für eine Gemeinde mit dem AGS  *" + gemeinde_ags +  "* in der Datenbank gefunden!"))
+                                        if orga and gemeinde_name:
+                                            if orga.name != gemeinde_name:
+                                                validation_error_messages.append(forms.ValidationError("Das Element xplan:gemeindeName: **" + result['gemeinde_name'] + "** stimmt nicht mit dem name der Organisation aus der DB für den AGS " + orga.ags + ": **" + orga.name + "** überein!"))
+                                    else:
+                                        validation_error_messages.append(forms.ValidationError("Es wurden kein ags-Attribut im XP_Gemeinde-Objekt gefunden!"))
+            # Erst mal alle Geometrietypen erlauben - ggf. Einschränkung auf MultiPolygon und Polygon
             geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/*", ns) 
             if geltungsbereich_element == None:
                 validation_error_messages.append(forms.ValidationError("Geltungsbereich nicht gefunden!"))
@@ -209,16 +235,6 @@ def xplan_content_validator(xplan_file):
                         geometry.transform(4326)
                     except:
                         validation_error_messages.append(forms.ValidationError("Geometrie des Geltungsbereichs lässt sich nicht in EPSG:4326 transformieren!"))
-            # Test, ob eine Organisation mit dem im GML vorhandenen AGS in der Datenbank vorhanden ist 
-            try:
-                orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
-            except:
-                validation_error_messages.append(forms.ValidationError("Es wurde keine Organisation mit dem AGS *" + gemeinde_ags + "* im System gefunden!"))
-            # Test, ob der name des XP_Gemeinde dem name der Organisation in der DB entspricht
-            if orga and 'name' in result:
-                if orga.name != result['gemeinde_name']:
-                    validation_error_messages.append(forms.ValidationError("Das Element xplan:gemeindeName: **" + result['gemeinde_name'] + "** stimmt nicht mit dem name der Organisation aus der DB für den AGS " + orga.ags + ": **" + orga.name + "** überein!"))
-
     except:
         validation_error_messages.append(forms.ValidationError("XML-Dokument konnte nicht geparsed werden!"))
     # Falls mindestens ein ValidationError aufgetreten ist
