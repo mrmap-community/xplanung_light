@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from xplanung_light import views
 from django.contrib.auth import views as auth_views
 from xplanung_light.views import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView
@@ -46,4 +46,5 @@ urlpatterns = [
         AdministrativeOrganizationAutocomplete.as_view(),
         name='administrativeorganization-autocomplete',
     ),
+    path('docs/', include('docs.urls')),
 ]
