@@ -1,4 +1,4 @@
 #https://www.sphinx-doc.org/en/master/tutorial/deploying.html
-furo==2021.11.16
+#furo==2021.11.16
 #sphinx
 #sphinx_rtd_theme
