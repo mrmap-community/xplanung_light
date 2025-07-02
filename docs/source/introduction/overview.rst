@@ -53,6 +53,7 @@ Als Verwaltungs- und Publikationstool für Bauleitpläne ist **XPlanung-light** 
 * Import und Export von XPlan-ZIP-Archiven
 * Verwaltung eines an der Praxis orientierten und historisierten Plan-Datenmodells (kompatibel zu XPlanung 6.0+)
 * Automatische Erstellung von Metadaten und OGC-Diensten für eine standardisierte Publikation der Daten
+* ...
 
 .. note::
 
