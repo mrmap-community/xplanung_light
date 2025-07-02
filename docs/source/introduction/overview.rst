@@ -45,7 +45,7 @@ verwaltet werden.
 
 .. _`XPlanung`: https://xleitstelle.de/xplanung
 
-Als Verwaltungs- und Publikationstool für Bauleitpläne ist **XPlanung-light** eher auf einer Metaebene angesiedelt.
+Als Verwaltungs- und Publikationstool für Bauleitpläne ist **XPlanung-light** eher auf einer Meta-ebene angesiedelt.
 
 **Funktionsumfang**
 
