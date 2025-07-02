@@ -57,7 +57,7 @@ Als Verwaltungs- und Publikationstool für Bauleitpläne ist **XPlanung-light** 
 
 .. note::
 
-   Das Projekt befindet sich aktuell noch in der Entwicklung. Um Interessierten Entwicklern den Einstieg in die 
+   Das Projekt befindet sich aktuell noch in der Entwicklung. Um interessierten Entwicklern den Einstieg in die 
    Materie zu erleichtern gibt es ein Tutorial: `Django-Tutorial`_.
 
    .. _Django-Tutorial: https://mrmap-community.github.io/django-tutorial/  

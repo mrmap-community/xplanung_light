@@ -145,9 +145,12 @@ Validierungen:
 * Existiert eine Organisation mit dem im XML vorhandenen AGS in der Datenbank
 """
 def xplan_content_validator(xplan_file):
-    xml_string = xplan_file.read().decode('UTF-8')
     validation_error_messages = []
-    #print(xml_string)
+    print(xplan_file.content_type)
+    if xplan_file.content_type not in ('application/gml', 'text/xml', 'text/plain'):
+        validation_error_messages.append("Es handelt sich nicht um eine GML-Datei!")
+        raise forms.ValidationError(validation_error_messages)
+    xml_string = xplan_file.read().decode('UTF-8')
     #validation_error_messages.append('test')
     try:
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
