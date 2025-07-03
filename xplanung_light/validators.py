@@ -93,7 +93,7 @@ Prüfungen:
 def xplan_upload_file_validator(xplan_file):
     # check type
     validation_error_messages = []
-    print(xplan_file.content_type)
+    #print(xplan_file.content_type)
     if xplan_file.content_type not in ('application/zip'):
         validation_error_messages.append("Es handelt sich nicht um ein ZIP-Archiv!")
     else:
@@ -146,10 +146,21 @@ Validierungen:
 """
 def xplan_content_validator(xplan_file):
     validation_error_messages = []
-    print(xplan_file.content_type)
-    if xplan_file.content_type not in ('application/gml', 'text/xml', 'text/plain'):
-        validation_error_messages.append("Es handelt sich nicht um eine GML-Datei!")
-        raise forms.ValidationError(validation_error_messages)
+    # Der content-type kann nur bei hochgeladenenen Dateien bestimmt werden. Wird eine ZIP-Datei hochgeladen und zur Laufzeit ausgepackt,
+    # dann wird der mimetype anders bestimmt. TODO: Datentyp für die Übergabe vereinheitlichen.
+    #print("Klasse des xplan_file objects: " + str(type(xplan_file)))
+    if str(type(xplan_file)) == "<class '_io.BytesIO'>":
+        mime_type = magic.from_buffer(xplan_file.read(2048), mime=True)
+        xplan_file.seek(0)
+        #print("mimetype of gml in zip: " + mime_type)
+        if mime_type not in ('application/gml', 'text/xml', 'text/plain', 'application/gml+xml'):
+            validation_error_messages.append("ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
+            raise forms.ValidationError(validation_error_messages)
+    else:
+        print("contenttype of gml in zip: " + xplan_file.content_type)
+        if xplan_file.content_type not in ('application/gml', 'text/xml', 'text/plain', 'application/gml+xml'):
+            validation_error_messages.append("Es handelt sich nicht um eine GML-Datei!")
+            raise forms.ValidationError(validation_error_messages)
     xml_string = xplan_file.read().decode('UTF-8')
     #validation_error_messages.append('test')
     try:
