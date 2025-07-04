@@ -18,3 +18,4 @@ django-autocomplete-light==3.12.1
 sphinx==7.4.7
 django-docs==0.3.3
 sphinx-rtd-theme==3.0.2
+Pillow==11.3.0

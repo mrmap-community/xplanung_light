@@ -4,6 +4,7 @@ from xplanung_light.forms import RegistrationForm, BPlanCreateForm, BPlanUpdateF
 from django.shortcuts import redirect
 from django.contrib.auth import login
 from xplanung_light.models import AdministrativeOrganization
+from xplanung_light.models import ContactOrganization
 from django.contrib.gis.geos import GEOSGeometry
 from openpyxl import Workbook, load_workbook
 import requests
@@ -12,7 +13,7 @@ from xplanung_light.models import AdministrativeOrganization, BPlan, BPlanSpezEx
 from django.urls import reverse_lazy
 from leaflet.forms.widgets import LeafletWidget
 from django_tables2 import SingleTableView
-from xplanung_light.tables import BPlanTable, BPlanBeteiligungTable
+from xplanung_light.tables import BPlanTable, BPlanBeteiligungTable, ContactOrganizationTable
 from django.views.generic import DetailView
 from django.contrib.gis.db.models.functions import AsGML, Transform, Envelope
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
@@ -28,6 +29,7 @@ from django.urls import reverse_lazy, reverse
 from xplanung_light.helper.xplanung import XPlanung
 from django.contrib import messages
 from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanSpezExterneReferenzForm, BPlanImportArchivForm
+from xplanung_light.forms import ContactOrganizationCreateForm, ContactOrganizationUpdateForm
 from django.db.models import Subquery, OuterRef
 from django.http import HttpResponse
 import mapscript
@@ -803,3 +805,32 @@ class BPlanBeteiligungDeleteView(DeleteView):
     def get_success_url(self):
         return reverse_lazy("bplanbeteiligung-list", kwargs={'bplanid': self.kwargs['bplanid']})
     
+
+# ContactOrganization - owned by group
+
+class ContactOrganizationCreateView(CreateView):
+    model = ContactOrganization
+    form_class = ContactOrganizationCreateForm
+
+    def get_success_url(self):
+        return reverse_lazy("contactorganization-list")
+    
+
+class ContactOrganizationUpdateView(UpdateView):
+    model = ContactOrganization
+    form_class = ContactOrganizationUpdateForm
+
+    def get_success_url(self):
+        return reverse_lazy("contactorganization-list")
+    
+    
+class ContactOrganizationListView(SingleTableView):
+    model = ContactOrganization
+    table_class = ContactOrganizationTable
+
+
+class ContactOrganizationDeleteView(DeleteView):
+    model = ContactOrganization
+    
+    def get_success_url(self):
+        return reverse_lazy("contactorganization-list")

@@ -5,6 +5,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization
+from xplanung_light.models import ContactOrganization
 from xplanung_light.validators import xplan_content_validator, xplan_upload_file_validator, geotiff_raster_validator
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Row, Column, Field
@@ -454,3 +455,93 @@ class BPlanUpdateForm(ModelForm):
                   "durchfuehrungs_vertrag",
                   "gruenordnungsplan",
                 ]
+        
+
+class ContactOrganizationCreateForm(ModelForm):
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.layout = Layout(
+            Fieldset(
+                "Informationen zur Kontaktstelle",
+                Row(
+                    Column(
+                        "name",
+                    ),
+                    Column(
+                        "unit",
+                    ),
+                ),
+                Row(
+                    'person',
+                ),
+                Row(
+                    Column(
+                        'email',
+                    ),
+                    Column(
+                        'phone',
+                    ),
+                    Column(
+                        'facsimile',
+                    ),
+                ),
+                Row(
+                    'homepage',
+                ),
+            ),
+            Submit("submit", "Erstellen"),
+        )
+
+    class Meta:
+        model = ContactOrganization
+
+        fields = ["name", "unit", "person", "email", "phone", "facsimile", "homepage", ]
+
+
+class ContactOrganizationUpdateForm(ModelForm):
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.layout = Layout(
+            Fieldset(
+                "Informationen zur Kontaktstelle",
+                Row(
+                    Column(
+                        "name",
+                    ),
+                    Column(
+                        "unit",
+                    ),
+                ),
+                Row(
+                    'person',
+                ),
+                Row(
+                    Column(
+                        'email',
+                    ),
+                    Column(
+                        'phone',
+                    ),
+                    Column(
+                        'facsimile',
+                    ),
+                ),
+                Row(
+                    'homepage',
+                ),
+            ),
+            Submit("submit", "Aktualisieren"),
+        )
+
+    class Meta:
+        model = ContactOrganization
+
+        fields = ["name", "unit", "person", "email", "phone", "facsimile", "homepage", ]

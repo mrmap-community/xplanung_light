@@ -1,9 +1,20 @@
 import django_tables2 as tables
 from django_tables2.utils import A
-from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung
+from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization
 from django.urls import reverse
 from django.utils.html import format_html
 from django.contrib.gis.gdal import OGRGeometry
+
+
+class ContactOrganizationTable(tables.Table):
+    edit = tables.LinkColumn('contactorganization-update', text='Bearbeiten', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    delete = tables.LinkColumn('contactorganization-delete', text='Löschen', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    class Meta:
+        model = ContactOrganization
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ['id', 'name', 'edit', 'delete']
 
 
 class BPlanSpezExterneReferenzTable(tables.Table):

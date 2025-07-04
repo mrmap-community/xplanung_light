@@ -7,6 +7,7 @@ from xplanung_light.views import BPlanBeteiligungCreateView, BPlanBeteiligungUpd
 from xplanung_light.views import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views import AdministrativeOrganizationPublishingListView
 from xplanung_light.views import AdministrativeOrganizationAutocomplete
+from xplanung_light.views import ContactOrganizationCreateView, ContactOrganizationListView, ContactOrganizationUpdateView, ContactOrganizationDeleteView
 from django.urls import re_path as url
 
 urlpatterns = [
@@ -46,5 +47,11 @@ urlpatterns = [
         AdministrativeOrganizationAutocomplete.as_view(),
         name='administrativeorganization-autocomplete',
     ),
+    # Kontaktorganisationen
+    path("contactorganization/create/", ContactOrganizationCreateView.as_view(), name="contactorganization-create"),
+    path("contactorganization/", ContactOrganizationListView.as_view(), name="contactorganization-list"),
+    path("contactorganization/<int:pk>/update/", ContactOrganizationUpdateView.as_view(), name="contactorganization-update"),
+    path("contactorganization/<int:pk>/delete/", ContactOrganizationDeleteView.as_view(), name="contactorganization-delete"),
+    # Dokumentation
     path('docs/', include('docs.urls')),
 ]

@@ -29,22 +29,62 @@ class GenericMetadata(models.Model):
         super().save(*args, **kwargs)"""
 
 """
-Klasse um die Kontaktdaten über eine Relation zu Verwalten
+Klasse um Kontaktinformationen über eine Relation zu verwalten.
+Die Kontaktinformationen können den einzelnen Gebietskörperschaften zugewiesen werden. 
+Die Kontaktinformationen in den Gebietsköperschaften selbst, sollen die offizielle Daten beinhalten und
+dienen nur als Fallback.
 """
-"""
+
 class ContactOrganization(GenericMetadata):
 
-    name = models.CharField(max_length=1024, verbose_name='Name der Kontaktorganisation', help_text='Offizieller Name der Organisation - z.B. Bauamt Pirmasens')
-    unit = models.CharField(max_length=1024, verbose_name='Name der Einheit/Referat', help_text='Name der zuständigen Einheit innerhalb der Organisation - z.B. Auskunftsstelle Bauleitplanung')
-    phone = models.CharField(max_length=256, blank=True, null=True, verbose_name='Telefon')
-    facsimile = models.CharField(max_length=256, blank=True, null=True, verbose_name='Fax')
-    email = models.EmailField(max_length=512, blank=True, null=True, verbose_name='EMail')
+    name = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Name der Kontaktorganisation', help_text='Offizieller Name der Organisation - z.B. Bauamt Pirmasens')
+    unit = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name der Einheit/Referat', help_text='Name der zuständigen Einheit innerhalb der Organisation - z.B. Auskunftsstelle Bauleitplanung')
+    person = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name einer Kontaktperson', help_text='Name einer Person die direkt kontaktiert werden kann, wenn man Informationen zu den Bauleitplänen benötigt.')
+    phone = models.CharField(blank=False, null=False, max_length=256, verbose_name='Telefon')
+    facsimile = models.CharField(blank=True, null=True, max_length=256, verbose_name='Fax')
+    email = models.EmailField(blank=False, null=False, max_length=512, verbose_name='EMail')
     homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
+    history = HistoricalRecords()
 
     def __str__(self):
         # Returns a string representation of a contact organization.
         return f"{self.name} ({self.unit})"
+
 """
+Klasse zur Abbildung einer Liste von standardisierten Lizenzen. Aus der Liste der Lizenzen können die Datenbereitsteller eine passende aussuchen.
+Die Lizenzen beziehen sich immer auf alle publizierten Pläne einer Gebietskörperschaft. Hier haben wir derzeit nicht vorgesehen,
+dass man einzelne Pläne mit getrennten Lizenzinformationen versehen kann.
+
+Als logischen Anhalt was man für die Angabe einer Lizenz benötigt, kann man das europäische Vokabular aus dem OpenData Context nehmen:
+
+    <skos:Concept rdf:about="http://europeandataportal.eu/ontologies/od-licenses#LPL-1.0" at:deprecated="false">
+        <dc:identifier>IPL-1.0</dc:identifier>
+        <skos:prefLabel xml:lang="en">IBM Public License Version 1.0 (IPL-1.0)</skos:prefLabel>
+        <skos:exactMatch rdf:resource="https://opensource.org/licenses/IPL-1.0"/>
+        <osi:isOpen rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</osi:isOpen>
+    </skos:Concept>
+
+Wir brauchen aber ggf. noch ein Symbol es den Nutzern einfacher zu machen ;-)
+
+Weitere Informationen
+https://www.w3.org/TR/vocab-dcat-3/
+https://www.w3.org/TR/vocab-dcat-3/#license-rights
+
+"""
+
+class License(GenericMetadata):
+
+    identifier = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Identifikator / Name', help_text='Offizieller Identifikatir / Name der Lizenz')
+    label = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Titel / Bezeichnung der Lizenz', help_text='Offizieller Titel / Bezeichnung der Lizenz un deutscher Sprache')
+    url = models.URLField(blank=False, null=False, verbose_name='URL', help_text='Verweis auf eine Seite mit einer genauen Beschreibung der Lizenz')
+    is_open = models.BooleanField(blank=False, null=False, default=False, verbose_name='Lizenz ist OpenData kompatibel')
+    need_source = models.BooleanField(blank=False, null=False, default=False, verbose_name='Lizenz ist erfordert Quellenangabe')
+    symbol = models.ImageField(blank=True, null=True, verbose_name='Symbol für die Anzeige')
+    history=HistoricalRecords()
+
+    def __str__(self):
+        return f"{self.label} ({self.identifier})"
+
 
 # administrative organizations
 class AdministrativeOrganization(GenericMetadata):
@@ -69,6 +109,7 @@ class AdministrativeOrganization(GenericMetadata):
     ks = models.CharField(max_length=3, verbose_name='Kreisschlüssel', help_text='Eindeutiger dreistelliger Schlüssel für den Landkreis', default='000')
     vs = models.CharField(blank=True, null=True, max_length=2, verbose_name='Gemeindeverbandsschlüssel', help_text='Eindeutiger zweistelliger Schlüssel für den Gemeindeverband', default='00')
     gs = models.CharField(max_length=3, verbose_name='Gemeindeschlüssel', help_text='Eindeutiger dreistelliger Schlüssel für die Gemeinde', default='000')
+    # obs = ... - Ortsbezirksschlüssel ...
     name = models.CharField(max_length=1024, verbose_name='Name der Gebietskörperschaft', help_text='Offizieller Name der Gebietskörperschaft - z.B. Rhein-Lahn-Kreis')
     type = models.CharField(max_length=3, choices=ADMIN_CLASS_CHOICES, default='UK', verbose_name='Typ der Gebietskörperschaft', db_index=True)
     address_street = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Straße mit Hausnummer', help_text='Straße und Hausnummer')
@@ -80,7 +121,26 @@ class AdministrativeOrganization(GenericMetadata):
     address_email = models.EmailField(max_length=512, blank=True, null=True, verbose_name='EMail')
     address_homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
     geometry = models.GeometryField(blank=True, null=True, verbose_name='Gebiet')
+
     history = HistoricalRecords()
+
+    # published_data_contact_point - foreign key
+    published_data_contact_point = HistoricForeignKey(ContactOrganization, null=True, blank=True, verbose_name='Kontaktstelle für die publizierten Pläne der Organisation', help_text='Auswahl einer Kontaktstelle für die publizierten Pläne der Organisation', on_delete=models.SET_NULL)
+    # https://www.w3.org/TR/vocab-dcat-3/#license-rights
+    # dcterm namespace
+    # https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/license
+    # https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/accessrights
+    # https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/rights
+
+    # published_data_license - foreign key
+    published_data_license = HistoricForeignKey(License, null=True, blank=True, verbose_name='Standardisierte Lizenz', help_text='Auswahl einer standardisierten Lizenz', on_delete=models.SET_NULL)
+
+    # published_data_license_source_note - if needed
+    published_data_license_source_note = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Quellenangabe', help_text='Art der Quellenangabe - falls Lizenz diese erfodert')
+    # published_data_accessrights
+    published_data_accessrights = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Zugriffsbeschränkungen', help_text='Angaben zu vorhandenen Zugriffsbeschränkungen (ist besipielsweise der Zugriff für jedermann möglich, oder nur für besonders berechtigte Personengruppen)')
+    # published_data_rights
+    published_data_rights = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Sonstige rechtliche Hinweise', help_text='Sonstige rechtliche Hinweise, die nicht von den Angaben zu Lizenzen oder Zugriffsbeschränkungen abgedeckt sind')
 
     @property
     def ags_10(self):

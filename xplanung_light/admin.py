@@ -1,6 +1,10 @@
 from django.contrib import admin
 from leaflet.admin import LeafletGeoAdmin
 from xplanung_light.models import BPlan, AdministrativeOrganization
+from simple_history.admin import SimpleHistoryAdmin
 
-admin.site.register(BPlan, LeafletGeoAdmin)
-admin.site.register(AdministrativeOrganization, LeafletGeoAdmin)
+class HistoryGeoAdmin(SimpleHistoryAdmin, LeafletGeoAdmin):
+   pass
+
+admin.site.register(BPlan, HistoryGeoAdmin)
+admin.site.register(AdministrativeOrganization, HistoryGeoAdmin)
