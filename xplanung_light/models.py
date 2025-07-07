@@ -29,6 +29,11 @@ class GenericMetadata(models.Model):
         super().save(*args, **kwargs)"""
 
 """
+TODO: UserProfile - Nutzer hat m2m Relation zu AdministrativeOrganization - dadurch wird geregelt, für welche Organisationen er Pläne erfassen kann
+
+"""
+
+"""
 Klasse um Kontaktinformationen über eine Relation zu verwalten.
 Die Kontaktinformationen können den einzelnen Gebietskörperschaften zugewiesen werden. 
 Die Kontaktinformationen in den Gebietsköperschaften selbst, sollen die offizielle Daten beinhalten und
@@ -44,6 +49,7 @@ class ContactOrganization(GenericMetadata):
     facsimile = models.CharField(blank=True, null=True, max_length=256, verbose_name='Fax')
     email = models.EmailField(blank=False, null=False, max_length=512, verbose_name='EMail')
     homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
+    # TODO - add foreign_key to AdministrativeOrganization
     history = HistoricalRecords()
 
     def __str__(self):
@@ -340,6 +346,8 @@ class BPlanSpezExterneReferenz(GenericMetadata):
     SCHUTZGEBIETSVERORDNUNG = "6000"
     RECHTSVERBINDLICH = "9998"
     INFORMELL = "9999"
+    # Erweiterung XPlanung-light - Ablage der referenzierten und ausgeschnittenen Scans zur Darstellung als WMS-Layer
+    REFSCAN = "99999"
 
     REF_TYPE_CHOICES = [
         (BESCHREIBUNG,  "Beschreibung"),
@@ -370,6 +378,7 @@ class BPlanSpezExterneReferenz(GenericMetadata):
         (SCHUTZGEBIETSVERORDNUNG, "Schutzgebietsverordnung"),
         (RECHTSVERBINDLICH, "Rechtsverbindlich"),
         (INFORMELL, "Informell"),
+        (REFSCAN, "GeoreferenzierterScan"),
     ]
 
     #georefURL [0..1], URI
