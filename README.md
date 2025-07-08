@@ -11,7 +11,7 @@ Die initiale Entwicklung des Systems ist in einem Tutorial dokumentiert, dass si
 Als root
 
 ```shell
-apt install binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite python3-mapscript
+apt install binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite python3-mapscript python3-venv
 ```
 
 Als normaler Nutzer
@@ -27,6 +27,7 @@ python3 -m pip install -r requirements.txt
 cd .venv/lib64/python3.9/site-packages/mapscript
 cp /usr/lib/python3/dist-packages/mapscript/_mapscript.cpython-39-x86_64-linux-gnu.so _mapscript.so
 cd ../../../../../
+python3 manage.py shell -c "import django;django.db.connection.cursor().execute('SELECT InitSpatialMetaData(1);')";
 python3 manage.py migrate
 python3 manage.py collectstatic
 python3 manage.py createsuperuser
