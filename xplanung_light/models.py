@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 import uuid, os
-from simple_history.models import HistoricalRecords
+from simple_history.models import HistoricalRecords, HistoricForeignKey
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models.functions import Envelope
 from django.contrib.gis.gdal.raster.source import GDALRaster
@@ -28,6 +28,63 @@ class GenericMetadata(models.Model):
         self.owned_by_user= self.request.user
         super().save(*args, **kwargs)"""
 
+"""
+Klasse um Kontaktinformationen über eine Relation zu verwalten.
+Die Kontaktinformationen können den einzelnen Gebietskörperschaften zugewiesen werden. 
+Die Kontaktinformationen in den Gebietsköperschaften selbst, sollen die offizielle Daten beinhalten und
+dienen nur als Fallback.
+"""
+
+class ContactOrganization(GenericMetadata):
+
+    name = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Name der Kontaktorganisation', help_text='Offizieller Name der Organisation - z.B. Bauamt Pirmasens')
+    unit = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name der Einheit/Referat', help_text='Name der zuständigen Einheit innerhalb der Organisation - z.B. Auskunftsstelle Bauleitplanung')
+    person = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name einer Kontaktperson', help_text='Name einer Person die direkt kontaktiert werden kann, wenn man Informationen zu den Bauleitplänen benötigt.')
+    phone = models.CharField(blank=False, null=False, max_length=256, verbose_name='Telefon')
+    facsimile = models.CharField(blank=True, null=True, max_length=256, verbose_name='Fax')
+    email = models.EmailField(blank=False, null=False, max_length=512, verbose_name='EMail')
+    homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
+    history = HistoricalRecords()
+
+    def __str__(self):
+        # Returns a string representation of a contact organization.
+        return f"{self.name} ({self.unit})"
+
+"""
+Klasse zur Abbildung einer Liste von standardisierten Lizenzen. Aus der Liste der Lizenzen können die Datenbereitsteller eine passende aussuchen.
+Die Lizenzen beziehen sich immer auf alle publizierten Pläne einer Gebietskörperschaft. Hier haben wir derzeit nicht vorgesehen,
+dass man einzelne Pläne mit getrennten Lizenzinformationen versehen kann.
+
+Als logischen Anhalt was man für die Angabe einer Lizenz benötigt, kann man das europäische Vokabular aus dem OpenData Context nehmen:
+
+    <skos:Concept rdf:about="http://europeandataportal.eu/ontologies/od-licenses#LPL-1.0" at:deprecated="false">
+        <dc:identifier>IPL-1.0</dc:identifier>
+        <skos:prefLabel xml:lang="en">IBM Public License Version 1.0 (IPL-1.0)</skos:prefLabel>
+        <skos:exactMatch rdf:resource="https://opensource.org/licenses/IPL-1.0"/>
+        <osi:isOpen rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</osi:isOpen>
+    </skos:Concept>
+
+Wir brauchen aber ggf. noch ein Symbol es den Nutzern einfacher zu machen ;-)
+
+Weitere Informationen
+https://www.w3.org/TR/vocab-dcat-3/
+https://www.w3.org/TR/vocab-dcat-3/#license-rights
+
+"""
+
+class License(GenericMetadata):
+
+    identifier = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Identifikator / Name', help_text='Offizieller Identifikatir / Name der Lizenz')
+    label = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Titel / Bezeichnung der Lizenz', help_text='Offizieller Titel / Bezeichnung der Lizenz un deutscher Sprache')
+    url = models.URLField(blank=False, null=False, verbose_name='URL', help_text='Verweis auf eine Seite mit einer genauen Beschreibung der Lizenz')
+    is_open = models.BooleanField(blank=False, null=False, default=False, verbose_name='Lizenz ist OpenData kompatibel')
+    need_source = models.BooleanField(blank=False, null=False, default=False, verbose_name='Lizenz ist erfordert Quellenangabe')
+    symbol = models.ImageField(blank=True, null=True, verbose_name='Symbol für die Anzeige')
+    history=HistoricalRecords()
+
+    def __str__(self):
+        return f"{self.label} ({self.identifier})"
+
 
 # administrative organizations
 class AdministrativeOrganization(GenericMetadata):
@@ -52,6 +109,7 @@ class AdministrativeOrganization(GenericMetadata):
     ks = models.CharField(max_length=3, verbose_name='Kreisschlüssel', help_text='Eindeutiger dreistelliger Schlüssel für den Landkreis', default='000')
     vs = models.CharField(blank=True, null=True, max_length=2, verbose_name='Gemeindeverbandsschlüssel', help_text='Eindeutiger zweistelliger Schlüssel für den Gemeindeverband', default='00')
     gs = models.CharField(max_length=3, verbose_name='Gemeindeschlüssel', help_text='Eindeutiger dreistelliger Schlüssel für die Gemeinde', default='000')
+    # obs = ... - Ortsbezirksschlüssel ...
     name = models.CharField(max_length=1024, verbose_name='Name der Gebietskörperschaft', help_text='Offizieller Name der Gebietskörperschaft - z.B. Rhein-Lahn-Kreis')
     type = models.CharField(max_length=3, choices=ADMIN_CLASS_CHOICES, default='UK', verbose_name='Typ der Gebietskörperschaft', db_index=True)
     address_street = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Straße mit Hausnummer', help_text='Straße und Hausnummer')
@@ -63,7 +121,26 @@ class AdministrativeOrganization(GenericMetadata):
     address_email = models.EmailField(max_length=512, blank=True, null=True, verbose_name='EMail')
     address_homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
     geometry = models.GeometryField(blank=True, null=True, verbose_name='Gebiet')
+
     history = HistoricalRecords()
+
+    # published_data_contact_point - foreign key
+    published_data_contact_point = HistoricForeignKey(ContactOrganization, null=True, blank=True, verbose_name='Kontaktstelle für die publizierten Pläne der Organisation', help_text='Auswahl einer Kontaktstelle für die publizierten Pläne der Organisation', on_delete=models.SET_NULL)
+    # https://www.w3.org/TR/vocab-dcat-3/#license-rights
+    # dcterm namespace
+    # https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/license
+    # https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/accessrights
+    # https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/rights
+
+    # published_data_license - foreign key
+    published_data_license = HistoricForeignKey(License, null=True, blank=True, verbose_name='Standardisierte Lizenz', help_text='Auswahl einer standardisierten Lizenz', on_delete=models.SET_NULL)
+
+    # published_data_license_source_note - if needed
+    published_data_license_source_note = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Quellenangabe', help_text='Art der Quellenangabe - falls Lizenz diese erfodert')
+    # published_data_accessrights
+    published_data_accessrights = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Zugriffsbeschränkungen', help_text='Angaben zu vorhandenen Zugriffsbeschränkungen (ist besipielsweise der Zugriff für jedermann möglich, oder nur für besonders berechtigte Personengruppen)')
+    # published_data_rights
+    published_data_rights = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Sonstige rechtliche Hinweise', help_text='Sonstige rechtliche Hinweise, die nicht von den Angaben zu Lizenzen oder Zugriffsbeschränkungen abgedeckt sind')
 
     @property
     def ags_10(self):
@@ -115,8 +192,9 @@ class XPlan(GenericMetadata):
     #externeReferenz, [0..*], XP_SpezExterneReferenz
     #texte [0..*], XP_TextAbschnitt
     #begruendungsTexte [0..*], XP_BegruendungAbschnitt
-    history = HistoricalRecords(inherit=True)
-
+    # https://stackoverflow.com/questions/35312334/how-can-i-store-history-of-manytomanyfield-using-django-simple-history
+    #history = HistoricalRecords(inherit=True, m2m_fields=)
+    #history = HistoricalRecords(inherit=True)
     xplan_gml = models.FileField(null = True, blank = True, verbose_name="XPlan GML-Dokument", help_text="")
     xplan_gml_version = models.CharField(null=True, blank=True, max_length=5, verbose_name='XPlan GML-Dokument Version', help_text='')
 
@@ -158,7 +236,9 @@ class BPlan(XPlan):
 
     #gemeinde [1..*], XP_Gemeinde
     # Zur Vereinfachung zunächst nur Kardinalität 1 implementieren
-    gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
+    #gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
+    gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
+    history = HistoricalRecords(m2m_fields=[gemeinde])
     #planaufstellendeGemeinde [0..*], XP_Gemeinde
     #plangeber [0..*], XP_Plangeber
     #planArt [1..*], BP_PlanArt
@@ -197,8 +277,33 @@ class BPlan(XPlan):
 
     def __str__(self):
         """Returns a string representation of a BPlan."""
-        return f"{self.name} ({self.get_planart_display()}) - {self.gemeinde}"
+        return f"{self.name} ({self.get_planart_display()})"
     
+"""
+Um die verschieden Beteiligungsverfahren abbilden zu können, macht es Sinn die Verfahren über einen ForeignKey an die 
+jeweilige Planung zu hängen. Das erfolgt ähnlich wie bei den Anlagen. In XPlanung gibt es 4 Datumsfelder, die der jeweiligen 
+Kardinalität von 0..*. Diese können aus 
+"""
+class BPlanBeteiligung(GenericMetadata):
+
+    AUSLEGUNG = "1000"
+    TOEB = "2000"
+    TYPE_CHOICES = [
+        (AUSLEGUNG,  "Öffentliche Auslegung"),
+        (TOEB, "Träger öffentlicher Belange"),
+    ]
+    bekanntmachung_datum = models.DateField(null=False, blank=False, verbose_name="Datum der Bekanntmachung", help_text="Datum der Bekanntmachung des Verfahrens")
+    start_datum = models.DateField(null=False, blank=False, verbose_name="Beginn", help_text="Datum des Beginns des Beteiligungsverfahrens")
+    end_datum = models.DateField(null=False, blank=False, verbose_name="Ende", help_text="Enddatum des Beteiligungsverfahrens")
+    typ = models.CharField(null=False, blank=False, max_length=5, choices=TYPE_CHOICES, default='1000', verbose_name='Typ des Beteiligungsverfahrens', help_text="Typ des Beteiligungsverfahrens - aktuell Auslegung oder TÖB", db_index=True)
+    publikation_internet = models.URLField(null=True, blank=True, verbose_name="Publikation im Internet", help_text="Link zur Publikation auf der Hompage der jeweiligen Organisation")
+    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="beteiligungen")
+    history = HistoricalRecords()
+
+    def __str__(self):
+            """Returns a string representation of Beteiligung."""
+            return f"{self.get_typ_display()} - vom {self.bekanntmachung_datum}"
+
     
 class BPlanSpezExterneReferenz(GenericMetadata):
 
@@ -278,12 +383,17 @@ class BPlanSpezExterneReferenz(GenericMetadata):
     #typ [1], XP_ExterneReferenzTyp
     typ = models.CharField(null=False, blank=False, max_length=5, choices=REF_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des referierten Dokuments oder Rasterplans', help_text="Typ / Inhalt des referierten Dokuments oder Rasterplans", db_index=True)
     attachment = models.FileField(null = True, blank = True, upload_to='uploads', verbose_name="Dokument")
-    bplan = models.ForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
-
+    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
+    #bplan = models.ForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
     
+    # Anwendungsspezifische Felder
+    aus_archiv = models.BooleanField(null=False, blank=False, default=False, verbose_name="Anhang stammt aus hochgeladenem ZIP-Archiv", help_text="Gibt an, ob der Anhang ursprünglich aus einem hochgeladenem ZIP-Archiv stammt.")
+    history = HistoricalRecords()
+
     def save(self, *args, **kwargs):
         # https://stackoverflow.com/questions/7514964/django-how-to-create-a-file-and-save-it-to-a-models-filefield
-        if self.typ == '1070': # Karte
+        # TODO - check if really needed - cause reading files from zip don't allow to have a temporary_file_path for each zipped file!
+        if self.typ == '****': # 1070 Karte
             #raster_file = self.attachment.file.read()
             try:
                 # https://dev.to/doridoro/what-is-contentfile-in-django-6nm
@@ -322,6 +432,10 @@ class BPlanSpezExterneReferenz(GenericMetadata):
             except (IOError, SyntaxError) as e:
                 raise ValueError(f"Konnte GeoTIFF nicht nach UTM32 transformieren. -- {e}")
         super().save(*args, **kwargs)
+
+    @property
+    def file_name(self):
+        return os.path.basename(self.attachment.file.name)
 
     def __str__(self):
             """Returns a string representation of SpezExterneReferenz."""

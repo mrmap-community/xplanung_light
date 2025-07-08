@@ -4,12 +4,15 @@ from django.utils import timezone
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
-from xplanung_light.models import BPlan, BPlanSpezExterneReferenz
-from xplanung_light.validators import xplan_content_validator, geotiff_raster_validator
+from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization
+from xplanung_light.models import ContactOrganization
+from xplanung_light.validators import xplan_content_validator, xplan_upload_file_validator, geotiff_raster_validator
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Row, Column, Field
 from crispy_forms.bootstrap import TabHolder, Tab, AccordionGroup, Accordion
 from django.forms import ModelForm
+from django_select2.forms import Select2MultipleWidget
+from dal import autocomplete
 
 class BPlanImportForm(forms.Form):
     confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
@@ -21,6 +24,17 @@ class BPlanImportForm(forms.Form):
         super(BPlanImportForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.layout = Layout(Fieldset("Bebauungsplan importieren", "file", "confirm"), Submit("submit", "Hochladen"))
+
+class BPlanImportArchivForm(forms.Form):
+    confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
+    file = forms.FileField(required=True, label="BPlan ZIP-Archiv", validators=[xplan_upload_file_validator])
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super(BPlanImportArchivForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.layout = Layout(Fieldset("Bebauungsplanarchiv importieren", "file", "confirm"), Submit("submit", "Hochladen"))
 
 
 class BPlanSpezExterneReferenzForm(forms.ModelForm):
@@ -49,6 +63,68 @@ class BPlanSpezExterneReferenzForm(forms.ModelForm):
        fields = ["typ", "name", "attachment"] # list of fields you want from model
 
 
+class BPlanBeteiligungForm(forms.ModelForm):
+    #typ = forms.CharField(required=True, label="Typ des Anhangs")
+    #name = forms.CharField
+    #attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super(BPlanBeteiligungForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.fields['bekanntmachung_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date() + timedelta(days=30)),
+                }
+        )
+        self.fields['start_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date() + timedelta(days=30)),
+                }
+        )
+        self.fields['end_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date() + timedelta(days=30)),
+                }
+        )
+        self.helper.layout = Layout(
+            Fieldset("Information zur Beteiligung / Offenlage", 
+                "typ",
+                Fieldset(
+                    "Datumsfelder",
+                    Row(
+                        Column(
+                            "bekanntmachung_datum",
+                        ),
+                        Column(
+                            "start_datum",
+                        ),
+                        Column(
+                            "end_datum",
+                        ),
+                    ),
+                ),
+                Fieldset(
+                    "Weitere Informationen",
+                    "publikation_internet",
+                ),
+            ),
+            Submit("submit", "Anlegen/Aktualisieren")
+        )
+        
+
+    class Meta:
+       model = BPlanBeteiligung
+       fields = ["typ", "bekanntmachung_datum", "start_datum", "end_datum", "publikation_internet"] # list of fields you want from model
+
+
 class RegistrationForm(UserCreationForm):
 
     email = forms.EmailField(required=True)
@@ -58,7 +134,28 @@ class RegistrationForm(UserCreationForm):
         fields = ['username', 'email', 'password1', 'password2']
 
 # https://docs.djangoproject.com/en/5.2/ref/forms/fields/
-class GemeindeSelect(forms.Select):
+# https://stackoverflow.com/questions/72004112/how-do-i-use-a-select2-multiple-select-in-a-django-crispy-form
+class GemeindeSelect(forms.SelectMultiple):
+
+    def create_option(
+        self, name, value, label, selected, index, subindex=None, attrs=None
+    ):
+        option = super().create_option(
+            name, value, label, selected, index, subindex, attrs
+        )
+        if value:
+            option["attrs"]["bbox"] = value.instance.bbox
+        return option
+
+"""
+Neue Klasse zur Verbesserung des Formulars der Zuordnung mehrerer Gebietskörperschaften zu einem 
+XPlan. Ist abhängig von django-autocomplete-light und select2
+"""
+class GemeindeSelect2(autocomplete.ModelSelect2Multiple):
+
+    def _init_(self):
+        self.url = 'administrativeorganization-autocomplete'
+
 
     def create_option(
         self, name, value, label, selected, index, subindex=None, attrs=None
@@ -72,7 +169,6 @@ class GemeindeSelect(forms.Select):
 
 
 class BPlanCreateForm(ModelForm):
-
     """
     for crispy-forms
     """
@@ -119,7 +215,12 @@ class BPlanCreateForm(ModelForm):
                 }
         )
         # https://forum.djangoproject.com/t/model-choice-field-how-to-add-attributes-to-the-options/37782
-        self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
+        # https://django-autocomplete-light.readthedocs.io/en/master/_modules/dal_select2/widgets.html#ModelSelect2Multiple
+        # mixin - erbt von 3 Kassen !
+        # alter Weg (einfache Select option Liste):
+        # self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
+        # Neuer Weg - django-autocomplete-light/select2
+        self.fields['gemeinde'].widget = GemeindeSelect2(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
         """
         self.helper.layout = Layout(
             TabHolder(
@@ -220,6 +321,10 @@ class BPlanCreateForm(ModelForm):
                   "durchfuehrungs_vertrag",
                   "gruenordnungsplan",
                 ]
+        # alternative to invokation above - but no possibility to have further attributes?
+        #widgets = {
+        #    'gemeinde': autocomplete.ModelSelect2Multiple(url='administrativeorganization-autocomplete')
+        #}
 
 
 class BPlanUpdateForm(ModelForm):
@@ -270,7 +375,8 @@ class BPlanUpdateForm(ModelForm):
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
+        self.fields['gemeinde'].widget = GemeindeSelect2(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
+        #self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
         self.helper.layout = Layout(
             Fieldset(
                 "Pflichtfelder XPlanung",
@@ -349,3 +455,93 @@ class BPlanUpdateForm(ModelForm):
                   "durchfuehrungs_vertrag",
                   "gruenordnungsplan",
                 ]
+        
+
+class ContactOrganizationCreateForm(ModelForm):
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.layout = Layout(
+            Fieldset(
+                "Informationen zur Kontaktstelle",
+                Row(
+                    Column(
+                        "name",
+                    ),
+                    Column(
+                        "unit",
+                    ),
+                ),
+                Row(
+                    'person',
+                ),
+                Row(
+                    Column(
+                        'email',
+                    ),
+                    Column(
+                        'phone',
+                    ),
+                    Column(
+                        'facsimile',
+                    ),
+                ),
+                Row(
+                    'homepage',
+                ),
+            ),
+            Submit("submit", "Erstellen"),
+        )
+
+    class Meta:
+        model = ContactOrganization
+
+        fields = ["name", "unit", "person", "email", "phone", "facsimile", "homepage", ]
+
+
+class ContactOrganizationUpdateForm(ModelForm):
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.layout = Layout(
+            Fieldset(
+                "Informationen zur Kontaktstelle",
+                Row(
+                    Column(
+                        "name",
+                    ),
+                    Column(
+                        "unit",
+                    ),
+                ),
+                Row(
+                    'person',
+                ),
+                Row(
+                    Column(
+                        'email',
+                    ),
+                    Column(
+                        'phone',
+                    ),
+                    Column(
+                        'facsimile',
+                    ),
+                ),
+                Row(
+                    'homepage',
+                ),
+            ),
+            Submit("submit", "Aktualisieren"),
+        )
+
+    class Meta:
+        model = ContactOrganization
+
+        fields = ["name", "unit", "person", "email", "phone", "facsimile", "homepage", ]

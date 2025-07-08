@@ -71,6 +71,7 @@ class MapfileGenerator():
                 # Falls mehrere Bebauungspläne mit derselben Nummer vorhanden sein sollten
                 bplan_nummer = "lc_" + str(layer_count)
             # Check, ob eine Anlage vom Typ Karte existiert - typ = 1070, falls sie existiert, wird ein Rasterlayer erstellt, sonst einfach ein Vektorlayer des Geltungsbereichs
+            raster_map_exist = False
             for attachment in bplan.attachments.all():
                 if attachment.typ == '1070':
                     # Anlage des Rasterlayers aus Vorlage
@@ -90,23 +91,24 @@ class MapfileGenerator():
                     raster_layer["metadata"] = raster_metadata
                     raster_layer["data"] = attachment.attachment.name
                     map["layers"].append(raster_layer)
-                else:
-                    # Darstellung der Geometrie
-                    layer = layer_from_template.copy()
-                    layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer
-                    layer["group"] = "BPlan." + orga.ags
-                    metadata = layer_from_template["metadata"].copy()
-                    metadata["ows_title"] = "Bebauungsplan " + bplan.name + " von " + orga.name
-                    metadata["ows_abstract"] = "Bebauungsplan " + bplan.name + " von " + orga.name + " - Abstract"
-                    metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(bplan.geltungsbereich), srs=4326).extent])
-                    metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + str(bplan.pk) + "/")
-                    layer["metadata"] = metadata
-                    layer["filter"] = "( '[id]' = '" + str(bplan.pk) + "' )"
-                    layer["classes"] = []
-                    # Layer nur hinzufügen, wenn auch ein Geltungsbereich existiert
-                    if bplan.geltungsbereich:
-                        layer["classes"].append(layer_class)
-                        map["layers"].append(layer)
+                    raster_map_exist = True
+            if raster_map_exist == False:
+                # Darstellung der Geometrie
+                layer = layer_from_template.copy()
+                layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer
+                layer["group"] = "BPlan." + orga.ags
+                metadata = layer_from_template["metadata"].copy()
+                metadata["ows_title"] = "Bebauungsplan " + bplan.name + " von " + orga.name
+                metadata["ows_abstract"] = "Bebauungsplan " + bplan.name + " von " + orga.name + " - Abstract"
+                metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(bplan.geltungsbereich), srs=4326).extent])
+                metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + str(bplan.pk) + "/")
+                layer["metadata"] = metadata
+                layer["filter"] = "( '[id]' = '" + str(bplan.pk) + "' )"
+                layer["classes"] = []
+                # Layer nur hinzufügen, wenn auch ein Geltungsbereich existiert
+                if bplan.geltungsbereich:
+                    layer["classes"].append(layer_class)
+                    map["layers"].append(layer)
         # Umring Layer hinzufügen
         umring_layer = layer_from_template.copy()
         umring_layer["name"] = "BPlan." + orga.ags + ".0"
@@ -118,7 +120,10 @@ class MapfileGenerator():
         # TODO Metadatengenerator für "Alle BPläne der Kommune X"
         metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + "umring" + "/")
         umring_layer["metadata"] = metadata
-        umring_layer["filter"] = "( '[gemeinde_id]' = '" + str(orga.pk) + "' )"
+        #umring_layer["filter"] = "( '[gemeinde_id]' = '" + str(orga.pk) + "' )"
+        umring_layer["filter"] = ""
+        umring_layer["data"] = "SELECT bplan.* FROM xplanung_light_bplan bplan INNER JOIN xplanung_light_bplan_gemeinde gemeinde ON bplan.id = gemeinde.bplan_id WHERE gemeinde.administrativeorganization_id = " + str(orga.pk)
+        # TODO: add active Filter when it will be available
         umring_layer["classes"] = []
         umring_layer["classes"].append(layer_class)
         map["layers"].append(umring_layer)

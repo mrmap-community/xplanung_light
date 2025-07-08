@@ -1,0 +1,9 @@
+{% extends "xplanung_light/layout.html" %}
+{% load crispy_forms_tags %}
+{% block title %}
+    Kontaktorganisation anlegen
+{% endblock %}
+{% block content %}
+<!-- https://simpleisbetterthancomplex.com/tutorial/2018/11/28/advanced-form-rendering-with-django-crispy-forms.html -->
+{% crispy form %}
+{% endblock %}
