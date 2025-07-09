@@ -11,17 +11,26 @@ def bbox_filter(queryset, value):
     # 7.51461,50.31417,7.51563,50.31544
     return queryset.filter(geltungsbereich__bboverlaps=geom)
 
+# https://django-filter.readthedocs.io/en/stable/guide/usage.html#filtering-the-related-queryset-for-modelchoicefilter
+def organizations(request):
+    #print("organizations invoked")
+    if request is None:
+        return AdministrativeOrganization.objects.only("pk", "name", "type")
+    if request.user.is_superuser:
+        return AdministrativeOrganization.objects.only("pk", "name", "type")
+    else:
+        return AdministrativeOrganization.objects.filter(users=request.user).only("pk", "name", "type")
 
 # https://stackoverflow.com/questions/68592837/custom-filter-with-django-filters
 class BPlanFilter(FilterSet):
-
     name = CharFilter(lookup_expr='icontains')
     bbox = CharFilter(method='bbox_filter', label='BBOX')
-    gemeinde = ModelChoiceFilter(queryset=AdministrativeOrganization.objects.only("pk", "name", "type"))
+    gemeinde = ModelChoiceFilter(queryset=organizations)
 
     class Meta:
         model = BPlan
         fields = ["name", "gemeinde", "planart", "bbox"]
+
 
     def bbox_filter(self, queryset, name, value):
         #print("name from DocumentFilter.bbox_filter: " + name)

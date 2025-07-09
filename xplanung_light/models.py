@@ -11,6 +11,14 @@ from django.core.files.base import ContentFile
 import slugify
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from io import BytesIO
+# django-organizations
+# einfache Klasse nutzen, weil slug und weitere Attribute sich in die Quere kommen und auch unnötig sind
+from organizations.base import (
+    OrganizationBase,
+    OrganizationUserBase,
+    OrganizationOwnerBase,
+    OrganizationInvitationBase,
+)
 
 # generic meta model
 class GenericMetadata(models.Model):
@@ -91,9 +99,25 @@ class License(GenericMetadata):
     def __str__(self):
         return f"{self.label} ({self.identifier})"
 
+"""
+Basisklassen von django-organizations zur Abbildung der Benutzerverwaltung, ...
+"""
+class AdminOrgaUser(OrganizationUserBase):
+    is_admin = models.BooleanField(blank=False, null=False, verbose_name='Nutzer ist Administrator für Organisation', default=False)
+
+    def __str__(self):
+        return f"{self.user} - {self.organization}"
+
+class AdminOrgaOwner(OrganizationOwnerBase):
+    pass
+
+
+class AdminOrgaInvitation(OrganizationInvitationBase):
+    pass
+
 
 # administrative organizations
-class AdministrativeOrganization(GenericMetadata):
+class AdministrativeOrganization(GenericMetadata, OrganizationBase):
 
     COUNTY = "KR"
     COUNTY_FREE_CITY = "KFS"
