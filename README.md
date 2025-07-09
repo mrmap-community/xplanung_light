@@ -35,18 +35,12 @@ python3 manage.py runserver
 ```
 
 Zur Erstellung von Plänen muss mindestens eine **AdministrativeOrganization** (XPlan Objekt: XP_Gemeinde) existieren.
-Die Gebietskörperschaften von RLP lassen sich über eine django shell importieren (Dauer ~10min - es werden dabei auch die Gebietsgrenzen über OGC API Features Schnittstellen ergänzt), sie können aber auch über das Admin-Backend händisch angelegt werden.
+Die Gebietskörperschaften von RLP lassen sich über einen django-admin-Befehl importieren (Dauer ~10min - es werden dabei auch die Gebietsgrenzen über OGC API Features Schnittstellen ergänzt), sie können aber auch über das Admin-Backend händisch angelegt werden.
 
 In einer neuen shell im xplanung_light Verzeichnis
 ```shell
 source .venv/bin/activate
-python3 manage.py shell
-```
-
-Dann folgende python Befehle ausführen
-```python
-from xplanung_light.views import import_organisations
-import_organisations()
+python3 manage.py importorganisations Kommunalverwaltungen_01.01_2025.xlsm
 ```
 
 Der Prozess kann mehrfach gestartet werden. Das **AdministrativeOrganization**-model ist historisiert und die Objekte werden beim neuen Import aktualisiert.
