@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'docs',
+    'organizations',
 ]
 
 MIDDLEWARE = [
@@ -169,3 +170,8 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 # https://www.515tech.com/post/integrating-sphinx-documentation-into-your-django-project
 DOCS_ROOT = os.path.join(BASE_DIR, 'docs/build/html')
 DOCS_ACCESS = 'public'
+
+ORGS_SLUGFIELD = 'django_extensions.db.fields.AutoSlugField'
+
+#INVITATION_BACKEND = 'xplanung_light.backends.MyInvitationBackend'
+#REGISTRATION_BACKEND = 'xplanung_light.backends.MyRegistrationBackend'

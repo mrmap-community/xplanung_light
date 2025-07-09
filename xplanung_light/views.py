@@ -48,6 +48,7 @@ import io, zipfile
 from pathlib import Path
 import os
 from dal import autocomplete
+from django import forms
 
 """
 PROXIES = {
@@ -459,10 +460,34 @@ class BPlanCreateView(CreateView):
     success_url = reverse_lazy("bplan-list") 
 
     def get_form(self, form_class=None):
+        """
+        Liefert das Formular für den BPlanCreateView. Beim Select Field für die Gemeinden, werden nur die Gemeinden angezeigt, für die der Nutzer
+        das Attribut is_admin = True hat.
+        """
         form = super().get_form(self.form_class)
-        form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+        if self.request.user.is_superuser:
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+        else:
+            """
+            Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users*
+            
+            """
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
         form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
         return form
+    
+    def form_valid(self, form):
+        if self.request.user.is_superuser == False:
+            # Überprüfen, ob der jeweilige Nutzer auch als Administrator für jede Gemeinde eingetragen ist
+            for gemeinde in form.cleaned_data['gemeinde']:
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True 
+                if user_is_admin == False:
+                    form.add_error("gemeinde", "Nutzer ist kein Administrator für die Gemeinde *" + str(gemeinde) + "* - Plan kann nicht angelegt werden!")
+                    return super().form_invalid(form)
+        return super().form_valid(form)
     
 
 class BPlanUpdateView(UpdateView):
@@ -472,13 +497,44 @@ class BPlanUpdateView(UpdateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+        if self.request.user.is_superuser:
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+        else:
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(users=self.request.user).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
         form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
         return form
+    
+    def form_valid(self, form):
+        if self.request.user.is_superuser == False:
+            # Überprüfen, ob der jeweilige Nutzer auch als Administrator für jede Gemeinde eingetragen ist
+            for gemeinde in form.cleaned_data['gemeinde']:
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True 
+                if user_is_admin == False:
+                    form.add_error("gemeinde", "Nutzer ist kein Administrator für die im Formular aufgeführte Gemeinde *" + str(gemeinde) + "* - Plan kann nicht aktualisiert werden!")
+                    return super().form_invalid(form)
+            # Überprüfen, ob Nutzer auch Berechtigungen auf alle Gemeinden hat, die mit dem vorliegenden Plan verknüpft sind
+            object = self.get_object()
+            for gemeinde in object.gemeinde.all():
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True 
+                if user_is_admin == False:
+                    form.add_error("gemeinde", "Nutzer ist kein Administrator für die am Plan-Objekt definierte Gemeinde *" + str(gemeinde) + "* - Plan kann nicht aktualisiert werden!")
+                    return super().form_invalid(form)
+        return super().form_valid(form)
 
 
 class BPlanDeleteView(DeleteView):
     model = BPlan
+
+    #def get_queryset(self):
+        #qs = super().get_queryset().filter(users=self.request.user)
+        #return qs
+    # TODO: check if bplan to be deleted has gemeinde ...
 
     def get_success_url(self):
         return reverse_lazy("bplan-list")
@@ -504,12 +560,18 @@ class BPlanListView(FilterView, SingleTableView):
         #qs = super().get_queryset()
         #https://github.com/jazzband/django-simple-history/issues/407
         # https://stackoverflow.com/questions/43364451/how-to-get-the-last-changed-object-in-django-simple-history
+        if self.request.user.is_superuser:
+            qs = BPlan.objects.prefetch_related('gemeinde').annotate(last_changed=Subquery(
+                BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+            )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
+        else:
+            qs = BPlan.objects.filter(gemeinde__users = self.request.user).prefetch_related('gemeinde').annotate(last_changed=Subquery(
+                BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+            )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
         
-        qs = BPlan.objects.prefetch_related('gemeinde').annotate(last_changed=Subquery(
-            BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-        )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
         #.prefetch_related('attachments')
-
+        # Filter BPläne nach Gemeinden, in denen der user Mitglied in der Organisation ist
+        #qs = qs.filter(gemeinde=self.request.user )
         self.filter_set = BPlanFilter(self.request.GET, queryset=qs)
         return self.filter_set.qs
 
@@ -604,13 +666,20 @@ class BPlanDetailXPlanLightZipView(BPlanDetailView):
 
 
 class AdministrativeOrganizationPublishingListView(SingleTableView):
+    """
+    Tabellen View zur Auflistung der Pläne der einzelnen Gebietskörperschaften (AdministrativeOrganization) mit den 
+    Zugriffspunkten der jeweiligen die OGC-Dienste 
+    """
     model = AdministrativeOrganization
     table_class = AdministrativeOrganizationPublishingTable
     template_name = 'xplanung_light/orga_publishing_list.html'
     success_url = reverse_lazy("orga-publishing-list") 
 
     def get_queryset(self):
-        qs = AdministrativeOrganization.objects.filter(bplan__isnull=False).distinct().annotate(num_bplan=Count('bplan'))
+        if self.request.user.is_superuser:
+            qs = AdministrativeOrganization.objects.filter(bplan__isnull=False).distinct().annotate(num_bplan=Count('bplan'))
+        else:
+            qs = AdministrativeOrganization.objects.filter(bplan__isnull=False, users=self.request.user).distinct().annotate(num_bplan=Count('bplan'))
         return qs
     
 

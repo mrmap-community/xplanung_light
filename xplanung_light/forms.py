@@ -259,7 +259,7 @@ class BPlanCreateForm(ModelForm):
                 ),
             ),
             Fieldset(
-                "Pflichtfelder Rheinland-Pfalz",
+                "Pflichtfelder XPlanung-light",
                 Row(
                     "nummer",
                 ),  
@@ -392,7 +392,7 @@ class BPlanUpdateForm(ModelForm):
                 ),
             ),
             Fieldset(
-                "Pflichtfelder Rheinland-Pfalz",
+                "Pflichtfelder XPlanung-light",
                 Row(
                     "nummer",
                 ),  

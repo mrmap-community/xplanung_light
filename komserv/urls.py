@@ -18,8 +18,12 @@ from django.contrib import admin
 from django.urls import include, path
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from debug_toolbar.toolbar import debug_toolbar_urls
+from organizations.backends import invitation_backend
+from django.urls import re_path as url
 
 urlpatterns = [
+    url(r'^accounts/', include('organizations.urls')),
+    url(r'^invitations/', include(invitation_backend().get_urls())),
     path("", include("xplanung_light.urls")),
     path('admin/', admin.site.urls)
 ]
