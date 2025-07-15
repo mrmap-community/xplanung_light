@@ -6,10 +6,21 @@ from django.utils.html import format_html
 from django.contrib.gis.gdal import OGRGeometry
 
 
-class ContactOrganizationTable(tables.Table):
-    edit = tables.LinkColumn('contactorganization-update', text='Bearbeiten', args=[A('pk')], \
+class AdministrativeOrganizationTable(tables.Table):
+    edit = tables.LinkColumn('organization-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
                          orderable=False, empty_values=())
-    delete = tables.LinkColumn('contactorganization-delete', text='Löschen', args=[A('pk')], \
+    #delete = tables.LinkColumn('contactorganization-delete', text='Löschen', args=[A('pk')], \
+    #                     orderable=False, empty_values=())
+    class Meta:
+        model = AdministrativeOrganization
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ['id', 'ags', 'name', 'edit']
+
+
+class ContactOrganizationTable(tables.Table):
+    edit = tables.LinkColumn('contact-update', text='Bearbeiten', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    delete = tables.LinkColumn('contact-delete', text='Löschen', args=[A('pk')], \
                          orderable=False, empty_values=())
     class Meta:
         model = ContactOrganization
@@ -18,12 +29,12 @@ class ContactOrganizationTable(tables.Table):
 
 
 class BPlanSpezExterneReferenzTable(tables.Table):
-    edit = tables.LinkColumn('bplanattachment-update', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
+    edit = tables.LinkColumn('bplanattachment-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
                          orderable=False, empty_values=())
-    delete = tables.LinkColumn('bplanattachment-delete', text='Löschen', args=[A('bplan.id'), A('pk')], \
+    delete = tables.LinkColumn('bplanattachment-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')], \
                          orderable=False, empty_values=())
     attachment = tables.Column(verbose_name="Ablage", orderable=False)
-    download = tables.LinkColumn('bplanattachment-download', text='Download', args=[A('pk')], \
+    download = tables.LinkColumn('bplanattachment-download', verbose_name='', text='Download', args=[A('pk')], \
                          orderable=False, empty_values=())
     name = tables.Column(verbose_name="Name/Bezeichnung")
     typ = tables.Column(verbose_name="Art des Dokuments")
@@ -36,9 +47,9 @@ class BPlanSpezExterneReferenzTable(tables.Table):
 
 class BPlanBeteiligungTable(tables.Table):
 
-    edit = tables.LinkColumn('bplanbeteiligung-update', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
+    edit = tables.LinkColumn('bplanbeteiligung-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
                          orderable=False, empty_values=())
-    delete = tables.LinkColumn('bplanbeteiligung-delete', text='Löschen', args=[A('bplan.id'), A('pk')], \
+    delete = tables.LinkColumn('bplanbeteiligung-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')], \
                          orderable=False, empty_values=())
     #attachment = tables.Column(verbose_name="Ablage", orderable=False)
     #download = tables.LinkColumn('bplanbeteiligung-download', text='Download', args=[A('pk')], \
@@ -53,8 +64,7 @@ class BPlanBeteiligungTable(tables.Table):
 
 
 class BPlanTable(tables.Table):
-    #download = tables.LinkColumn('gedis-document-pdf', text='Download', args=[A('pk')], \
-    #                     orderable=False, empty_values=())
+    last_changed = tables.Column(verbose_name="Letzte Änderung")
 
     xplan_gml_export = tables.LinkColumn('bplan-export-xplan-raster-6', verbose_name='XPlan-GML', text='Exportieren', args=[A('pk')], \
                          orderable=False, empty_values=())
@@ -62,9 +72,9 @@ class BPlanTable(tables.Table):
                          orderable=False, empty_values=())
     iso_metadata = tables.LinkColumn('bplan-export-iso19139', verbose_name='Geo-Metadaten', text='Exportieren', args=[A('pk')], \
                          orderable=False, empty_values=())
-    edit = tables.LinkColumn('bplan-update', text='Bearbeiten', args=[A('pk')], \
+    edit = tables.LinkColumn('bplan-update', verbose_name="", text='Bearbeiten', args=[A('pk')], \
                          orderable=False, empty_values=())
-    delete = tables.LinkColumn('bplan-delete', text='Löschen', args=[A('pk')], \
+    delete = tables.LinkColumn('bplan-delete', verbose_name="", text='Löschen', args=[A('pk')], \
                          orderable=False, empty_values=())
     planart = tables.Column(verbose_name="Planart")
     zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
@@ -72,7 +82,7 @@ class BPlanTable(tables.Table):
     beteiligungen = tables.Column(verbose_name="Beteiligungen", accessor='beteiligungen', orderable=False)
     # manytomany relations are handled automatically!
     #gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
-    xplangml = tables.Column(verbose_name="GML Uploaded", accessor='xplan_gml', empty_values=())
+    xplangml = tables.Column(verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
 
     def render_xplangml(self, value, record):
         if value:
@@ -116,7 +126,7 @@ class BPlanTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "name", "gemeinde", "planart", "attachments", "xplangml", "xplan_gml_export", "xplan_zip_export", "iso_metadata", "edit", "delete")
+        fields = ( "zoom", "last_changed", "name", "gemeinde", "planart", "attachments", "beteiligungen", "xplangml", "xplan_gml_export", "xplan_zip_export", "iso_metadata", "edit", "delete")
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):

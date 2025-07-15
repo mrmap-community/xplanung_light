@@ -5,7 +5,7 @@ from django.db.models import F, Func
 import os
 
 """
-Klasse für die Generierung und Bearbeitung von Mapserver-Konfigurationsdateien (mapfiles) 
+Klassen für die Generierung und Bearbeitung von Mapserver-Konfigurationsdateien (mapfiles) 
 """
 
 class MapfileGenerator():
@@ -76,7 +76,11 @@ class MapfileGenerator():
                 if attachment.typ == '1070':
                     # Anlage des Rasterlayers aus Vorlage
                     raster_layer = raster_layer_from_template.copy()
-                    raster_layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer
+                    # check ob Bebauungsplan mehreren Gemeinden zugeordnet ist - fals das der Fall ist, wird der Layernamen aus der generic_id generiert!
+                    if bplan.gemeinde.all().count() > 1:
+                        layer["name"] = "BPlan." + str(bplan.generic_id)
+                    else:
+                        layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer
                     # raster_layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer + "_raster"
                     # Group - ist aber deprecated - muss man bei Aktualisierung  des Mapservers beachten!
                     # Ticket in Github:
@@ -95,7 +99,11 @@ class MapfileGenerator():
             if raster_map_exist == False:
                 # Darstellung der Geometrie
                 layer = layer_from_template.copy()
-                layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer
+                # check ob Bebauungsplan mehreren Gemeinden zugeordnet ist - fals das der Fall ist, wird der Layernamen aus der generic_id generiert!
+                if bplan.gemeinde.all().count() > 1:
+                    layer["name"] = "BPlan." + str(bplan.generic_id)
+                else:
+                    layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer
                 layer["group"] = "BPlan." + orga.ags
                 metadata = layer_from_template["metadata"].copy()
                 metadata["ows_title"] = "Bebauungsplan " + bplan.name + " von " + orga.name

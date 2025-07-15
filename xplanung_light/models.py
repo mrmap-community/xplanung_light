@@ -41,28 +41,7 @@ TODO: UserProfile - Nutzer hat m2m Relation zu AdministrativeOrganization - dadu
 
 """
 
-"""
-Klasse um Kontaktinformationen über eine Relation zu verwalten.
-Die Kontaktinformationen können den einzelnen Gebietskörperschaften zugewiesen werden. 
-Die Kontaktinformationen in den Gebietsköperschaften selbst, sollen die offizielle Daten beinhalten und
-dienen nur als Fallback.
-"""
 
-class ContactOrganization(GenericMetadata):
-
-    name = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Name der Kontaktorganisation', help_text='Offizieller Name der Organisation - z.B. Bauamt Pirmasens')
-    unit = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name der Einheit/Referat', help_text='Name der zuständigen Einheit innerhalb der Organisation - z.B. Auskunftsstelle Bauleitplanung')
-    person = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name einer Kontaktperson', help_text='Name einer Person die direkt kontaktiert werden kann, wenn man Informationen zu den Bauleitplänen benötigt.')
-    phone = models.CharField(blank=False, null=False, max_length=256, verbose_name='Telefon')
-    facsimile = models.CharField(blank=True, null=True, max_length=256, verbose_name='Fax')
-    email = models.EmailField(blank=False, null=False, max_length=512, verbose_name='EMail')
-    homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
-    # TODO - add foreign_key to AdministrativeOrganization
-    history = HistoricalRecords()
-
-    def __str__(self):
-        # Returns a string representation of a contact organization.
-        return f"{self.name} ({self.unit})"
 
 """
 Klasse zur Abbildung einer Liste von standardisierten Lizenzen. Aus der Liste der Lizenzen können die Datenbereitsteller eine passende aussuchen.
@@ -150,12 +129,14 @@ class AdministrativeOrganization(GenericMetadata, OrganizationBase):
     address_facsimile = models.CharField(max_length=256, blank=True, null=True, verbose_name='Fax')
     address_email = models.EmailField(max_length=512, blank=True, null=True, verbose_name='EMail')
     address_homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
+    coat_of_arms_url = models.URLField(blank=True, null=True, verbose_name='Link zum Wappen', help_text='Hier bietet sich an den Link von Wikipedia zu übernehmen.')
+    
     geometry = models.GeometryField(blank=True, null=True, verbose_name='Gebiet')
 
     history = HistoricalRecords()
 
     # published_data_contact_point - foreign key
-    published_data_contact_point = HistoricForeignKey(ContactOrganization, null=True, blank=True, verbose_name='Kontaktstelle für die publizierten Pläne der Organisation', help_text='Auswahl einer Kontaktstelle für die publizierten Pläne der Organisation', on_delete=models.SET_NULL)
+    #published_data_contact_point = HistoricForeignKey(ContactOrganization, null=True, blank=True, verbose_name='Kontaktstelle für die publizierten Pläne der Organisation', help_text='Auswahl einer Kontaktstelle für die publizierten Pläne der Organisation', on_delete=models.SET_NULL)
     # https://www.w3.org/TR/vocab-dcat-3/#license-rights
     # dcterm namespace
     # https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/license
@@ -183,7 +164,32 @@ class AdministrativeOrganization(GenericMetadata, OrganizationBase):
     def __str__(self):
         """Returns a string representation of a administrative unit."""
         return f"{self.name} ({self.get_type_display()})"
-    
+
+
+"""
+Klasse um Kontaktinformationen über eine Relation zu verwalten.
+Die Kontaktinformationen können den einzelnen Gebietskörperschaften zugewiesen werden. 
+Die Kontaktinformationen in den Gebietsköperschaften selbst, sollen die offizielle Daten beinhalten und
+dienen nur als Fallback.
+"""
+
+class ContactOrganization(GenericMetadata):
+
+    name = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Name der Kontaktorganisation', help_text='Offizieller Name der Organisation - z.B. Bauamt Pirmasens')
+    unit = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name der Einheit/Referat', help_text='Name der zuständigen Einheit innerhalb der Organisation - z.B. Auskunftsstelle Bauleitplanung')
+    person = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name einer Kontaktperson', help_text='Name einer Person die direkt kontaktiert werden kann, wenn man Informationen zu den Bauleitplänen benötigt.')
+    phone = models.CharField(blank=False, null=False, max_length=256, verbose_name='Telefon')
+    facsimile = models.CharField(blank=True, null=True, max_length=256, verbose_name='Fax')
+    email = models.EmailField(blank=False, null=False, max_length=512, verbose_name='EMail')
+    homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
+    # TODO - add foreign_key to AdministrativeOrganization
+    gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Kontakt für Gemeinde(n)")
+    history = HistoricalRecords(m2m_fields=[gemeinde])
+
+    def __str__(self):
+        # Returns a string representation of a contact organization.
+        return f"{self.name} ({self.unit})"
+
 
 """
 https://xleitstelle.de/releases/objektartenkatalog_6_0

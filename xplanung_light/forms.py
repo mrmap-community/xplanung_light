@@ -464,9 +464,13 @@ class ContactOrganizationCreateForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
+        self.fields['gemeinde'].widget = GemeindeSelect2()
         self.helper.layout = Layout(
             Fieldset(
                 "Informationen zur Kontaktstelle",
+                Row(
+                    Field("gemeinde"),
+                    ),
                 Row(
                     Column(
                         "name",
@@ -499,7 +503,7 @@ class ContactOrganizationCreateForm(ModelForm):
     class Meta:
         model = ContactOrganization
 
-        fields = ["name", "unit", "person", "email", "phone", "facsimile", "homepage", ]
+        fields = ["gemeinde", "name", "unit", "person", "email", "phone", "facsimile", "homepage", ]
 
 
 class ContactOrganizationUpdateForm(ModelForm):
@@ -509,9 +513,13 @@ class ContactOrganizationUpdateForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
+        self.fields['gemeinde'].widget = GemeindeSelect2()
         self.helper.layout = Layout(
             Fieldset(
                 "Informationen zur Kontaktstelle",
+                Row(
+                    Field("gemeinde"),
+                ),
                 Row(
                     Column(
                         "name",
@@ -544,4 +552,32 @@ class ContactOrganizationUpdateForm(ModelForm):
     class Meta:
         model = ContactOrganization
 
-        fields = ["name", "unit", "person", "email", "phone", "facsimile", "homepage", ]
+        fields = ["gemeinde", "name", "unit", "person", "email", "phone", "facsimile", "homepage", ]
+
+
+class AdministrativeOrganizationUpdateForm(ModelForm):
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.layout = Layout(
+            Fieldset(
+                "Informationen zur Lizensierung der publizierten Pläne",
+                Row(
+                    Column(
+                        "published_data_accessrights",
+                    ),
+                    Column(
+                        "published_data_rights",
+                    ),
+                ),
+            ),
+            Submit("submit", "Aktualisieren"),
+        )
+
+    class Meta:
+        model = AdministrativeOrganization
+
+        fields = ["published_data_accessrights", "published_data_rights", ]

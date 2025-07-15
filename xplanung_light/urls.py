@@ -7,6 +7,7 @@ from xplanung_light.views import BPlanBeteiligungCreateView, BPlanBeteiligungUpd
 from xplanung_light.views import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views import AdministrativeOrganizationPublishingListView
 from xplanung_light.views import AdministrativeOrganizationAutocomplete
+from xplanung_light.views import AdministrativeOrganizationListView, AdministrativeOrganizationUpdateView
 from xplanung_light.views import ContactOrganizationCreateView, ContactOrganizationListView, ContactOrganizationUpdateView, ContactOrganizationDeleteView
 from django.urls import re_path as url
 
@@ -47,11 +48,14 @@ urlpatterns = [
         AdministrativeOrganizationAutocomplete.as_view(),
         name='administrativeorganization-autocomplete',
     ),
+    # Organisationen für die der Nutzer is_amin=True hat
+    path("organization/", AdministrativeOrganizationListView.as_view(), name="organization-list"),
+    path("organization/<int:pk>/update/", AdministrativeOrganizationUpdateView.as_view(), name="organization-update"),
     # Kontaktorganisationen
-    path("contactorganization/create/", ContactOrganizationCreateView.as_view(), name="contactorganization-create"),
-    path("contactorganization/", ContactOrganizationListView.as_view(), name="contactorganization-list"),
-    path("contactorganization/<int:pk>/update/", ContactOrganizationUpdateView.as_view(), name="contactorganization-update"),
-    path("contactorganization/<int:pk>/delete/", ContactOrganizationDeleteView.as_view(), name="contactorganization-delete"),
+    path("contact/create/", ContactOrganizationCreateView.as_view(), name="contact-create"),
+    path("contact/", ContactOrganizationListView.as_view(), name="contact-list"),
+    path("contact/<int:pk>/update/", ContactOrganizationUpdateView.as_view(), name="contact-update"),
+    path("contact/<int:pk>/delete/", ContactOrganizationDeleteView.as_view(), name="contact-delete"),
     # Dokumentation
     path('docs/', include('docs.urls')),
 ]

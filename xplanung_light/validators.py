@@ -8,22 +8,21 @@ import magic, json
 from io import BytesIO
 from zipfile import ZipFile
 
-"""
-Funktion zur Validierung von GeoTIFF Dateien, die als Anlage zur Darstellung des Plangebietes beigefügt
-werden. 
-
-Validierungen:
-
-* Mimetype 'image/tiff'
-* Dateigröße nicht überschritten
-* Overviews existieren
-* Datei mit LZW komprimiert
-* SRS vorhanden
-* Extent vorhanden
-
-"""
-
 def geotiff_raster_validator(geotiff_file):
+    """
+    Funktion zur Validierung von GeoTIFF Dateien, die als Anlage zur Darstellung des Plangebietes beigefügt
+    werden. 
+
+    Validierungen:
+
+    * Mimetype 'image/tiff'
+    * Dateigröße nicht überschritten
+    * Overviews existieren
+    * Datei mit LZW komprimiert
+    * SRS vorhanden
+    * Extent vorhanden
+
+    """
     geotiff = geotiff_file.read()
     validation_error_messages = []
     # check mimetype
@@ -76,21 +75,19 @@ def geotiff_raster_validator(geotiff_file):
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
 
-
-"""
-Funktion zur Validierung eines hochzuladenen ZIP-Archivs
-
-Prüfungen:
-
-* MimeType: application/zip
-* Zugelassene Dateien: GML, TIFF, pdf
-* Maximale Größe einzelner unkomprimierter Datei 40MB
-* nur eine GML-Datei zulässig
-* Überprüfen der GML-Datei mit xplan_content_validator
-
-"""
-
 def xplan_upload_file_validator(xplan_file):
+    """
+    Funktion zur Validierung eines hochzuladenen ZIP-Archivs.
+
+    Prüfungen:
+
+    * MimeType: application/zip
+    * Zugelassene Dateien: GML, TIFF, pdf
+    * Maximale Größe einzelner unkomprimierter Datei 40MB
+    * nur eine GML-Datei zulässig
+    * Überprüfen der GML-Datei mit xplan_content_validator
+
+    """
     # check type
     validation_error_messages = []
     #print(xplan_file.content_type)
@@ -133,18 +130,18 @@ def xplan_upload_file_validator(xplan_file):
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
 
-"""
-Funktion zur Validierung der zu importierenden XPlan-GML Datei.
-
-Validierungen:
-
-* Datei ist XML
-* Namespace ist http://www.xplanung.de/xplangml/6/0 und Element ist XPlanAuszug
-* XPlan-Pflichtfelder
-* Spezielle Pflichtfelder
-* Existiert eine Organisation mit dem im XML vorhandenen AGS in der Datenbank
-"""
 def xplan_content_validator(xplan_file):
+    """
+    Funktion zur Validierung der zu importierenden XPlan-GML Datei.
+
+    Validierungen:
+
+    * Datei ist XML
+    * Namespace ist http://www.xplanung.de/xplangml/6/0 und Element ist XPlanAuszug
+    * XPlan-Pflichtfelder
+    * Spezielle Pflichtfelder
+    * Existiert eine Organisation mit dem im XML vorhandenen AGS in der Datenbank
+    """
     validation_error_messages = []
     # Der content-type kann nur bei hochgeladenenen Dateien bestimmt werden. Wird eine ZIP-Datei hochgeladen und zur Laufzeit ausgepackt,
     # dann wird der mimetype anders bestimmt. TODO: Datentyp für die Übergabe vereinheitlichen.

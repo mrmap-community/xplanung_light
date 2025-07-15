@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from xplanung_light.forms import RegistrationForm, BPlanCreateForm, BPlanUpdateForm, BPlanBeteiligungForm
 from django.shortcuts import redirect
@@ -8,7 +8,7 @@ from xplanung_light.models import AdministrativeOrganization, BPlan, BPlanSpezEx
 from django.urls import reverse_lazy
 from leaflet.forms.widgets import LeafletWidget
 from django_tables2 import SingleTableView
-from xplanung_light.tables import BPlanTable, BPlanBeteiligungTable, ContactOrganizationTable
+from xplanung_light.tables import BPlanTable, BPlanBeteiligungTable, ContactOrganizationTable, AdministrativeOrganizationTable
 from django.views.generic import DetailView
 from django.contrib.gis.db.models.functions import AsGML, Transform, Envelope
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
@@ -23,8 +23,9 @@ from django_filters.views import FilterView
 from django.urls import reverse_lazy, reverse
 from xplanung_light.helper.xplanung import XPlanung
 from django.contrib import messages
+from django.contrib.messages.views import SuccessMessageMixin
 from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanSpezExterneReferenzForm, BPlanImportArchivForm
-from xplanung_light.forms import ContactOrganizationCreateForm, ContactOrganizationUpdateForm
+from xplanung_light.forms import ContactOrganizationCreateForm, ContactOrganizationUpdateForm, AdministrativeOrganizationUpdateForm
 from django.db.models import Subquery, OuterRef
 from django.http import HttpResponse
 import mapscript
@@ -44,7 +45,8 @@ from pathlib import Path
 import os
 from dal import autocomplete
 from django import forms
-
+from django.http import Http404
+from django.core.exceptions import PermissionDenied
 
 def get_bplan_attachment(request, pk):
     try:
@@ -140,7 +142,20 @@ def bplan_import(request):
             xplanung = XPlanung(request.FILES["file"])
             # import xml file after prevalidation - check is done, if object already exists
             overwrite = form.cleaned_data['confirm']
-            #print(overwrite)
+            # TODO check ob user admin einer der Gemeinden den Plans ist!
+            if request.user.is_superuser == False:
+                orgas = xplanung.get_orgas()
+                user_orga_admin = []
+                for gemeinde in orgas:
+                    user_is_admin = False
+                    for user in gemeinde.organization_users.all():
+                        if user.user == request.user and user.is_admin:
+                            user_is_admin = True 
+                    user_orga_admin.append(user_is_admin)
+                if all(user_orga_admin) == False:
+                    messages.error(request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
+                    form = BPlanImportForm()
+                    return render(request, "xplanung_light/bplan_import.html", {"form": form})
             bplan_created = xplanung.import_bplan(overwrite=overwrite)
             if bplan_created == False:
                 messages.error(request, 'Bebauungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
@@ -173,7 +188,20 @@ def bplan_import_archiv(request):
             xplanung = XPlanung(request.FILES["file"])
             # import xml file after prevalidation - check is done, if object already exists
             overwrite = form.cleaned_data['confirm']
-            # print(overwrite)
+            # TODO check ob user admin einer der Gemeinden den Plans ist!
+            if request.user.is_superuser == False:
+                orgas = xplanung.get_orgas()
+                user_orga_admin = []
+                for gemeinde in orgas:
+                    user_is_admin = False
+                    for user in gemeinde.organization_users.all():
+                        if user.user == request.user and user.is_admin:
+                            user_is_admin = True 
+                    user_orga_admin.append(user_is_admin)
+                if all(user_orga_admin) == False:
+                    messages.error(request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
+                    form = BPlanImportForm()
+                    return render(request, "xplanung_light/bplan_import.html", {"form": form})
             bplan_created = xplanung.import_bplan_archiv(overwrite=overwrite)
             if bplan_created == False:
                 messages.error(request, 'Bebauungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
@@ -261,11 +289,24 @@ class AdministrativeOrganizationAutocomplete(autocomplete.Select2QuerySetView):
 
 
 class BPlanCreateView(CreateView):
+    """
+    Anlagen eines Bebauungsplans-Datensatzes über Formular.
+
+
+    """
     form_class = BPlanCreateForm
     model = BPlan
     # copy fields to form class - cause form class will handle the form now!
     #fields = ["name", "nummer", "geltungsbereich", "gemeinde", "planart", "inkrafttretens_datum", "staedtebaulicher_vetrag"]
     success_url = reverse_lazy("bplan-list") 
+
+    def get_context_data(self, **kwargs):
+        # Get the current context from the parent's get_context_data method
+        context = super().get_context_data(**kwargs)
+        # check ob user ein admin einer AdministrativeOrganization ist - sonst nicht zulässig
+        # TODO
+        #raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        return context
 
     def get_form(self, form_class=None):
         """
@@ -277,7 +318,7 @@ class BPlanCreateView(CreateView):
             form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
         else:
             """
-            Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users*
+            Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
             
             """
             form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
@@ -293,62 +334,124 @@ class BPlanCreateView(CreateView):
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True 
                 if user_is_admin == False:
-                    form.add_error("gemeinde", "Nutzer ist kein Administrator für die Gemeinde *" + str(gemeinde) + "* - Plan kann nicht angelegt werden!")
+                    form.add_error("gemeinde", "Nutzer ist kein Administrator für die dem Plan-Objekt zugewiesene Gemeinde *" + str(gemeinde) + "* - Plan kann nicht angelegt werden!")
                     return super().form_invalid(form)
         return super().form_valid(form)
     
 
-class BPlanUpdateView(UpdateView):
+class BPlanUpdateView(SuccessMessageMixin, UpdateView):
+    """
+    Editieren eines Bebauungsgplan-Datensatzes.
+
+    """
     form_class = BPlanUpdateForm
     model = BPlan
     success_url = reverse_lazy("bplan-list") 
+    success_message = "Bebauungsplan wurde aktualisiert!"
 
     def get_form(self, form_class=None):
+        success_url = self.get_success_url()
         form = super().get_form(form_class)
         if self.request.user.is_superuser:
             form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
         else:
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(users=self.request.user).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
-        form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
-        return form
-    
-    def form_valid(self, form):
-        if self.request.user.is_superuser == False:
-            # Überprüfen, ob der jeweilige Nutzer auch als Administrator für jede Gemeinde eingetragen ist
-            for gemeinde in form.cleaned_data['gemeinde']:
-                user_is_admin = False
-                for user in gemeinde.organization_users.all():
-                    if user.user == self.request.user and user.is_admin:
-                        user_is_admin = True 
-                if user_is_admin == False:
-                    form.add_error("gemeinde", "Nutzer ist kein Administrator für die im Formular aufgeführte Gemeinde *" + str(gemeinde) + "* - Plan kann nicht aktualisiert werden!")
-                    return super().form_invalid(form)
-            # Überprüfen, ob Nutzer auch Berechtigungen auf alle Gemeinden hat, die mit dem vorliegenden Plan verknüpft sind
+            # Deaktivieren des Gemeinde Fields - falls auch noch andere Gemeinde am Plan hängt, für die der aktuelle Nutzer kein admin ist
             object = self.get_object()
+            user_orga_admin = []
             for gemeinde in object.gemeinde.all():
                 user_is_admin = False
                 for user in gemeinde.organization_users.all():
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True 
+                user_orga_admin.append(user_is_admin)
+            if all(user_orga_admin) == False:
+                form.fields['gemeinde'].disabled = True
+                form.fields['gemeinde'].label = "Gemeinden sind nicht editierbar (Nutzer ist nicht Administrator aller Gemeinden)"
+            else:
+                """
+                Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
+                """
+                form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+        form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
+        return form
+    
+    def form_valid(self, form):
+        if self.request.user.is_superuser == False:
+            # Überprüfen, ob der jeweilige Nutzer auch als Administrator eine der Gemeinden eingetragen ist
+            for gemeinde in form.cleaned_data['gemeinde']:
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True                         
+                        return super().form_valid(form)
                 if user_is_admin == False:
-                    form.add_error("gemeinde", "Nutzer ist kein Administrator für die am Plan-Objekt definierte Gemeinde *" + str(gemeinde) + "* - Plan kann nicht aktualisiert werden!")
+                    form.add_error("gemeinde", "Nutzer ist kein Administrator für eine der dem Plan-Objekt zugewiesenen Gemeinde - Plan kann nicht aktualisiert werden!")
                     return super().form_invalid(form)
+        self.success_message = "Bebauungsplan *" + form.cleaned_data['name'] + "* aktualisiert!" 
         return super().form_valid(form)
+    
+    def get_object(self):
+        object = super().get_object()
+        if self.request.user.is_superuser == False:
+            for gemeinde in object.gemeinde.all():
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:                    
+                        return object
+            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        return object  
+      
 
+class BPlanDeleteView(SuccessMessageMixin, DeleteView):
+    """
+    Löschen eines Bebauungsplan-Datensatzes.
 
-class BPlanDeleteView(DeleteView):
+    """
     model = BPlan
+    success_message = "Plan wurde gelöscht!"
 
-    #def get_queryset(self):
-        #qs = super().get_queryset().filter(users=self.request.user)
-        #return qs
-    # TODO: check if bplan to be deleted has gemeinde ...
+    def form_valid(self, form):
+        success_url = self.get_success_url()
+        if self.request.user.is_superuser == False:
+            object = self.get_object()
+            user_orga_admin = []
+            for gemeinde in object.gemeinde.all():
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True 
+                user_orga_admin.append(user_is_admin)
+            if all(user_orga_admin) == False:
+                messages.add_message(self.request, messages.WARNING, "Nutzer ist kein Administrator für alle dem Plan-Objekt zugewiesene Gemeinde(n) - Plan kann nicht gelöscht werden!")
+                return HttpResponseRedirect(success_url)
+        self.object.delete()
+        messages.add_message(self.request, messages.SUCCESS, "Bebauungsplan " + self.object.name + " wurde gelöscht!")
+        return HttpResponseRedirect(success_url)
+
+    def get_object(self):
+        object = super().get_object()
+        if self.request.user.is_superuser == False:
+            user_orga_admin = []
+            for gemeinde in object.gemeinde.all():
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True 
+                user_orga_admin.append(user_is_admin)
+            if all(user_orga_admin) == False:
+                raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        return object
 
     def get_success_url(self):
         return reverse_lazy("bplan-list")
 
 
 class BPlanListView(FilterView, SingleTableView):
+    """
+    Liste der Bebauungsgplan-Datensätze.
+
+    Klasse für die Anzeige aller Bebauungspläne, auf die ein Nutzer Leseberechtigung hat. Ein Nutzer hat Leseberechtigung, wenn er
+    über die AadminOrgUser Klasse mit einer der AdministrativeOrganizations verknüpft ist, die an einem Plan hängen. 
+    """
     model = BPlan
     table_class = BPlanTable
     template_name = 'xplanung_light/bplan_list.html'
@@ -365,21 +468,15 @@ class BPlanListView(FilterView, SingleTableView):
         return context
 
     def get_queryset(self):
-        #qs = super().get_queryset()
-        #https://github.com/jazzband/django-simple-history/issues/407
-        # https://stackoverflow.com/questions/43364451/how-to-get-the-last-changed-object-in-django-simple-history
         if self.request.user.is_superuser:
+        #if True:
             qs = BPlan.objects.prefetch_related('gemeinde').annotate(last_changed=Subquery(
                 BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
         else:
-            qs = BPlan.objects.filter(gemeinde__users = self.request.user).prefetch_related('gemeinde').annotate(last_changed=Subquery(
+            qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
                 BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
-        
-        #.prefetch_related('attachments')
-        # Filter BPläne nach Gemeinden, in denen der user Mitglied in der Organisation ist
-        #qs = qs.filter(gemeinde=self.request.user )
         self.filter_set = BPlanFilter(self.request.GET, queryset=qs)
         return self.filter_set.qs
 
@@ -498,11 +595,18 @@ class BPlanSpezExterneReferenzCreateView(CreateView):
     def get_context_data(self, **kwargs):
         bplanid = self.kwargs['bplanid']
         context = super().get_context_data(**kwargs)
-        context['bplan'] = BPlan.objects.get(pk=bplanid)
+        bplan = BPlan.objects.get(pk=bplanid)
+        # check ob Nutzer admin einer der Gemeinden des BPlans ist
+        if self.request.user.is_superuser == False:
+            for gemeinde in bplan.gemeinde.all():
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:                        
+                         context['bplan'] = bplan
+                         return context
+            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        context['bplan'] = bplan
         return context
 
-    # reduce choices for invoice to own invoices    
-    # https://stackoverflow.com/questions/48089590/limiting-choices-in-foreign-key-dropdown-in-django-using-generic-views-createv
     def get_form(self, form_class=None):
         form = super().get_form(form_class=None)
         #form.fields['bplan'].queryset = form.fields['bplan'].queryset.filter(owned_by_user=self.request.user.id)
@@ -515,7 +619,6 @@ class BPlanSpezExterneReferenzCreateView(CreateView):
     def get_form_kwargs(self):
         form = super().get_form_kwargs()
         bplanid = self.kwargs['bplanid']
-        
         form['initial'].update({'bplan': BPlan.objects.get(pk=bplanid)})
         #form['initial'].update({'owned_by_user': self.request.user})
         return form
@@ -570,6 +673,16 @@ class BPlanSpezExterneReferenzUpdateView(UpdateView):
         #form.fields['bplan'].queryset = form.fields['bplan'].queryset.filter(owned_by_user=self.request.user.id)
         return form 
     
+    def get_object(self):
+        object = super().get_object()
+        if self.request.user.is_superuser == False:
+            for gemeinde in object.bplan.gemeinde.all():
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:                        
+                        return object
+            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        return object
+
     def form_valid(self, form):
         bplanid = self.kwargs['bplanid']
         form.instance.bplan = BPlan.objects.get(pk=bplanid)
@@ -585,6 +698,20 @@ class BPlanSpezExterneReferenzDeleteView(DeleteView):
     def get_success_url(self):
         return reverse_lazy("bplanattachment-list", kwargs={'bplanid': self.kwargs['bplanid']})
     
+    def get_object(self):
+        object = super().get_object()
+        if self.request.user.is_superuser == False:
+            user_orga_admin = []
+            for gemeinde in object.bplan.gemeinde.all():
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True 
+                user_orga_admin.append(user_is_admin)
+            if all(user_orga_admin) == False:
+                raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        return object
+    
 
 """
 Klassen zur Verwaltung von Beteiligungen
@@ -596,7 +723,16 @@ class BPlanBeteiligungCreateView(CreateView):
     def get_context_data(self, **kwargs):
         bplanid = self.kwargs['bplanid']
         context = super().get_context_data(**kwargs)
-        context['bplan'] = BPlan.objects.get(pk=bplanid)
+        bplan = BPlan.objects.get(pk=bplanid)
+        # check ob Nutzer admin einer der Gemeinden des BPlans ist
+        if self.request.user.is_superuser == False:
+            for gemeinde in bplan.gemeinde.all():
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:                        
+                         context['bplan'] = bplan
+                         return context
+            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        context['bplan'] = bplan
         return context
 
     # reduce choices for invoice to own invoices    
@@ -667,6 +803,16 @@ class BPlanBeteiligungUpdateView(UpdateView):
         #form.fields['bplan'].queryset = form.fields['bplan'].queryset.filter(owned_by_user=self.request.user.id)
         return form 
     
+    def get_object(self):
+        object = super().get_object()
+        if self.request.user.is_superuser == False:
+            for gemeinde in object.bplan.gemeinde.all():
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:                        
+                        return object
+            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        return object
+
     def form_valid(self, form):
         bplanid = self.kwargs['bplanid']
         form.instance.bplan = BPlan.objects.get(pk=bplanid)
@@ -682,32 +828,233 @@ class BPlanBeteiligungDeleteView(DeleteView):
     def get_success_url(self):
         return reverse_lazy("bplanbeteiligung-list", kwargs={'bplanid': self.kwargs['bplanid']})
     
+    def get_object(self):
+        object = super().get_object()
+        if self.request.user.is_superuser == False:
+            user_orga_admin = []
+            for gemeinde in object.bplan.gemeinde.all():
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True 
+                user_orga_admin.append(user_is_admin)
+            if all(user_orga_admin) == False:
+                raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        return object
+    
 
 # ContactOrganization - owned by group
 
-class ContactOrganizationCreateView(CreateView):
+class ContactOrganizationCreateView(SuccessMessageMixin, CreateView):
     model = ContactOrganization
     form_class = ContactOrganizationCreateForm
+    template_name = "xplanung_light/contact_form.html"
+
+    def get_form(self, form_class=None):
+        """
+        Liefert das Formular für den BPlanCreateView. Beim Select Field für die Gemeinden, werden nur die Gemeinden angezeigt, für die der Nutzer
+        das Attribut is_admin = True hat.
+        """
+        form = super().get_form(self.form_class)
+        if self.request.user.is_superuser:
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+        else:
+            """
+            Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
+            
+            """
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+        return form
+
+    def form_valid(self, form):
+        # TODO check if contact for gemeinde already exist!
+        if self.request.user.is_superuser == False:
+            # Überprüfen, ob der jeweilige Nutzer auch als Administrator für jede Gemeinde eingetragen ist
+            for gemeinde in form.cleaned_data['gemeinde']:
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True 
+                if user_is_admin == False:
+                    form.add_error("gemeinde", "Nutzer ist kein Administrator für die der Kontaktorganisation zugewiesene Gemeinde *" + str(gemeinde) + "* - Kontaktorganisation kann nicht angelegt werden!")
+                    return super().form_invalid(form)
+        return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy("contactorganization-list")
+        return reverse_lazy("contact-list")
     
 
-class ContactOrganizationUpdateView(UpdateView):
+class ContactOrganizationUpdateView(SuccessMessageMixin, UpdateView):
     model = ContactOrganization
     form_class = ContactOrganizationUpdateForm
+    template_name = "xplanung_light/contact_form_update.html"
+
+    def get_form(self, form_class=None):
+        success_url = self.get_success_url()
+        form = super().get_form(form_class)
+        if self.request.user.is_superuser:
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+        else:
+            # Deaktivieren des Gemeinde Fields - falls auch noch andere Gemeinde am Plan hängt, für die der aktuelle Nutzer kein admin ist
+            object = self.get_object()
+            user_orga_admin = []
+            for gemeinde in object.gemeinde.all():
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True 
+                user_orga_admin.append(user_is_admin)
+            if all(user_orga_admin) == False:
+                form.fields['gemeinde'].disabled = True
+                form.fields['gemeinde'].label = "Gemeinden sind nicht editierbar (Nutzer ist nicht Administrator aller Gemeinden)"
+            else:
+                """
+                Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
+                """
+                form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+        return form
+    
+    def form_valid(self, form):
+        if self.request.user.is_superuser == False:
+            # Überprüfen, ob der jeweilige Nutzer auch als Administrator eine der Gemeinden eingetragen ist
+            for gemeinde in form.cleaned_data['gemeinde']:
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True                         
+                        return super().form_valid(form)
+                if user_is_admin == False:
+                    form.add_error("gemeinde", "Nutzer ist kein Administrator für eine der der Kontaktorganisation zugewiesenen Gemeinde - Kontaktorganisation kann nicht aktualisiert werden!")
+                    return super().form_invalid(form)
+        self.success_message = "Kontaktorganisation *" + form.cleaned_data['name'] + "* aktualisiert!" 
+        return super().form_valid(form)
+    
+    def get_object(self):
+        object = super().get_object()
+        if self.request.user.is_superuser == False:
+            for gemeinde in object.gemeinde.all():
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:                    
+                        return object
+            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        return object 
 
     def get_success_url(self):
-        return reverse_lazy("contactorganization-list")
+        return reverse_lazy("contact-list")
     
     
 class ContactOrganizationListView(SingleTableView):
     model = ContactOrganization
     table_class = ContactOrganizationTable
+    template_name = "xplanung_light/contact_list.html"
+
+    def get_queryset(self):
+        if self.request.user.is_superuser:
+        #if True:
+            qs = ContactOrganization.objects.prefetch_related('gemeinde').annotate(last_changed=Subquery(
+                ContactOrganization.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+            )).order_by('-last_changed')
+        else:
+            qs = ContactOrganization.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+                ContactOrganization.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+            )).order_by('-last_changed')
+        
+        return qs
 
 
-class ContactOrganizationDeleteView(DeleteView):
+class ContactOrganizationDeleteView(SuccessMessageMixin, DeleteView):
     model = ContactOrganization
-    
+    success_message = "Kontaktorganisation wurde gelöscht!"
+    template_name = "xplanung_light/contact_confirm_delete.html"
+
+    def form_valid(self, form):
+        success_url = self.get_success_url()
+        if self.request.user.is_superuser == False:
+            object = self.get_object()
+            user_orga_admin = []
+            for gemeinde in object.gemeinde.all():
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True 
+                user_orga_admin.append(user_is_admin)
+            if all(user_orga_admin) == False:
+                messages.add_message(self.request, messages.WARNING, "Nutzer ist kein Administrator für alle der Kontaktorganisation zugewiesene Gemeinde(n) - Kontaktorganisation kann nicht gelöscht werden!")
+                return HttpResponseRedirect(success_url)
+        self.object.delete()
+        messages.add_message(self.request, messages.SUCCESS, "Kontaktorganisation " + self.object.name + " wurde gelöscht!")
+        return HttpResponseRedirect(success_url)
+
+    def get_object(self):
+        object = super().get_object()
+        if self.request.user.is_superuser == False:
+            user_orga_admin = []
+            for gemeinde in object.gemeinde.all():
+                user_is_admin = False
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:
+                        user_is_admin = True 
+                user_orga_admin.append(user_is_admin)
+            if all(user_orga_admin) == False:
+                raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        return object
+
     def get_success_url(self):
-        return reverse_lazy("contactorganization-list")
+        return reverse_lazy("contact-list")
+    
+class AdministrativeOrganizationListView(SingleTableView):
+    """
+    Liste der Organisations-Datensätze.
+
+    Klasse für die Anzeige aller Organisationen, für die ein Nutzer Administrationsberechtigungen hat. 
+    """
+    model = AdministrativeOrganization
+    table_class = AdministrativeOrganizationTable
+    template_name = 'xplanung_light/organization_list.html'
+    success_url = reverse_lazy("organization-list") 
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
+
+    def get_queryset(self):
+        if self.request.user.is_superuser:
+        #if True:
+            qs = AdministrativeOrganization.objects.annotate(last_changed=Subquery(
+                AdministrativeOrganization.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+            )).order_by('-last_changed').only('id', 'name')
+        else:
+            qs = AdministrativeOrganization.objects.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(last_changed=Subquery(
+                AdministrativeOrganization.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+            )).order_by('-last_changed').only('id', 'name')
+        return qs
+
+
+class AdministrativeOrganizationUpdateView(SuccessMessageMixin, UpdateView):
+    """
+    Editieren eines Organisations-Datensatzes.
+
+    """
+    form_class = AdministrativeOrganizationUpdateForm
+    model = AdministrativeOrganization
+    success_url = reverse_lazy("organization-list") 
+    success_message = "Organisation wurde aktualisiert!"
+
+    def get_form(self, form_class=None):
+        success_url = self.get_success_url()
+        form = super().get_form(form_class)
+        return form
+    
+    def form_valid(self, form):
+        object=self.get_object()
+        self.success_message = "Organisation *" + object.name + "* aktualisiert!" 
+        return super().form_valid(form)
+    
+    def get_object(self):
+        object = super().get_object()
+        if self.request.user.is_superuser == False:
+            for user in object.organization_users.all():
+                if user.user == self.request.user and user.is_admin:                    
+                    return object
+            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        return object  

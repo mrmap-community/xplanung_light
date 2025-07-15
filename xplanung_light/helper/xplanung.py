@@ -44,6 +44,34 @@ class XPlanung():
             print("helper/xplanung.py init: read directly from gml")
             self.xml_string = self.context_file_bytesio.read().decode('UTF-8')
 
+    def get_orgas(self):
+        ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
+        root = ET.fromstring(self.xml_string)
+        # check for version
+        #<xplan:XPlanAuszug xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="GML_080e46d4-9a9f-4f1d-8f3b-f17f79228417">
+        ns = {
+            'xplan': 'http://www.xplanung.de/xplangml/6/0',
+            'gml': 'http://www.opengis.net/gml/3.2',
+            'xlink': 'http://www.w3.org/1999/xlink',
+            'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+            'wfs': 'http://www.opengis.net/wfs',
+            'xsd': 'http://www.w3.org/2001/XMLSchema',
+        }
+        # Auslesen der Gemeinden
+        gemeinden = root.findall("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde", ns)
+        orgas = []
+        # Problem: Funktioniert nicht für Verbandsgemeinden! - Die dürfen nicht in Liste auftauchen!
+        for gemeinde in gemeinden:
+            single_gemeinde_ags = gemeinde.find("xplan:ags", ns).text
+            single_gemeinde_name = gemeinde.find("xplan:gemeindeName", ns).text
+            try:
+                orga = AdministrativeOrganization.objects.get(name=single_gemeinde_name, ls=single_gemeinde_ags[:2], ks=single_gemeinde_ags[2:5], gs=single_gemeinde_ags[5:8])
+                orgas.append(orga)
+            except:
+                all_administrativeorganizations_exists = False
+                raise forms.ValidationError("Fehler beim Abspeichern des neuen BPlan-Objekts - nicht alle angegebenen Gemeinden wurden in der Datenbank gefunden!")
+        return orgas    
+
     def import_bplan(self, overwrite=False):
         # for exporting gml with right namespace
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
