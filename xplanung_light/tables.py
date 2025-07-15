@@ -18,14 +18,14 @@ class AdministrativeOrganizationTable(tables.Table):
 
 
 class ContactOrganizationTable(tables.Table):
-    edit = tables.LinkColumn('contact-update', text='Bearbeiten', args=[A('pk')], \
+    edit = tables.LinkColumn('contact-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
                          orderable=False, empty_values=())
-    delete = tables.LinkColumn('contact-delete', text='Löschen', args=[A('pk')], \
+    delete = tables.LinkColumn('contact-delete', verbose_name='', text='Löschen', args=[A('pk')], \
                          orderable=False, empty_values=())
     class Meta:
         model = ContactOrganization
         template_name = "django_tables2/bootstrap5.html"
-        fields = ['id', 'name', 'edit', 'delete']
+        fields = ['id', 'name', 'gemeinde', 'edit', 'delete']
 
 
 class BPlanSpezExterneReferenzTable(tables.Table):

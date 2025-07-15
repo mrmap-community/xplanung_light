@@ -29,6 +29,31 @@ class MapfileGenerator():
         map["web"]["metadata"]["ows_title"] = "Kommunale Pläne von " + orga.name
         map["web"]["metadata"]["ows_abstract"] = "Kommunale Pläne von " + orga.name + " - Abstract"
         map["web"]["metadata"]["ows_onlineresource"] = ows_uri
+        # Übernahme der Kontaktinformationen, wenn vorhanden
+        print(orga.contactorganization_set.count())
+        if orga.contactorganization_set.count() >= 1:
+            contact = orga.contactorganization_set.first()
+            map["web"]["metadata"]["ows_contactorganization"] = str(contact)
+            map["web"]["metadata"]["ows_contactvoicetelephone"] = str(contact.phone)
+            map["web"]["metadata"]["ows_contactelectronicmailaddress"] = str(contact.email)
+            map["web"]["metadata"]["ows_contactperson"] = str(contact.person)
+            # TODO - weitere Felder hinzufügen - ggf. Infos aus settings.py, das es hier um den Dienstbereisteller geht!
+            
+
+            """
+            "ows_addresstype"                   "postal"
+            "ows_contactorganization"           "Gemeinde/Stadt Aach"
+            "ows_contactperson"                 ""
+            "ows_address"                       ""
+            "ows_city"                          ""
+            "ows_stateorprovince"               "DE-RP"
+            "ows_postcode"                      ""
+            "ows_country"                       "DE"
+            "ows_contactvoicetelephone"         ""
+            "ows_contactfacsimiletelephone"     ""
+            "ows_contactelectronicmailaddress"  ""
+            """
+
         # Abfrage der Geltungsbereiche aller Bebauungspläne einer Gemeinde zur Ableitung des Extents
         union_queryset = bplaene.annotate(
             union_geom=Func(F('geltungsbereich'), function='ST_Union')
