@@ -26,6 +26,39 @@ import json
 import io, zipfile
 from pathlib import Path
 from django.core.exceptions import PermissionDenied
+import uuid
+import xml.etree.ElementTree as ET
+
+
+def qualify_gml_geometry(gml_from_db:str):
+    ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
+    root = ET.fromstring("<?xml version='1.0' encoding='UTF-8'?><snippet xmlns:gml='http://www.opengis.net/gml/3.2'>" + gml_from_db + "</snippet>")
+    ns = {
+        'gml': 'http://www.opengis.net/gml/3.2',
+    }
+    # print("<?xml version='1.0' encoding='UTF-8'?><snippet xmlns:gml='http://www.opengis.net/gml/3.2'>" + context['bplan'].geltungsbereich_gml_25832 + "</snippet>")
+    # Test ob ein Polygon zurück kommt - damit wäre nur ein einziges Polygon im geometry Field
+    polygons = root.findall('gml:Polygon', ns)
+    # print(len(polygons))
+    if len(polygons) == 0:
+        # print("Kein Polygon auf oberer Ebene gefunden - es sind wahrscheinlich mehrere!")
+        multi_polygon_element = root.find('gml:MultiSurface', ns)
+        uuid_multisurface = uuid.uuid4()
+        multi_polygon_element.set("gml:id", "GML_" + str(uuid_multisurface))
+        # Füge gml_id Attribute hinzu - besser diese als Hash aus den Geometrien zu rechnen, oder in Zukunft generic_ids der Bereiche zu verwenden 
+        polygons = root.findall('gml:MultiSurface/gml:surfaceMember/gml:Polygon', ns)
+        for polygon in polygons:
+            uuid_polygon = uuid.uuid4()
+            polygon.set("gml:id", "GML_" + str(uuid_polygon))
+        return ET.tostring(multi_polygon_element, encoding="utf-8", method="xml").decode('utf8')
+    else:
+        polygon_element = root.find('gml:Polygon', ns)
+        #polygon_element.set("xmlns:gml", "http://www.opengis.net/gml/3.2")   
+        uuid_polygon = uuid.uuid4()
+        polygon_element.set("gml:id", "GML_" + str(uuid_polygon))
+        # Ausgabe der Geometrie in ein XML-Snippet - erweitert um den MultiSurface/surfaceMember Rahmen
+        ET.dump(polygon_element) 
+        return '<gml:MultiSurface srsName="EPSG:25832"><gml:surfaceMember>' + ET.tostring(polygon_element, encoding="utf-8", method="xml").decode('utf8') + '</gml:surfaceMember></gml:MultiSurface>'
 
 
 class BPlanCreateView(CreateView):
