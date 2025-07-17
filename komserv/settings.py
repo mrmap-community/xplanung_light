@@ -175,3 +175,22 @@ ORGS_SLUGFIELD = 'django_extensions.db.fields.AutoSlugField'
 
 #INVITATION_BACKEND = 'xplanung_light.backends.MyInvitationBackend'
 #REGISTRATION_BACKEND = 'xplanung_light.backends.MyRegistrationBackend'
+
+# Konfigurationen für xplanung_light
+
+# Kontaktinformationen für Metadaten und Dienste
+
+XPLANUNG_LIGHT_CONFIG = {
+    'metadata_contact': {
+        'organization_name': 'Musterorganisation Metadaten / Dienste',
+        'person_name': 'Max Mustermann',
+        'email': 'maximilian.mustermann@example.com',
+        'phone': '01111/11111',
+        'facsimile': '01111/11111-0',
+        'homepage': 'https://www.example.com',
+        'address': 'Musterstraße 10',
+        'city': 'Musterstadt',
+        'postcode': '11111',
+    },
+    'metadata_keywords': ['bebauungsplan', 'kommunal', ],
+}

@@ -28,7 +28,7 @@ from pathlib import Path
 from django.core.exceptions import PermissionDenied
 import uuid
 import xml.etree.ElementTree as ET
-
+from django.conf import settings
 
 def qualify_gml_geometry(gml_from_db:str):
     ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
@@ -247,7 +247,10 @@ class BPlanListView(FilterView, SingleTableView):
                 BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
         else:
-            qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+            # admin für alle Gemeinden eines Plans
+            qs = BPlan.objects.filter(gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+            # user ist Organisation zugewiesen - ohen id_admin=True
+            #qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
                 BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
         self.filter_set = BPlanFilter(self.request.GET, queryset=qs)
@@ -284,13 +287,15 @@ class BPlanDetailXPlanLightView(BPlanDetailView):
         ogr_geom.transform(ct)
         # Speichern des Extents in den Context
         context['extent'] = ogr_geom.extent
+        # Übergabe der Informationen aus der setings.py an das Template
+        context['metadata_contact'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']
+        context['metadata_keywords'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_keywords']
         # Ausgabe der GML Variante zu Testzwecken 
         # print(context['bplan'].geltungsbereich_gml_25832)
         # Da die GML Daten nicht alle Attribute beinhalten, die XPlanung fordert, müssen wir sie anpassen, bzw. umschreiben
         # Hierzu nutzen wir die Funktion qualify_gml_geometry
         context['multisurface_geometry_25832'] = qualify_gml_geometry(context['bplan'].geltungsbereich_gml_25832)
         context['multisurface_geometry_4326'] = qualify_gml_geometry(context['bplan'].geltungsbereich_gml_4326)
-
         relative_url = reverse('bplan-export-xplan-raster-6', kwargs={'pk': context['bplan'].id})
         context['iso19139_url']= self.request.build_absolute_uri(relative_url)
         # Übergabe der attachments

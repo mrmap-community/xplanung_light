@@ -1,11 +1,11 @@
 {% extends "xplanung_light/layout.html" %}
 {% block title %}
-    Liste der Kontaktorganisationen
+    Liste der Kontaktstellen
 {% endblock %}
 {% load render_table from django_tables2 %}
 {% block content %}
 {% load django_bootstrap5 %}
-<p><a href="{% url 'contact-create' %}">Kontaktorganisation anlegen</a></p>
+<p><a href="{% url 'contact-create' %}">Kontaktstelle anlegen</a></p>
 {% render_table table %}
 <p>Anzahl: {{ object_list.count }}</p>
 {% endblock %}

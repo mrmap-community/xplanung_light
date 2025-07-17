@@ -80,6 +80,8 @@ class BPlanTable(tables.Table):
     zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
     attachments = tables.Column(verbose_name="Anlagen", accessor='attachments', orderable=False)
     beteiligungen = tables.Column(verbose_name="Beteiligungen", accessor='beteiligungen', orderable=False)
+    detail = tables.LinkColumn('bplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
+                         orderable=False, empty_values=())
     # manytomany relations are handled automatically!
     #gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
     xplangml = tables.Column(verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
@@ -126,7 +128,7 @@ class BPlanTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "name", "gemeinde", "planart", "attachments", "beteiligungen", "xplangml", "xplan_gml_export", "xplan_zip_export", "iso_metadata", "edit", "delete")
+        fields = ( "zoom", "last_changed", "name", "gemeinde", "planart", "attachments", "beteiligungen", "detail", "xplangml", "xplan_gml_export", "xplan_zip_export", "iso_metadata", "edit", "delete")
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):

@@ -15,20 +15,22 @@
   <gmd:contact>
     <gmd:CI_ResponsibleParty>
       <gmd:organisationName>
-        <gco:CharacterString>{{ bplan.gemeinde.name }}</gco:CharacterString>
+        <gco:CharacterString>{{ metadata_contact.organization_name }}</gco:CharacterString>
       </gmd:organisationName>
       <gmd:contactInfo>
         <gmd:CI_Contact>
           <gmd:address>
             <gmd:CI_Address>
+              {% if bplan.gemeinde.all.first %}
               <gmd:administrativeArea>
-                <gco:CharacterString>Rheinland-Pfalz</gco:CharacterString>
+                <gco:CharacterString>{{ bplan.gemeinde.all|join:", " }}</gco:CharacterString>
               </gmd:administrativeArea>
+              {% endif %}
               <gmd:country>
                 <gco:CharacterString>DE</gco:CharacterString>
               </gmd:country>
               <gmd:electronicMailAddress>
-                <gco:CharacterString>{{ bplan.gemeinde.address_email }}</gco:CharacterString>
+                <gco:CharacterString>{% if metadata_contact.email %}{{ metadata_contact.email }}{% else %}max.mustermann@example.com{% endif %}</gco:CharacterString>
               </gmd:electronicMailAddress>
             </gmd:CI_Address>
           </gmd:address>
@@ -135,10 +137,13 @@
       <gmd:abstract>
         <gco:CharacterString>Bebauungsplan {{ bplan.name }} von {{ bplan.gemeinde.name }}</gco:CharacterString>
       </gmd:abstract>
+      <!-- https://www.isotc211.org/2005/gmd/identification.xsd -->
+      {% for single_gemeinde in bplan.gemeinde.all %}
       <gmd:pointOfContact>
         <gmd:CI_ResponsibleParty>
+          {% if single_gemeinde.contacts.first %}
           <gmd:organisationName>
-            <gco:CharacterString>{{ bplan.gemeinde.address_street }}</gco:CharacterString>
+            <gco:CharacterString>{{ single_gemeinde.contacts.first.name }}</gco:CharacterString>
           </gmd:organisationName>
           <gmd:contactInfo>
             <gmd:CI_Contact>
@@ -151,7 +156,7 @@
                     <gco:CharacterString>DE</gco:CharacterString>
                   </gmd:country>
                   <gmd:electronicMailAddress>
-                    <gco:CharacterString>{{ bplan.gemeinde.address_email }}</gco:CharacterString>
+                    <gco:CharacterString>{{ single_gemeinde.contacts.first.email }}</gco:CharacterString>
                   </gmd:electronicMailAddress>
                 </gmd:CI_Address>
               </gmd:address>
@@ -160,8 +165,34 @@
           <gmd:role>
             <gmd:CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_RoleCode" codeListValue="publisher">publisher</gmd:CI_RoleCode>
           </gmd:role>
+          {% else%}
+          <gmd:organisationName>
+            <gco:CharacterString>Gemeinde {{ single_gemeinde.name }} hat keine weiteren Kontaktinformationen</gco:CharacterString>
+          </gmd:organisationName>
+          <gmd:contactInfo>
+            <gmd:CI_Contact>
+              <gmd:address>
+                <gmd:CI_Address>
+                  <gmd:administrativeArea>
+                    <gco:CharacterString>Rheinland-Pfalz</gco:CharacterString>
+                  </gmd:administrativeArea>
+                  <gmd:country>
+                    <gco:CharacterString>DE</gco:CharacterString>
+                  </gmd:country>
+                  <gmd:electronicMailAddress>
+                    <gco:CharacterString>demoorganization@example.com</gco:CharacterString>
+                  </gmd:electronicMailAddress>
+                </gmd:CI_Address>
+              </gmd:address>
+            </gmd:CI_Contact>
+          </gmd:contactInfo>
+          <gmd:role>
+            <gmd:CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_RoleCode" codeListValue="publisher">publisher</gmd:CI_RoleCode>
+          </gmd:role>
+          {% endif %}
         </gmd:CI_ResponsibleParty>
       </gmd:pointOfContact>
+      {% endfor %}
       <gmd:resourceMaintenance>
         <gmd:MD_MaintenanceInformation>
           <gmd:maintenanceAndUpdateFrequency>
@@ -169,6 +200,17 @@
           </gmd:maintenanceAndUpdateFrequency>
         </gmd:MD_MaintenanceInformation>
       </gmd:resourceMaintenance>
+      {% if metadata_keywords %}
+      {% for keyword in metadata_keywords%}
+      <gmd:descriptiveKeywords>
+      <gmd:MD_Keywords>
+      <gmd:keyword>
+      <gco:CharacterString>{{ keyword }}</gco:CharacterString>
+      </gmd:keyword>
+      </gmd:MD_Keywords>
+      </gmd:descriptiveKeywords>
+      {% endfor %}
+      {% endif %}
       <gmd:descriptiveKeywords>
         <gmd:MD_Keywords>
           <gmd:keyword>

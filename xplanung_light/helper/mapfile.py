@@ -3,6 +3,7 @@ from xplanung_light.models import AdministrativeOrganization, BPlan
 from django.contrib.gis.gdal import OGRGeometry, SpatialReference
 from django.db.models import F, Func
 import os
+from django.conf import settings
 
 """
 Klassen für die Generierung und Bearbeitung von Mapserver-Konfigurationsdateien (mapfiles) 
@@ -30,13 +31,14 @@ class MapfileGenerator():
         map["web"]["metadata"]["ows_abstract"] = "Kommunale Pläne von " + orga.name + " - Abstract"
         map["web"]["metadata"]["ows_onlineresource"] = ows_uri
         # Übernahme der Kontaktinformationen, wenn vorhanden
-        print(orga.contactorganization_set.count())
-        if orga.contactorganization_set.count() >= 1:
-            contact = orga.contactorganization_set.first()
-            map["web"]["metadata"]["ows_contactorganization"] = str(contact)
-            map["web"]["metadata"]["ows_contactvoicetelephone"] = str(contact.phone)
-            map["web"]["metadata"]["ows_contactelectronicmailaddress"] = str(contact.email)
-            map["web"]["metadata"]["ows_contactperson"] = str(contact.person)
+        print(orga.contacts.count())
+        if orga.contacts.count() >= 1:
+            contact = orga.contacts.first()
+            map["web"]["metadata"]["ows_contactorganization"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['organization_name']
+            map["web"]["metadata"]["ows_contactvoicetelephone"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone']
+            map["web"]["metadata"]["ows_contactelectronicmailaddress"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email']
+            map["web"]["metadata"]["ows_contactperson"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['person_name']
+            map["web"]["metadata"]["ows_keywordlist"] = ','.join(settings.XPLANUNG_LIGHT_CONFIG['metadata_keywords'])
             # TODO - weitere Felder hinzufügen - ggf. Infos aus settings.py, das es hier um den Dienstbereisteller geht!
             
 

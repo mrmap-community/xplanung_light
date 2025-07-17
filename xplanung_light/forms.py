@@ -166,6 +166,23 @@ class GemeindeSelect2(autocomplete.ModelSelect2Multiple):
         if value:
             option["attrs"]["bbox"] = value.instance.bbox
         return option
+    
+
+class GemeindeSelect3(autocomplete.ModelSelect2Multiple):
+    """
+    Klasse für den Zugriff auf die Gemeinden ohne die Verwendung der Geometrien - macht das alles etwas schneller
+    """
+    def _init_(self):
+        self.url = 'administrativeorganization-autocomplete'
+
+
+    def create_option(
+        self, name, value, label, selected, index, subindex=None, attrs=None
+    ):
+        option = super().create_option(
+            name, value, label, selected, index, subindex, attrs
+        )
+        return option
 
 
 class BPlanCreateForm(ModelForm):
@@ -464,7 +481,7 @@ class ContactOrganizationCreateForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.fields['gemeinde'].widget = GemeindeSelect2()
+        self.fields['gemeinde'].widget = GemeindeSelect3()
         self.helper.layout = Layout(
             Fieldset(
                 "Informationen zur Kontaktstelle",
@@ -513,7 +530,7 @@ class ContactOrganizationUpdateForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.fields['gemeinde'].widget = GemeindeSelect2()
+        self.fields['gemeinde'].widget = GemeindeSelect3()
         self.helper.layout = Layout(
             Fieldset(
                 "Informationen zur Kontaktstelle",
@@ -564,7 +581,10 @@ class AdministrativeOrganizationUpdateForm(ModelForm):
         self.helper = FormHelper(self)
         self.helper.layout = Layout(
             Fieldset(
-                "Informationen zur Lizensierung der publizierten Pläne",
+                "Zusätzliche Informationen für die Bereitstellung durch die Gebietskörperschaft",
+                Row(
+                    "coat_of_arms_url",
+                ),
                 Row(
                     Column(
                         "published_data_accessrights",
@@ -580,4 +600,4 @@ class AdministrativeOrganizationUpdateForm(ModelForm):
     class Meta:
         model = AdministrativeOrganization
 
-        fields = ["published_data_accessrights", "published_data_rights", ]
+        fields = ["coat_of_arms_url", "published_data_accessrights", "published_data_rights", ]

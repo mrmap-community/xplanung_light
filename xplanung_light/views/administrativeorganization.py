@@ -2,12 +2,11 @@ from django.views.generic import (UpdateView)
 from xplanung_light.models import AdministrativeOrganization
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableView
-from xplanung_light.tables import AdministrativeOrganizationTable
+from xplanung_light.tables import AdministrativeOrganizationTable, AdministrativeOrganizationPublishingTable
 from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from xplanung_light.forms import AdministrativeOrganizationUpdateForm
 from django.db.models import Subquery, OuterRef
-from xplanung_light.tables import AdministrativeOrganizationPublishingTable
 from django.db.models import Count
 from dal import autocomplete
 from django.core.exceptions import PermissionDenied

@@ -1,0 +1,46 @@
+
+{% load django_bootstrap5 %}
+{% bootstrap_css %}
+{% load leaflet_tags %}
+{% block title %}
+<center>
+{% for gemeinde in bplan.gemeinde.all %}
+    <img width="120px" height="132px" src="{{ gemeinde.coat_of_arms_url }}">
+{% endfor %}
+</center>
+<center>{{ bplan.gemeinde.all|join:" | " }}</center>
+{% endblock %}
+{% block content %}
+<table class="table">
+  <thead>
+   <!-- <tr>
+      <th scope="col">Attribut</th>
+      <th scope="col">Wert</th>
+    </tr> -->
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Typ des Plans</th>
+      <td>{{ bplan.get_planart_display }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Name des Plans</th>
+      <td>{{ bplan.name }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Nummer des Plans</th>
+      <td>{{ bplan.nummer }}</td>
+    </tr>
+    {% for anlage in bplan.attachments.all %}
+    <tr>
+      <th scope="row">Anlage vom Typ <i>{{ anlage.get_typ_display }}</i></th>
+      <td><a href="{% url 'bplanattachment-download' pk=anlage.id %}">{{ anlage.name }}</a></td>
+    </tr>
+    {% endfor %}
+    <tr>
+      <th scope="row">XPlan-GML V 6.0</th>
+      <td><a href="{% url 'bplan-export-xplan-raster-6' pk=bplan.id %}">Download</a></td>
+    </tr>
+  </tbody>
+</table>
+{% endblock %}

@@ -14,6 +14,7 @@
 .navbar a {
     text-decoration: none;
     color: inherit;
+    background-color: inherit;
 }
 
 .navbar-brand {
@@ -25,6 +26,11 @@
     font-variant: small-caps;
     margin-left: 30px;
 }
+
+/*.dropdown-item {
+    color: red;
+    
+}*/
 
 .body-content {
     padding: 5px;

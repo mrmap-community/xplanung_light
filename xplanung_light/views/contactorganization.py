@@ -24,17 +24,23 @@ class ContactOrganizationCreateView(SuccessMessageMixin, CreateView):
         """
         form = super().get_form(self.form_class)
         if self.request.user.is_superuser:
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.only("pk", "name", "type")
         else:
             """
             Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
             
             """
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).only("pk", "name", "type")
+        # Herausnehmen der Gemeinden, die schon eine Kontaktstelle zugewiesen bekommen haben
+        form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(contacts__isnull = True)
         return form
 
     def form_valid(self, form):
         # TODO check if contact for gemeinde already exist!
+        for gemeinde in form.cleaned_data['gemeinde']:
+            if gemeinde.contacts.all().count() >= 1:
+                form.add_error("gemeinde", "Die Gemeinde *" + str(gemeinde) + "* hat schon eine Kontaktstelle angegeben: " + str(gemeinde.contacts.first())+ " - mehrere sind nicht zulässig!")
+                return super().form_invalid(form)
         if self.request.user.is_superuser == False:
             # Überprüfen, ob der jeweilige Nutzer auch als Administrator für jede Gemeinde eingetragen ist
             for gemeinde in form.cleaned_data['gemeinde']:
@@ -59,11 +65,12 @@ class ContactOrganizationUpdateView(SuccessMessageMixin, UpdateView):
     def get_form(self, form_class=None):
         success_url = self.get_success_url()
         form = super().get_form(form_class)
+        object = self.get_object()
+        #form.fields['gemeinde'].queryset = 
         if self.request.user.is_superuser:
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.only("pk", "name", "type")
         else:
             # Deaktivieren des Gemeinde Fields - falls auch noch andere Gemeinde am Plan hängt, für die der aktuelle Nutzer kein admin ist
-            object = self.get_object()
             user_orga_admin = []
             for gemeinde in object.gemeinde.all():
                 user_is_admin = False
@@ -78,7 +85,10 @@ class ContactOrganizationUpdateView(SuccessMessageMixin, UpdateView):
                 """
                 Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
                 """
-                form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+                form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).only("pk", "name", "type")
+        # Erweitern der Gemeinden, die noch keinem Kontakt zugewiesen wurden, mit denen, die schon am Record vorhanden sind 
+        # https://studygyaan.com/django/combining-multiple-querysets-in-django-with-examples
+        form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(contacts__isnull = True).only("pk", "name", "type") | object.gemeinde.get_queryset().only("pk", "name", "type")
         return form
     
     def form_valid(self, form):
@@ -122,7 +132,7 @@ class ContactOrganizationListView(SingleTableView):
                 ContactOrganization.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed')
         else:
-            qs = ContactOrganization.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+            qs = ContactOrganization.objects.filter(gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
                 ContactOrganization.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed')
         

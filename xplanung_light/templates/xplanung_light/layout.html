@@ -30,27 +30,36 @@
             <span class="navbar-toggler-icon"></span>
           </button>
           <div class="collapse navbar-collapse" id="navbarTogglerDemo01">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-              <li class="nav-item">
-                <a class="nav-link" aria-current="page" href="{% url 'about' %}">Über</a>
-              </li>
+            <ul class="navbar-nav me-auto my-2 my-lg-0 navbar-nav-scroll" style="--bs-scroll-height: 100px;">
               {% if user.is_authenticated %}
-              <li class="nav-item">
-                <a class="nav-link" aria-current="page" href="{% url 'bplan-list' %}">Bebauungspläne</a>
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Pläne und Satzungen
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+                  <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'bplan-list' %}">Bebauungspläne</a></li>
+                </ul>
+              </li> 
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Organisationen
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+                  <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'organization-list' %}">Gebietskörperschaften</a></li>
+                  <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'contact-list' %}">Kontakte</a></li>
+                  <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'organization-publishing-list' %}">Schnittstellen</a></li>
+                  <!--<li><hr class="dropdown-divider"></li>-->
+                </ul>
               </li>
-              <li class="nav-item">
-                <a class="nav-link" aria-current="page" href="{% url 'organization-list' %}">Organisationen</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" aria-current="page" href="{% url 'contact-list' %}">Kontakt</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" aria-current="page" href="{% url 'organization-publishing-list' %}">Publizierende Organisationen</a>
-              </li>
+              {% if user.is_superuser %}
               <li class="nav-item">
                   <a class="nav-link" aria-current="page" href="{% url 'admin:index' %}">Admin Backend</a>
               </li>
               {% endif %}
+              {% endif %}
+              <li class="nav-item">
+                <a class="nav-link" aria-current="page" href="{% url 'about' %}">Über</a>
+              </li>
             </ul>
             <div class="d-flex">
                 {% if user.is_authenticated %}

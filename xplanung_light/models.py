@@ -175,15 +175,14 @@ dienen nur als Fallback.
 
 class ContactOrganization(GenericMetadata):
 
-    name = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Name der Kontaktorganisation', help_text='Offizieller Name der Organisation - z.B. Bauamt Pirmasens')
-    unit = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name der Einheit/Referat', help_text='Name der zuständigen Einheit innerhalb der Organisation - z.B. Auskunftsstelle Bauleitplanung')
+    name = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Name der Kontaktstelle', help_text='Offizieller Name der Kontaktstelle - z.B. Bauamt Pirmasens')
+    unit = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name der Einheit/Referat', help_text='Name der zuständigen Einheit innerhalb der Kontaktstelle - z.B. Auskunftsstelle Bauleitplanung')
     person = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name einer Kontaktperson', help_text='Name einer Person die direkt kontaktiert werden kann, wenn man Informationen zu den Bauleitplänen benötigt.')
     phone = models.CharField(blank=False, null=False, max_length=256, verbose_name='Telefon')
     facsimile = models.CharField(blank=True, null=True, max_length=256, verbose_name='Fax')
     email = models.EmailField(blank=False, null=False, max_length=512, verbose_name='EMail')
     homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
-    # TODO - add foreign_key to AdministrativeOrganization
-    gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Kontakt für Gemeinde(n)")
+    gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Kontakt für Gemeinde(n)", related_name="contacts")
     history = HistoricalRecords(m2m_fields=[gemeinde])
 
     def __str__(self):
