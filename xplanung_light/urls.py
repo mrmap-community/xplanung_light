@@ -1,7 +1,7 @@
 from django.urls import path, include
 from xplanung_light.views import views
 from django.contrib.auth import views as auth_views
-from xplanung_light.views.bplan import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView, BPlanDetailView
+from xplanung_light.views.bplan import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView, BPlanDetailView, BPlanListViewHtml
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views.bplanspezexternereferenz import BPlanSpezExterneReferenzCreateView, BPlanSpezExterneReferenzUpdateView, BPlanSpezExterneReferenzDeleteView, BPlanSpezExterneReferenzListView
 from xplanung_light.views.bplanbeteiligung import BPlanBeteiligungCreateView, BPlanBeteiligungUpdateView, BPlanBeteiligungDeleteView, BPlanBeteiligungListView
@@ -22,6 +22,8 @@ urlpatterns = [
     path("bplan/<int:pk>/update/", BPlanUpdateView.as_view(), name="bplan-update"),
     path("bplan/<int:pk>/delete/", BPlanDeleteView.as_view(), name="bplan-delete"),
     path("bplan/<int:pk>/", BPlanDetailView.as_view(), name="bplan-detail"),
+    # BPlan HTML List - für GetFeatureInfo
+    path("bplan/html-list/", BPlanListViewHtml.as_view(), name="bplan-list-html"),
     # BPlan XPlan Export
     path("bplan/<int:pk>/xplan/", BPlanDetailXPlanLightView.as_view(template_name="xplanung_light/bplan_template_xplanung_light_6.xml"), name="bplan-export-xplan-raster-6"),
     path("bplan/<int:pk>/xplan-zip/", BPlanDetailXPlanLightZipView.as_view(template_name="xplanung_light/bplan_template_xplanung_light_6.xml"), name="bplan-export-xplan-raster-6-zip"),

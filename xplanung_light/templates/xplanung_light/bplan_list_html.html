@@ -2,6 +2,9 @@
 {% load django_bootstrap5 %}
 {% bootstrap_css %}
 {% load leaflet_tags %}
+
+{%for bplan in bplan_list %}
+
 {% block title %}
 <center>
 <h3>Bebauungsplan "<b>{{ bplan.name }}</b>"</h3>
@@ -140,3 +143,5 @@
   </tbody>
 </table>
 {% endblock %}
+
+{% endfor %}

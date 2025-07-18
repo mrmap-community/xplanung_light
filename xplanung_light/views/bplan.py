@@ -6,14 +6,14 @@ from django.urls import reverse_lazy
 from leaflet.forms.widgets import LeafletWidget
 from django_tables2 import SingleTableView
 from xplanung_light.tables import BPlanTable
-from django.views.generic import DetailView
+from django.views.generic import DetailView, ListView
 from django.contrib.gis.db.models.functions import AsGML, Transform, Envelope
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.gdal import OGRGeometry
 import uuid
 from django.core.serializers import serialize
 import json
-from xplanung_light.filter import BPlanFilter
+from xplanung_light.filter import BPlanFilter, BPlanFilterHtml
 from django_filters.views import FilterView
 from django.urls import reverse_lazy, reverse
 from xplanung_light.helper.xplanung import XPlanung
@@ -255,6 +255,16 @@ class BPlanListView(FilterView, SingleTableView):
             )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
         self.filter_set = BPlanFilter(self.request.GET, queryset=qs)
         return self.filter_set.qs
+
+class BPlanListViewHtml(FilterView, ListView):
+    """
+    Klasse wird für die Rückgabe einer Liste von Bebauungspläne bei einer GetFeatureInfo Anfrage verwendet.
+
+
+    """
+    model = BPlan
+    template_name = 'xplanung_light/bplan_list_html.html'
+    filterset_class = BPlanFilterHtml
 
 
 class BPlanDetailView(DetailView):

@@ -19,6 +19,8 @@ from django.core.cache import cache
 from django.conf import settings
 from django.http import FileResponse
 import os
+import xml.etree.ElementTree as ET
+from xplanung_light.views.bplan import BPlanDetailView, BPlanListViewHtml
 
 def get_bplan_attachment(request, pk):
     try:
@@ -37,6 +39,9 @@ def get_bplan_attachment(request, pk):
         return HttpResponse("Object not found", status=404)
 
 def ows(request, pk:int):
+    """
+    OWS Proxy für den Mapserver, der per mapscript aufgerufen wird. 
+    """
     orga = AdministrativeOrganization.objects.get(pk=pk)
     req =  mapscript.OWSRequest()
     """
@@ -46,11 +51,28 @@ def ows(request, pk:int):
     """
     #print(request.META['QUERY_STRING'])
     qs = parse_qs(request.META['QUERY_STRING'])
+    # check ob eine GetFeatureInfo Anfrage gestellt wird. Falls das der Fall ist, greifen wir ein und grabben die IDs der zurückgelieferten Pläne heraus.
+    # ausgeliefert wird dann eine eigene HTML-Seite ;-) - entweder direkt das Detail-Template eine Aggregation mehrerer Templates ...  
+    is_featureinfo = False
+    is_featureinfo_format_html = False
     for k, v in qs.items():
-        #print(k)
+
+        if v[0].lower() == 'getfeatureinfo':
+            is_featureinfo = True
+        if k.lower() == 'info_format':
+            if v[0] == 'text/html':
+                is_featureinfo_format_html = True
+            #print(qs)
+            #v = 'text/xml'
+        #print(k)            
         #print(v)
+        #else:
+    for k, v in qs.items():
+        if is_featureinfo and k.lower() == 'info_format' and is_featureinfo_format_html:
+            v[0] = 'application/vnd.ogc.gml'
         req.setParameter(k, ','.join(v))
-    #print(req)
+    
+    print(req)
 
     # test wfs http://127.0.0.1:8000/organization/1/ows/?REQUEST=GetFeature&VERSION=1.1.0&SERVICE=wfs&typename=BPlan.0723507001.12
     ## first variant - fast - 0.07 seconds
@@ -91,6 +113,29 @@ def ows(request, pk:int):
     content_type = mapscript.msIO_stripStdoutBufferContentType()
     mapscript.msIO_stripStdoutBufferContentHeaders()
     result = mapscript.msIO_getStdoutBufferBytes()
+    # Parse gml response for getfeature info
+    if is_featureinfo and is_featureinfo_format_html:
+        print('iam here')
+        #ET.register_namespace("gml", "http://www.opengis.net/gml")
+        print(result.decode('utf-8'))
+        root = ET.fromstring(result.decode('utf-8'))
+        ns = {
+            #'gml': 'http://www.opengis.net/gml',
+            #'xlink': 'http://www.w3.org/1999/xlink',
+            #'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+        }
+        # Auslesen der BPläne
+        ids = root.findall(".//id", None)
+        id_list = []
+        for id in ids:
+            id_list.append(int(id.text))
+        id_list_unique = list(dict.fromkeys(id_list))
+        print(id_list_unique)
+        if len(id_list_unique) > 0:
+            return BPlanListViewHtml.as_view(template_name="xplanung_light/bplan_list_html.html")(pk__in=(',').join(str(v) for v in id_list_unique), request=request).render()
+        #bplan_html = BPlanDetailView.as_view(template_name="xplanung_light/bplan_detail.html")(pk=53, request=request).render()
+        #print(bplan_html)
+        #return bplan_html
     # [('Content-Type', 'application/vnd.ogc.wms_xml; charset=UTF-8'), ('Content-Length', '11385')]
     response_headers = [('Content-Type', content_type),
                         ('Content-Length', str(len(result)))]

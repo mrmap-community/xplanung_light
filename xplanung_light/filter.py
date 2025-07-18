@@ -1,4 +1,4 @@
-from django_filters import FilterSet, CharFilter, ModelChoiceFilter
+from django_filters import FilterSet, CharFilter, ModelChoiceFilter, NumberFilter, BaseInFilter
 from .models import BPlan, AdministrativeOrganization
 from django.contrib.gis.geos import Polygon
 from django.db.models import Q
@@ -35,3 +35,15 @@ class BPlanFilter(FilterSet):
     def bbox_filter(self, queryset, name, value):
         #print("name from DocumentFilter.bbox_filter: " + name)
         return bbox_filter(queryset, value)
+
+
+class NumberInFilter(BaseInFilter, NumberFilter):
+    pass
+
+
+class BPlanFilterHtml(FilterSet):
+    pk__in = NumberInFilter(field_name='id', lookup_expr='in')
+    
+    class Meta:
+        model = BPlan
+        fields = ["id"] 
