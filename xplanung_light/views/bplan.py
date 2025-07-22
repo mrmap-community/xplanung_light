@@ -259,6 +259,7 @@ class BPlanListView(FilterView, SingleTableView):
 class BPlanListViewHtml(FilterView, ListView):
     """
     Klasse wird für die Rückgabe einer Liste von Bebauungspläne bei einer GetFeatureInfo Anfrage verwendet.
+    Da die Bereitstellung immer pro Organisation erfolgt, kann man die Organisation als Vorfilter setzen.
 
 
     """

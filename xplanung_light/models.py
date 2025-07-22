@@ -290,9 +290,9 @@ class BPlan(XPlan):
     #traegerbeteiligungsStartDatum [0..*], Date
     #traegerbeteiligungsEndDatum [0..*], Date
     #satzungsbeschlussDatum [0..1], Date
-    satzungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Satzungsbeschlusses", help_text="Datum des Satzungsbeschlusses")
+    satzungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Satzungsbeschlusses", help_text="Datum des Satzungsbeschlusses, falls ein Bebauungsplan als Satzung beschlossen wird.")
     #rechtsverordnungsDatum [0..1], Date
-    rechtsverordnungs_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Rechtsverordnung", help_text="Datum der Rechtsverordnung")
+    rechtsverordnungs_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Rechtsverordnung", help_text="Datum der Rechtsverordnung, falls ein Bebauungsplan als Rechtsverordnung beschlossen wird.")
     #inkrafttretensDatum [0..1], Date
     inkrafttretens_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Inkrafttretens", help_text="Datum des Inkrafttretens")
     #ausfertigungsDatum [0..1], Date

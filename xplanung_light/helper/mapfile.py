@@ -31,18 +31,33 @@ class MapfileGenerator():
         map["web"]["metadata"]["ows_abstract"] = "Kommunale Pläne von " + orga.name + " - Abstract"
         map["web"]["metadata"]["ows_onlineresource"] = ows_uri
         # Übernahme der Kontaktinformationen, wenn vorhanden
-        print(orga.contacts.count())
-        if orga.contacts.count() >= 1:
-            contact = orga.contacts.first()
-            map["web"]["metadata"]["ows_contactorganization"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['organization_name']
-            map["web"]["metadata"]["ows_contactvoicetelephone"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone']
-            map["web"]["metadata"]["ows_contactelectronicmailaddress"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email']
-            map["web"]["metadata"]["ows_contactperson"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['person_name']
-            map["web"]["metadata"]["ows_keywordlist"] = ','.join(settings.XPLANUNG_LIGHT_CONFIG['metadata_keywords'])
-            # TODO - weitere Felder hinzufügen - ggf. Infos aus settings.py, das es hier um den Dienstbereisteller geht!
-            
+        #print(orga.contacts.count())
+        #if orga.contacts.count() >= 1:
+        #contact = orga.contacts.first()
+        map["web"]["metadata"]["ows_contactorganization"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['organization_name']
+        map["web"]["metadata"]["ows_contactvoicetelephone"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone']
+        map["web"]["metadata"]["ows_contactelectronicmailaddress"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email']
+        map["web"]["metadata"]["ows_contactperson"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['person_name']
+        map["web"]["metadata"]["ows_keywordlist"] = ','.join(settings.XPLANUNG_LIGHT_CONFIG['metadata_keywords'])
+        
+        
+        # TODO - weitere Felder hinzufügen
+        if orga.published_data_license: 
+            print(orga.published_data_license.identifier)
 
-            """
+        if orga.published_data_accessrights: 
+            map["web"]["metadata"]["ows_accessconstraints"] = orga.published_data_accessrights
+        else:
+            map["web"]["metadata"]["ows_accessconstraints"] = "None"
+
+        if orga.published_data_rights: 
+            map["web"]["metadata"]["ows_fees"] = orga.published_data_rights
+        else:
+            map["web"]["metadata"]["ows_fees"] = "None" 
+
+
+        
+        """
             "ows_addresstype"                   "postal"
             "ows_contactorganization"           "Gemeinde/Stadt Aach"
             "ows_contactperson"                 ""
@@ -54,7 +69,7 @@ class MapfileGenerator():
             "ows_contactvoicetelephone"         ""
             "ows_contactfacsimiletelephone"     ""
             "ows_contactelectronicmailaddress"  ""
-            """
+        """
 
         # Abfrage der Geltungsbereiche aller Bebauungspläne einer Gemeinde zur Ableitung des Extents
         union_queryset = bplaene.annotate(

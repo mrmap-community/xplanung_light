@@ -217,14 +217,14 @@ class BPlanCreateForm(ModelForm):
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['inkrafttretens_datum'].widget = forms.DateInput(          
+        self.fields['ausfertigungs_datum'].widget = forms.DateInput(
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['ausfertigungs_datum'].widget = forms.DateInput(
+        self.fields['inkrafttretens_datum'].widget = forms.DateInput(          
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -293,10 +293,10 @@ class BPlanCreateForm(ModelForm):
                             "rechtsverordnungs_datum",
                         ),
                         Column(
-                            "inkrafttretens_datum",
+                            "ausfertigungs_datum",
                         ),
                         Column(
-                            "ausfertigungs_datum",
+                            "inkrafttretens_datum",
                         ),
                     ),
                 ),
@@ -331,8 +331,8 @@ class BPlanCreateForm(ModelForm):
                   "aufstellungsbeschluss_datum", 
                   "satzungsbeschluss_datum",
                   "rechtsverordnungs_datum",
+                  "ausfertigungs_datum",
                   "inkrafttretens_datum", 
-                  "ausfertigungs_datum", 
                   "staedtebaulicher_vertrag",
                   "erschliessungs_vertrag",
                   "durchfuehrungs_vertrag",
@@ -378,14 +378,14 @@ class BPlanUpdateForm(ModelForm):
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['inkrafttretens_datum'].widget = forms.DateInput(          
+        self.fields['ausfertigungs_datum'].widget = forms.DateInput(
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['ausfertigungs_datum'].widget = forms.DateInput(
+        self.fields['inkrafttretens_datum'].widget = forms.DateInput(          
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -426,10 +426,10 @@ class BPlanUpdateForm(ModelForm):
                             "rechtsverordnungs_datum",
                         ),
                         Column(
-                            "inkrafttretens_datum",
+                            "ausfertigungs_datum",
                         ),
                         Column(
-                            "ausfertigungs_datum",
+                            "inkrafttretens_datum",
                         ),
                     ),
                 ),
@@ -465,8 +465,8 @@ class BPlanUpdateForm(ModelForm):
                   "aufstellungsbeschluss_datum", 
                   "satzungsbeschluss_datum",
                   "rechtsverordnungs_datum",
-                  "inkrafttretens_datum", 
                   "ausfertigungs_datum", 
+                  "inkrafttretens_datum",  
                   "staedtebaulicher_vertrag",
                   "erschliessungs_vertrag",
                   "durchfuehrungs_vertrag",
@@ -587,6 +587,14 @@ class AdministrativeOrganizationUpdateForm(ModelForm):
                 ),
                 Row(
                     Column(
+                        "published_data_license",
+                    ),
+                    Column(
+                        "published_data_license_source_note",
+                    ),
+                ),
+                Row(
+                    Column(
                         "published_data_accessrights",
                     ),
                     Column(
@@ -600,4 +608,4 @@ class AdministrativeOrganizationUpdateForm(ModelForm):
     class Meta:
         model = AdministrativeOrganization
 
-        fields = ["coat_of_arms_url", "published_data_accessrights", "published_data_rights", ]
+        fields = ["coat_of_arms_url", "published_data_license", "published_data_license_source_note", "published_data_accessrights", "published_data_rights", ]

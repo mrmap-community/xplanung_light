@@ -236,7 +236,18 @@
         </gmd:MD_Keywords>
       </gmd:descriptiveKeywords>
       <gmd:resourceConstraints>
-<!-- TODO: pull license information from user defined license information -->
+<!-- TODO: pull license information from user defined license information - problem - more than one gemeinde possible ... -->
+{% if bplan.gemeinde.published_data_accessrights %}
+<gmd:MD_LegalConstraints>
+<gmd:accessConstraints>
+<gmd:MD_RestrictionCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_RestrictionCode" codeListValue="otherRestrictions"/>
+</gmd:accessConstraints>
+<gmd:otherConstraints>{{ bplan.gemeinde.published_data_accessrights }}</gmd:otherConstraints>
+</gmd:MD_LegalConstraints>
+</gmd:resourceConstraints>
+<gmd:resourceConstraints>
+<gmd:MD_LegalConstraints>
+{% else %}
 <gmd:MD_LegalConstraints>
 <gmd:accessConstraints>
 <gmd:MD_RestrictionCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_RestrictionCode" codeListValue="otherRestrictions"/>
@@ -248,6 +259,7 @@
 </gmd:resourceConstraints>
 <gmd:resourceConstraints>
 <gmd:MD_LegalConstraints>
+{% endif %}
 <gmd:useConstraints>
 <gmd:MD_RestrictionCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_RestrictionCode" codeListValue="otherRestrictions"/>
 </gmd:useConstraints>
