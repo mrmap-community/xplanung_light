@@ -205,13 +205,15 @@ class XPlan(GenericMetadata):
 
     name = models.CharField(null=False, blank=False, max_length=2048, verbose_name='Name des Plans', help_text='Offizieller Name des raumbezogenen Plans')
     #nummer [0..1]
-    nummer = models.CharField(max_length=5, verbose_name="Nummer des Plans.")
+    nummer = models.CharField(max_length=56, verbose_name="Nummer des Plans.")
     #internalId [0..1]
     #beschreibung [0..1]
+    beschreibung = models.TextField(null=True, blank=True, max_length=4096, verbose_name="Kommentierende Beschreibung des Plans. Es wird empfohlen, eine Planbeschreibung zu erfassen.")
     #kommentar [0..1]
     #technHerstellDatum [0..1], Date
     #genehmigungsDatum [0..1], Date
     #untergangsDatum [0..1], Date
+    #untergangs_datum = models.DateField(null=True, blank=True, verbose_name="Untergangsdatum des Plans", help_text="Datum, an dem der Plan (z.B. durch Ratsbeschluss oder Gerichtsurteil) aufgehoben oder für nichtig erklärt wurde.")
     #aendertPlan [0..*], XP_VerbundenerPlan
     #wurdeGeaendertVonPlan [0..*], XP_VerbundenerPlan
     #aendertPlanBereich [0..*], Referenz, Testphase
@@ -339,7 +341,45 @@ class BPlanBeteiligung(GenericMetadata):
             """Returns a string representation of Beteiligung."""
             return f"{self.get_typ_display()} - vom {self.bekanntmachung_datum}"
 
-    
+"""
+Die folgenden Klassen dienen der Abbildung eines Beteiligungsprozesses - zumindest soll die Möglichkeit geschaffen werden,
+die sich in der Offenlage befindlichen Pläne zu kommentieren, sowohl durch den Bürger, als auch durch eine andere Behörde.
+Die Frage ist aber, ob es für diese Zwecke nicht schon speziell entwickelte Software gibt, die schon länger eingesetzt wird.
+"""
+"""
+class BPlanBeteiligungBeitrag(GenericMetadata):
+
+    titel = models.CharField(null=False, blank=False, verbose_name="Titel des Beitrags")
+    beschreibung = models.TextField(null=False, blank=False, verbose_name="Beitrag (Textform)")
+    bplan = HistoricForeignKey(BPlanBeteiligung, on_delete=models.CASCADE, verbose_name="BPlanBeteiligung", help_text="BPlanBeteiligung", related_name="comments")
+    # tags?
+    public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Öffentlich einsehbar")
+    considered = models.BooleanField(null=False, blank=False, default=False, verbose_name="Wurde in Abwägung einbezogen")
+    history = HistoricalRecords()
+
+
+class BPlanBeteiligungBeitragAnhang(GenericMetadata):   
+
+    BESCHREIBUNG = "1000"
+    FOTO = "2000"
+    KARTE = "3000"
+
+    COMMENT_ATTACHMENT_TYPE_CHOICES = [
+        (BESCHREIBUNG,  "Beschreibung"),
+        (FOTO, "Foto"),
+        (KARTE, "Karte/Skizze"),
+    ]
+
+    name = models.CharField(null=False, blank=False)
+    beitrag = HistoricForeignKey(BPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zur Kommetierung", help_text="Dateianhänge für die Kommentierung", related_name="attachments")
+    typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_ATTACHMENT_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des Anhangs', help_text="Typ / Inhalt des Anhngs zum Kommentar", db_index=True)
+    attachment = models.FileField(null = True, blank = True, upload_to='uploads', verbose_name="Dokument")
+
+
+class BPlanBeteiligungBeitragAntwort():
+    pass
+"""
+
 class BPlanSpezExterneReferenz(GenericMetadata):
 
     # https://gist.github.com/chhantyal/5370749

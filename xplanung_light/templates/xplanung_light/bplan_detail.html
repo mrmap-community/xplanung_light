@@ -24,7 +24,7 @@
   </thead>
   <tbody>
     <tr>
-      <th scope="row">Typ des Plans</th>
+      <th scope="row">Planart</th>
       <td>{{ bplan.get_planart_display }}</td>
     </tr>
     <tr>
@@ -52,7 +52,7 @@
       <td>{% for single_gemeinde in bplan.gemeinde.all %}{{ single_gemeinde.ls }}{{ single_gemeinde.ks }}{{ single_gemeinde.gs }};{% endfor %}</td>
     </tr>
     <tr>
-      <th scope="row">Planart</th>
+      <th scope="row"><s>Planart</s></th>
       <td></td>
     </tr>
     <tr>
@@ -61,11 +61,19 @@
     </tr>
     <tr>
       <th scope="row">Datum des Aufstellungsbeschlusses</th>
-      <td>{{ bplan.aufstellungsbeschluss_datum }}</td>
+      <td>{{ bplan.aufstellungsbeschluss_datum|default:"nicht erfasst" }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Datum des Satzungsbeschlusses</th>
+      <td>{{ bplan.satzungsbeschluss_datum|default:"nicht erfasst" }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Ausfertigungsdatum</th>
+      <td>{{ bplan.ausfertigungs_datum|default:"nicht erfasst" }}</td>
     </tr>
     <tr>
       <th scope="row">Datum des Inkrafttretens</th>
-      <td>{{ bplan.inkrafttretens_datum }}</td>
+      <td>{{ bplan.inkrafttretens_datum|default:"nicht erfasst" }}</td>
     </tr>
     <tr>
       <th scope="row">Erstellungsmassstab</th>
@@ -96,16 +104,8 @@
     </tr>
     {% endfor %}
     <tr>
-      <th scope="row">Datum des Satzungsbeschlusses</th>
-      <td>{{ bplan.satzungsbeschluss_datum }}</td>
-    </tr>
-    <tr>
       <th scope="row"><s>Nummer der Gemarkung</s></th>
       <td></td>
-    </tr>
-    <tr>
-      <th scope="row">Ausfertigungsdatum</th>
-      <td>{{ bplan.ausfertigungs_datum }}</td>
     </tr>
     {% for gemeinde in bplan.gemeinde.all %}
     <tr>

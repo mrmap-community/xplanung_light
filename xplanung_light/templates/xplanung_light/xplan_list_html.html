@@ -1,0 +1,180 @@
+
+{% load django_bootstrap5 %}
+{% bootstrap_css %}
+{% load leaflet_tags %}
+
+{%for bplan in bplan_list.qs %}
+
+{% block title %}
+<center>
+<h3>Bebauungsplan "<b>{{ bplan.name }}</b>"</h3>
+</center>
+<center>
+{% for gemeinde in bplan.gemeinde.all %}
+    <img width="120px" height="132px" src="{{ gemeinde.coat_of_arms_url }}">
+{% endfor %}
+</center>
+<center>{{ bplan.gemeinde.all|join:" | " }}</center>
+<center>Inkraft seit: <b>{{ bplan.inkrafttretens_datum }}</b></center>
+{% endblock %}
+{% block content %}
+<table class="table">
+  <thead>
+   <!-- <tr>
+      <th scope="col">Attribut</th>
+      <th scope="col">Wert</th>
+    </tr> -->
+  </thead>
+  <tbody>
+    <!--<tr>
+      <th scope="row">Planart</th>
+      <td>{{ bplan.get_planart_display }}</td>
+    </tr>-->
+    <tr>
+      <th scope="row">Name des Plans</th>
+      <td>{{ bplan.name }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Nummer des Plans</th>
+      <td>{{ bplan.nummer }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Beschreibung</th>
+      <td></td>
+    </tr>
+    <tr>
+      <th scope="row"><s>Name der Änderung des Plans</s></th>
+      <td></td>
+    </tr>
+    <tr>
+      <th scope="row"><s>Fortlaufende Nummer der Änderung des Plans</s></th>
+      <td></td>
+    </tr>
+    <!--<tr>
+      <th scope="row">Kommentierende Beschreibung des Bebauungsplans</th>
+      <td>Bebauungsplan "<b>{{ bplan.name }}</b>" der Kommune(n): {{ bplan.gemeinde.all|join:", " }}</td>
+    </tr>-->
+    <tr>
+      <th scope="row">Amtliche(r) Gemeindeschlüssel (AGS)</th>
+      <td>{% for single_gemeinde in bplan.gemeinde.all %}{{ single_gemeinde.ls }}{{ single_gemeinde.ks }}{{ single_gemeinde.gs }};{% endfor %}</td>
+    </tr>
+    <tr>
+      <th scope="row">Planart</th>
+      <td>{{ bplan.get_planart_display }}</td>
+    </tr>
+    <tr>
+      <th scope="row"><s>Rechtsstand</s></th>
+      <td></td>
+    </tr>
+    <tr>
+      <th scope="row"><s>Erstellungsmassstab</s></th>
+      <td></td>
+    </tr>
+    {% if bplan.attachments %}
+    <tr>
+      <td colspan="2">
+        <table class="table mb-0">
+          <tr>
+            <thead>
+              <b>Dokumente</b>
+            </thead>
+          </tr>
+          {% for anlage in bplan.attachments.all %}
+          <tr>
+            <td><a href="{% url 'bplanattachment-download' pk=anlage.id %}">{{ anlage.name }} (<i>{{ anlage.get_typ_display }})</a></td>
+          </tr>
+          {% endfor %}
+        </table>
+      </td>
+    </tr>
+    {% endif %}
+    {% if bplan.beteiligungen %}
+    <tr>
+      <td colspan="2">
+        <table class="table mb-0">
+          <tr>
+            <thead>
+              <b>Beteiligungsverfahren</b>
+            </thead>
+          </tr>
+          {% for beteiligung in bplan.beteiligungen.all %}
+          <tr>
+            <td>{{ beteiligung.bekanntmachung_datum }}: <a href="">{{beteiligung.get_typ_display }}</a></td>
+          </tr>
+          {% endfor %}
+        </table>
+      </td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td colspan="2">
+        <table class="table mb-0">
+          <tr>
+            <thead>
+              <b>Historie</b>
+            </thead>
+          </tr>
+          <tr>
+            <th scope="row">Aufstellungsbeschluss</th>
+            <td>{{ bplan.aufstellungsbeschluss_datum }}</td>
+          </tr>
+          {% if bplan.satzungsbeschluss_datum %}
+          <tr>
+            <th scope="row">Satzungsbeschluss</th>
+            <td>{{ bplan.satzungsbeschluss_datum }}</td>
+          </tr>
+          {% endif %}
+          {% if bplan.rechtsverordnungs_datum %}
+          <tr>
+            <th scope="row">Rechtsverordnung</th>
+            <td>{{ bplan.rechtsverordnungs_datum }}</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <th scope="row">Ausfertigung</th>
+            <td>{{ bplan.ausfertigungs_datum }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Inkrafttreten</th>
+            <td>{{ bplan.inkrafttretens_datum }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    {% if bplan.gemeinde %}
+    <tr>
+      <td colspan="2">
+        <table class="table mb-0">
+          <tr>
+            <thead>
+              <b>Auskunft</b>
+            </thead>
+          </tr>
+          <tr>
+          {% for gemeinde in bplan.gemeinde.all %}
+            <td>
+              <b>{{ gemeinde }}</b><br>
+              {{ gemeinde.contacts.first.name }} - {{ gemeinde.contacts.first.unit }}<br>
+              <a href="mailto:gemeinde.contacts.first.email">{{ gemeinde.contacts.first.email }}</a><br>
+              <b>Tel.:</b> {{ gemeinde.contacts.first.phone }}<br>
+              <b>Fax.:</b> {{ gemeinde.contacts.first.facsimile }}
+            </td>
+          {% endfor %}
+          </tr>
+        </table>
+      </td>
+    </tr>
+    {% endif %}
+    <tr>
+      <th scope="row">XPlan-GML V 6.0</th>
+      <td><a href="{% url 'bplan-export-xplan-raster-6' pk=bplan.id %}">GML herunterladen</a></td>
+    </tr>
+    <tr>
+      <th scope="row">XPlan-ZIP-Archiv V 6.0</th>
+      <td><a href="{% url 'bplan-export-xplan-raster-6-zip' pk=bplan.id %}">ZIP-Archiv herunterladen</a></td>
+    </tr>
+  </tbody>
+</table>
+{% endblock %}
+
+{% endfor %}

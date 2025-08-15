@@ -275,7 +275,7 @@ class XPlanung():
                 file_bytes = zipfile_ob.read(file_name)
                 file_bytesio = BytesIO(file_bytes)
                 file_bytesio.name = file_name
-                if typ == '1070':
+                if typ == '99999':
                     valid = self.validate(file_bytesio, typ)
                 if valid:
                     spez_externe_referenz, created = BPlanSpezExterneReferenz.objects.update_or_create(
@@ -292,10 +292,10 @@ class XPlanung():
                     print("Datei nicht valide! Wurde nicht importiert")
 
     def validate(self, file, typ):
-        if typ == '1070':
-            print("Karte: type: " + str(type(file)))
+        if typ == '99999':
+            print("GeoreferenzierterScan: type: " + str(type(file)))
             real_mime_type = magic.from_buffer(file.read(1024), mime=True)
-            print("Karte: mimetype: " + real_mime_type)
+            print("GeoreferenzierterScan: mimetype: " + real_mime_type)
             if real_mime_type != 'image/tiff':
                 return False
         return True

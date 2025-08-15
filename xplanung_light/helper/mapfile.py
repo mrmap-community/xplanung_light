@@ -7,6 +7,7 @@ from django.conf import settings
 
 """
 Klassen für die Generierung und Bearbeitung von Mapserver-Konfigurationsdateien (mapfiles) 
+Der Generator lädt templates aus dem mapserver/mapfile_templates Ordner. Diese werden dann programmatisch angepasst.
 """
 
 class MapfileGenerator():
@@ -30,33 +31,26 @@ class MapfileGenerator():
         map["web"]["metadata"]["ows_title"] = "Kommunale Pläne von " + orga.name
         map["web"]["metadata"]["ows_abstract"] = "Kommunale Pläne von " + orga.name + " - Abstract"
         map["web"]["metadata"]["ows_onlineresource"] = ows_uri
-        # Übernahme der Kontaktinformationen, wenn vorhanden
-        #print(orga.contacts.count())
-        #if orga.contacts.count() >= 1:
-        #contact = orga.contacts.first()
+        # Übernahme der Kontaktinformationen aus den Settings - diese weden für eine Instanz definiert und beziehen sich auf den technischen Service Provider
         map["web"]["metadata"]["ows_contactorganization"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['organization_name']
         map["web"]["metadata"]["ows_contactvoicetelephone"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone']
         map["web"]["metadata"]["ows_contactelectronicmailaddress"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email']
         map["web"]["metadata"]["ows_contactperson"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['person_name']
         map["web"]["metadata"]["ows_keywordlist"] = ','.join(settings.XPLANUNG_LIGHT_CONFIG['metadata_keywords'])
-        
-        
-        # TODO - weitere Felder hinzufügen
+        # TODO - ggf. weitere Felder hinzufügen
+        # Informationen zu den Lizenzen - hier werden Infrmationen genutzt, die von den Datenanbietern pro Gebietskörperschaft definiert werden.
+        # Damit werden natürlich alle Daten einer Gebietsköperschaft unter den gleichen Nutzungsbedingungen/Lizenzen publiziert
+        # Im ersten Schritt werden nur die beiden Freitextfelder in die Capabilities geschrieben
         if orga.published_data_license: 
             print(orga.published_data_license.identifier)
-
         if orga.published_data_accessrights: 
             map["web"]["metadata"]["ows_accessconstraints"] = orga.published_data_accessrights
         else:
             map["web"]["metadata"]["ows_accessconstraints"] = "None"
-
         if orga.published_data_rights: 
             map["web"]["metadata"]["ows_fees"] = orga.published_data_rights
         else:
-            map["web"]["metadata"]["ows_fees"] = "None" 
-
-
-        
+            map["web"]["metadata"]["ows_fees"] = "None"         
         """
             "ows_addresstype"                   "postal"
             "ows_contactorganization"           "Gemeinde/Stadt Aach"
@@ -70,7 +64,6 @@ class MapfileGenerator():
             "ows_contactfacsimiletelephone"     ""
             "ows_contactelectronicmailaddress"  ""
         """
-
         # Abfrage der Geltungsbereiche aller Bebauungspläne einer Gemeinde zur Ableitung des Extents
         union_queryset = bplaene.annotate(
             union_geom=Func(F('geltungsbereich'), function='ST_Union')
@@ -78,7 +71,7 @@ class MapfileGenerator():
         for item in union_queryset:
             ogr_geom = item['union_geom']
         map["web"]["metadata"]["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
-        # Layer Objekt Template
+        # Layer Objekt Template / Vektor
         with open(os.path.join(current_dir, "../mapserver/mapfile_templates/layer_obj.map")) as file:
             layer_file_string = file.read()
         layer_from_template = mappyfile.loads(layer_file_string)
@@ -95,41 +88,33 @@ class MapfileGenerator():
         map['layers'] = []
         layer_count = 0
         for bplan in bplaene:
-            # create union
-            """
-            try:
-                umringe
-            except NameError:
-                umringe = None
-            if not umringe:
-                umringe = bplan.geltungsbereich
-            else:
-                umringe = Union(umringe, bplan.geltungsbereich)
-            """
             layer_count = layer_count + 1
             if bplan.nummer:
                 bplan_nummer = bplan.nummer
             else:
                 # Falls mehrere Bebauungspläne mit derselben Nummer vorhanden sein sollten
                 bplan_nummer = "lc_" + str(layer_count)
-            # Check, ob eine Anlage vom Typ Karte existiert - typ = 1070, falls sie existiert, wird ein Rasterlayer erstellt, sonst einfach ein Vektorlayer des Geltungsbereichs
+            # Check, ob eine Anlage vom Typ Karte existiert - typ = 99999, falls sie existiert, wird ein Rasterlayer erstellt, sonst einfach ein Vektorlayer des Geltungsbereichs
             raster_map_exist = False
             for attachment in bplan.attachments.all():
-                if attachment.typ == '1070':
+                if attachment.typ == '99999':
+                    """
+                    Die Validierung des attachments mit dem typ 99999 wurde beim Import durchgeführt, daher ist hier klar, dass keine Fehler auftreten können.
+                    """
                     # Anlage des Rasterlayers aus Vorlage
                     raster_layer = raster_layer_from_template.copy()
                     # check ob Bebauungsplan mehreren Gemeinden zugeordnet ist - fals das der Fall ist, wird der Layernamen aus der generic_id generiert!
                     if bplan.gemeinde.all().count() > 1:
-                        layer["name"] = "BPlan." + str(bplan.generic_id)
+                        raster_layer["name"] = "BPlan." + str(bplan.generic_id)
                     else:
-                        layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer
+                        raster_layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer
                     # raster_layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer + "_raster"
                     # Group - ist aber deprecated - muss man bei Aktualisierung  des Mapservers beachten!
                     # Ticket in Github:
                     # https://github.com/MapServer/MapServer/issues/7260
                     raster_layer["group"] = "BPlan." + orga.ags
                     raster_metadata = raster_layer_from_template["metadata"].copy()
-                    raster_metadata["ows_title"] = "Bebauungsplan " + bplan.name + " von " + orga.name
+                    raster_metadata["ows_title"] = bplan.name
                     raster_metadata["ows_abstract"] = "Bebauungsplan " + bplan.name + " von " + orga.name + " - Abstract"
                     # Angabe des Extents
                     raster_metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(bplan.geltungsbereich), srs=4326).transform(SpatialReference(25832), clone=True).extent])
@@ -141,17 +126,19 @@ class MapfileGenerator():
             if raster_map_exist == False:
                 # Darstellung der Geometrie
                 layer = layer_from_template.copy()
-                # check ob Bebauungsplan mehreren Gemeinden zugeordnet ist - fals das der Fall ist, wird der Layernamen aus der generic_id generiert!
+                # check ob Bebauungsplan mehreren Gemeinden zugeordnet ist - falls das der Fall ist, wird der Layernamen aus der generic_id generiert!
                 if bplan.gemeinde.all().count() > 1:
                     layer["name"] = "BPlan." + str(bplan.generic_id)
                 else:
                     layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer
                 layer["group"] = "BPlan." + orga.ags
                 metadata = layer_from_template["metadata"].copy()
-                metadata["ows_title"] = "Bebauungsplan " + bplan.name + " von " + orga.name
+                metadata["ows_title"] = bplan.name
                 metadata["ows_abstract"] = "Bebauungsplan " + bplan.name + " von " + orga.name + " - Abstract"
                 metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(bplan.geltungsbereich), srs=4326).extent])
                 metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + str(bplan.pk) + "/")
+                layer.pop('dump')
+                layer.pop('template')
                 layer["metadata"] = metadata
                 layer["filter"] = "( '[id]' = '" + str(bplan.pk) + "' )"
                 layer["classes"] = []

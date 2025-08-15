@@ -43,6 +43,9 @@ urlpatterns = [
     path("bplan/<int:bplanid>/beteiligung/<int:pk>/delete/", BPlanBeteiligungDeleteView.as_view(), name="bplanbeteiligung-delete"),
     # Organisationen
     path("organization/<int:pk>/ows/", views.ows, name="ows"),
+    # Organisations XPlan-Liste für GetFeatureInfo - hier müssen alle Plantypen zurückgeliefert werden können
+    path("organization/<int:pk>/xplan/html/", views.xplan_html, name="xplan-list-html"),
+    # 
     path("organization/publishing/", AdministrativeOrganizationPublishingListView.as_view(), name="organization-publishing-list"),
     url(
         r'^administrativeorganization-autocomplete/$',

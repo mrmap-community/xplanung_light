@@ -3,13 +3,14 @@ from django.shortcuts import render
 from xplanung_light.forms import RegistrationForm
 from django.shortcuts import redirect
 from django.contrib.auth import login
-from xplanung_light.models import AdministrativeOrganization, BPlanSpezExterneReferenz
+from xplanung_light.models import AdministrativeOrganization, BPlanSpezExterneReferenz, BPlan
 import uuid
 import xml.etree.ElementTree as ET
 from django.urls import reverse
 from xplanung_light.helper.xplanung import XPlanung
 from django.contrib import messages
 from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanImportArchivForm
+from xplanung_light.filter import BPlanIdFilter
 from django.http import HttpResponse
 import mapscript
 from urllib.parse import parse_qs
@@ -21,6 +22,7 @@ from django.http import FileResponse
 import os
 import xml.etree.ElementTree as ET
 from xplanung_light.views.bplan import BPlanDetailView, BPlanListViewHtml
+from xplanung_light.views import views
 
 def get_bplan_attachment(request, pk):
     try:
@@ -38,6 +40,16 @@ def get_bplan_attachment(request, pk):
     else:
         return HttpResponse("Object not found", status=404)
 
+def xplan_html(request, pk:int):
+    orga = AdministrativeOrganization.objects.get(pk=pk)
+    #bplan_list = BPlan.objects.filter(gemeinde=orga)
+    #print(bplaene)
+    bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.filter(gemeinde=orga))
+    #context = { 'bplan_list': bplan_list }
+    print(bplan_filter.queryset)
+    return render(request, 'xplanung_light/xplan_list_html.html', {'bplan_list': bplan_filter})
+    #return HttpResponse("Liste der XPlan-Objekte einer Organisation!", status=200) 
+
 def ows(request, pk:int):
     """
     OWS Proxy für den Mapserver, der per mapscript aufgerufen wird. 
@@ -51,32 +63,26 @@ def ows(request, pk:int):
     """
     #print(request.META['QUERY_STRING'])
     qs = parse_qs(request.META['QUERY_STRING'])
-    # check ob eine GetFeatureInfo Anfrage gestellt wird. Falls das der Fall ist, greifen wir ein und grabben die IDs der zurückgelieferten Pläne heraus.
-    # ausgeliefert wird dann eine eigene HTML-Seite ;-) - entweder direkt das Detail-Template eine Aggregation mehrerer Templates ...  
+    """
+    Check ob eine GetFeatureInfo Anfrage gestellt wird. Falls das der Fall ist, greifen wir ein und grabben die IDs der zurückgelieferten Pläne heraus.
+    ausgeliefert wird dann eine eigene HTML-Seite ;-) - entweder direkt das Detail-Template eine Aggregation mehrerer Templates ...  
+    """
     is_featureinfo = False
     is_featureinfo_format_html = False
     for k, v in qs.items():
-
         if v[0].lower() == 'getfeatureinfo':
             is_featureinfo = True
         if k.lower() == 'info_format':
             if v[0] == 'text/html':
                 is_featureinfo_format_html = True
-            #print(qs)
-            #v = 'text/xml'
-        #print(k)            
-        #print(v)
-        #else:
     for k, v in qs.items():
         if is_featureinfo and k.lower() == 'info_format' and is_featureinfo_format_html:
             v[0] = 'application/vnd.ogc.gml'
         req.setParameter(k, ','.join(v))
-    
-    print(req)
-
+    #print(req)
     # test wfs http://127.0.0.1:8000/organization/1/ows/?REQUEST=GetFeature&VERSION=1.1.0&SERVICE=wfs&typename=BPlan.0723507001.12
     ## first variant - fast - 0.07 seconds
-    
+
     #map = mapscript.mapObj( '/home/armin/devel/django/komserv2/test.map' )
     
     ## alternative approach - read from file into string and then from string with special path - also fast - 0.1 seconds
@@ -113,6 +119,11 @@ def ows(request, pk:int):
     content_type = mapscript.msIO_stripStdoutBufferContentType()
     mapscript.msIO_stripStdoutBufferContentHeaders()
     result = mapscript.msIO_getStdoutBufferBytes()
+    """
+    Check ob eine GetFeatureInfo-Anfrage gestellt wurde und ob als Rückgabeformat html gesetzt wurde.
+    In diesem Fall greifen wir in den Prozess ein und liefern das Ergebnis in Form eines Django-Views zurück.
+    Damit haben wir alle Möglichkeiten eine pragmatische Anzeige der Informationen zu generieren.
+    """
     # Parse gml response for getfeature info
     if is_featureinfo and is_featureinfo_format_html:
         print('iam here')
@@ -124,15 +135,22 @@ def ows(request, pk:int):
             #'xlink': 'http://www.w3.org/1999/xlink',
             #'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
         }
-        # Auslesen der BPläne
+        # Auslesen der BPläne für FPläne noch zu erweitern bzw. anzupassen.
         ids = root.findall(".//id", None)
         id_list = []
         for id in ids:
             id_list.append(int(id.text))
         id_list_unique = list(dict.fromkeys(id_list))
         print(id_list_unique)
+        # path("organization/<int:pk>/xplan/html/", views.xplan_html, name="xplan-list-html"),
         if len(id_list_unique) > 0:
-            return BPlanListViewHtml.as_view(template_name="xplanung_light/bplan_list_html.html")(pk__in=(',').join(str(v) for v in id_list_unique), request=request).render()
+            # https://stackoverflow.com/questions/45188800/how-can-i-set-query-parameter-dynamically-to-request-get-in-django
+            if not request.GET._mutable:
+                request.GET._mutable = True
+            # Setzen der ID-Filter-Parameter
+            request.GET['bplan_id__in'] = (',').join(str(v) for v in id_list_unique)
+            return views.xplan_html(pk=pk, request=request)#, bplan_id__in=(',').join(str(v) for v in id_list_unique), request=request).render()
+            #return BPlanListViewHtml.as_view(template_name="xplanung_light/xplan_list_html.html")(pk=1, bplan_id__in=(',').join(str(v) for v in id_list_unique), request=request).render()
         #bplan_html = BPlanDetailView.as_view(template_name="xplanung_light/bplan_detail.html")(pk=53, request=request).render()
         #print(bplan_html)
         #return bplan_html

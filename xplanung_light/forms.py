@@ -279,45 +279,50 @@ class BPlanCreateForm(ModelForm):
                 "Pflichtfelder XPlanung-light",
                 Row(
                     "nummer",
-                ),  
-                Fieldset(
-                    "Datumsfelder",
-                    Row(
-                        Column(
-                            "aufstellungsbeschluss_datum",
-                        ),
-                        Column(
-                            "satzungsbeschluss_datum",
-                        ),
-                        Column(
-                            "rechtsverordnungs_datum",
-                        ),
-                        Column(
-                            "ausfertigungs_datum",
-                        ),
-                        Column(
-                            "inkrafttretens_datum",
-                        ),
+                ),
+            ),  
+            Fieldset(
+                "Weitere Informationen",
+                Row(
+                    "beschreibung",
+                )),    
+            Fieldset(
+                "Datumsfelder",
+                Row(
+                    Column(
+                        "aufstellungsbeschluss_datum",
+                    ),
+                    Column(
+                        "satzungsbeschluss_datum",
+                    ),
+                    Column(
+                        "rechtsverordnungs_datum",
+                    ),
+                    Column(
+                        "ausfertigungs_datum",
+                    ),
+                    Column(
+                        "inkrafttretens_datum",
                     ),
                 ),
-                Fieldset(
-                    "Marker",
-                    Row(
-                        Column(
-                            "staedtebaulicher_vertrag",
-                        ),
-                        Column(
-                            "erschliessungs_vertrag",
-                        ),
-                        Column(
-                            "durchfuehrungs_vertrag",
-                        ),
-                        Column(
-                            "gruenordnungsplan",
-                        ),
-                    ),
-                ), 
             ),
+            Fieldset(
+                "Marker",
+                Row(
+                    Column(
+                        "staedtebaulicher_vertrag",
+                    ),
+                    Column(
+                        "erschliessungs_vertrag",
+                    ),
+                    Column(
+                        "durchfuehrungs_vertrag",
+                    ),
+                    Column(
+                        "gruenordnungsplan",
+                    ),
+                ),
+            ), 
             Submit("submit", "Erstellen")
         )
 
@@ -328,6 +333,7 @@ class BPlanCreateForm(ModelForm):
                   "geltungsbereich", 
                   "gemeinde", 
                   "planart",
+                  "beschreibung",
                   "aufstellungsbeschluss_datum", 
                   "satzungsbeschluss_datum",
                   "rechtsverordnungs_datum",
@@ -362,6 +368,7 @@ class BPlanUpdateForm(ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
+                'localize': True,
                 }
         )
         self.fields['satzungsbeschluss_datum'].widget = forms.DateInput(
@@ -412,46 +419,50 @@ class BPlanUpdateForm(ModelForm):
                 "Pflichtfelder XPlanung-light",
                 Row(
                     "nummer",
-                ),  
-                Fieldset(
-                    "Datumsfelder",
-                    Row(
-                        Column(
-                            "aufstellungsbeschluss_datum",
-                        ),
-                        Column(
-                            "satzungsbeschluss_datum",
-                        ),
-                        Column(
-                            "rechtsverordnungs_datum",
-                        ),
-                        Column(
-                            "ausfertigungs_datum",
-                        ),
-                        Column(
-                            "inkrafttretens_datum",
-                        ),
+                )),
+            Fieldset(
+                "Weitere Informationen",
+                Row(
+                    "beschreibung",
+                )),    
+            Fieldset(
+                "Datumsfelder",
+                Row(
+                    Column(
+                        "aufstellungsbeschluss_datum",
+                    ),
+                    Column(
+                        "satzungsbeschluss_datum",
+                    ),
+                    Column(
+                        "rechtsverordnungs_datum",
+                    ),
+                    Column(
+                        "ausfertigungs_datum",
+                    ),
+                    Column(
+                        "inkrafttretens_datum",
                     ),
                 ),
-                Fieldset(
-                    "Marker",
-                    Row(
-                        Column(
-                            "staedtebaulicher_vertrag",
-                        ),
-                        Column(
-                            "erschliessungs_vertrag",
-                        ),
-                        Column(
-                            "durchfuehrungs_vertrag",
-                        ),
-                        Column(
-                            "gruenordnungsplan",
-                        ),
-                    ),
-                ),   
             ),
-            Submit("submit", "Aktualisieren")
+            Fieldset(
+                "Marker",
+                Row(
+                    Column(
+                        "staedtebaulicher_vertrag",
+                    ),
+                    Column(
+                        "erschliessungs_vertrag",
+                    ),
+                    Column(
+                        "durchfuehrungs_vertrag",
+                    ),
+                    Column(
+                        "gruenordnungsplan",
+                    ),
+                ),
+            ),   
+            Submit("submit", "Aktualisieren"),
         )
 
     class Meta:
@@ -462,6 +473,7 @@ class BPlanUpdateForm(ModelForm):
                   "geltungsbereich", 
                   "gemeinde", 
                   "planart",
+                  "beschreibung",
                   "aufstellungsbeschluss_datum", 
                   "satzungsbeschluss_datum",
                   "rechtsverordnungs_datum",

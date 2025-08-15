@@ -43,7 +43,15 @@ class NumberInFilter(BaseInFilter, NumberFilter):
 
 class BPlanFilterHtml(FilterSet):
     pk__in = NumberInFilter(field_name='id', lookup_expr='in')
-    
+
+    class Meta:
+        model = BPlan
+        fields = ["id"] 
+
+
+class BPlanIdFilter(FilterSet):
+    bplan_id__in = NumberInFilter(field_name='id', lookup_expr='in')
+
     class Meta:
         model = BPlan
         fields = ["id"] 
