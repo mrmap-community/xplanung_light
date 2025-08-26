@@ -168,6 +168,8 @@ SERIALIZATION_MODULES = {
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
+DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap5.html"
+
 # https://www.515tech.com/post/integrating-sphinx-documentation-into-your-django-project
 DOCS_ROOT = os.path.join(BASE_DIR, 'docs/build/html')
 DOCS_ACCESS = 'public'

@@ -1,0 +1,102 @@
+MAP
+    NAME "overview"
+    STATUS ON
+    SIZE 600 600
+    MAXSIZE 5000
+    UNITS METERS
+    PROJECTION
+        "init=epsg:4326"
+    END
+    EXTENT -180 -90 180 90
+    WEB	
+        IMAGEPATH "/tmp/"
+        METADATA
+            WMS_TITLE "XPlan Detailanzeige"
+            WMS_ABSTRACT "XPlanung-light WMS Detailanzeige"
+            WMS_ONLINERESOURCE "<wms_onlineresource>"	
+            WMS_SRS "epsg:4326 epsg:25832 epsg:3857 epsg:900913"
+            wms_extent "-180 -90 180 90"
+            "ows_keywordlist" "XPlanung-light"
+            "ows_fees" "none"
+            "ows_accessconstraints" "none"
+            "ows_addresstype" "postal"
+            "ows_address" "Musterstraße 1"
+            "ows_city" "Musterstadt"
+            "ows_stateorprovince" "Muster Bundesland"
+            "ows_postcode" "00000"
+            "ows_country" "Germany"
+            "ows_contactperson" "Max Mustermann" 
+            "ows_contactorganization" "Musterorganisation"
+            "ows_contactposition" "Position"
+            "ows_contactelectronicmailaddress" "test@example.com"
+            "wms_contactfacsimiletelephone" "1111"
+            "wms_contactvoicetelephone" "1111"
+            "wms_enable_request" "*"
+        END
+    END
+    OUTPUTFORMAT
+        NAME 'png'
+        DRIVER 'AGG/PNG'
+        MIMETYPE 'image/png'
+        EXTENSION PNG
+        IMAGEMODE PC256
+        TRANSPARENT ON
+    END
+    LEGEND
+        STATUS ON
+        KEYSIZE 10 8
+        KEYSPACING 10 10
+        IMAGECOLOR 255 255 255
+        LABEL
+            COLOR 128 128 128
+            TYPE TRUETYPE
+            #FONT "arial"
+            SIZE 8
+        END
+    END
+    # Inline Polygon Layer auf Basis des Umrings - wird dynamisch in das mapfile geschrieben
+    LAYER
+        NAME "umring"
+        STATUS ON
+        TYPE POLYGON
+        MAXSCALE 10000000
+        FEATURE
+            WKT "<wkt>"
+        END
+        METADATA
+            WMS_TITLE       "Umringspolygon"
+            WMS_SRS         "EPSG:4326"
+            WMS_ABSTRACT    "Umringspolygone des jeweiligen Plans für die Detailanzeige"
+            "wms_extent"    "-180 -90 180 90"
+        END
+        PROJECTION
+            "init=epsg:4326"
+        END
+        CLASS
+            NAME "Umringspolygon"
+            STYLE
+                OUTLINECOLOR 255 0 0 
+                WIDTH 2 
+            END 
+        END
+    END
+    # Globale Hintergrundkarte auf Basis des BKG Topplus
+    LAYER
+        NAME "topplus"
+        TYPE RASTER
+        CONNECTION "https://sgx.geodatenzentrum.de/wms_topplus_web_open?"
+        CONNECTIONTYPE WMS
+        METADATA
+            "wms_srs"             "EPSG:4326"
+            "wms_name"            "web_grau"
+            "wms_title"           "web_grau"
+            "wms_connectiontimeout" "6"
+            "wms_server_version"  "1.1.1"
+            "wms_format"          "image/png"
+            "wms_proxy_host"	  "10.240.20.164"
+            "wms_proxy_port"	  "8080"
+            "wms_proxy_type"	  "http"
+            "wms_extent"          "-180 -90 180 90"
+        END
+    END
+END

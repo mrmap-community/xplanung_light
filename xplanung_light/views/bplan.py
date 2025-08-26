@@ -1,13 +1,14 @@
 from django.http import HttpResponseRedirect
 from xplanung_light.forms import  BPlanCreateForm, BPlanUpdateForm
 from django.views.generic import (CreateView, UpdateView, DeleteView)
-from xplanung_light.models import BPlan, BPlanSpezExterneReferenz
+from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, AdministrativeOrganization
 from django.urls import reverse_lazy
 from leaflet.forms.widgets import LeafletWidget
 from django_tables2 import SingleTableView
 from xplanung_light.tables import BPlanTable
 from django.views.generic import DetailView, ListView
 from django.contrib.gis.db.models.functions import AsGML, Transform, Envelope
+from django.contrib.gis.db.models import Collect, Union
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.gdal import OGRGeometry
 import uuid
@@ -271,6 +272,55 @@ class BPlanListViewHtml(FilterView, ListView):
 class BPlanDetailView(DetailView):
     model = BPlan
 
+    
+    def get_queryset(self):
+        # Erweiterung der auszulesenden Objekte um eine transformierte Geomtrie im Format GML 3
+        queryset = super().get_queryset()
+        return queryset
+    
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Geometrien 
+        ogr_geom = OGRGeometry(str(context['bplan'].geltungsbereich), srs=4326)
+        offset = 0.01
+        extent0 = float(ogr_geom.extent[0]) - offset
+        extent1 = float(ogr_geom.extent[1]) - offset
+        extent2 = float(ogr_geom.extent[2]) + offset
+        extent3 = float(ogr_geom.extent[3]) + offset
+        context['wgs84_extent'] = [ extent0, extent1, extent2, extent3]
+        ct = CoordTransform(SpatialReference(4326, srs_type='epsg'), SpatialReference(25832, srs_type='epsg'))
+        # Transformation nach EPSG:25832
+        ogr_geom.transform(ct)
+        # Speichern des Extents in den Context
+        offset = 100
+        extent0 = float(ogr_geom.extent[0]) - offset
+        extent1 = float(ogr_geom.extent[1]) - offset
+        extent2 = float(ogr_geom.extent[2]) + offset
+        extent3 = float(ogr_geom.extent[3]) + offset
+        context['extent'] = [ extent0, extent1, extent2, extent3]
+
+        orgas = context['bplan'].gemeinde.all()
+        #for orga in context['bplan'].gemeinde.all():
+        #    print(orga.name)
+
+        # demo daten hatten keine geometrie!!!!!
+
+        #bplan_id = context['bplan'].pk
+        #combined_geometry = AdministrativeOrganization.objects.filter(bplans__id__in=[bplan_id]).aggregate(bereich=Collect('geometry'))['bereich']
+
+        #print(len(orgas))
+        combined_geometry = orgas.aggregate(bereich=Union('geometry'))['bereich']
+        ogr_gemeinde_geom = OGRGeometry(str(combined_geometry), srs=4326)
+        ogr_gemeinde_geom.transform(ct)
+        context['gemeinden_extent'] = ogr_gemeinde_geom.extent
+        #print(combined_geometry.extent)
+        #combined_geometry2 = context['bplan'].gemeinde.all().aggregate(bereich=Union('geometry'))['bereich']
+        #print(combined_geometry2)
+        #test = OGRGeometry(str(combined_geometry2), srs=4326)
+        # Merge die Geometrien aller zuständigen Gemeinden
+
+        return context
 
 class BPlanDetailXPlanLightView(BPlanDetailView):  
 

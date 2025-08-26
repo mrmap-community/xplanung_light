@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from django.shortcuts import render
 from xplanung_light.forms import RegistrationForm
+from django.contrib.gis.gdal import OGRGeometry
 from django.shortcuts import redirect
 from django.contrib.auth import login
 from xplanung_light.models import AdministrativeOrganization, BPlanSpezExterneReferenz, BPlan
@@ -49,6 +50,45 @@ def xplan_html(request, pk:int):
     print(bplan_filter.queryset)
     return render(request, 'xplanung_light/xplan_list_html.html', {'bplan_list': bplan_filter})
     #return HttpResponse("Liste der XPlan-Objekte einer Organisation!", status=200) 
+
+def ows_bplan_overview(request, pk:int):
+    """
+    WMS für die Detailanzeige der Lage eines einzelnen Plans
+    """
+    bplan = BPlan.objects.get(pk=pk)
+    qs = parse_qs(request.META['QUERY_STRING'])
+    req =  mapscript.OWSRequest()
+    for k, v in qs.items():
+        req.setParameter(k, ','.join(v))
+    map_file_string = ''
+    with open(os.path.join(str(settings.BASE_DIR), "xplanung_light/mapserver/mapfiles/overview.map")) as file:
+        map_file_string = file.read()
+        # Überschreiben der Online Resource
+        map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('bplan-overview-map', kwargs={"pk": pk})))
+        # Überschreiben der Punkte des Features:
+        wkt = str(bplan.geltungsbereich)
+        map_file_string = map_file_string.replace('<wkt>', wkt.replace('SRID=4326;',''))
+        geometry = OGRGeometry(str(bplan.geltungsbereich), srs=4326)
+        wgs84_extent = geometry.extent
+        print(wgs84_extent)
+    map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
+    mapscript.msIO_installStdoutToBuffer()
+    dispatch_status = map.OWSDispatch(req)
+    if dispatch_status != mapscript.MS_SUCCESS:
+        if dispatch_status == mapscript.MS_DONE:
+            return HttpResponse("No valid OWS Request!")
+        if dispatch_status == mapscript.MS_FAILURE:
+            return HttpResponse("No valid OWS Request not successfully processed!")
+    content_type = mapscript.msIO_stripStdoutBufferContentType()
+    mapscript.msIO_stripStdoutBufferContentHeaders()
+    result = mapscript.msIO_getStdoutBufferBytes()
+    response_headers = [('Content-Type', content_type),
+                        ('Content-Length', str(len(result)))]
+    assert int(response_headers[1][1]) > 0
+    http_response = HttpResponse(result)
+    http_response.headers['Content-Type'] = content_type
+    http_response.headers['Content-Length'] = str(len(result))
+    return http_response
 
 def ows(request, pk:int):
     """

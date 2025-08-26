@@ -110,6 +110,7 @@ Filter
     <input type="submit" /><a href="{% url 'bplan-list' %}">Filter löschen</a>.</p>
 </form>
 <p><a href="{% url 'bplan-create' %}">BPlan anlegen</a><a href="{% url 'bplan-import' %}">BPlan importieren</a><a href="{% url 'bplan-import-archiv' %}">BPlan Archiv importieren</a></p>
+<!-- https://stackoverflow.com/questions/44572682/dynamically-set-per-page-in-django-tables2 -->
 {% render_table table %}
 <p>Anzahl: {{ object_list.count }}</p>
 {% endblock %}

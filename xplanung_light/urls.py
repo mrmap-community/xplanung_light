@@ -22,6 +22,7 @@ urlpatterns = [
     path("bplan/<int:pk>/update/", BPlanUpdateView.as_view(), name="bplan-update"),
     path("bplan/<int:pk>/delete/", BPlanDeleteView.as_view(), name="bplan-delete"),
     path("bplan/<int:pk>/", BPlanDetailView.as_view(), name="bplan-detail"),
+    path("bplan/<int:pk>/overview-map/", views.ows_bplan_overview, name="bplan-overview-map"),
     # BPlan HTML List - für GetFeatureInfo
     path("bplan/html-list/", BPlanListViewHtml.as_view(), name="bplan-list-html"),
     # BPlan XPlan Export

@@ -65,13 +65,15 @@ class BPlanBeteiligungTable(tables.Table):
 
 class BPlanTable(tables.Table):
     last_changed = tables.Column(verbose_name="Letzte Änderung")
-
+    """
+    Aus Tabelle rausgenommen, 
     xplan_gml_export = tables.LinkColumn('bplan-export-xplan-raster-6', verbose_name='XPlan-GML', text='Exportieren', args=[A('pk')], \
                          orderable=False, empty_values=())
     xplan_zip_export = tables.LinkColumn('bplan-export-xplan-raster-6-zip', verbose_name='XPlan-ZIP', text='Exportieren', args=[A('pk')], \
                          orderable=False, empty_values=())
     iso_metadata = tables.LinkColumn('bplan-export-iso19139', verbose_name='Geo-Metadaten', text='Exportieren', args=[A('pk')], \
                          orderable=False, empty_values=())
+    """
     edit = tables.LinkColumn('bplan-update', verbose_name="", text='Bearbeiten', args=[A('pk')], \
                          orderable=False, empty_values=())
     delete = tables.LinkColumn('bplan-delete', verbose_name="", text='Löschen', args=[A('pk')], \
@@ -128,7 +130,7 @@ class BPlanTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "name", "gemeinde", "planart", "attachments", "beteiligungen", "detail", "xplangml", "xplan_gml_export", "xplan_zip_export", "iso_metadata", "edit", "delete")
+        fields = ( "zoom", "last_changed", "inkrafttretens_datum", "nummer", "name", "gemeinde", "planart", "attachments", "beteiligungen", "detail", "xplangml", "edit", "delete")
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):
