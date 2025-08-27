@@ -274,7 +274,7 @@ class BPlan(XPlan):
     #gemeinde [1..*], XP_Gemeinde
     # Zur Vereinfachung zunächst nur Kardinalität 1 implementieren
     #gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
-    gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)", related_name='bplans')
+    gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
     history = HistoricalRecords(m2m_fields=[gemeinde])
     #planaufstellendeGemeinde [0..*], XP_Gemeinde
     #plangeber [0..*], XP_Plangeber

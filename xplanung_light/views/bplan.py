@@ -298,28 +298,41 @@ class BPlanDetailView(DetailView):
         extent1 = float(ogr_geom.extent[1]) - offset
         extent2 = float(ogr_geom.extent[2]) + offset
         extent3 = float(ogr_geom.extent[3]) + offset
+        # Um Verzerrungen zu vermeiden - Ausgabe soll immer in einer festen Größe erfolgen 
+        # 200 x 200
+        dx = extent2 - extent0
+        dy = extent3 - extent1
+        if dx - dy > 0:
+            d = dx - dy
+            extent3 = extent3 + d / 2
+            extent1 = extent1 - d / 2
+        else:
+            d = dy - dx
+            extent2 = extent2 + d / 2
+            extent0 = extent0 - d / 2
         context['extent'] = [ extent0, extent1, extent2, extent3]
-
-        orgas = context['bplan'].gemeinde.all()
-        #for orga in context['bplan'].gemeinde.all():
-        #    print(orga.name)
-
-        # demo daten hatten keine geometrie!!!!!
-
-        #bplan_id = context['bplan'].pk
-        #combined_geometry = AdministrativeOrganization.objects.filter(bplans__id__in=[bplan_id]).aggregate(bereich=Collect('geometry'))['bereich']
-
-        #print(len(orgas))
-        combined_geometry = orgas.aggregate(bereich=Union('geometry'))['bereich']
-        ogr_gemeinde_geom = OGRGeometry(str(combined_geometry), srs=4326)
-        ogr_gemeinde_geom.transform(ct)
-        context['gemeinden_extent'] = ogr_gemeinde_geom.extent
-        #print(combined_geometry.extent)
-        #combined_geometry2 = context['bplan'].gemeinde.all().aggregate(bereich=Union('geometry'))['bereich']
-        #print(combined_geometry2)
-        #test = OGRGeometry(str(combined_geometry2), srs=4326)
-        # Merge die Geometrien aller zuständigen Gemeinden
-
+        combined_geometry = context['bplan'].gemeinde.all().aggregate(bereich=Union('geometry'))['bereich']
+        if combined_geometry:
+            ogr_gemeinde_geom = OGRGeometry(str(combined_geometry), srs=4326)
+            ogr_gemeinde_geom.transform(ct)
+            offset = 100
+            extent0 = float(ogr_gemeinde_geom.extent[0]) - offset
+            extent1 = float(ogr_gemeinde_geom.extent[1]) - offset
+            extent2 = float(ogr_gemeinde_geom.extent[2]) + offset
+            extent3 = float(ogr_gemeinde_geom.extent[3]) + offset
+            dx = extent2 - extent0
+            dy = extent3 - extent1
+            if dx - dy > 0:
+                d = dx - dy
+                extent3 = extent3 + d / 2
+                extent1 = extent1 - d / 2
+            else:
+                d = dy - dx
+                extent2 = extent2 + d / 2
+                extent0 = extent0 - d / 2
+            context['gemeinden_extent'] = [extent0, extent1, extent2, extent3]    
+        else:
+            context['gemeinden_extent'] = None
         return context
 
 class BPlanDetailXPlanLightView(BPlanDetailView):  

@@ -25,11 +25,13 @@
   <tbody>
     <tr>
       <th scope="row">Lage (Übersicht)</th>
-      <td><img width="400px" height="200px" src="{% url 'bplan-overview-map' pk=bplan.id%}?VERSION=1.3.0&REQUEST=GetMap&SERVICE=WMS&LAYERS=topplus,umring&STYLES=,&CRS=EPSG:25832&BBOX={{gemeinden_extent.0}},{{gemeinden_extent.1}},{{gemeinden_extent.2}},{{gemeinden_extent.3}}&WIDTH=400&HEIGHT=200&FORMAT=image/png&BGCOLOR=0xffffff&TRANSPARENT=TRUE&EXCEPTIONS=inimage"></td>
+      {% if gemeinden_extent %}
+      <td><img width="200px" height="200px" src="{% url 'bplan-overview-map' pk=bplan.id%}?VERSION=1.3.0&REQUEST=GetMap&SERVICE=WMS&LAYERS=topplus,umring&STYLES=,&CRS=EPSG:25832&BBOX={{gemeinden_extent.0}},{{gemeinden_extent.1}},{{gemeinden_extent.2}},{{gemeinden_extent.3}}&WIDTH=200&HEIGHT=200&FORMAT=image/png&BGCOLOR=0xffffff&TRANSPARENT=TRUE&EXCEPTIONS=inimage"></td>
+      {% endif %}
     </tr>
     <tr>
       <th scope="row">Lage (Detail)</th>
-            <td><img width="400px" height="200px" src="{% url 'bplan-overview-map' pk=bplan.id%}?VERSION=1.3.0&REQUEST=GetMap&SERVICE=WMS&LAYERS=topplus,umring&STYLES=,&CRS=EPSG:25832&BBOX={{extent.0}},{{extent.1}},{{extent.2}},{{extent.3}}&WIDTH=400&HEIGHT=200&FORMAT=image/png&BGCOLOR=0xffffff&TRANSPARENT=TRUE&EXCEPTIONS=inimage"></td>
+            <td><img width="200px" height="200px" src="{% url 'bplan-overview-map' pk=bplan.id%}?VERSION=1.3.0&REQUEST=GetMap&SERVICE=WMS&LAYERS=topplus,umring&STYLES=,&CRS=EPSG:25832&BBOX={{extent.0}},{{extent.1}},{{extent.2}},{{extent.3}}&WIDTH=200&HEIGHT=200&FORMAT=image/png&BGCOLOR=0xffffff&TRANSPARENT=TRUE&EXCEPTIONS=inimage"></td>
     </tr>
     <tr>
       <th scope="row">Planart</th>
