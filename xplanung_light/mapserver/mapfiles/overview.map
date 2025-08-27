@@ -93,9 +93,6 @@ MAP
             "wms_connectiontimeout" "6"
             "wms_server_version"  "1.1.1"
             "wms_format"          "image/png"
-            "wms_proxy_host"	  "10.240.20.164"
-            "wms_proxy_port"	  "8080"
-            "wms_proxy_type"	  "http"
             "wms_extent"          "-180 -90 180 90"
         END
     END
