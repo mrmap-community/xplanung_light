@@ -118,9 +118,13 @@ class AdministrativeOrganization(GenericMetadata, OrganizationBase):
     ks = models.CharField(max_length=3, verbose_name='Kreisschlüssel', help_text='Eindeutiger dreistelliger Schlüssel für den Landkreis', default='000')
     vs = models.CharField(blank=True, null=True, max_length=2, verbose_name='Gemeindeverbandsschlüssel', help_text='Eindeutiger zweistelliger Schlüssel für den Gemeindeverband', default='00')
     gs = models.CharField(max_length=3, verbose_name='Gemeindeschlüssel', help_text='Eindeutiger dreistelliger Schlüssel für die Gemeinde', default='000')
-    # obs = ... - Ortsbezirksschlüssel ...
+    # ts = ... - Ortsbezirks(-teil)schlüssel ...
+    ts = models.CharField(blank=True, null=True, max_length=4, verbose_name='Ortsteilschlüssel', help_text='Eindeutiger, maximal vierstelliger Schlüssel einen Teil einer Gebietskörperschaft - von Bundesland zu Bundesland unterschiedlich geregelt!')
+    
     name = models.CharField(max_length=1024, verbose_name='Name der Gebietskörperschaft', help_text='Offizieller Name der Gebietskörperschaft - z.B. Rhein-Lahn-Kreis')
     type = models.CharField(max_length=3, choices=ADMIN_CLASS_CHOICES, default='UK', verbose_name='Typ der Gebietskörperschaft', db_index=True)
+    name_part = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name des Teils der Gebietskörperschaft', help_text='Offizieller Namen eines Teils der Gebietskörperschaft - z.B. Arzheim - als Ortsbezirk 2 der Stadt Koblenz')
+    
     address_street = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Straße mit Hausnummer', help_text='Straße und Hausnummer')
     address_postcode = models.CharField(blank=True, null=True, max_length=5, verbose_name='Postleitzahl', help_text='Postleitzahl')
     
@@ -163,7 +167,11 @@ class AdministrativeOrganization(GenericMetadata, OrganizationBase):
 
     def __str__(self):
         """Returns a string representation of a administrative unit."""
-        return f"{self.name} ({self.get_type_display()})"
+        if self.name_part:
+            return f"{self.name_part} - {self.name} ({self.get_type_display()})"
+        else:
+            return f"{self.name} ({self.get_type_display()})"
+        #return f"{self.name} ({self.get_type_display()})"
 
 
 """

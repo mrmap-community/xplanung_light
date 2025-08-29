@@ -8,7 +8,7 @@ from django_tables2 import SingleTableView
 from xplanung_light.tables import BPlanTable
 from django.views.generic import DetailView, ListView
 from django.contrib.gis.db.models.functions import AsGML, Transform, Envelope
-from django.contrib.gis.db.models import Collect, Union
+from django.contrib.gis.db.models import Collect, Union, Count
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.gdal import OGRGeometry
 import uuid
@@ -89,13 +89,13 @@ class BPlanCreateView(CreateView):
         """
         form = super().get_form(self.form_class)
         if self.request.user.is_superuser:
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
         else:
             """
             Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
             
             """
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
         form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
         return form
     
@@ -127,7 +127,7 @@ class BPlanUpdateView(SuccessMessageMixin, UpdateView):
         success_url = self.get_success_url()
         form = super().get_form(form_class)
         if self.request.user.is_superuser:
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
         else:
             # Deaktivieren des Gemeinde Fields - falls auch noch andere Gemeinde am Plan hängt, für die der aktuelle Nutzer kein admin ist
             object = self.get_object()
@@ -145,7 +145,7 @@ class BPlanUpdateView(SuccessMessageMixin, UpdateView):
                 """
                 Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
                 """
-                form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type")
+                form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
         form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
         return form
     
@@ -224,7 +224,7 @@ class BPlanListView(FilterView, SingleTableView):
     Liste der Bebauungsgplan-Datensätze.
 
     Klasse für die Anzeige aller Bebauungspläne, auf die ein Nutzer Leseberechtigung hat. Ein Nutzer hat Leseberechtigung, wenn er
-    über die AadminOrgUser Klasse mit einer der AdministrativeOrganizations verknüpft ist, die an einem Plan hängen. 
+    über die AdminOrgUser Klasse mit einer der AdministrativeOrganizations verknüpft ist, die an einem Plan hängen. 
     """
     model = BPlan
     table_class = BPlanTable
@@ -244,16 +244,16 @@ class BPlanListView(FilterView, SingleTableView):
     def get_queryset(self):
         if self.request.user.is_superuser:
         #if True:
-            qs = BPlan.objects.prefetch_related('gemeinde').annotate(last_changed=Subquery(
+            qs = BPlan.objects.prefetch_related('gemeinde').distinct().annotate(last_changed=Subquery(
                 BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-            )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
+            )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True))
         else:
             # admin für alle Gemeinden eines Plans
             qs = BPlan.objects.filter(gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
             # user ist Organisation zugewiesen - ohen id_admin=True
             #qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
                 BPlan.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-            )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich"))
+            )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True))
         self.filter_set = BPlanFilter(self.request.GET, queryset=qs)
         return self.filter_set.qs
 

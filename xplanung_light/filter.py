@@ -15,11 +15,11 @@ def bbox_filter(queryset, value):
 def organizations(request):
     #print("organizations invoked")
     if request is None:
-        return AdministrativeOrganization.objects.only("pk", "name", "type")
+        return AdministrativeOrganization.objects.only("pk", "name", "name_part", "type")
     if request.user.is_superuser:
-        return AdministrativeOrganization.objects.only("pk", "name", "type")
+        return AdministrativeOrganization.objects.only("pk", "name", "name_part", "type")
     else:
-        return AdministrativeOrganization.objects.filter(users=request.user).only("pk", "name", "type")
+        return AdministrativeOrganization.objects.filter(users=request.user).only("pk", "name", "name_part", "type")
 
 # https://stackoverflow.com/questions/68592837/custom-filter-with-django-filters
 class BPlanFilter(FilterSet):

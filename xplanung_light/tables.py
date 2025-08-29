@@ -10,7 +10,20 @@ class AdministrativeOrganizationTable(tables.Table):
     edit = tables.LinkColumn('organization-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
                          orderable=False, empty_values=())
     #delete = tables.LinkColumn('contactorganization-delete', text='Löschen', args=[A('pk')], \
-    #                     orderable=False, empty_values=())
+    #                  orderable=False, empty_values=())
+
+    def render_ags(self, record):
+        if record.ts:
+            return format_html(record.ags + ' - ' + record.ts)
+        else:
+            return format_html(record.ags)
+        
+    def render_name(self, record):
+        if record.name_part:
+            return format_html(record.name + ' - ' + record.name_part)
+        else:
+            return format_html(record.name)
+        
     class Meta:
         model = AdministrativeOrganization
         template_name = "django_tables2/bootstrap5.html"
@@ -80,8 +93,8 @@ class BPlanTable(tables.Table):
                          orderable=False, empty_values=())
     planart = tables.Column(verbose_name="Planart")
     zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
-    attachments = tables.Column(verbose_name="Anlagen", accessor='attachments', orderable=False)
-    beteiligungen = tables.Column(verbose_name="Beteiligungen", accessor='beteiligungen', orderable=False)
+    count_attachments = tables.Column(verbose_name="Anlagen", accessor='count_attachments', orderable=False)
+    count_beteiligungen = tables.Column(verbose_name="Beteiligungen", accessor='count_beteiligungen', orderable=False)
     detail = tables.LinkColumn('bplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
                          orderable=False, empty_values=())
     # manytomany relations are handled automatically!
@@ -100,24 +113,17 @@ class BPlanTable(tables.Table):
         # lat/lon !
         return format_html('<i class="fa fa-search-plus" aria-hidden="true" onclick="mapGlobal.fitBounds([[{}, {}], [{}, {}]]);"></i>', extent[1], extent[0], extent[3], extent[2])
     
-    def render_attachments(self, value, record):
-        #print(record)
-        #print(record.attachments.count())
-        #print(value)
-        number_of_attachments = value.count()
-        try:
-            bplanid = value.first().bplan.id
-        except:
-            return format_html('<a href="' + reverse('bplanattachment-create', kwargs={'bplanid': record.pk}) + '">' +  str(number_of_attachments) + '</a>')
-        return format_html('<a href="' + reverse('bplanattachment-list', kwargs={'bplanid': bplanid}) + '">' +  str(number_of_attachments) + '</a>')
-    
-    def render_beteiligungen(self, value, record):
-        number_of_beteiligungen = value.count()
-        try:
-            bplanid = value.first().bplan.id
-        except:
-            return format_html('<a href="' + reverse('bplanbeteiligung-create', kwargs={'bplanid': record.pk}) + '">' +  str(number_of_beteiligungen) + '</a>')
-        return format_html('<a href="' + reverse('bplanbeteiligung-list', kwargs={'bplanid': bplanid}) + '">' +  str(number_of_beteiligungen) + '</a>')
+    def render_count_attachments(self, value, record):
+        if value == 0:
+            return format_html('<a href="' + reverse('bplanattachment-create', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
+        else:
+            return format_html('<a href="' + reverse('bplanattachment-list', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
+        
+    def render_count_beteiligungen(self, value, record):
+        if value == 0:
+            return format_html('<a href="' + reverse('bplanbeteiligung-create', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
+        else:
+            return format_html('<a href="' + reverse('bplanbeteiligung-list', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
 
     """
     geojson = Column(
@@ -130,7 +136,7 @@ class BPlanTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "inkrafttretens_datum", "nummer", "name", "gemeinde", "planart", "attachments", "beteiligungen", "detail", "xplangml", "edit", "delete")
+        fields = ( "zoom", "last_changed", "inkrafttretens_datum", "nummer", "name", "gemeinde", "planart", "count_attachments", "count_beteiligungen", "detail", "xplangml", "edit", "delete")
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):
@@ -140,6 +146,18 @@ class AdministrativeOrganizationPublishingTable(tables.Table):
     wfs = tables.LinkColumn('ows', text='WFS', args=[A('pk')], \
                          orderable=False, empty_values=())
     ags = tables.Column(verbose_name="AGS", orderable=False)
+
+    def render_ags(self, record):
+        if record.ts:
+            return format_html(record.ags + ' - ' + record.ts)
+        else:
+            return format_html(record.ags)
+        
+    def render_name(self, record):
+        if record.name_part:
+            return format_html(record.name + ' - ' + record.name_part)
+        else:
+            return format_html(record.name)
 
     # https://stackoverflow.com/questions/36698387/how-to-add-get-parameters-to-django-tables2-linkcolumn
     def render_wms(self, record):

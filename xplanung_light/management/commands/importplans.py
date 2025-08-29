@@ -95,6 +95,25 @@ class Command(BaseCommand):
                             'value': False,
                             'typ': '1030'
                         },
+                        'begruendungurl': {
+                            'value': False,
+                            'typ': '1010'
+                        },
+                        'umweltberichturl': {
+                            'value': False,
+                            'typ': '1050'
+                        },
+                        'legendeurl': {
+                            'value': False,
+                            'typ': '1020'
+                        },
+                    }
+                    # Marker
+                    marker_fields_dict = {
+                        'staedtebaulichervertrag': False,
+                        'erschliessungsvertrag': False,
+                        'durchfuehrungsvertrag': False,
+                        'staedtebaulichesanierungsmassnahme': False,
                     }
                     # Transformation der Pflichtfelder
                     if _object_dict['name']:
@@ -115,6 +134,18 @@ class Command(BaseCommand):
                     for key in other_fields_dict:
                         if _object_dict[key]:
                             other_fields_dict[key] = _object_dict[key]
+                    # Übernahme der Marker
+                    if _object_dict['staedtebaulichervertrag']:
+                        marker_fields_dict['staedtebaulichervertrag'] = True
+                    if _object_dict['erschliessungsvertrag']:
+                        marker_fields_dict['erschliessungsvertrag'] = True
+                    if _object_dict['durchfuehrungsvertrag']:
+                        marker_fields_dict['durchfuehrungsvertrag'] = True
+                    if _object_dict['staedtebaulichesanierungsmassnahme']:
+                        marker_fields_dict['staedtebaulichesanierungsmassnahme'] = True    
+                    #if _object_dict['']:
+                    #    marker_fields_dict[''] = True    
+
                     # Übernahme der Anlagen
                     for key in attachment_fields_dict:
                         if _object_dict[key]:
@@ -144,6 +175,13 @@ class Command(BaseCommand):
                                 existing_bplan.ausfertigungs_datum = other_fields_dict['ausfertigungsdatum']
                             if other_fields_dict['satzungsbeschlussdatum']:
                                 existing_bplan.satzungsbeschluss_datum = other_fields_dict['satzungsbeschlussdatum']
+                            # Marker
+                            if marker_fields_dict['staedtebaulichervertrag']:
+                                existing_bplan.staedtebaulicher_vertrag = True
+                            if marker_fields_dict['erschliessungsvertrag']:
+                                existing_bplan.erschliessungs_vertrag = True  
+                            if marker_fields_dict['durchfuehrungsvertrag']:
+                                existing_bplan.durchfuehrungs_vertrag = True       
                             existing_bplan.save()
                             print("Update wurde durchgeführt, Anlagen/Referenzen werden überprüft...")
                             # Füge Anlagen hinzu, falls sie noch nicht vorhanden sind ...
@@ -181,6 +219,13 @@ class Command(BaseCommand):
                                 bplan.ausfertigungs_datum = other_fields_dict['ausfertigungsdatum']
                             if other_fields_dict['satzungsbeschlussdatum']:
                                 bplan.satzungsbeschluss_datum = other_fields_dict['satzungsbeschlussdatum']
+                            # Marker
+                            if marker_fields_dict['staedtebaulichervertrag']:
+                                bplan.staedtebaulicher_vertrag = True
+                            if marker_fields_dict['erschliessungsvertrag']:
+                                bplan.erschliessungs_vertrag = True  
+                            if marker_fields_dict['durchfuehrungsvertrag']:
+                                bplan.durchfuehrungs_vertrag = True   
                             bplan.save()
                             print("* Plan-Objekt gespeichert")
                             bplan.gemeinde.set(orgas)
