@@ -231,6 +231,13 @@ class BPlanCreateForm(ModelForm):
                 'max': str(timezone.now().date()),
                 }
         )
+        self.fields['untergangs_datum'].widget = forms.DateInput(          
+            attrs={
+                'type': 'date',
+                'min': '1960-01-01',
+                'max': str(timezone.now().date()),
+                }
+        )
         # https://forum.djangoproject.com/t/model-choice-field-how-to-add-attributes-to-the-options/37782
         # https://django-autocomplete-light.readthedocs.io/en/master/_modules/dal_select2/widgets.html#ModelSelect2Multiple
         # mixin - erbt von 3 Kassen !
@@ -304,6 +311,9 @@ class BPlanCreateForm(ModelForm):
                     Column(
                         "inkrafttretens_datum",
                     ),
+                    Column(
+                        "untergangs_datum",
+                    ),
                 ),
             ),
             Fieldset(
@@ -339,6 +349,7 @@ class BPlanCreateForm(ModelForm):
                   "rechtsverordnungs_datum",
                   "ausfertigungs_datum",
                   "inkrafttretens_datum", 
+                  "untergangs_datum",
                   "staedtebaulicher_vertrag",
                   "erschliessungs_vertrag",
                   "durchfuehrungs_vertrag",
@@ -399,6 +410,13 @@ class BPlanUpdateForm(ModelForm):
                 'max': str(timezone.now().date()),
                 }
         )
+        self.fields['untergangs_datum'].widget = forms.DateInput(          
+            attrs={
+                'type': 'date',
+                'min': '1960-01-01',
+                'max': str(timezone.now().date()),
+                }
+        )
         self.fields['gemeinde'].widget = GemeindeSelect2(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
         #self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
         self.helper.layout = Layout(
@@ -443,6 +461,9 @@ class BPlanUpdateForm(ModelForm):
                     Column(
                         "inkrafttretens_datum",
                     ),
+                    Column(
+                        "untergangs_datum",
+                    ),
                 ),
             ),
             Fieldset(
@@ -479,6 +500,7 @@ class BPlanUpdateForm(ModelForm):
                   "rechtsverordnungs_datum",
                   "ausfertigungs_datum", 
                   "inkrafttretens_datum",  
+                  "untergangs_datum",
                   "staedtebaulicher_vertrag",
                   "erschliessungs_vertrag",
                   "durchfuehrungs_vertrag",

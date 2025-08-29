@@ -221,7 +221,7 @@ class XPlan(GenericMetadata):
     #technHerstellDatum [0..1], Date
     #genehmigungsDatum [0..1], Date
     #untergangsDatum [0..1], Date
-    #untergangs_datum = models.DateField(null=True, blank=True, verbose_name="Untergangsdatum des Plans", help_text="Datum, an dem der Plan (z.B. durch Ratsbeschluss oder Gerichtsurteil) aufgehoben oder für nichtig erklärt wurde.")
+    untergangs_datum = models.DateField(null=True, blank=True, verbose_name="Untergangsdatum des Plans", help_text="Datum, an dem der Plan (z.B. durch Ratsbeschluss oder Gerichtsurteil) aufgehoben oder für nichtig erklärt wurde.")
     #aendertPlan [0..*], XP_VerbundenerPlan
     #wurdeGeaendertVonPlan [0..*], XP_VerbundenerPlan
     #aendertPlanBereich [0..*], Referenz, Testphase
