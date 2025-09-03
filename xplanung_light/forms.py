@@ -4,7 +4,7 @@ from django.utils import timezone
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
-from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization
+from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization, Uvp
 from xplanung_light.models import ContactOrganization
 from xplanung_light.validators import xplan_content_validator, xplan_upload_file_validator, geotiff_raster_validator
 from crispy_forms.helper import FormHelper
@@ -123,6 +123,73 @@ class BPlanBeteiligungForm(forms.ModelForm):
     class Meta:
        model = BPlanBeteiligung
        fields = ["typ", "bekanntmachung_datum", "start_datum", "end_datum", "publikation_internet"] # list of fields you want from model
+
+
+"""
+Formular zur Verwaltung von Informationen zu durchgeführten UVPs
+"""
+class UvpForm(forms.ModelForm):
+    #typ = forms.CharField(required=True, label="Typ des Anhangs")
+    #name = forms.CharField
+    #attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super(UvpForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        #self.fields['bekanntmachung_datum'].widget = forms.DateInput(
+        #    attrs={
+        #        'type': 'date',
+        #        'min': str((timezone.now() - timedelta(days=29200)).date()),
+        #        'max': str(timezone.now().date() + timedelta(days=30)),
+        #        }
+        #)
+        self.fields['uvp_beginn_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date() + timedelta(days=30)),
+                }
+        )
+        self.fields['uvp_ende_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date() + timedelta(days=30)),
+                }
+        )
+        self.helper.layout = Layout(
+            Fieldset("Information zur Umweltverträglichkeitsprüfung",      
+                "typ",
+                "uvp_vp",
+                "uvp",
+                Fieldset(
+                    "Datumsfelder",
+                    Row(
+                        Column(
+                            "uvp_beginn_datum",
+                        ),
+                        Column(
+                            "uvp_ende_datum",
+                        ),
+                        #Column(
+                        #    "end_datum",
+                        #),
+                    ),
+                ),
+                #Fieldset(
+                #    "Weitere Informationen",
+                #    "publikation_internet",
+                #),
+            ),
+            Submit("submit", "Anlegen/Aktualisieren")
+        )
+        
+
+    class Meta:
+       model = Uvp
+       fields = ["uvp", "uvp_vp", "typ", "uvp_beginn_datum", "uvp_ende_datum"] # list of fields you want from model
 
 
 class RegistrationForm(UserCreationForm):

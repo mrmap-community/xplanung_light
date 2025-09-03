@@ -1,0 +1,15 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% load crispy_forms_tags %}
+{% bootstrap_css %}
+{% block title %}
+    UVP zum Bebauungsplan
+{% endblock %}
+{% block content %}
+<p>UVP zum Bebauungsplan <b>{{ bplan.name }}</b> der Kommune(n):<br>
+    <ul>
+        {% for gemeinde in bplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
+    </ul>
+</p>  
+{% crispy form %}
+{% endblock %}

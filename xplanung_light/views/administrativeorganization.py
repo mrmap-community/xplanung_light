@@ -61,11 +61,11 @@ class AdministrativeOrganizationListView(SingleTableView):
         #if True:
             qs = AdministrativeOrganization.objects.annotate(last_changed=Subquery(
                 AdministrativeOrganization.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-            )).order_by('-last_changed').only('id', 'name')
+            )).order_by('-last_changed').only('id', 'name', 'name_part', 'ls', 'ks', 'gs', 'ts')
         else:
             qs = AdministrativeOrganization.objects.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(last_changed=Subquery(
                 AdministrativeOrganization.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-            )).order_by('-last_changed').only('id', 'name')
+            )).order_by('-last_changed').only('id', 'name', 'name_part', 'ls', 'ks', 'gs', 'ts')
         return qs
 
 

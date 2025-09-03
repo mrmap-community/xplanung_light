@@ -5,6 +5,7 @@ from xplanung_light.views.bplan import BPlanCreateView, BPlanUpdateView, BPlanDe
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views.bplanspezexternereferenz import BPlanSpezExterneReferenzCreateView, BPlanSpezExterneReferenzUpdateView, BPlanSpezExterneReferenzDeleteView, BPlanSpezExterneReferenzListView
 from xplanung_light.views.bplanbeteiligung import BPlanBeteiligungCreateView, BPlanBeteiligungUpdateView, BPlanBeteiligungDeleteView, BPlanBeteiligungListView
+from xplanung_light.views.uvp import UvpCreateView, UvpUpdateView, UvpDeleteView, UvpListView
 from xplanung_light.views.administrativeorganization import AdministrativeOrganizationPublishingListView, AdministrativeOrganizationAutocomplete, AdministrativeOrganizationListView, AdministrativeOrganizationUpdateView
 from xplanung_light.views.contactorganization import ContactOrganizationCreateView, ContactOrganizationListView, ContactOrganizationUpdateView, ContactOrganizationDeleteView
 from django.urls import re_path as url
@@ -42,6 +43,11 @@ urlpatterns = [
     path("bplan/<int:bplanid>/beteiligung/", BPlanBeteiligungListView.as_view(), name="bplanbeteiligung-list"),
     path("bplan/<int:bplanid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(), name="bplanbeteiligung-update"),
     path("bplan/<int:bplanid>/beteiligung/<int:pk>/delete/", BPlanBeteiligungDeleteView.as_view(), name="bplanbeteiligung-delete"),
+    # BPlan UVP Info
+    path("bplan/<int:bplanid>/uvp/create/", UvpCreateView.as_view(), name="uvp-create"),
+    path("bplan/<int:bplanid>/uvp/", UvpListView.as_view(), name="uvp-list"),
+    path("bplan/<int:bplanid>/uvp/<int:pk>/update/", UvpUpdateView.as_view(), name="uvp-update"),
+    path("bplan/<int:bplanid>/uvp/<int:pk>/delete/", UvpDeleteView.as_view(), name="uvp-delete"),
     # Organisationen
     path("organization/<int:pk>/ows/", views.ows, name="ows"),
     # Organisations XPlan-Liste für GetFeatureInfo - hier müssen alle Plantypen zurückgeliefert werden können

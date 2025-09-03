@@ -221,7 +221,7 @@ class XPlan(GenericMetadata):
     #technHerstellDatum [0..1], Date
     #genehmigungsDatum [0..1], Date
     #untergangsDatum [0..1], Date
-    untergangs_datum = models.DateField(null=True, blank=True, verbose_name="Untergangsdatum des Plans", help_text="Datum, an dem der Plan (z.B. durch Ratsbeschluss oder Gerichtsurteil) aufgehoben oder für nichtig erklärt wurde.")
+    untergangs_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Untergangs", help_text="Datum, an dem der Plan (z.B. durch Ratsbeschluss oder Gerichtsurteil) aufgehoben oder für nichtig erklärt wurde.")
     #aendertPlan [0..*], XP_VerbundenerPlan
     #wurdeGeaendertVonPlan [0..*], XP_VerbundenerPlan
     #aendertPlanBereich [0..*], Referenz, Testphase
@@ -324,6 +324,45 @@ class BPlan(XPlan):
         """Returns a string representation of a BPlan."""
         return f"{self.name} ({self.get_planart_display()})"
     
+"""
+FPlan 
+Beispiele:
+https://www.geoportal.rlp.de/mapbender/php/mod_exportIso19139.php?url=https%3A%2F%2Fgdk.gdi-de.org%2Fgeonetwork%2Fsrv%2Fger%2Fcsw%3Frequest%3DGetRecordById%26service%3DCSW%26version%3D2.0.2%26Id%3D93033873-236e-449c-b20e-b238a6f8af8d%26ElementSetName%3Dfull%26OUTPUTSCHEMA%3Dhttp%3A%2F%2Fwww.isotc211.org%2F2005%2Fgmd&resolveCoupledResources=true
+https://www.geoportal.rlp.de/mapbender/php/mod_exportIso19139.php?url=https%3A%2F%2Fgdk.gdi-de.org%2Fgeonetwork%2Fsrv%2Fger%2Fcsw%3Frequest%3DGetRecordById%26service%3DCSW%26version%3D2.0.2%26Id%3D9fa0c44a-1348-4953-a765-36781a788845%26ElementSetName%3Dfull%26OUTPUTSCHEMA%3Dhttp%3A%2F%2Fwww.isotc211.org%2F2005%2Fgmd&resolveCoupledResources=true
+"""
+
+"""
+Informationen zur Durchführung von UVPs
+"""
+class Uvp(GenericMetadata):
+
+    TYPE_CHOICES = [
+        ( '18.1: Feriendorf Außenbereich',
+            (
+                ('18_1_1', '18.1.1 (X): Betten >= 300 oder GZ >= 200'),
+                ('18_1_2', '18.1.2 (A): Betten >= 100 < 300 oder GZ >=80 < 200'), 
+            ),
+        ),
+        ( '18.2: Campingplatz Außenbereich',
+            (
+                ('18_2_1', '18.2.1 (X): StPl 200+'),
+                ('18_2_2', '18.2.2 (A): StPl >=50 < 200'), 
+            ),
+        ),
+    ]
+
+    uvp_vp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP Vorprüfung durchgeführt", help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP Vorprüfung durchgeführt wurde.")
+    uvp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP durchgeführt", help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP durchgeführt wurde.")
+    typ = models.CharField(null=True, blank=True, max_length=7, choices=TYPE_CHOICES, verbose_name='Kategorie für Bauvorhaben gem. Anlage 1 UVPG', help_text="Kategorie für Bauvorhaben gem. Anlage 1 UVPG - https://www.gesetze-im-internet.de/uvpg/anlage_1.html", db_index=True)
+    uvp_beginn_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Beginns der UVP", help_text="Datum des Beginns der UVP.")
+    uvp_ende_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Abschlusses der UVP", help_text="Datum des Abschlusses der UVP.")
+    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="uvps")
+    history = HistoricalRecords()
+
+    def __str__(self):
+        """Returns a string representation of the Info about the UVP."""
+        return f"UVP - { self.id } ({self.get_typ_display()})"
+
 """
 Um die verschieden Beteiligungsverfahren abbilden zu können, macht es Sinn die Verfahren über einen ForeignKey an die 
 jeweilige Planung zu hängen. Das erfolgt ähnlich wie bei den Anlagen. In XPlanung gibt es 4 Datumsfelder, die der jeweiligen 

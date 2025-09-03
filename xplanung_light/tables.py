@@ -1,6 +1,6 @@
 import django_tables2 as tables
 from django_tables2.utils import A
-from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization
+from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp
 from django.urls import reverse
 from django.utils.html import format_html
 from django.contrib.gis.gdal import OGRGeometry
@@ -76,6 +76,21 @@ class BPlanBeteiligungTable(tables.Table):
         fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "edit", "delete")
 
 
+class UvpTable(tables.Table):
+
+    edit = tables.LinkColumn('uvp-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
+                         orderable=False, empty_values=())
+    delete = tables.LinkColumn('uvp-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')], \
+                         orderable=False, empty_values=())
+    typ = tables.Column(verbose_name="Kategorie gem. UVPG Anlage 1")
+
+    class Meta:
+        model = Uvp
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ( "id", "uvp_vp", "uvp", "typ", "uvp_beginn_datum", "uvp_ende_datum", "edit", "delete")
+
+
+
 class BPlanTable(tables.Table):
     last_changed = tables.Column(verbose_name="Letzte Änderung")
     """
@@ -95,6 +110,7 @@ class BPlanTable(tables.Table):
     zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
     count_attachments = tables.Column(verbose_name="Anlagen", accessor='count_attachments', orderable=False)
     count_beteiligungen = tables.Column(verbose_name="Beteiligungen", accessor='count_beteiligungen', orderable=False)
+    count_uvps = tables.Column(verbose_name="UVPs", accessor='count_uvps', orderable=False)
     detail = tables.LinkColumn('bplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
                          orderable=False, empty_values=())
     # manytomany relations are handled automatically!
@@ -124,7 +140,13 @@ class BPlanTable(tables.Table):
             return format_html('<a href="' + reverse('bplanbeteiligung-create', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
         else:
             return format_html('<a href="' + reverse('bplanbeteiligung-list', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
-
+        
+    def render_count_uvps(self, value, record):
+        if value == 0:
+            return format_html('<a href="' + reverse('uvp-create', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
+        else:
+            return format_html('<a href="' + reverse('uvp-list', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
+        
     """
     geojson = Column(
         accessor=A('geojson'),
@@ -136,7 +158,7 @@ class BPlanTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "inkrafttretens_datum", "nummer", "name", "gemeinde", "planart", "count_attachments", "count_beteiligungen", "detail", "xplangml", "edit", "delete")
+        fields = ( "zoom", "last_changed", "inkrafttretens_datum", "nummer", "name", "gemeinde", "planart", "count_attachments", "count_beteiligungen", "count_uvps", "detail", "xplangml", "edit", "delete")
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):

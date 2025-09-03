@@ -1,0 +1,16 @@
+{% extends "xplanung_light/layout.html" %}
+{% block title %}
+ UVP Infos zum Bebauungsplan
+{% endblock %}
+{% load render_table from django_tables2 %}
+{% load django_bootstrap5 %}
+{% block content %}
+<p>UVPs zum Bebauungsplan <b>{{ bplan.name }}</b> der Kommune(n):<br>
+    <ul>
+        {% for gemeinde in bplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
+    </ul>
+</p>  
+<p><a href="{% url 'uvp-create' bplanid=bplanid %}">Neue UVP erstellen</a></p>
+{% render_table table %}
+<p>Anzahl: {{ uvp_list.count }}</p>
+{% endblock %}
