@@ -1,42 +1,18 @@
-from xplanung_light.forms import BPlanBeteiligungForm
 from django.views.generic import (CreateView, UpdateView, DeleteView)
-from xplanung_light.views.bplanrelations import BPlanRelationsCreateView, BPlanRelationsListView, BPlanRelationsUpdateView, BPlanRelationsDeleteView
-from xplanung_light.models import BPlan, BPlanBeteiligung
+from xplanung_light.models import BPlan
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableView
-from xplanung_light.tables import BPlanBeteiligungTable
 from django.core.exceptions import PermissionDenied
 
 
 """
-View Klassen zur Verwaltung von Beteiligungen
+Generische Klassen zur Verwaltung von Relationen zu BPlänen
+TODO - ggf. bplanid durch generic_id ersetzen - dann können Klassen auch für FPläne genutzt werden!
 """
-class BPlanBeteiligungCreateView(BPlanRelationsCreateView):
-    model = BPlanBeteiligung
-    form_class = BPlanBeteiligungForm
-    list_url_name = 'bplanbeteiligung-list'
-
-
-class BPlanBeteiligungListView(BPlanRelationsListView, SingleTableView):
-    model = BPlanBeteiligung
-    table_class = BPlanBeteiligungTable
-    template_name = 'xplanung_light/bplanbeteiligung_list.html'
-    list_url_name = 'bplanbeteiligung-list'
-
-
-class BPlanBeteiligungUpdateView(BPlanRelationsUpdateView):
-    model = BPlanBeteiligung
-    form_class = BPlanBeteiligungForm
-    list_url_name = 'bplanbeteiligung-list'
-
-
-class BPlanBeteiligungDeleteView(BPlanRelationsDeleteView):
-    model = BPlanBeteiligung
-    list_url_name = 'bplanbeteiligung-list'
-
-class BPlanBeteiligungCreateView2(CreateView):
-    model = BPlanBeteiligung
-    form_class = BPlanBeteiligungForm
+class BPlanRelationsCreateView(CreateView):
+    #model = BPlanBeteiligung
+    #form_class = BPlanBeteiligungForm
+    list_url_name = 'test'
     
     def get_context_data(self, **kwargs):
         bplanid = self.kwargs['bplanid']
@@ -80,14 +56,15 @@ class BPlanBeteiligungCreateView2(CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy("bplanbeteiligung-list", kwargs={'bplanid': self.kwargs['bplanid']})   
+        return reverse_lazy(self.list_url_name, kwargs={'bplanid': self.kwargs['bplanid']})   
     
 
-class BPlanBeteiligungListView2(SingleTableView):
-    model = BPlanBeteiligung
-    table_class = BPlanBeteiligungTable
-    template_name = 'xplanung_light/bplanbeteiligung_list.html'
-    success_url = reverse_lazy("bplanbeteiligung-list") 
+class BPlanRelationsListView(SingleTableView):
+    #model = BPlanBeteiligung
+    #table_class = BPlanBeteiligungTable
+    #template_name = 'xplanung_light/bplanbeteiligung_list.html'
+    list_url_name = 'test'
+    success_url = reverse_lazy(list_url_name) 
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data()
@@ -105,10 +82,11 @@ class BPlanBeteiligungListView2(SingleTableView):
             return self.model.objects#.order_by('-created')
         
 
-class BPlanBeteiligungUpdateView2(UpdateView):
-    model = BPlanBeteiligung
+class BPlanRelationsUpdateView(UpdateView):
+    #model = BPlanBeteiligung
     #fields = ["typ", "name", "attachment"]
-    form_class = BPlanBeteiligungForm
+    #form_class = BPlanBeteiligungForm
+    list_url_name = 'dummy'
 
     def get_context_data(self, **kwargs):
         bplanid = self.kwargs['bplanid']
@@ -137,14 +115,15 @@ class BPlanBeteiligungUpdateView2(UpdateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy("bplanbeteiligung-list", kwargs={'bplanid': self.kwargs['bplanid']})
+        return reverse_lazy(self.list_url_name, kwargs={'bplanid': self.kwargs['bplanid']})
 
 
-class BPlanBeteiligungDeleteView2(DeleteView):
-    model = BPlanBeteiligung
+class BPlanRelationsDeleteView(DeleteView):
+    #model = BPlanBeteiligung
+    list_url_name = 'dummy'
 
     def get_success_url(self):
-        return reverse_lazy("bplanbeteiligung-list", kwargs={'bplanid': self.kwargs['bplanid']})
+        return reverse_lazy(self.list_url_name, kwargs={'bplanid': self.kwargs['bplanid']})
     
     def get_object(self):
         object = super().get_object()
