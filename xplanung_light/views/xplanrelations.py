@@ -6,27 +6,28 @@ from django.core.exceptions import PermissionDenied
 
 
 """
-Generische Klassen zur Verwaltung von Relationen zu BPlänen
-TODO - ggf. bplanid durch generic_id ersetzen - dann können Klassen auch für FPläne genutzt werden!
+Generische Klassen zur Verwaltung von Relationen zu XPlänen
 """
-class BPlanRelationsCreateView(CreateView):
+class XPlanRelationsCreateView(CreateView):
+    reference_model = BPlan
     #model = BPlanBeteiligung
     #form_class = BPlanBeteiligungForm
     list_url_name = 'test'
-    
+    reference_model_name_lower = str(reference_model._meta.model_name).lower()
+
     def get_context_data(self, **kwargs):
-        bplanid = self.kwargs['bplanid']
+        planid = self.kwargs['planid']
         context = super().get_context_data(**kwargs)
-        bplan = BPlan.objects.get(pk=bplanid)
+        plan = self.reference_model.objects.get(pk=planid)
         # check ob Nutzer admin einer der Gemeinden des BPlans ist
         if self.request.user.is_superuser == False:
-            for gemeinde in bplan.gemeinde.all():
+            for gemeinde in plan.gemeinde.all():
                 for user in gemeinde.organization_users.all():
                     if user.user == self.request.user and user.is_admin:                        
-                         context['bplan'] = bplan
+                         context[self.reference_model_name_lower] = plan
                          return context
             raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
-        context['bplan'] = bplan
+        context[self.reference_model_name_lower] = plan
         return context
 
     # reduce choices for invoice to own invoices    
@@ -42,24 +43,34 @@ class BPlanRelationsCreateView(CreateView):
     
     def get_form_kwargs(self):
         form = super().get_form_kwargs()
-        bplanid = self.kwargs['bplanid']
+        planid = self.kwargs['planid']
         
-        form['initial'].update({'bplan': BPlan.objects.get(pk=bplanid)})
+        form['initial'].update({self.reference_model_name_lower: self.reference_model.objects.get(pk=planid)})
         #form['initial'].update({'owned_by_user': self.request.user})
         return form
         #return super().get_form_kwargs()
 
     def form_valid(self, form):
-        bplanid = self.kwargs['bplanid']
-        form.instance.bplan = BPlan.objects.get(pk=bplanid)
+        planid = self.kwargs['planid']
+        if self.reference_model_name_lower == 'bplan':
+            form.instance.bplan = self.reference_model.objects.get(pk=planid)
+        if self.reference_model_name_lower == 'fplan':
+            # TODO alter to fplan
+            form.instance.bplan = self.reference_model.objects.get(pk=planid)    
         # TODO: check ob der Extent des Rasterbilds innerhalb der Abgrenzung der AdministrativeUnit liegt ...  
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy(self.list_url_name, kwargs={'bplanid': self.kwargs['bplanid']})   
+        return reverse_lazy(self.list_url_name, kwargs={'planid': self.kwargs['planid']})   
     
 
-class BPlanRelationsListView(SingleTableView):
+class XPlanRelationsListView(SingleTableView):
+    reference_model = BPlan
+    #model = BPlanBeteiligung
+    #form_class = BPlanBeteiligungForm
+    list_url_name = 'test'
+    reference_model_name_lower = str(reference_model._meta.model_name).lower()
+
     #model = BPlanBeteiligung
     #table_class = BPlanBeteiligungTable
     #template_name = 'xplanung_light/bplanbeteiligung_list.html'
@@ -68,30 +79,39 @@ class BPlanRelationsListView(SingleTableView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data()
-        context['bplanid'] = self.kwargs['bplanid']
-        context['bplan'] = BPlan.objects.get(pk=self.kwargs['bplanid'])
+        if self.reference_model_name_lower == 'bplan':
+            context['bplanid'] = self.kwargs['planid']
+        if self.reference_model_name_lower == 'fplan':
+            # TODO alter to fplanid
+            context['bplanid'] = self.kwargs['planid']
+        context[self.reference_model_name_lower] = self.reference_model.objects.get(pk=self.kwargs['planid'])
         return context
     
     def get_queryset(self):
-        bplanid = self.kwargs['bplanid']
-        if bplanid:
-            return self.model.objects.filter(
-            bplan=BPlan.objects.get(pk=bplanid)
-        )#.order_by('-created')
+        planid = self.kwargs['planid']
+        if planid:
+            if self.reference_model_name_lower == 'bplan':
+                return self.model.objects.filter(
+                    bplan=self.reference_model.objects.get(pk=planid)
+                )#.order_by('-created')
+            if self.reference_model_name_lower == 'fplan':
+                # TODO alter to fplan
+                return self.model.objects.filter(
+                    bplan=self.reference_model.objects.get(pk=planid)
+                )#.order_by('-created')
         else:
             return self.model.objects#.order_by('-created')
         
 
-class BPlanRelationsUpdateView(UpdateView):
-    #model = BPlanBeteiligung
-    #fields = ["typ", "name", "attachment"]
-    #form_class = BPlanBeteiligungForm
+class XPlanRelationsUpdateView(UpdateView):
+    reference_model = BPlan
+    reference_model_name_lower = str(reference_model._meta.model_name).lower()
     list_url_name = 'dummy'
 
     def get_context_data(self, **kwargs):
-        bplanid = self.kwargs['bplanid']
+        planid = self.kwargs['planid']
         context = super().get_context_data(**kwargs)
-        context['bplan'] = BPlan.objects.get(pk=bplanid)
+        context['bplan'] = self.reference_model.objects.get(pk=planid)
         return context
 
     def get_form(self, form_class=None):
@@ -102,7 +122,12 @@ class BPlanRelationsUpdateView(UpdateView):
     def get_object(self):
         object = super().get_object()
         if self.request.user.is_superuser == False:
-            for gemeinde in object.bplan.gemeinde.all():
+            if self.reference_model_name_lower == 'bplan':
+                gemeinden = object.bplan.gemeinde.all()
+            if self.reference_model_name_lower == 'fplan':  
+                # TODO alter to fplan
+                gemeinden = object.bplan.gemeinde.all()
+            for gemeinde in gemeinden:
                 for user in gemeinde.organization_users.all():
                     if user.user == self.request.user and user.is_admin:                        
                         return object
@@ -110,26 +135,37 @@ class BPlanRelationsUpdateView(UpdateView):
         return object
 
     def form_valid(self, form):
-        bplanid = self.kwargs['bplanid']
-        form.instance.bplan = BPlan.objects.get(pk=bplanid)
+        planid = self.kwargs['planid']
+        if self.reference_model_name_lower == 'bplan':
+            form.instance.bplan = self.reference_model.objects.get(pk=planid)
+        if self.reference_model_name_lower == 'fplan':
+            # TODO alter to fplan
+            form.instance.bplan = self.reference_model.objects.get(pk=planid)
+        
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy(self.list_url_name, kwargs={'bplanid': self.kwargs['bplanid']})
+        return reverse_lazy(self.list_url_name, kwargs={'planid': self.kwargs['planid']})
 
 
-class BPlanRelationsDeleteView(DeleteView):
-    #model = BPlanBeteiligung
+class XPlanRelationsDeleteView(DeleteView):
+    reference_model = BPlan
+    reference_model_name_lower = str(reference_model._meta.model_name).lower()
     list_url_name = 'dummy'
 
     def get_success_url(self):
-        return reverse_lazy(self.list_url_name, kwargs={'bplanid': self.kwargs['bplanid']})
+        return reverse_lazy(self.list_url_name, kwargs={'planid': self.kwargs['planid']})
     
     def get_object(self):
         object = super().get_object()
         if self.request.user.is_superuser == False:
             user_orga_admin = []
-            for gemeinde in object.bplan.gemeinde.all():
+            if self.reference_model_name_lower == 'bplan':
+                gemeinden = object.bplan.gemeinde.all()
+            if self.reference_model_name_lower == 'fplan':  
+                # TODO alter to fplan
+                gemeinden = object.bplan.gemeinde.all()
+            for gemeinde in gemeinden:
                 user_is_admin = False
                 for user in gemeinde.organization_users.all():
                     if user.user == self.request.user and user.is_admin:

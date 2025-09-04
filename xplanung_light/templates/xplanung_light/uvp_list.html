@@ -10,7 +10,7 @@
         {% for gemeinde in bplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
     </ul>
 </p>  
-<p><a href="{% url 'uvp-create' bplanid=bplanid %}">Neue UVP erstellen</a></p>
+<p><a href="{% url 'uvp-create' planid=bplan.id %}">Neue UVP erstellen</a></p>
 {% render_table table %}
 <p>Anzahl: {{ uvp_list.count }}</p>
 {% endblock %}

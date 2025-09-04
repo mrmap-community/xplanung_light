@@ -10,7 +10,7 @@
         {% for gemeinde in bplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
     </ul>
 </p>  
-<p><a href="{% url 'bplanattachment-create' bplanid=bplanid %}">Anlage erstellen</a></p>
+<p><a href="{% url 'bplanattachment-create' planid=bplan.id %}">Anlage erstellen</a></p>
 {% render_table table %}
 <p>Anzahl: {{ bplanspezexternereferenz_list.count }}</p>
 {% endblock %}

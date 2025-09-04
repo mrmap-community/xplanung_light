@@ -33,21 +33,21 @@ urlpatterns = [
     path("bplan/import/", views.bplan_import, name="bplan-import"),
     path("bplan/import-archiv/", views.bplan_import_archiv, name="bplan-import-archiv"),
     # BPlan Anlagen
-    path("bplan/<int:bplanid>/attachment/create/", BPlanSpezExterneReferenzCreateView.as_view(), name="bplanattachment-create"),
-    path("bplan/<int:bplanid>/attachment/", BPlanSpezExterneReferenzListView.as_view(), name="bplanattachment-list"),
-    path("bplan/<int:bplanid>/attachment/<int:pk>/update/", BPlanSpezExterneReferenzUpdateView.as_view(), name="bplanattachment-update"),
-    path("bplan/<int:bplanid>/attachment/<int:pk>/delete/", BPlanSpezExterneReferenzDeleteView.as_view(), name="bplanattachment-delete"),
+    path("bplan/<int:planid>/attachment/create/", BPlanSpezExterneReferenzCreateView.as_view(), name="bplanattachment-create"),
+    path("bplan/<int:planid>/attachment/", BPlanSpezExterneReferenzListView.as_view(), name="bplanattachment-list"),
+    path("bplan/<int:planid>/attachment/<int:pk>/update/", BPlanSpezExterneReferenzUpdateView.as_view(), name="bplanattachment-update"),
+    path("bplan/<int:planid>/attachment/<int:pk>/delete/", BPlanSpezExterneReferenzDeleteView.as_view(), name="bplanattachment-delete"),
     path("bplanattachment/<int:pk>/", views.get_bplan_attachment, name="bplanattachment-download"),
     # BPlan Beteiligungen
-    path("bplan/<int:bplanid>/beteiligung/create/", BPlanBeteiligungCreateView.as_view(), name="bplanbeteiligung-create"),
-    path("bplan/<int:bplanid>/beteiligung/", BPlanBeteiligungListView.as_view(), name="bplanbeteiligung-list"),
-    path("bplan/<int:bplanid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(), name="bplanbeteiligung-update"),
-    path("bplan/<int:bplanid>/beteiligung/<int:pk>/delete/", BPlanBeteiligungDeleteView.as_view(), name="bplanbeteiligung-delete"),
+    path("bplan/<int:planid>/beteiligung/create/", BPlanBeteiligungCreateView.as_view(), name="bplanbeteiligung-create"),
+    path("bplan/<int:planid>/beteiligung/", BPlanBeteiligungListView.as_view(), name="bplanbeteiligung-list"),
+    path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(), name="bplanbeteiligung-update"),
+    path("bplan/<int:planid>/beteiligung/<int:pk>/delete/", BPlanBeteiligungDeleteView.as_view(), name="bplanbeteiligung-delete"),
     # BPlan UVP Info
-    path("bplan/<int:bplanid>/uvp/create/", UvpCreateView.as_view(), name="uvp-create"),
-    path("bplan/<int:bplanid>/uvp/", UvpListView.as_view(), name="uvp-list"),
-    path("bplan/<int:bplanid>/uvp/<int:pk>/update/", UvpUpdateView.as_view(), name="uvp-update"),
-    path("bplan/<int:bplanid>/uvp/<int:pk>/delete/", UvpDeleteView.as_view(), name="uvp-delete"),
+    path("bplan/<int:planid>/uvp/create/", UvpCreateView.as_view(), name="uvp-create"),
+    path("bplan/<int:planid>/uvp/", UvpListView.as_view(), name="uvp-list"),
+    path("bplan/<int:planid>/uvp/<int:pk>/update/", UvpUpdateView.as_view(), name="uvp-update"),
+    path("bplan/<int:planid>/uvp/<int:pk>/delete/", UvpDeleteView.as_view(), name="uvp-delete"),
     # Organisationen
     path("organization/<int:pk>/ows/", views.ows, name="ows"),
     # Organisations XPlan-Liste für GetFeatureInfo - hier müssen alle Plantypen zurückgeliefert werden können

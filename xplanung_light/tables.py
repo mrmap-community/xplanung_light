@@ -131,21 +131,21 @@ class BPlanTable(tables.Table):
     
     def render_count_attachments(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('bplanattachment-create', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('bplanattachment-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('bplanattachment-list', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('bplanattachment-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
         
     def render_count_beteiligungen(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('bplanbeteiligung-create', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('bplanbeteiligung-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('bplanbeteiligung-list', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('bplanbeteiligung-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
         
     def render_count_uvps(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('uvp-create', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('uvp-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('uvp-list', kwargs={'bplanid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('uvp-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
         
     """
     geojson = Column(
