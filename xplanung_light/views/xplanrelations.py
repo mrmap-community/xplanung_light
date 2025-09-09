@@ -10,8 +10,6 @@ Generische Klassen zur Verwaltung von Relationen zu XPlänen
 """
 class XPlanRelationsCreateView(CreateView):
     reference_model = BPlan
-    #model = BPlanBeteiligung
-    #form_class = BPlanBeteiligungForm
     list_url_name = 'test'
     reference_model_name_lower = str(reference_model._meta.model_name).lower()
 
@@ -44,19 +42,16 @@ class XPlanRelationsCreateView(CreateView):
     def get_form_kwargs(self):
         form = super().get_form_kwargs()
         planid = self.kwargs['planid']
-        
         form['initial'].update({self.reference_model_name_lower: self.reference_model.objects.get(pk=planid)})
-        #form['initial'].update({'owned_by_user': self.request.user})
         return form
-        #return super().get_form_kwargs()
 
     def form_valid(self, form):
         planid = self.kwargs['planid']
+
         if self.reference_model_name_lower == 'bplan':
             form.instance.bplan = self.reference_model.objects.get(pk=planid)
         if self.reference_model_name_lower == 'fplan':
-            # TODO alter to fplan
-            form.instance.bplan = self.reference_model.objects.get(pk=planid)    
+            form.instance.fplan = self.reference_model.objects.get(pk=planid)    
         # TODO: check ob der Extent des Rasterbilds innerhalb der Abgrenzung der AdministrativeUnit liegt ...  
         return super().form_valid(form)
 
@@ -66,11 +61,8 @@ class XPlanRelationsCreateView(CreateView):
 
 class XPlanRelationsListView(SingleTableView):
     reference_model = BPlan
-    #model = BPlanBeteiligung
-    #form_class = BPlanBeteiligungForm
     list_url_name = 'test'
     reference_model_name_lower = str(reference_model._meta.model_name).lower()
-
     #model = BPlanBeteiligung
     #table_class = BPlanBeteiligungTable
     #template_name = 'xplanung_light/bplanbeteiligung_list.html'
@@ -97,7 +89,7 @@ class XPlanRelationsListView(SingleTableView):
             if self.reference_model_name_lower == 'fplan':
                 # TODO alter to fplan
                 return self.model.objects.filter(
-                    bplan=self.reference_model.objects.get(pk=planid)
+                    fplan=self.reference_model.objects.get(pk=planid)
                 )#.order_by('-created')
         else:
             return self.model.objects#.order_by('-created')

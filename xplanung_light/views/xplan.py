@@ -1,7 +1,9 @@
 from django.http import HttpResponseRedirect
 from xplanung_light.forms import  BPlanCreateForm, BPlanUpdateForm
 from django.views.generic import (CreateView, UpdateView, DeleteView)
-from xplanung_light.models import BPlan, BPlanSpezExterneReferenz
+from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, FPlan, FPlanSpezExterneReferenz
+#from xplanung_light.views.bplan import BPlanDetailXPlanLightView
+#from xplanung_light.views.fplan import FPlanDetailXPlanLightView
 from django.urls import reverse_lazy
 from leaflet.forms.widgets import LeafletWidget
 from django_tables2 import SingleTableView
@@ -11,6 +13,7 @@ from django.contrib.gis.db.models.functions import AsGML, Transform, Envelope
 from django.contrib.gis.db.models import Collect, Union, Count
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.gdal import OGRGeometry
+from django.contrib.gis.geos import Polygon
 import uuid
 from django.core.serializers import serialize
 import json
@@ -237,25 +240,44 @@ class XPlanListView(FilterView, SingleTableView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # TODO: Anstatt object_list.data vlt. table.data? ... - dann haben wir mehr Einfluss auf die Darstellung im Leaflet Client
+        #print(len(context['table'].page.object_list.data))
+        #for obj in context['table'].page.object_list.data:
+        #    print(obj.bbox)
         context["markers"] = json.loads(
-            serialize("geojson", context['table'].page.object_list.data, geometry_field='geltungsbereich')
+            serialize("geojson", context['table'].page.object_list.data, fields=["id", "name", "pk", "planart"], geometry_field='geltungsbereich')
         )
+        #print(context["bbox"])
+        #context["markers"] = json.loads(
+        #    serialize("geojson", context['table'].page.object_list.data, geometry_field='geltungsbereich')
+        #)
+        #context['markers'] = None
         #print(context["markers"])
         return context
 
     def get_queryset(self):
         if self.request.user.is_superuser:
-        #if True:
-            qs = self.model.objects.prefetch_related('gemeinde').distinct().annotate(last_changed=Subquery(
-                self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-            )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True)).annotate(count_uvps=Count('uvps', distinct=True))
+            if self.model_name_lower == 'bplan':
+                qs = self.model.objects.prefetch_related('gemeinde').distinct().annotate(last_changed=Subquery(
+                    self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True)).annotate(count_uvps=Count('uvps', distinct=True))
+            if self.model_name_lower == 'fplan':
+                qs = self.model.objects.prefetch_related('gemeinde').distinct().annotate(last_changed=Subquery(
+                    self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True))
         else:
             # admin für alle Gemeinden eines Plans
-            qs = self.model.objects.filter(gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
-            # user ist Organisation zugewiesen - ohen id_admin=True
-            #qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
-                self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-            )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True)).annotate(count_uvps=Count('uvps', distinct=True))
+            if self.model_name_lower == 'bplan':
+                qs = self.model.objects.filter(gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+                # user ist Organisation zugewiesen - ohen id_admin=True
+                #qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+                    self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True)).annotate(count_uvps=Count('uvps', distinct=True))
+            if self.model_name_lower == 'fplan':
+                qs = self.model.objects.filter(gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+                # user ist Organisation zugewiesen - ohen id_admin=True
+                #qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+                    self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True))
         self.filter_set = self.filterset_class(self.request.GET, queryset=qs)
         return self.filter_set.qs
 
@@ -283,7 +305,7 @@ class XPlanDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Geometrien 
-        ogr_geom = OGRGeometry(str(context['bplan'].geltungsbereich), srs=4326)
+        ogr_geom = OGRGeometry(str(context[self.model_name_lower].geltungsbereich), srs=4326)
         offset = 0.01
         extent0 = float(ogr_geom.extent[0]) - offset
         extent1 = float(ogr_geom.extent[1]) - offset
@@ -351,13 +373,13 @@ class XPlanDetailXPlanLightView(XPlanDetailView):
         # aus den Daten in der DB stammen und dort vergeben werden. 
         # Im ersten Schritt synthetisieren wir sie einfach ;-)
         context['auszug_uuid'] = "GML_" + str(uuid.uuid4())
-        context['bplan_uuid'] = "GML_" + str(uuid.uuid4())
+        context[self.model_name_lower + '_uuid'] = "GML_" + str(uuid.uuid4())
         # Irgendwie gibt es keine django model function um direkt den Extent der Geometrie zu erhalten. Daher nutzen wir hier gdal
         # und Transformieren die Daten erneut im RAM
         # Definition der Transformation (Daten sind immer in WGS 84 - 4326)
         ct = CoordTransform(SpatialReference(4326, srs_type='epsg'), SpatialReference(25832, srs_type='epsg'))
         # OGRGeoemtry Objekt erstellen
-        ogr_geom = OGRGeometry(str(context['bplan'].geltungsbereich), srs=4326)
+        ogr_geom = OGRGeometry(str(context[self.model_name_lower].geltungsbereich), srs=4326)
         context['wgs84_extent'] = ogr_geom.extent
         # Transformation nach EPSG:25832
         ogr_geom.transform(ct)
@@ -384,15 +406,15 @@ class XPlanDetailXPlanLightView(XPlanDetailView):
             context['attachments'] = BPlanSpezExterneReferenz.objects.filter(bplan=self.kwargs['pk'])
         if self.model_name_lower == 'fplan':
             # TODO adopt
-            context['attachments'] = BPlanSpezExterneReferenz.objects.filter(bplan=self.kwargs['pk'])   
+            context['attachments'] = FPlanSpezExterneReferenz.objects.filter(fplan=self.kwargs['pk'])   
         # TODO: Überschreiben des xplan gml mit neuen Inhalten - Anlagen, Datumswerten, ...
         if context[self.model_name_lower].xplan_gml:
             print("Ausgabe des gespeicherten/hochgeladenen GML - danach Überschreiben mit Inhalten aus der Datenbank")
             if self.model_name_lower == 'bplan':
-                context[self.model_name_lower].xplan_gml = XPlanung.proxy_bplan_gml(context[self.model_name_lower].id)
-            if self.model_name_lower == 'bplan':
+                context[self.model_name_lower].xplan_gml = XPlanung.proxy_bplan_gml(bplan_id=context[self.model_name_lower].id)
+            if self.model_name_lower == 'fplan':
                 # TODO adopt
-                context[self.model_name_lower].xplan_gml = XPlanung.proxy_bplan_gml(context[self.model_name_lower].id)    
+                context[self.model_name_lower].xplan_gml = XPlanung.proxy_fplan_gml(context[self.model_name_lower].id)    
         return context
 
     def dispatch(self, *args, **kwargs):
@@ -412,14 +434,21 @@ class XPlanDetailXPlanLightZipView(XPlanDetailView):
         response = super().dispatch(*args, **kwargs)
         response['Content-type'] = "application/zip"  # setzen des headers
         if self.model_name_lower == 'bplan':
-            xplan_gml_view = XPlanDetailXPlanLightView.as_view(template_name="xplanung_light/bplan_template_xplanung_light_6.xml")(pk=self.kwargs['pk'], request=self.request).render()
+            class test(XPlanDetailXPlanLightView):
+                model = BPlan
+                model_name_lower = str(model._meta.model_name).lower()
+            xplan_gml_view = test.as_view(template_name="xplanung_light/bplan_template_xplanung_light_6.xml")(pk=self.kwargs['pk'], request=self.request).render()
             # Alle Anhaenge ziehen
             attachments = BPlanSpezExterneReferenz.objects.filter(bplan=self.kwargs['pk'])
         if self.model_name_lower == 'fplan':
             # TODO adopt
-            xplan_gml_view = XPlanDetailXPlanLightView.as_view(template_name="xplanung_light/bplan_template_xplanung_light_6.xml")(pk=self.kwargs['pk'], request=self.request).render()
+            class test(XPlanDetailXPlanLightView):
+                model = FPlan
+                model_name_lower = str(model._meta.model_name).lower()
+            xplan_gml_view = test.as_view(template_name="xplanung_light/fplan_template_xplanung_light_6.xml")(pk=self.kwargs['pk'], request=self.request).render()
             # Alle Anhaenge ziehen
-            attachments = BPlanSpezExterneReferenz.objects.filter(bplan=self.kwargs['pk'])
+            attachments = FPlanSpezExterneReferenz.objects.filter(fplan=self.kwargs['pk'])
+        #print(xplan_gml_view.content)
         # https://stackoverflow.com/questions/2463770/python-in-memory-zip-library
         zip_buffer = io.BytesIO()
         file_array = []

@@ -1,0 +1,43 @@
+{% if fplan.xplan_gml %}{{ fplan.xplan_gml|safe|escape }}
+{% else %}<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<xplan:XPlanAuszug xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="{{ auszug_uuid }}">
+  <gml:boundedBy>
+    <gml:Envelope srsName="EPSG:25832">
+      <gml:lowerCorner>567015.8040 5937951.7580</gml:lowerCorner>
+      <gml:upperCorner>567582.8240 5938562.2710</gml:upperCorner>
+    </gml:Envelope>
+  </gml:boundedBy>
+  <gml:featureMember>
+    <xplan:FP_Plan gml:id="{{ fplan_uuid }}">
+      <gml:boundedBy>
+        <gml:Envelope srsName="EPSG:25832">
+          <gml:lowerCorner>{{ extent.0 }} {{ extent.1 }}</gml:lowerCorner>
+          <gml:upperCorner>{{ extent.2 }} {{ extent.3 }}</gml:upperCorner>
+        </gml:Envelope>
+      </gml:boundedBy>
+      <xplan:name>{{ fplan.name }}</xplan:name>
+      <xplan:erstellungsMassstab>1000</xplan:erstellungsMassstab>
+      <xplan:raeumlicherGeltungsbereich>
+        {% autoescape off %}{{ multisurface_geometry_25832 }}{% endautoescape %}
+      </xplan:raeumlicherGeltungsbereich>
+      {% for attachment in attachments %}<xplan:externeReferenz>
+        <xplan:XP_SpezExterneReferenz>
+          <!--<xplan:art>Dokument</xplan:art>-->
+          <xplan:referenzName>{{ attachment.name }}</xplan:referenzName>
+          <xplan:referenzURL>{{ attachment.file_name }}</xplan:referenzURL>
+          <xplan:typ>{{ attachment.typ }}</xplan:typ>
+        </xplan:XP_SpezExterneReferenz>
+      </xplan:externeReferenz>{% endfor %}
+      {% for single_gemeinde in fplan.gemeinde.all %}<xplan:gemeinde>
+        <xplan:XP_Gemeinde>
+          <xplan:ags>{{ single_gemeinde.ls }}{{ single_gemeinde.ks }}{{ single_gemeinde.gs }}</xplan:ags>
+          <xplan:gemeindeName>{{ single_gemeinde.name }}</xplan:gemeindeName>
+        </xplan:XP_Gemeinde>
+      </xplan:gemeinde>{% endfor %}
+      <xplan:planArt>{{ fplan.planart }}</xplan:planArt>
+      {% if fplan.rechtsstand %}<xplan:rechtsstand>{{ fplan.rechtsstand }}</xplan:rechtsstand>{% else %}<!-- rechtsstand nicht angegeben -->{% endif %}
+      {% if fplan.aufstellungsbeschluss_datum %}<xplan:aufstellungsbeschlussDatum>{{ fplan.aufstellungsbeschluss_datum|date:"Y-m-d" }}</xplan:aufstellungsbeschlussDatum>{% else %}<!-- aufstellungsbeschlussDatum nicht angegeben -->{% endif %}
+    </xplan:FP_Plan>
+  </gml:featureMember>
+</xplan:XPlanAuszug>
+{% endif %}

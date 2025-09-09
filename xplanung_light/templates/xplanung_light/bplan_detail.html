@@ -139,11 +139,11 @@
     </tr>
     {% endfor %}
     <tr>
-      <th scope="row">XPlan-GML V 6.0</th>
+      <th scope="row">XPlan-GML V {% if bplan.xplan_gml_version %}{{bplan.xplan_gml_version}}{% else %}6.0{% endif %}</th>
       <td><a href="{% url 'bplan-export-xplan-raster-6' pk=bplan.id %}">GML herunterladen</a></td>
     </tr>
     <tr>
-      <th scope="row">XPlan-ZIP-Archiv V 6.0</th>
+      <th scope="row">XPlan-ZIP-Archiv V {% if bplan.xplan_gml_version %}{{bplan.xplan_gml_version}}{% else %}6.0{% endif %}</th>
       <td><a href="{% url 'bplan-export-xplan-raster-6-zip' pk=bplan.id %}">ZIP-Archiv herunterladen</a></td>
     </tr>
     <tr>

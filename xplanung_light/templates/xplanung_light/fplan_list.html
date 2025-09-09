@@ -1,0 +1,116 @@
+{% extends "xplanung_light/layout.html" %}
+{% load leaflet_tags %}
+{% block title %}
+    Liste der Flächennutzungspläne
+{% endblock %}
+{% load render_table from django_tables2 %}
+{% block content %}
+{{ markers|json_script:"markers-data" }}
+<script>
+<!-- javascript-Part - siehe nächster Abschnitt -->
+let mapGlobal = {};
+    function map_init_basic (map, options) {
+        mapGlobal = map;
+        //https://stackoverflow.com/questions/43007019/leaflet-event-how-to-propagate-to-overlapping-layers
+        const data = document.getElementById("markers-data");
+        const markers = JSON.parse(data.textContent);
+        map.setZoom(14);
+        let feature = L.geoJSON(markers, {
+                style: function(feature) {
+                    switch (feature.properties.planart) {
+                        case '1000': return {color: "#ff0000"};
+                        case '10000':   return {color: "#0000ff"};
+                    }
+                }//,
+                //onEachFeature: onEachFeature
+                //zoomToBounds: zoomToBounds
+            }
+        )
+            /*.bindPopup(function (layer) {
+                return layer
+                    .feature.properties.generic_id;
+            })*/
+        .addTo(map);       
+        map.fitBounds(feature.getBounds());
+        /*
+        map.on('moveend', function() { 
+            const bbox_field = document.getElementById("id_bbox");
+            //bbox_field.value = "test";
+            //alert(JSON.stringify(map.getBounds()));
+            const bounds = map.getBounds();
+            bbox_field.value = bounds._southWest.lng + "," + bounds._southWest.lat + "," + bounds._northEast.lng + "," + bounds._northEast.lat;
+       });
+       */
+       /*function onEachFeature(feature, layer) {
+            layer.on({
+                click: zoomToFeature
+            });
+            //featureByName[feature.properties.name] = layer;
+        }*/
+        /*
+        function zoomToBounds(bounds) {
+            alert(JSON.stringify(bounds));
+            //featureByName[feature.properties.name] = layer;
+        }
+        */
+        /*
+        function zoomToFeature(e) {
+            map.fitBounds(e.target.getBounds());
+        }
+        */
+        var popup = L.popup()
+        map.on('click', e => {
+            //var thisMap = map;
+            const { lat, lng } = e.latlng;
+            const point = turf.point([lng, lat]);
+            const polygonsClicked = [];
+            //console.log(map._layers)
+            for (var id in map._layers) {
+                const layer = map._layers[id]
+                if (typeof layer.feature !== "undefined"){
+                    //map._layers.forEach((p, i) => {
+                    //const polygon= p.toGeoJSON();
+                    const polygon = layer.feature;
+                    //console.log(polygon)
+                    //console.log(point)
+                    if (turf.booleanPointInPolygon(point, polygon)) polygonsClicked.push(layer);
+                }
+            }
+            if (polygonsClicked.length > 0) {
+                popupContent = "Dokument(e):<br>";
+                for (var id in polygonsClicked) {
+                    //console.log(polygonsClicked[id]);
+                    bounds = polygonsClicked[id].getBounds();
+                    //console.log(bounds);
+                    popupContent += "<a onclick='mapGlobal.fitBounds([[" + bounds._southWest.lat + ", " + bounds._southWest.lng + "], [" + bounds._northEast.lat + ", " + bounds._northEast.lng + "]]);'>+</a> ";
+                    popupContent += "<a href='" + polygonsClicked[id].feature.properties.pk + "/update/'><b>" + polygonsClicked[id].feature.properties.name + " (" + polygonsClicked[id].feature.properties.pk + ")</b></a>; Planart: " + polygonsClicked[id].feature.properties.planart;
+                    popupContent += " - <a href='" + polygonsClicked[id].feature.properties.pk + "/xplan/' target='_blank'>XPlan-GML" + "</a><br>";
+                }
+                popup
+                    .setLatLng(e.latlng)
+                    .setContent(popupContent)
+                    .openOn(map);
+            } else {
+                /*
+                popup
+                .setLatLng(e.latlng)
+                .setContent("You clicked the map at " + e.latlng.toString())
+                .openOn(map);
+                */
+            }
+        });
+    }
+</script>
+{% leaflet_map "fplan_list_map" callback="window.map_init_basic" %}
+Filter
+<!-- add boostrap form css - if wished -->
+{% load django_bootstrap5 %}
+<form method="get" action="">
+    {{ filter.form.as_p }}
+    <input type="submit" /><a href="{% url 'fplan-list' %}">Filter löschen</a>.</p>
+</form>
+<p><a href="{% url 'fplan-create' %}">FPlan anlegen</a><a href="{% url 'fplan-import' %}">FPlan importieren</a><a href="{% url 'fplan-import-archiv' %}">FPlan Archiv importieren</a></p>
+<!-- https://stackoverflow.com/questions/44572682/dynamically-set-per-page-in-django-tables2 -->
+{% render_table table %}
+<p>Anzahl: {{ object_list.count }}</p>
+{% endblock %}

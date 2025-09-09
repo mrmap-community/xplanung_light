@@ -2,9 +2,13 @@ from django.urls import path, include
 from xplanung_light.views import views
 from django.contrib.auth import views as auth_views
 from xplanung_light.views.bplan import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView, BPlanDetailView, BPlanListViewHtml
+from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDeleteView, FPlanListView, FPlanDetailView, FPlanListViewHtml
+from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views.bplanspezexternereferenz import BPlanSpezExterneReferenzCreateView, BPlanSpezExterneReferenzUpdateView, BPlanSpezExterneReferenzDeleteView, BPlanSpezExterneReferenzListView
+from xplanung_light.views.fplanspezexternereferenz import FPlanSpezExterneReferenzCreateView, FPlanSpezExterneReferenzUpdateView, FPlanSpezExterneReferenzDeleteView, FPlanSpezExterneReferenzListView
 from xplanung_light.views.bplanbeteiligung import BPlanBeteiligungCreateView, BPlanBeteiligungUpdateView, BPlanBeteiligungDeleteView, BPlanBeteiligungListView
+from xplanung_light.views.fplanbeteiligung import FPlanBeteiligungCreateView, FPlanBeteiligungUpdateView, FPlanBeteiligungDeleteView, FPlanBeteiligungListView
 from xplanung_light.views.uvp import UvpCreateView, UvpUpdateView, UvpDeleteView, UvpListView
 from xplanung_light.views.administrativeorganization import AdministrativeOrganizationPublishingListView, AdministrativeOrganizationAutocomplete, AdministrativeOrganizationListView, AdministrativeOrganizationUpdateView
 from xplanung_light.views.contactorganization import ContactOrganizationCreateView, ContactOrganizationListView, ContactOrganizationUpdateView, ContactOrganizationDeleteView
@@ -48,6 +52,33 @@ urlpatterns = [
     path("bplan/<int:planid>/uvp/", UvpListView.as_view(), name="uvp-list"),
     path("bplan/<int:planid>/uvp/<int:pk>/update/", UvpUpdateView.as_view(), name="uvp-update"),
     path("bplan/<int:planid>/uvp/<int:pk>/delete/", UvpDeleteView.as_view(), name="uvp-delete"),
+    # FPlan
+    # BPlan CRUD
+    path("fplan/", FPlanListView.as_view(), name="fplan-list"),
+    path("fplan/create/", FPlanCreateView.as_view(), name="fplan-create"),
+    path("fplan/<int:pk>/update/", FPlanUpdateView.as_view(), name="fplan-update"),
+    path("fplan/<int:pk>/delete/", FPlanDeleteView.as_view(), name="fplan-delete"),
+    path("fplan/<int:pk>/", FPlanDetailView.as_view(), name="fplan-detail"),
+    path("fplan/<int:pk>/overview-map/", views.ows_fplan_overview, name="fplan-overview-map"),
+    # FPlan HTML List - für GetFeatureInfo
+    #path("fplan/html-list/", FPlanListViewHtml.as_view(), name="fplan-list-html"),
+    # FPlan XPlan Export
+    path("fplan/<int:pk>/xplan/", FPlanDetailXPlanLightView.as_view(template_name="xplanung_light/fplan_template_xplanung_light_6.xml"), name="fplan-export-xplan-raster-6"),
+    path("fplan/<int:pk>/xplan-zip/", FPlanDetailXPlanLightZipView.as_view(template_name="xplanung_light/fplan_template_xplanung_light_6.xml"), name="fplan-export-xplan-raster-6-zip"),
+    path("fplan/<int:pk>/iso19139/", FPlanDetailXPlanLightView.as_view(template_name="xplanung_light/fplan_template_iso19139.xml"), name="fplan-export-iso19139"),
+    path("fplan/import/", views.fplan_import, name="fplan-import"),
+    path("fplan/import-archiv/", views.fplan_import_archiv, name="fplan-import-archiv"),
+    # FPlan Beteiligungen
+    path("fplan/<int:planid>/beteiligung/create/", FPlanBeteiligungCreateView.as_view(), name="fplanbeteiligung-create"),
+    path("fplan/<int:planid>/beteiligung/", FPlanBeteiligungListView.as_view(), name="fplanbeteiligung-list"),
+    path("fplan/<int:planid>/beteiligung/<int:pk>/update/", FPlanBeteiligungUpdateView.as_view(), name="fplanbeteiligung-update"),
+    path("fplan/<int:planid>/beteiligung/<int:pk>/delete/", FPlanBeteiligungDeleteView.as_view(), name="fplanbeteiligung-delete"),
+     # FPlan Anlagen
+    path("fplan/<int:planid>/attachment/create/", FPlanSpezExterneReferenzCreateView.as_view(), name="fplanattachment-create"),
+    path("fplan/<int:planid>/attachment/", FPlanSpezExterneReferenzListView.as_view(), name="fplanattachment-list"),
+    path("fplan/<int:planid>/attachment/<int:pk>/update/", FPlanSpezExterneReferenzUpdateView.as_view(), name="fplanattachment-update"),
+    path("fplan/<int:planid>/attachment/<int:pk>/delete/", FPlanSpezExterneReferenzDeleteView.as_view(), name="fplanattachment-delete"),
+    path("fplanattachment/<int:pk>/", views.get_fplan_attachment, name="fplanattachment-download"),
     # Organisationen
     path("organization/<int:pk>/ows/", views.ows, name="ows"),
     # Organisations XPlan-Liste für GetFeatureInfo - hier müssen alle Plantypen zurückgeliefert werden können

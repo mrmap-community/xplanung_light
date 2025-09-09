@@ -1,0 +1,16 @@
+{% extends "xplanung_light/layout.html" %}
+{% block title %}
+ Beteiligungsverfahren zum Flächennutzungsplan
+{% endblock %}
+{% load render_table from django_tables2 %}
+{% load django_bootstrap5 %}
+{% block content %}
+<p>Beteiligungen zum Flächennutzungsplan <b>{{ fplan.name }}</b> der Kommune(n):<br>
+    <ul>
+        {% for gemeinde in fplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
+    </ul>
+</p>  
+<p><a href="{% url 'fplanbeteiligung-create' planid=fplan.id %}">Neue Beteiligung erstellen</a></p>
+{% render_table table %}
+<p>Anzahl: {{ fplanbeteiligung_list.count }}</p>
+{% endblock %}

@@ -1,12 +1,13 @@
 import xml.etree.ElementTree as ET
 from django import forms
 from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
-from xplanung_light.models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz
+from xplanung_light.models import BPlan, FPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, FPlanSpezExterneReferenz
 from io import BytesIO
 from zipfile import ZipFile
 import magic
 from django.db.models import FileField
 from xplanung_light.validators import geotiff_raster_validator
+import re
 
 class XPlanung():
     """Klasse mit Hilfsfunktionen für den Import und die Validierung von XPlan Dokumenten. 
@@ -16,6 +17,10 @@ class XPlanung():
     xplan_version = "6.0"
     xplan_name:str
     xplan_orga:AdministrativeOrganization
+
+    def namespace(self, element):
+        m = re.match(r'\{.*\}', element.tag)
+        return m.group(0) if m else ''
 
     def __init__(self, context_file):
         """Constructor method
@@ -50,7 +55,7 @@ class XPlanung():
         # check for version
         #<xplan:XPlanAuszug xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="GML_080e46d4-9a9f-4f1d-8f3b-f17f79228417">
         ns = {
-            'xplan': 'http://www.xplanung.de/xplangml/6/0',
+            'xplan': self.namespace(root).strip('{').strip('}'),
             'gml': 'http://www.opengis.net/gml/3.2',
             'xlink': 'http://www.w3.org/1999/xlink',
             'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
@@ -72,14 +77,24 @@ class XPlanung():
                 raise forms.ValidationError("Fehler beim Abspeichern des neuen BPlan-Objekts - nicht alle angegebenen Gemeinden wurden in der Datenbank gefunden!")
         return orgas    
 
-    def import_bplan(self, overwrite=False):
+    def import_plan(self, overwrite=False, plan_typ='bplan'):
         # for exporting gml with right namespace
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
         root = ET.fromstring(self.xml_string)
+        if plan_typ == 'bplan':
+            path_element = 'xplan:BP_Plan'
+        if plan_typ == 'fplan':
+            path_element = 'xplan:FP_Plan'    
         # check for version
+        if self.namespace(root).strip('{').strip('}') == 'http://www.xplanung.de/xplangml/6/0':
+            xplan_version = '6.0'
+        if self.namespace(root).strip('{').strip('}') == 'http://www.xplanung.de/xplangml/5/4':
+            xplan_version = '5.4'    
+        if self.namespace(root).strip('{').strip('}') == 'http://www.xplanung.de/xplangml/5/1':
+            xplan_version = '5.1'
         #<xplan:XPlanAuszug xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="GML_080e46d4-9a9f-4f1d-8f3b-f17f79228417">
         ns = {
-            'xplan': 'http://www.xplanung.de/xplangml/6/0',
+            'xplan': self.namespace(root).strip('{').strip('}'),
             'gml': 'http://www.opengis.net/gml/3.2',
             'xlink': 'http://www.w3.org/1999/xlink',
             'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
@@ -87,9 +102,10 @@ class XPlanung():
             'xsd': 'http://www.w3.org/2001/XMLSchema',
         }
         # Auslesen der Pflichtelemente aus der GML-Datei - Prüfung erfolgte bereits im Formular
-        name = root.find("gml:featureMember/xplan:BP_Plan/xplan:name", ns).text
-        planart = root.find("gml:featureMember/xplan:BP_Plan/xplan:planArt", ns).text
-        geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/*", ns)        
+        #print("gml:featureMember/" + path_element + "/xplan:name")
+        name = root.find("gml:featureMember/" + path_element + "/xplan:name", ns).text
+        planart = root.find("gml:featureMember/" + path_element + "/xplan:planArt", ns).text
+        geltungsbereich_element = root.find("gml:featureMember/" + path_element + "/xplan:raeumlicherGeltungsbereich/*", ns)        
         geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()  
         # Bauen eines GEOS-Geometrie Objektes aus dem GML
         geometry = GEOSGeometry.from_gml(geltungsbereich_text)
@@ -101,10 +117,10 @@ class XPlanung():
         # Transformation in WGS84 für die Ablage im System
         geometry.transform(4326)
         # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
-        gemeinde_name = root.find("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/xplan:gemeindeName", ns).text
-        gemeinde_ags = root.find("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/xplan:ags", ns).text
+        gemeinde_name = root.find("gml:featureMember/" + path_element + "/xplan:gemeinde/xplan:XP_Gemeinde/xplan:gemeindeName", ns).text
+        gemeinde_ags = root.find("gml:featureMember/" + path_element + "/xplan:gemeinde/xplan:XP_Gemeinde/xplan:ags", ns).text
 
-        gemeinden = root.findall("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde", ns)
+        gemeinden = root.findall("gml:featureMember/" + path_element + "/xplan:gemeinde/xplan:XP_Gemeinde", ns)
         all_administrativeorganizations_exists = True
         orgas = []
         # Problem: Funktioniert nicht für Verbandsgemeinden! - Die dürfen nicht in Liste auftauchen!
@@ -133,55 +149,71 @@ class XPlanung():
         # Test, ob ein BPlan mit gleichem name und gemeinde schon existiert
         try:
             #existing_bplan = BPlan.objects.get(name=name, gemeinde=orgas)
-            existing_bplan_query = BPlan.objects.filter(name=name)
+            if plan_typ == 'bplan':
+                existing_plan_query = BPlan.objects.filter(name=name)
+            if plan_typ == 'fplan':
+                existing_plan_query = FPlan.objects.filter(name=name)
             for orga in orgas:
-                existing_bplan_query = existing_bplan_query.filter(gemeinde=orga)
-            existing_bplan = existing_bplan_query.get()
+                existing_plan_query = existing_plan_query.filter(gemeinde=orga)
+            existing_plan = existing_plan_query.get()
             # TODO testen ob mehrere zurückgeliefert werden ...
             #print(existing_bplan)
             if overwrite:
-                existing_bplan.planart = planart
-                existing_bplan.geltungsbereich = geometry
-                existing_bplan.xplan_gml = self.xml_string.strip()
-                existing_bplan.xplan_gml_version = "6.0"
-                existing_bplan.save()
+                existing_plan.planart = planart
+                existing_plan.geltungsbereich = geometry
+                existing_plan.xplan_gml = self.xml_string.strip()
+                existing_plan.xplan_gml_version = xplan_version
+                existing_plan.save()
                 return True
             return False
         except:
             pass
         # Erstellen eines neuen BPlan-Objektes
-        bplan = BPlan()
-        bplan.name = name
-        bplan.planart = planart
-        bplan.geltungsbereich = geometry
-        bplan.save()
-        bplan.gemeinde.set(orgas)
-        bplan.xplan_gml = self.xml_string.strip()
-        bplan.xplan_gml_version = "6.0"
+        if plan_typ == 'bplan':
+            plan = BPlan()
+        if plan_typ == 'fplan':
+            plan = FPlan()    
+        plan.name = name
+        plan.planart = planart
+        plan.geltungsbereich = geometry
+        plan.save()
+        plan.gemeinde.set(orgas)
+        plan.xplan_gml = self.xml_string.strip()
+        plan.xplan_gml_version = xplan_version
         try:
-            bplan.save()
+            plan.save()
         except:
             raise forms.ValidationError("Fehler beim Abspeichern des neuen BPlan-Objekts!")
         return True
     
-    def import_bplan_archiv(self, overwrite=False):
+    def import_plan_archiv(self, overwrite=False, plan_typ='bplan'):
         # for exporting gml with right namespace
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
         root = ET.fromstring(self.xml_string)
         # check for version
         #<xplan:XPlanAuszug xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="GML_080e46d4-9a9f-4f1d-8f3b-f17f79228417">
         ns = {
-            'xplan': 'http://www.xplanung.de/xplangml/6/0',
+            'xplan': self.namespace(root).strip('{').strip('}'),
             'gml': 'http://www.opengis.net/gml/3.2',
             'xlink': 'http://www.w3.org/1999/xlink',
             'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
             'wfs': 'http://www.opengis.net/wfs',
             'xsd': 'http://www.w3.org/2001/XMLSchema',
         }
-        # Auslesen der Pflichtelemente aus der GML-Datei - Prüfung erfolgte bereits im Formular
-        name = root.find("gml:featureMember/xplan:BP_Plan/xplan:name", ns).text
-        planart = root.find("gml:featureMember/xplan:BP_Plan/xplan:planArt", ns).text
-        geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/*", ns)        
+        if plan_typ == 'bplan':
+            path_element = 'xplan:BP_Plan'
+        if plan_typ == 'fplan':
+            path_element = 'xplan:FP_Plan'   
+        # Auslesen der Pflichtelemente aus der GML-Datei - Prüfung erfolgte bereits im Formular - aber jetzt auch spezifische elemente prüfen - da FPlan oder BPlan
+        try:
+            name = root.find("gml:featureMember/" + path_element + "/xplan:name", ns).text
+            #planart = root.find("gml:featureMember/" + path_element + "/xplan:planArt", ns).text
+            #geltungsbereich_element = root.find("gml:featureMember/" + path_element + "/xplan:raeumlicherGeltungsbereich/*", ns)    
+        except:
+            #raise forms.ValidationError("Fehler beim Auslesen des Namens")
+            return False
+        planart = root.find("gml:featureMember/" + path_element + "/xplan:planArt", ns).text
+        geltungsbereich_element = root.find("gml:featureMember/" + path_element + "/xplan:raeumlicherGeltungsbereich/*", ns) 
         geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()  
         # Bauen eines GEOS-Geometrie Objektes aus dem GML
         geometry = GEOSGeometry.from_gml(geltungsbereich_text)
@@ -193,10 +225,10 @@ class XPlanung():
         # Transformation in WGS84 für die Ablage im System
         geometry.transform(4326)
         # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
-        gemeinde_name = root.find("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/xplan:gemeindeName", ns).text
-        gemeinde_ags = root.find("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/xplan:ags", ns).text
+        gemeinde_name = root.find("gml:featureMember/" + path_element + "/xplan:gemeinde/xplan:XP_Gemeinde/xplan:gemeindeName", ns).text
+        gemeinde_ags = root.find("gml:featureMember/" + path_element + "/xplan:gemeinde/xplan:XP_Gemeinde/xplan:ags", ns).text
 
-        gemeinden = root.findall("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde", ns)
+        gemeinden = root.findall("gml:featureMember/" + path_element + "/xplan:gemeinde/xplan:XP_Gemeinde", ns)
         all_administrativeorganizations_exists = True
         orgas = []
         # Problem: Funktioniert nicht für Verbandsgemeinden! - Die dürfen nicht in Liste auftauchen!
@@ -210,10 +242,10 @@ class XPlanung():
                 orgas.append(orga)
             except:
                 all_administrativeorganizations_exists = False
-                raise forms.ValidationError("Fehler beim Abspeichern des neuen BPlan-Objekts - nicht alle angegebenen Gemeinden wurden in der Datenbank gefunden!")
+                raise forms.ValidationError("Fehler beim Abspeichern des neuen XPlan-Objekts - nicht alle angegebenen Gemeinden wurden in der Datenbank gefunden!")
                 return False
 
-        referenzen = root.findall("gml:featureMember/xplan:BP_Plan/xplan:externeReferenz", ns)
+        referenzen = root.findall("gml:featureMember/" + path_element + "/xplan:externeReferenz", ns)
         #print(referenzen)
         # DEBUG Ausgaben
         #print("Name des BPlans: " + name)
@@ -227,42 +259,48 @@ class XPlanung():
         #orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
         # Test, ob ein BPlan mit gleichem name und gemeinde schon existiert
         try:
-            existing_bplan_query = BPlan.objects.filter(name=name)
+            if plan_typ == 'bplan':
+                existing_plan_query = BPlan.objects.filter(name=name)
+            if plan_typ == 'fplan':
+                existing_plan_query = FPlan.objects.filter(name=name)
             for orga in orgas:
-                existing_bplan_query = existing_bplan_query.filter(gemeinde=orga)
-            existing_bplan = existing_bplan_query.get()
+                existing_plan_query = existing_plan_query.filter(gemeinde=orga)
+            existing_plan = existing_plan_query.get()
             # TODO testen ob mehrere zurückgeliefert werden ...
             if overwrite:
-                existing_bplan.planart = planart
-                existing_bplan.geltungsbereich = geometry
-                existing_bplan.xplan_gml = self.xml_string.strip()
-                existing_bplan.xplan_gml_version = "6.0"
-                id = existing_bplan.save()
-                print("BPlan ID (update): " + str(existing_bplan.id))
+                existing_plan.planart = planart
+                existing_plan.geltungsbereich = geometry
+                existing_plan.xplan_gml = self.xml_string.strip()
+                existing_plan.xplan_gml_version = "6.0"
+                id = existing_plan.save()
+                print("Plan ID (update): " + str(existing_plan.id))
                 # Anhänge abspeichern, wenn welche dabei sind - prüfen, ob sie schon existieren
-                self.sync_referenzen(existing_bplan, referenzen, ns)
+                self.sync_referenzen(existing_plan, referenzen, ns, plan_typ)
                 return True
             return False
         except:
             pass
-        # Erstellen eines neuen BPlan-Objektes
-        bplan = BPlan()
-        bplan.name = name
-        bplan.planart = planart
-        bplan.geltungsbereich = geometry
-        bplan.save()
-        bplan.gemeinde.set(orgas)
-        bplan.xplan_gml = self.xml_string.strip()
-        bplan.xplan_gml_version = "6.0"
+        # Erstellen eines neuen Plan-Objektes
+        if plan_typ == 'bplan':
+            plan = BPlan()
+        if plan_typ == 'fplan':
+            plan = FPlan()    
+        plan.name = name
+        plan.planart = planart
+        plan.geltungsbereich = geometry
+        plan.save()
+        plan.gemeinde.set(orgas)
+        plan.xplan_gml = self.xml_string.strip()
+        plan.xplan_gml_version = "6.0"
         try:
-            bplan.save()
-            print("BPlan ID (inserted): " + str(bplan.id))
-            self.sync_referenzen(bplan, referenzen, ns)
+            plan.save()
+            print("Plan ID (inserted): " + str(plan.id))
+            self.sync_referenzen(plan, referenzen, ns, plan_typ)
         except:
-            raise forms.ValidationError("Fehler beim Abspeichern des neuen BPlan-Objekts!")
+            raise forms.ValidationError("Fehler beim Abspeichern des neuen Plan-Objekts!")
         return True
     
-    def sync_referenzen(self, bplan, xml_referenzen, ns):
+    def sync_referenzen(self, plan, xml_referenzen, ns, plan_typ='bplan'):
         zipfile_ob = ZipFile(self.context_file_bytesio)
         for referenz in xml_referenzen:
             name = referenz.find('xplan:XP_SpezExterneReferenz/xplan:referenzName', ns).text
@@ -278,9 +316,14 @@ class XPlanung():
                 if typ == '99999':
                     valid = self.validate(file_bytesio, typ)
                 if valid:
-                    spez_externe_referenz, created = BPlanSpezExterneReferenz.objects.update_or_create(
-                        bplan=bplan, name=name, typ=typ
-                    )
+                    if plan_typ == 'bplan':
+                        spez_externe_referenz, created = BPlanSpezExterneReferenz.objects.update_or_create(
+                            bplan=plan, name=name, typ=typ
+                        )
+                    if plan_typ == 'fplan':
+                        spez_externe_referenz, created = FPlanSpezExterneReferenz.objects.update_or_create(
+                            fplan=plan, name=name, typ=typ
+                        )
                     if created:
                         print("Referenz erstellt!")
                     else:
@@ -303,9 +346,15 @@ class XPlanung():
     def proxy_bplan_gml(bplan_id):
         print("proxy_bplan_gml")
         bplan = BPlan.objects.get(pk=bplan_id)
+        if bplan.xplan_gml_version == '6.0':
+            xplan_namespace = 'http://www.xplanung.de/xplangml/6/0'
+        if bplan.xplan_gml_version == '5.4':
+            xplan_namespace = 'http://www.xplanung.de/xplangml/5/4'
+        if bplan.xplan_gml_version == '5.1':
+            xplan_namespace = 'http://www.xplanung.de/xplangml/5/1'   
         # for exporting gml with right namespace
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
-        ET.register_namespace("xplan", "http://www.xplanung.de/xplangml/6/0")
+        ET.register_namespace("xplan", xplan_namespace)
         ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
         ET.register_namespace("xsi", "http://www.w3.org/2001/XMLSchema-instance")
         ET.register_namespace("xsd", "http://www.w3.org/2001/XMLSchema")
@@ -315,7 +364,7 @@ class XPlanung():
         # check for version
         #<xplan:XPlanAuszug xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="GML_080e46d4-9a9f-4f1d-8f3b-f17f79228417">
         ns = {
-            'xplan': 'http://www.xplanung.de/xplangml/6/0',
+            'xplan': xplan_namespace,
             'gml': 'http://www.opengis.net/gml/3.2',
             'xlink': 'http://www.w3.org/1999/xlink',
             'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
@@ -344,6 +393,70 @@ class XPlanung():
             xplan_typ = ET.SubElement(xp_spez_externe_referenz, 'xplan:typ')
             xplan_typ.text = attachment.typ
             bplan_element.insert(index + 1, externe_referenz)
+        # TODO: Überschreiben der Inhalte des XML mit weiteren Infos aus der Datenbank!
+        # Datumswerte, Nummer, ... 
+        """
+        <xplan:externeReferenz>
+        <xplan:XP_SpezExterneReferenz>
+        <xplan:art>Dokument</xplan:art>
+        <xplan:referenzName>BPlan004_6-0_Dok</xplan:referenzName>
+        <xplan:referenzURL>BPlan004_6-0.pdf</xplan:referenzURL>
+        <xplan:typ>1065</xplan:typ>
+        </xplan:XP_SpezExterneReferenz>
+        </xplan:externeReferenz>
+        """
+        return str(ET.tostring(root), 'utf-8')
+    
+    def proxy_fplan_gml(plan_id):
+        print("proxy_fplan_gml")
+        fplan = FPlan.objects.get(pk=plan_id)
+        if fplan.xplan_gml_version == '6.0':
+            xplan_namespace = 'http://www.xplanung.de/xplangml/6/0'
+        if fplan.xplan_gml_version == '5.4':
+            xplan_namespace = 'http://www.xplanung.de/xplangml/5/4'
+        if fplan.xplan_gml_version == '5.1':
+            xplan_namespace = 'http://www.xplanung.de/xplangml/5/1' 
+        # for exporting gml with right namespace
+        ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
+        ET.register_namespace("xplan", xplan_namespace)
+        ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+        ET.register_namespace("xsi", "http://www.w3.org/2001/XMLSchema-instance")
+        ET.register_namespace("xsd", "http://www.w3.org/2001/XMLSchema")
+        ET.register_namespace("wfs", "http://www.opengis.net/wfs")
+        #print(bplan.xplan_gml)
+        root = ET.fromstring(str(fplan.xplan_gml))
+        # check for version
+        #<xplan:XPlanAuszug xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="GML_080e46d4-9a9f-4f1d-8f3b-f17f79228417">
+        ns = {
+            'xplan': xplan_namespace,
+            'gml': 'http://www.opengis.net/gml/3.2',
+            'xlink': 'http://www.w3.org/1999/xlink',
+            'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+            'wfs': 'http://www.opengis.net/wfs',
+            'xsd': 'http://www.w3.org/2001/XMLSchema',
+        }
+        referenzen = root.findall("gml:featureMember/xplan:FP_Plan/xplan:externeReferenz", ns)
+        fplan_element = root.find("gml:featureMember/xplan:FP_Plan", ns)
+        geltungsbereich = root.find("gml:featureMember/xplan:FP_Plan/xplan:raeumlicherGeltungsbereich", ns)
+        # https://stackoverflow.com/questions/21178266/sibling-nodes-in-elementtree-in-python/3146652
+        # Löschen aller vorhandenen externen Referenzen - sie bekommen ja beim Import neue Dateibezeichnungen!
+        for referenz in referenzen:
+            fplan_element.remove(referenz)
+        # add referenzen
+        index = list(fplan_element).index(geltungsbereich)
+        for attachment in fplan.attachments.all():
+            print(attachment.name)
+            externe_referenz = ET.Element('xplan:externeReferenz')
+            xp_spez_externe_referenz = ET.SubElement(externe_referenz, 'xplan:XP_SpezExterneReferenz')
+            #xplan_art = ET.SubElement(xp_spez_externe_referenz, 'xplan:art')
+            #xplan_art.text = "Dokument"
+            xplan_referenz_name = ET.SubElement(xp_spez_externe_referenz, 'xplan:referenzName')
+            xplan_referenz_name.text = attachment.name
+            xplan_referenz_url = ET.SubElement(xp_spez_externe_referenz, 'xplan:referenzURL')
+            xplan_referenz_url.text = attachment.file_name
+            xplan_typ = ET.SubElement(xp_spez_externe_referenz, 'xplan:typ')
+            xplan_typ.text = attachment.typ
+            fplan_element.insert(index + 1, externe_referenz)
         # TODO: Überschreiben der Inhalte des XML mit weiteren Infos aus der Datenbank!
         # Datumswerte, Nummer, ... 
         """

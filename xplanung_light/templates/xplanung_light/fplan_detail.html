@@ -1,0 +1,123 @@
+
+{% extends "xplanung_light/xplan_detail_top.html" %}
+
+{% block title %}
+<center>
+<h3>Flächennutzungsplan "<b>{{ fplan.name }}</b>"</h3>
+</center>
+<center>
+{% for gemeinde in fplan.gemeinde.all %}
+    <img width="120px" height="132px" src="{{ gemeinde.coat_of_arms_url }}">
+{% endfor %}
+</center>
+<center>{{ fplan.gemeinde.all|join:" | " }}</center>
+<center>Aufgestellt am: <b>{{ fplan.aufstellungsbeschluss_datum }}</b></center>
+{% endblock %}
+{% block content %}
+<table class="table">
+  <thead>
+   <!-- <tr>
+      <th scope="col">Attribut</th>
+      <th scope="col">Wert</th>
+    </tr> -->
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Lage (Übersicht)</th>
+      {% if gemeinden_extent %}
+      <td><img width="200px" height="200px" src="{% url 'fplan-overview-map' pk=fplan.id%}?VERSION=1.3.0&REQUEST=GetMap&SERVICE=WMS&LAYERS=topplus,umring&STYLES=,&CRS=EPSG:25832&BBOX={{gemeinden_extent.0}},{{gemeinden_extent.1}},{{gemeinden_extent.2}},{{gemeinden_extent.3}}&WIDTH=200&HEIGHT=200&FORMAT=image/png&BGCOLOR=0xffffff&TRANSPARENT=TRUE&EXCEPTIONS=inimage"></td>
+      {% endif %}
+    </tr>
+    <tr>
+      <th scope="row">Lage (Detail)</th>
+            <td><img width="200px" height="200px" src="{% url 'fplan-overview-map' pk=fplan.id%}?VERSION=1.3.0&REQUEST=GetMap&SERVICE=WMS&LAYERS=topplus,umring&STYLES=,&CRS=EPSG:25832&BBOX={{extent.0}},{{extent.1}},{{extent.2}},{{extent.3}}&WIDTH=200&HEIGHT=200&FORMAT=image/png&BGCOLOR=0xffffff&TRANSPARENT=TRUE&EXCEPTIONS=inimage"></td>
+    </tr>
+    <tr>
+      <th scope="row">Planart</th>
+      <td>{{ fplan.get_planart_display }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Name des Plans</th>
+      <td>{{ fplan.name }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Nummer des Plans</th>
+      <td>{{ fplan.nummer }}</td>
+    </tr>
+    <tr>
+      <th scope="row"><s>Name der Änderung des Plans</s></th>
+      <td></td>
+    </tr>
+    <tr>
+      <th scope="row"><s>Fortlaufende Nummer der Änderung des Plans</s></th>
+      <td></td>
+    </tr>
+    <tr>
+      <th scope="row">Kommentierende Beschreibung des Flächennutzungsplans</th>
+      <td>Flächennutzungsplan "<b>{{ fplan.name }}</b>" der Kommune(n): {{ fplan.gemeinde.all|join:", " }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Amtliche(r) Gemeindeschlüssel (AGS)</th>
+      <td>{% for single_gemeinde in fplan.gemeinde.all %}{{ single_gemeinde.ls }}{{ single_gemeinde.ks }}{{ single_gemeinde.gs }};{% endfor %}</td>
+    </tr>
+    <tr>
+      <th scope="row"><s>Planart</s></th>
+      <td></td>
+    </tr>
+    <tr>
+      <th scope="row">Rechtsstand</th>
+      <td></td>
+    </tr>
+    <tr>
+      <th scope="row">Datum des Aufstellungsbeschlusses</th>
+      <td>{{ fplan.aufstellungsbeschluss_datum|default:"nicht erfasst" }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Erstellungsmassstab</th>
+      <td></td>
+    </tr>
+    <tr>
+      <th scope="row">Besonderheiten</th>
+      <td></td>
+    </tr>
+    <tr>
+      <th scope="row"><s>Nummer der Gemarkung</s></th>
+      <td></td>
+    </tr>
+    {% for gemeinde in fplan.gemeinde.all %}
+    <tr>
+      <th scope="row">Inhaltlich für den Plan verantwortliche Organisation</th>
+      <td>{{ gemeinde.contacts.first.name }}</td>
+    </tr>
+    <tr>
+      <th scope="row"><s>Adresse der Organisation</s></th>
+      <td></td>
+    </tr>
+    <tr>
+      <th scope="row">Telefonnummer der Organisation</th>
+      <td>{{ gemeinde.contacts.first.phone }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Faxnummer der Organisation</th>
+      <td>{{ gemeinde.contacts.first.facsimile }}</td>
+    </tr>
+    <tr>
+      <th scope="row">E-Mail der Organisation</th>
+      <td>{{ gemeinde.contacts.first.email }}</td>
+    </tr>
+    {% endfor %}
+    <tr>
+      <th scope="row">XPlan-GML V {% if fplan.xplan_gml_version %}{{fplan.xplan_gml_version}}{% else %}6.0{% endif %}</th>
+      <td><a href="{% url 'fplan-export-xplan-raster-6' pk=fplan.id %}">GML herunterladen</a></td>
+    </tr>
+    <tr>
+      <th scope="row">XPlan-ZIP-Archiv V {% if fplan.xplan_gml_version %}{{fplan.xplan_gml_version}}{% else %}6.0{% endif %}</th>
+      <td><a href="{% url 'fplan-export-xplan-raster-6-zip' pk=fplan.id %}">ZIP-Archiv herunterladen</a></td>
+    </tr>
+    <tr>
+      <th scope="row">Geo-Metadaten (ISO19139)</th>
+      <td><a href="{% url 'fplan-export-iso19139' pk=fplan.id %}">GML herunterladen</a></td>
+    </tr>
+  </tbody>
+</table>
+{% endblock %}

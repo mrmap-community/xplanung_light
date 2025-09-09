@@ -1,6 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import A
 from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp
+from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz
 from django.urls import reverse
 from django.utils.html import format_html
 from django.contrib.gis.gdal import OGRGeometry
@@ -58,6 +59,23 @@ class BPlanSpezExterneReferenzTable(tables.Table):
         fields = ( "id", "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
 
 
+class FPlanSpezExterneReferenzTable(tables.Table):
+    edit = tables.LinkColumn('fplanattachment-update', verbose_name='', text='Bearbeiten', args=[A('fplan.id'), A('pk')], \
+                         orderable=False, empty_values=())
+    delete = tables.LinkColumn('fplanattachment-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')], \
+                         orderable=False, empty_values=())
+    attachment = tables.Column(verbose_name="Ablage", orderable=False)
+    download = tables.LinkColumn('fplanattachment-download', verbose_name='', text='Download', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    name = tables.Column(verbose_name="Name/Bezeichnung")
+    typ = tables.Column(verbose_name="Art des Dokuments")
+
+    class Meta:
+        model = FPlanSpezExterneReferenz
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ( "id", "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
+
+
 class BPlanBeteiligungTable(tables.Table):
 
     edit = tables.LinkColumn('bplanbeteiligung-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
@@ -72,6 +90,23 @@ class BPlanBeteiligungTable(tables.Table):
 
     class Meta:
         model = BPlanBeteiligung
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "edit", "delete")
+
+class FPlanBeteiligungTable(tables.Table):
+
+    edit = tables.LinkColumn('fplanbeteiligung-update', verbose_name='', text='Bearbeiten', args=[A('fplan.id'), A('pk')], \
+                         orderable=False, empty_values=())
+    delete = tables.LinkColumn('fplanbeteiligung-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')], \
+                         orderable=False, empty_values=())
+    #attachment = tables.Column(verbose_name="Ablage", orderable=False)
+    #download = tables.LinkColumn('bplanbeteiligung-download', text='Download', args=[A('pk')], \
+    #                     orderable=False, empty_values=())
+    #name = tables.Column(verbose_name="Name/Bezeichnung")
+    typ = tables.Column(verbose_name="Art der Beteiligung")
+
+    class Meta:
+        model = FPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
         fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "edit", "delete")
 
@@ -159,6 +194,69 @@ class BPlanTable(tables.Table):
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
         fields = ( "zoom", "last_changed", "inkrafttretens_datum", "nummer", "name", "gemeinde", "planart", "count_attachments", "count_beteiligungen", "count_uvps", "detail", "xplangml", "edit", "delete")
+
+
+class FPlanTable(tables.Table):
+    last_changed = tables.Column(verbose_name="Letzte Änderung")
+    edit = tables.LinkColumn('fplan-update', verbose_name="", text='Bearbeiten', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    delete = tables.LinkColumn('fplan-delete', verbose_name="", text='Löschen', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    planart = tables.Column(verbose_name="Planart")
+    zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
+    count_attachments = tables.Column(verbose_name="Anlagen", accessor='count_attachments', orderable=False)
+    count_beteiligungen = tables.Column(verbose_name="Beteiligungen", accessor='count_beteiligungen', orderable=False)
+    #count_uvps = tables.Column(verbose_name="UVPs", accessor='count_uvps', orderable=False)
+    detail = tables.LinkColumn('fplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    # manytomany relations are handled automatically!
+    #gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
+    xplangml = tables.Column(verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
+
+    def render_xplangml(self, value, record):
+        if value:
+            return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
+        else:
+            return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
+    
+    def render_zoom(self, value):
+        ogr_geom = OGRGeometry(str(value), srs=4326)
+        extent = ogr_geom.extent
+        # lat/lon !
+        return format_html('<i class="fa fa-search-plus" aria-hidden="true" onclick="mapGlobal.fitBounds([[{}, {}], [{}, {}]]);"></i>', extent[1], extent[0], extent[3], extent[2])
+    
+    def render_count_attachments(self, value, record):
+        if value == 0:
+            return format_html('<a href="' + reverse('fplanattachment-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+        else:
+            return format_html('<a href="' + reverse('fplanattachment-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+        
+    def render_count_beteiligungen(self, value, record):
+        if value == 0:
+            return format_html('<a href="' + reverse('fplanbeteiligung-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+        else:
+            return format_html('<a href="' + reverse('fplanbeteiligung-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+    """    
+    def render_count_uvps(self, value, record):
+        if value == 0:
+            return format_html('<a href="' + reverse('uvp-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+        else:
+            return format_html('<a href="' + reverse('uvp-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+        
+    """
+    """
+    geojson = Column(
+        accessor=A('geojson'),
+        orderable=False,
+        # ...
+    )
+    """
+
+    class Meta:
+        model = FPlan
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ( "zoom", "last_changed", "aufstellungsbeschluss_datum", "nummer", "name", "gemeinde", "planart", "count_attachments", "count_beteiligungen", "detail", "xplangml", "edit", "delete")
+
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):

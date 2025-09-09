@@ -1,0 +1,576 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gmd:MD_Metadata xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:gmx="http://www.isotc211.org/2005/gmx" xmlns:gco="http://www.isotc211.org/2005/gco" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:schemaLocation="http://www.isotc211.org/2005/gmd http://schemas.opengis.net/iso/19139/20060504/gmd/gmd.xsd">
+  <gmd:fileIdentifier>
+    <gco:CharacterString>{{ fplan.generic_id }}</gco:CharacterString>
+  </gmd:fileIdentifier>
+  <gmd:language>
+    <gmd:LanguageCode codeList="http://www.loc.gov/standards/iso639-2" codeListValue="ger">Deutsch</gmd:LanguageCode>
+  </gmd:language>
+  <gmd:characterSet>
+    <gmd:MD_CharacterSetCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#MD_CharacterSetCode" codeListValue="utf8"/>
+  </gmd:characterSet>
+  <gmd:hierarchyLevel>
+    <gmd:MD_ScopeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#MD_ScopeCode" codeListValue="dataset">dataset</gmd:MD_ScopeCode>
+  </gmd:hierarchyLevel>
+  <gmd:contact>
+    <gmd:CI_ResponsibleParty>
+      <gmd:organisationName>
+        <gco:CharacterString>{{ metadata_contact.organization_name }}</gco:CharacterString>
+      </gmd:organisationName>
+      <gmd:contactInfo>
+        <gmd:CI_Contact>
+          <gmd:address>
+            <gmd:CI_Address>
+              {% if fplan.gemeinde.all.first %}
+              <gmd:administrativeArea>
+                <gco:CharacterString>{{ fplan.gemeinde.all|join:", " }}</gco:CharacterString>
+              </gmd:administrativeArea>
+              {% endif %}
+              <gmd:country>
+                <gco:CharacterString>DE</gco:CharacterString>
+              </gmd:country>
+              <gmd:electronicMailAddress>
+                <gco:CharacterString>{% if metadata_contact.email %}{{ metadata_contact.email }}{% else %}max.mustermann@example.com{% endif %}</gco:CharacterString>
+              </gmd:electronicMailAddress>
+            </gmd:CI_Address>
+          </gmd:address>
+        </gmd:CI_Contact>
+      </gmd:contactInfo>
+      <gmd:role>
+        <gmd:CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_RoleCode" codeListValue="pointOfContact">pointOfContact</gmd:CI_RoleCode>
+      </gmd:role>
+    </gmd:CI_ResponsibleParty>
+  </gmd:contact>
+  <gmd:dateStamp>
+    {% if fplan.history.date %}
+    <gco:Date>{{ fplan.history.date }}</gco:Date>
+    {% else %}
+    <gco:Date>2025-05-07</gco:Date>
+    {% endif %}
+  </gmd:dateStamp>
+  <gmd:metadataStandardName>
+    <gco:CharacterString>ISO19115</gco:CharacterString>
+  </gmd:metadataStandardName>
+  <gmd:metadataStandardVersion>
+    <gco:CharacterString>2003/Cor.1:2006</gco:CharacterString>
+  </gmd:metadataStandardVersion>
+  <gmd:referenceSystemInfo>
+    <gmd:MD_ReferenceSystem>
+      <gmd:referenceSystemIdentifier>
+        <gmd:RS_Identifier>
+          <gmd:authority>
+            <gmd:CI_Citation>
+              <gmd:title>
+                <gco:CharacterString>European Petroleum Survey Group (EPSG) Geodetic Parameter Registry</gco:CharacterString>
+              </gmd:title>
+              <gmd:date>
+                <gmd:CI_Date>
+                  <gmd:date>
+                    <gco:Date>2008-11-12</gco:Date>
+                  </gmd:date>
+                  <gmd:dateType>
+                    <gmd:CI_DateTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</gmd:CI_DateTypeCode>
+                  </gmd:dateType>
+                </gmd:CI_Date>
+              </gmd:date>
+              <gmd:citedResponsibleParty>
+                <gmd:CI_ResponsibleParty>
+                  <gmd:organisationName>
+                    <gco:CharacterString>European Petroleum Survey Group</gco:CharacterString>
+                  </gmd:organisationName>
+                  <gmd:contactInfo>
+                    <gmd:CI_Contact>
+                      <gmd:onlineResource>
+                        <gmd:CI_OnlineResource>
+                          <gmd:linkage>
+                            <gmd:URL>http://www.epsg-registry.org/</gmd:URL>
+                          </gmd:linkage>
+                        </gmd:CI_OnlineResource>
+                      </gmd:onlineResource>
+                    </gmd:CI_Contact>
+                  </gmd:contactInfo>
+                  <gmd:role gco:nilReason="missing"/>
+                </gmd:CI_ResponsibleParty>
+              </gmd:citedResponsibleParty>
+            </gmd:CI_Citation>
+          </gmd:authority>
+          <gmd:code>
+            <gco:CharacterString>http://www.opengis.net/def/crs/EPSG/0/4326</gco:CharacterString>
+          </gmd:code>
+          <gmd:version>
+            <gco:CharacterString>6.18.3</gco:CharacterString>
+          </gmd:version>
+        </gmd:RS_Identifier>
+      </gmd:referenceSystemIdentifier>
+    </gmd:MD_ReferenceSystem>
+  </gmd:referenceSystemInfo>
+  <gmd:identificationInfo>
+    <gmd:MD_DataIdentification>
+      <gmd:citation>
+        <gmd:CI_Citation>
+          <gmd:title>
+            <gco:CharacterString>Flächennutzungsplan {{ fplan.name }} von {{ fplan.gemeinde.name }}</gco:CharacterString>
+          </gmd:title>
+          <gmd:date>
+            <gmd:CI_Date>
+              <gmd:date>
+                {% if fplan.history.date %}
+                <gco:Date>{{ fplan.history.date }}</gco:Date>
+                {% else %}
+                <gco:Date>2025-05-07</gco:Date>
+                {% endif %}
+              </gmd:date>
+              <gmd:dateType>
+                <gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="revision">revision</gmd:CI_DateTypeCode>
+              </gmd:dateType>
+            </gmd:CI_Date>
+          </gmd:date>
+          <gmd:identifier>
+            <gmd:MD_Identifier>
+              <gmd:code>
+                <gco:CharacterString>https://komserv4gdi.service24.rlp.de/{{ fplan.generic_id }}</gco:CharacterString>
+              </gmd:code>
+            </gmd:MD_Identifier>
+          </gmd:identifier>
+        </gmd:CI_Citation>
+      </gmd:citation>
+      <gmd:abstract>
+        <gco:CharacterString>Flächennutzungsplan {{ fplan.name }} von {{ fplan.gemeinde.name }}</gco:CharacterString>
+      </gmd:abstract>
+      <!-- https://www.isotc211.org/2005/gmd/identification.xsd -->
+      {% for single_gemeinde in fplan.gemeinde.all %}
+      <gmd:pointOfContact>
+        <gmd:CI_ResponsibleParty>
+          {% if single_gemeinde.contacts.first %}
+          <gmd:organisationName>
+            <gco:CharacterString>{{ single_gemeinde.contacts.first.name }}</gco:CharacterString>
+          </gmd:organisationName>
+          <gmd:contactInfo>
+            <gmd:CI_Contact>
+              <gmd:address>
+                <gmd:CI_Address>
+                  <gmd:administrativeArea>
+                    <gco:CharacterString>Rheinland-Pfalz</gco:CharacterString>
+                  </gmd:administrativeArea>
+                  <gmd:country>
+                    <gco:CharacterString>DE</gco:CharacterString>
+                  </gmd:country>
+                  <gmd:electronicMailAddress>
+                    <gco:CharacterString>{{ single_gemeinde.contacts.first.email }}</gco:CharacterString>
+                  </gmd:electronicMailAddress>
+                </gmd:CI_Address>
+              </gmd:address>
+            </gmd:CI_Contact>
+          </gmd:contactInfo>
+          <gmd:role>
+            <gmd:CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_RoleCode" codeListValue="publisher">publisher</gmd:CI_RoleCode>
+          </gmd:role>
+          {% else%}
+          <gmd:organisationName>
+            <gco:CharacterString>Gemeinde {{ single_gemeinde.name }} hat keine weiteren Kontaktinformationen</gco:CharacterString>
+          </gmd:organisationName>
+          <gmd:contactInfo>
+            <gmd:CI_Contact>
+              <gmd:address>
+                <gmd:CI_Address>
+                  <gmd:administrativeArea>
+                    <gco:CharacterString>Rheinland-Pfalz</gco:CharacterString>
+                  </gmd:administrativeArea>
+                  <gmd:country>
+                    <gco:CharacterString>DE</gco:CharacterString>
+                  </gmd:country>
+                  <gmd:electronicMailAddress>
+                    <gco:CharacterString>demoorganization@example.com</gco:CharacterString>
+                  </gmd:electronicMailAddress>
+                </gmd:CI_Address>
+              </gmd:address>
+            </gmd:CI_Contact>
+          </gmd:contactInfo>
+          <gmd:role>
+            <gmd:CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_RoleCode" codeListValue="publisher">publisher</gmd:CI_RoleCode>
+          </gmd:role>
+          {% endif %}
+        </gmd:CI_ResponsibleParty>
+      </gmd:pointOfContact>
+      {% endfor %}
+      <gmd:resourceMaintenance>
+        <gmd:MD_MaintenanceInformation>
+          <gmd:maintenanceAndUpdateFrequency>
+            <gmd:MD_MaintenanceFrequencyCode codeListValue="irregular" codeList="http://www.isotc211.org/2005/resources/codeList.xml#MD_MaintenanceFrequencyCode"/>
+          </gmd:maintenanceAndUpdateFrequency>
+        </gmd:MD_MaintenanceInformation>
+      </gmd:resourceMaintenance>
+      {% if metadata_keywords %}
+      {% for keyword in metadata_keywords%}
+      <gmd:descriptiveKeywords>
+      <gmd:MD_Keywords>
+      <gmd:keyword>
+      <gco:CharacterString>{{ keyword }}</gco:CharacterString>
+      </gmd:keyword>
+      </gmd:MD_Keywords>
+      </gmd:descriptiveKeywords>
+      {% endfor %}
+      {% endif %}
+      <gmd:descriptiveKeywords>
+        <gmd:MD_Keywords>
+          <gmd:keyword>
+            <gco:CharacterString>Regional</gco:CharacterString>
+          </gmd:keyword>
+          <gmd:thesaurusName>
+            <gmd:CI_Citation>
+              <gmd:title>
+                <gco:CharacterString>Spatial scope</gco:CharacterString>
+              </gmd:title>
+              <gmd:date>
+                <gmd:CI_Date>
+                  <gmd:date>
+                    <gco:Date>2019-05-22</gco:Date>
+                  </gmd:date>
+                  <gmd:dateType>
+                    <gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</gmd:CI_DateTypeCode>
+                  </gmd:dateType>
+                </gmd:CI_Date>
+              </gmd:date>
+            </gmd:CI_Citation>
+          </gmd:thesaurusName>
+        </gmd:MD_Keywords>
+      </gmd:descriptiveKeywords>
+      <gmd:resourceConstraints>
+<!-- TODO: pull license information from user defined license information - problem - more than one gemeinde possible ... -->
+{% if fplan.gemeinde.published_data_accessrights %}
+<gmd:MD_LegalConstraints>
+<gmd:accessConstraints>
+<gmd:MD_RestrictionCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_RestrictionCode" codeListValue="otherRestrictions"/>
+</gmd:accessConstraints>
+<gmd:otherConstraints>{{ fplan.gemeinde.published_data_accessrights }}</gmd:otherConstraints>
+</gmd:MD_LegalConstraints>
+</gmd:resourceConstraints>
+<gmd:resourceConstraints>
+<gmd:MD_LegalConstraints>
+{% else %}
+<gmd:MD_LegalConstraints>
+<gmd:accessConstraints>
+<gmd:MD_RestrictionCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_RestrictionCode" codeListValue="otherRestrictions"/>
+</gmd:accessConstraints>
+<gmd:otherConstraints>
+<gmx:Anchor xlink:href="http://inspire.ec.europa.eu/metadata-codelist/LimitationsOnPublicAccess/noLimitations">Es gelten keine Zugriffsbeschränkungen</gmx:Anchor>
+</gmd:otherConstraints>
+</gmd:MD_LegalConstraints>
+</gmd:resourceConstraints>
+<gmd:resourceConstraints>
+<gmd:MD_LegalConstraints>
+{% endif %}
+<gmd:useConstraints>
+<gmd:MD_RestrictionCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_RestrictionCode" codeListValue="otherRestrictions"/>
+</gmd:useConstraints>
+<gmd:otherConstraints>
+<gco:CharacterString>
+Lizenz: cc-by-3.0 - Creative Commons: Namensnennung 3.0 Deutschland - http://creativecommons.org/licenses/by/3.0/de/ - Quellenvermerk: Source note required by license, but not given!
+</gco:CharacterString>
+</gmd:otherConstraints>
+<gmd:otherConstraints>
+<gco:CharacterString>
+{"id":"cc-by-3.0","name":"Creative Commons: Namensnennung 3.0 Deutschland","url":"http:\/\/creativecommons.org\/licenses\/by\/3.0\/de\/","quelle":"Source note required by license, but not given!"}
+</gco:CharacterString>
+</gmd:otherConstraints>
+</gmd:MD_LegalConstraints>
+</gmd:resourceConstraints>
+<gmd:spatialRepresentationType>
+<gmd:MD_SpatialRepresentationTypeCode codeList="https://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_SpatialRepresentationTypeCode" codeListValue="vector">vector</gmd:MD_SpatialRepresentationTypeCode>
+</gmd:spatialRepresentationType>
+      <gmd:spatialResolution>
+        <gmd:MD_Resolution>
+          <gmd:equivalentScale>
+            <gmd:MD_RepresentativeFraction>
+              <gmd:denominator>
+                <gco:Integer>1000</gco:Integer>
+              </gmd:denominator>
+            </gmd:MD_RepresentativeFraction>
+          </gmd:equivalentScale>
+        </gmd:MD_Resolution>
+      </gmd:spatialResolution>
+      <gmd:language>
+        <gmd:LanguageCode codeListValue="ger" codeList="http://www.loc.gov/standards/iso639-2">Deutsch</gmd:LanguageCode>
+      </gmd:language>
+
+      <gmd:characterSet>
+        <gmd:MD_CharacterSetCode codeListValue="utf8" codeList="http://www.isotc211.org/2005/resources/codeList.xml#MD_CharacterSetCode"/>
+      </gmd:characterSet>
+      <gmd:topicCategory>
+        <gmd:MD_TopicCategoryCode>location</gmd:MD_TopicCategoryCode>
+      </gmd:topicCategory>
+      <gmd:extent>
+        <gmd:EX_Extent>
+          <gmd:geographicElement>
+            <gmd:EX_GeographicBoundingBox>
+              <gmd:westBoundLongitude>
+                <gco:Decimal>{{ wgs84_extent.0 }}</gco:Decimal>
+              </gmd:westBoundLongitude>
+              <gmd:eastBoundLongitude>
+                <gco:Decimal>{{ wgs84_extent.1 }}</gco:Decimal>
+              </gmd:eastBoundLongitude>
+              <gmd:southBoundLatitude>
+                <gco:Decimal>{{ wgs84_extent.2 }}</gco:Decimal>
+              </gmd:southBoundLatitude>
+              <gmd:northBoundLatitude>
+                <gco:Decimal>{{ wgs84_extent.3 }}</gco:Decimal>
+              </gmd:northBoundLatitude>
+            </gmd:EX_GeographicBoundingBox>
+          </gmd:geographicElement>
+        </gmd:EX_Extent>
+      </gmd:extent>
+      {% if multisurface_geometry_4326 %}
+      <gmd:extent>
+        <gmd:EX_Extent>
+          <gmd:geographicElement>
+            <gmd:EX_BoundingPolygon>
+              <gmd:polygon>
+                {% autoescape off %}
+                {{ multisurface_geometry_4326 }}
+                {% endautoescape %}
+              </gmd:polygon>
+            </gmd:EX_BoundingPolygon>
+          </gmd:geographicElement>
+        </gmd:EX_Extent>
+      </gmd:extent>
+      {% endif %}
+      <!--<gmd:extent>
+        <gmd:EX_Extent>
+          <gmd:temporalElement>
+            <gmd:EX_TemporalExtent>
+              <gmd:extent>
+                <gml:TimePeriod gml:id="temporalextent">
+                  <gml:beginPosition>2024-11-08</gml:beginPosition>
+                  <gml:endPosition>2024-11-09</gml:endPosition>
+                </gml:TimePeriod>
+              </gmd:extent>
+            </gmd:EX_TemporalExtent>
+          </gmd:temporalElement>
+        </gmd:EX_Extent>
+      </gmd:extent>-->
+    </gmd:MD_DataIdentification>
+  </gmd:identificationInfo>
+  <gmd:distributionInfo>
+    <gmd:MD_Distribution>
+      <gmd:distributionFormat>
+        <gmd:MD_Format>
+          <gmd:name>
+            <gco:CharacterString>GML</gco:CharacterString>
+          </gmd:name>
+          <gmd:version>
+            <gco:CharacterString>3.2</gco:CharacterString>
+          </gmd:version>
+        </gmd:MD_Format>
+      </gmd:distributionFormat>
+      <gmd:distributor>
+        <gmd:MD_Distributor>
+          <gmd:distributorContact>
+            <gmd:CI_ResponsibleParty>
+              <gmd:organisationName>
+                {% if responsible_party_address %}
+                <gco:CharacterString>{{ responsible_party_address }}</gco:CharacterString> 
+                {% else %}
+                <gco:CharacterString>Musterstraße 10</gco:CharacterString>
+                {% endif %}
+              </gmd:organisationName>
+              <gmd:contactInfo>
+                <gmd:CI_Contact>
+                  <gmd:address>
+                    <gmd:CI_Address>
+                      <gmd:administrativeArea>
+                        <gco:CharacterString>Rheinland-Pfalz</gco:CharacterString>
+                      </gmd:administrativeArea>
+                      <gmd:country>
+                        <gco:CharacterString>DE</gco:CharacterString>
+                      </gmd:country>
+                      <gmd:electronicMailAddress>
+                        {% if responsible_party_email %}
+                        <gco:CharacterString>{{ responsible_party_email }}</gco:CharacterString> 
+                        {% else %}
+                        <gco:CharacterString>test@example.com</gco:CharacterString>
+                        {% endif %}
+                      </gmd:electronicMailAddress>
+                    </gmd:CI_Address>
+                  </gmd:address>
+                </gmd:CI_Contact>
+              </gmd:contactInfo>
+              <gmd:role>
+                <gmd:CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#CI_RoleCode" codeListValue="pointOfContact">pointOfContact</gmd:CI_RoleCode>
+              </gmd:role>
+            </gmd:CI_ResponsibleParty>
+          </gmd:distributorContact>
+        </gmd:MD_Distributor>
+      </gmd:distributor>
+      <gmd:transferOptions>
+        <gmd:MD_DigitalTransferOptions>
+          <gmd:onLine>
+            <gmd:CI_OnlineResource>
+              <gmd:linkage>
+                <gmd:URL>{{ iso19139_url }}</gmd:URL>
+              </gmd:linkage>
+              <gmd:function>
+                <gmd:CI_OnLineFunctionCode codeList="http://www.isotc211.org/2005/resources/Codelist/gmxCodelists.xml" codeListValue="download">download</gmd:CI_OnLineFunctionCode>
+              </gmd:function>
+            </gmd:CI_OnlineResource>
+          </gmd:onLine>
+        </gmd:MD_DigitalTransferOptions>
+      </gmd:transferOptions>
+    </gmd:MD_Distribution>
+  </gmd:distributionInfo>
+  <gmd:dataQualityInfo>
+    <!-- Fix -->
+    <gmd:DQ_DataQuality>
+      <gmd:scope>
+        <gmd:DQ_Scope>
+          <gmd:level>
+            <gmd:MD_ScopeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/ML_gmxCodelists.xml#MD_ScopeCode" codeListValue="dataset">dataset</gmd:MD_ScopeCode>
+          </gmd:level>
+        </gmd:DQ_Scope>
+      </gmd:scope>
+
+      <gmd:report xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gco="http://www.isotc211.org/2005/gco">
+        <gmd:DQ_DomainConsistency xsi:type="gmd:DQ_DomainConsistency_Type">
+          <gmd:result>
+            <gmd:DQ_ConformanceResult xsi:type="gmd:DQ_ConformanceResult_Type">
+              <gmd:specification>
+                <gmd:CI_Citation>
+                  <gmd:title>
+                    <gco:CharacterString>VERORDNUNG (EG) Nr. 1205/2008 DER KOMMISSION vom 3. Dezember 2008 zur Durchführung der Richtlinie 2007/2/EG des Europäischen Parlaments und des Rates hinsichtlich Metadaten</gco:CharacterString>
+                  </gmd:title>
+                  <gmd:date>
+                    <gmd:CI_Date>
+                      <gmd:date>
+                        <gco:Date>2008-12-04</gco:Date>
+                      </gmd:date>
+                      <gmd:dateType>
+                        <gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</gmd:CI_DateTypeCode>
+                      </gmd:dateType>
+                    </gmd:CI_Date>
+                  </gmd:date>
+                  <gmd:edition>
+                    <gco:CharacterString>1.0</gco:CharacterString>
+                  </gmd:edition>
+                </gmd:CI_Citation>
+              </gmd:specification>
+              <gmd:explanation>
+                <gco:CharacterString>No explanation available</gco:CharacterString>
+              </gmd:explanation>
+              <gmd:pass>
+                <gco:Boolean>true</gco:Boolean>
+              </gmd:pass>
+            </gmd:DQ_ConformanceResult>
+          </gmd:result>
+        </gmd:DQ_DomainConsistency>
+      </gmd:report>
+      <gmd:report xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gco="http://www.isotc211.org/2005/gco">
+        <gmd:DQ_DomainConsistency xsi:type="gmd:DQ_DomainConsistency_Type">
+          <gmd:result>
+            <gmd:DQ_ConformanceResult xsi:type="gmd:DQ_ConformanceResult_Type">
+              <gmd:specification>
+                <gmd:CI_Citation>
+                  <gmd:title>
+                    <gco:CharacterString>VERORDNUNG (EU) Nr. 1253/2013 DER KOMMISSION vom 21. Oktober 2013 zur Änderung der Verordnung (EU) Nr. 1089/2010 zur Durchführung der Richtlinie 2007/2/EG hinsichtlich der Interoperabilität von Geodatensätzen und -diensten</gco:CharacterString>
+                  </gmd:title>
+                  <gmd:date>
+                    <gmd:CI_Date>
+                      <gmd:date>
+                        <gco:Date>2013-12-10</gco:Date>
+                      </gmd:date>
+                      <gmd:dateType>
+                        <gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</gmd:CI_DateTypeCode>
+                      </gmd:dateType>
+                    </gmd:CI_Date>
+                  </gmd:date>
+                  <gmd:edition>
+                    <gco:CharacterString>1.0</gco:CharacterString>
+                  </gmd:edition>
+                </gmd:CI_Citation>
+              </gmd:specification>
+              <gmd:explanation>
+                <gco:CharacterString>No explanation available</gco:CharacterString>
+              </gmd:explanation>
+              <gmd:pass>
+                <gco:Boolean>false</gco:Boolean>
+              </gmd:pass>
+            </gmd:DQ_ConformanceResult>
+          </gmd:result>
+        </gmd:DQ_DomainConsistency>
+      </gmd:report>
+      <gmd:report xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gco="http://www.isotc211.org/2005/gco">
+        <gmd:DQ_DomainConsistency xsi:type="gmd:DQ_DomainConsistency_Type">
+          <gmd:result>
+            <gmd:DQ_ConformanceResult xsi:type="gmd:DQ_ConformanceResult_Type">
+              <gmd:specification>
+                <gmd:CI_Citation>
+                  <gmd:title>
+                    <gco:CharacterString>VERORDNUNG (EU) Nr. 102/2011 DER KOMMISSION vom 4. Februar 2011 zur Änderung der Verordnung (EU) Nr. 1089/2010 zur Durchführung der Richtlinie 2007/2/EG des Europäischen Parlaments und des Rates hinsichtlich der Interoperabilität von Geodatensätzen und -diensten</gco:CharacterString>
+                  </gmd:title>
+                  <gmd:date>
+                    <gmd:CI_Date>
+                      <gmd:date>
+                        <gco:Date>2011-02-05</gco:Date>
+                      </gmd:date>
+                      <gmd:dateType>
+                        <gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</gmd:CI_DateTypeCode>
+                      </gmd:dateType>
+                    </gmd:CI_Date>
+                  </gmd:date>
+                  <gmd:edition>
+                    <gco:CharacterString>1.0</gco:CharacterString>
+                  </gmd:edition>
+                </gmd:CI_Citation>
+              </gmd:specification>
+              <gmd:explanation>
+                <gco:CharacterString>No explanation available</gco:CharacterString>
+              </gmd:explanation>
+              <gmd:pass>
+                <gco:Boolean>false</gco:Boolean>
+              </gmd:pass>
+            </gmd:DQ_ConformanceResult>
+          </gmd:result>
+        </gmd:DQ_DomainConsistency>
+      </gmd:report>
+      <gmd:report xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gco="http://www.isotc211.org/2005/gco">
+        <gmd:DQ_DomainConsistency xsi:type="gmd:DQ_DomainConsistency_Type">
+          <gmd:result>
+            <gmd:DQ_ConformanceResult xsi:type="gmd:DQ_ConformanceResult_Type">
+              <gmd:specification>
+                <gmd:CI_Citation>
+                  <gmd:title>
+                    <gco:CharacterString>VERORDNUNG (EG) Nr. 1089/2010 DER KOMMISSION vom 23. November 2010 zur Durchführung der Richtlinie 2007/2/EG des Europäischen Parlaments und des Rates hinsichtlich der Interoperabilität von Geodatensätzen und -diensten</gco:CharacterString>
+                  </gmd:title>
+                  <gmd:date>
+                    <gmd:CI_Date>
+                      <gmd:date>
+                        <gco:Date>2010-12-08</gco:Date>
+                      </gmd:date>
+                      <gmd:dateType>
+                        <gmd:CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</gmd:CI_DateTypeCode>
+                      </gmd:dateType>
+                    </gmd:CI_Date>
+                  </gmd:date>
+                  <gmd:edition>
+                    <gco:CharacterString>1.0</gco:CharacterString>
+                  </gmd:edition>
+                </gmd:CI_Citation>
+              </gmd:specification>
+              <gmd:explanation>
+                <gco:CharacterString>No explanation available</gco:CharacterString>
+              </gmd:explanation>
+              <gmd:pass>
+                <gco:Boolean>false</gco:Boolean>
+              </gmd:pass>
+            </gmd:DQ_ConformanceResult>
+          </gmd:result>
+        </gmd:DQ_DomainConsistency>
+      </gmd:report>
+      <gmd:lineage>
+        <gmd:LI_Lineage>
+          <gmd:statement>
+            <gco:CharacterString>Geodaten basieren auf den generalisierten amtlichen Grenzen der Gebietskörperschaften.</gco:CharacterString>
+          </gmd:statement>
+        </gmd:LI_Lineage>
+      </gmd:lineage>
+    </gmd:DQ_DataQuality>
+  </gmd:dataQualityInfo>
+</gmd:MD_Metadata>

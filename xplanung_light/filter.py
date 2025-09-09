@@ -1,5 +1,5 @@
 from django_filters import FilterSet, CharFilter, ModelChoiceFilter, NumberFilter, BaseInFilter
-from .models import BPlan, AdministrativeOrganization
+from .models import BPlan, AdministrativeOrganization, FPlan
 from django.contrib.gis.geos import Polygon
 from django.db.models import Q
 
@@ -37,6 +37,21 @@ class BPlanFilter(FilterSet):
         return bbox_filter(queryset, value)
 
 
+class FPlanFilter(FilterSet):
+    name = CharFilter(lookup_expr='icontains')
+    bbox = CharFilter(method='bbox_filter', label='BBOX')
+    gemeinde = ModelChoiceFilter(queryset=organizations)
+
+    class Meta:
+        model = FPlan
+        fields = ["name", "gemeinde", "planart", "bbox"]
+
+
+    def bbox_filter(self, queryset, name, value):
+        #print("name from DocumentFilter.bbox_filter: " + name)
+        return bbox_filter(queryset, value)
+    
+
 class NumberInFilter(BaseInFilter, NumberFilter):
     pass
 
@@ -46,6 +61,14 @@ class BPlanFilterHtml(FilterSet):
 
     class Meta:
         model = BPlan
+        fields = ["id"] 
+
+
+class FPlanFilterHtml(FilterSet):
+    pk__in = NumberInFilter(field_name='id', lookup_expr='in')
+
+    class Meta:
+        model = FPlan
         fields = ["id"] 
 
 

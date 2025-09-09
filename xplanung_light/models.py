@@ -247,6 +247,20 @@ class XPlan(GenericMetadata):
         abstract = True
 
 
+class BauleitPlan(XPlan):
+    """
+    Abstrakte Klasse, die alle dem BPlan und FPlan gemeinsamen Attribute managed!
+    Lohnt sich wahrscheinlich nicht...
+    """
+    #gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
+    planart = models.CharField(null=False, blank=False, max_length=5, default='1000', verbose_name='Typ des vorliegenden Plans.', db_index=True)
+    #history = HistoricalRecords(m2m_fields=[gemeinde])
+    aufstellungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Aufstellungsbeschlusses", help_text="Datum des Aufstellungsbeschlusses")
+    
+    class Meta:
+        abstract = True
+
+
 class BPlan(XPlan):
 
     BPLAN = "1000"
@@ -330,7 +344,68 @@ Beispiele:
 https://www.geoportal.rlp.de/mapbender/php/mod_exportIso19139.php?url=https%3A%2F%2Fgdk.gdi-de.org%2Fgeonetwork%2Fsrv%2Fger%2Fcsw%3Frequest%3DGetRecordById%26service%3DCSW%26version%3D2.0.2%26Id%3D93033873-236e-449c-b20e-b238a6f8af8d%26ElementSetName%3Dfull%26OUTPUTSCHEMA%3Dhttp%3A%2F%2Fwww.isotc211.org%2F2005%2Fgmd&resolveCoupledResources=true
 https://www.geoportal.rlp.de/mapbender/php/mod_exportIso19139.php?url=https%3A%2F%2Fgdk.gdi-de.org%2Fgeonetwork%2Fsrv%2Fger%2Fcsw%3Frequest%3DGetRecordById%26service%3DCSW%26version%3D2.0.2%26Id%3D9fa0c44a-1348-4953-a765-36781a788845%26ElementSetName%3Dfull%26OUTPUTSCHEMA%3Dhttp%3A%2F%2Fwww.isotc211.org%2F2005%2Fgmd&resolveCoupledResources=true
 """
+class FPlan(XPlan):
 
+    FPLAN = "1000"
+    GEMEINSAMERFPLAN = "2000"
+    REGFPLAN = "3000"
+    FPLANREGPLAN = "4000"
+    SACHLICHERTEILPLAN  = "5000"
+    SONSTIGES = "6000"
+
+    FPLAN_TYPE_CHOICES = [
+        (FPLAN,  "FPlan"),
+        (GEMEINSAMERFPLAN, "GemeinsamerFPlan"),
+        (REGFPLAN, "RegFPlan"),
+        (FPLANREGPLAN, "FPlanRegPlan"),
+        (SACHLICHERTEILPLAN, "SachlicherTeilplan"),
+        (SONSTIGES, "Sonstiges"),
+    ]
+
+    #gemeinde [1..*], XP_Gemeinde
+    # Zur Vereinfachung zunächst nur Kardinalität 1 implementieren
+    #gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
+    gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
+    history = HistoricalRecords(m2m_fields=[gemeinde])
+    #planaufstellendeGemeinde [0..*], XP_Gemeinde
+    #plangeber [0..*], XP_Plangeber
+    #planArt [1..*], BP_PlanArt
+    planart = models.CharField(null=False, blank=False, max_length=5, choices=FPLAN_TYPE_CHOICES, default='1000', verbose_name='Typ des vorliegenden Flächennutzungsplans.', db_index=True)
+	#sonstPlanArt [0..1], BP_SonstPlanArt
+    #rechtsstand [0..1], BP_Rechtsstand
+    #status [0..1], BP_Status
+    #aenderungenBisDatum [0..1], Date
+    #aufstellungsbeschlussDatum [0..1], Date
+    aufstellungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Aufstellungsbeschlusses", help_text="Datum des Aufstellungsbeschlusses")
+    #veraenderungssperre [0..1], BP_VeraenderungssperreDaten
+    #auslegungsStartDatum [0..*], Date
+    #auslegungsEndDatum [0..*], Date
+    #traegerbeteiligungsStartDatum [0..*], Date
+    #traegerbeteiligungsEndDatum [0..*], Date
+    #satzungsbeschlussDatum [0..1], Date
+    #satzungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Satzungsbeschlusses", help_text="Datum des Satzungsbeschlusses, falls ein Bebauungsplan als Satzung beschlossen wird.")
+    #rechtsverordnungsDatum [0..1], Date
+    #rechtsverordnungs_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Rechtsverordnung", help_text="Datum der Rechtsverordnung, falls ein Bebauungsplan als Rechtsverordnung beschlossen wird.")
+    #inkrafttretensDatum [0..1], Date
+    #inkrafttretens_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Inkrafttretens", help_text="Datum des Inkrafttretens")
+    #ausfertigungsDatum [0..1], Date
+    #ausfertigungs_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Ausfertigung", help_text="Datum der Ausfertigung")
+    #staedtebaulicherVertrag [0..1], Boolean
+    #staedtebaulicher_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Städtebaulicher Vertrag", help_text="Gibt an, ob es zum Plan einen städtebaulichen Vertrag gibt.")
+    #erschliessungsVertrag [0..1], Boolean
+    #erschliessungs_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Erschließungsvertrag", help_text="Gibt an, ob es für den Plan einen Erschließungsvertrag gibt.")
+    #durchfuehrungsVertrag [0..1], Boolean
+    #durchfuehrungs_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Durchführungsvertrag", help_text="Gibt an, ob für das Planungsgebiet einen Durchführungsvertrag (Kombination aus Städtebaulichen Vertrag und Erschließungsvertrag) gibt.")
+    #gruenordnungsplan [0..1], Boolean
+    #gruenordnungsplan = models.BooleanField(null=False, blank=False, default=False, verbose_name="Grünordnungsplan", help_text="Gibt an, ob für den Plan ein zugehöriger Grünordnungsplan existiert.")
+    #versionBauNVO [0..1], XP_GesetzlicheGrundlage
+    #versionBauGB [0..1], XP_GesetzlicheGrundlage
+    #versionSonstRechtsgrundlage [0..*], XP_GesetzlicheGrundlage
+    #bereich [0..*], BP_Bereich
+
+    def __str__(self):
+        """Returns a string representation of a BPlan."""
+        return f"{self.name} ({self.get_planart_display()})"
 """
 Informationen zur Durchführung von UVPs
 """
@@ -368,25 +443,46 @@ Um die verschieden Beteiligungsverfahren abbilden zu können, macht es Sinn die 
 jeweilige Planung zu hängen. Das erfolgt ähnlich wie bei den Anlagen. In XPlanung gibt es 4 Datumsfelder, die der jeweiligen 
 Kardinalität von 0..*. Diese können aus 
 """
-class BPlanBeteiligung(GenericMetadata):
+class XPlanBeteiligung(GenericMetadata):
 
     AUSLEGUNG = "1000"
+    FAUSLEGUNG = "10001"
     TOEB = "2000"
+    FTOEB = "20001"
+
     TYPE_CHOICES = [
-        (AUSLEGUNG,  "Öffentliche Auslegung"),
+        (FTOEB, "Frühzeitige Trägerbeteiligung"),
+        (FAUSLEGUNG,  "Frühzeitige Öffentlichkeitsbeteiligung"),
         (TOEB, "Träger öffentlicher Belange"),
+        (AUSLEGUNG,  "Öffentliche Auslegung"),
     ]
     bekanntmachung_datum = models.DateField(null=False, blank=False, verbose_name="Datum der Bekanntmachung", help_text="Datum der Bekanntmachung des Verfahrens")
     start_datum = models.DateField(null=False, blank=False, verbose_name="Beginn", help_text="Datum des Beginns des Beteiligungsverfahrens")
     end_datum = models.DateField(null=False, blank=False, verbose_name="Ende", help_text="Enddatum des Beteiligungsverfahrens")
     typ = models.CharField(null=False, blank=False, max_length=5, choices=TYPE_CHOICES, default='1000', verbose_name='Typ des Beteiligungsverfahrens', help_text="Typ des Beteiligungsverfahrens - aktuell Auslegung oder TÖB", db_index=True)
     publikation_internet = models.URLField(null=True, blank=True, verbose_name="Publikation im Internet", help_text="Link zur Publikation auf der Hompage der jeweiligen Organisation")
-    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="beteiligungen")
-    history = HistoricalRecords()
+    #bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="beteiligungen")
+    #history = HistoricalRecords()
 
     def __str__(self):
             """Returns a string representation of Beteiligung."""
             return f"{self.get_typ_display()} - vom {self.bekanntmachung_datum}"
+    
+    class Meta:
+        abstract = True
+
+
+
+class BPlanBeteiligung(XPlanBeteiligung):
+
+    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="beteiligungen")
+    history = HistoricalRecords()
+
+
+class FPlanBeteiligung(XPlanBeteiligung):
+
+    fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE, verbose_name="FPlan", help_text="FPlan", related_name="beteiligungen")
+    history = HistoricalRecords()
 
 """
 Die folgenden Klassen dienen der Abbildung eines Beteiligungsprozesses - zumindest soll die Möglichkeit geschaffen werden,
@@ -427,7 +523,7 @@ class BPlanBeteiligungBeitragAntwort():
     pass
 """
 
-class BPlanSpezExterneReferenz(GenericMetadata):
+class XPlanSpezExterneReferenz(GenericMetadata):
 
     # https://gist.github.com/chhantyal/5370749
     def get_upload_path(self, filename):
@@ -508,12 +604,12 @@ class BPlanSpezExterneReferenz(GenericMetadata):
     #typ [1], XP_ExterneReferenzTyp
     typ = models.CharField(null=False, blank=False, max_length=5, choices=REF_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des referierten Dokuments oder Rasterplans', help_text="Typ / Inhalt des referierten Dokuments oder Rasterplans", db_index=True)
     attachment = models.FileField(null = True, blank = True, upload_to='uploads', verbose_name="Dokument")
-    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
+    #bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
     #bplan = models.ForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
     
     # Anwendungsspezifische Felder
     aus_archiv = models.BooleanField(null=False, blank=False, default=False, verbose_name="Anhang stammt aus hochgeladenem ZIP-Archiv", help_text="Gibt an, ob der Anhang ursprünglich aus einem hochgeladenem ZIP-Archiv stammt.")
-    history = HistoricalRecords()
+    #history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
         # https://stackoverflow.com/questions/7514964/django-how-to-create-a-file-and-save-it-to-a-models-filefield
@@ -577,3 +673,18 @@ class BPlanSpezExterneReferenz(GenericMetadata):
             </xplan:XP_ExterneReferenz>
         </xplan:refScan>
     """
+
+    class Meta:
+        abstract = True
+
+
+class BPlanSpezExterneReferenz(XPlanSpezExterneReferenz):
+
+    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
+    history = HistoricalRecords()
+
+
+class FPlanSpezExterneReferenz(XPlanSpezExterneReferenz):
+
+    fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE, verbose_name="FPlan", help_text="FPlan", related_name="attachments")
+    history = HistoricalRecords()

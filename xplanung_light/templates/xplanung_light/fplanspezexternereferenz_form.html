@@ -1,0 +1,19 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% bootstrap_css %}
+{% block title %}
+    Anlage zum Flächennutzungsplan
+{% endblock %}
+{% block content %}
+<p>Anlage zum Flächennutzungsplan <b>{{ fplan.name }}</b> der Kommune(n):<br>
+    <ul>
+        {% for gemeinde in fplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
+    </ul>
+</p>  
+    <form action="" method="POST" class="fplanattachment-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.media }}
+        {% bootstrap_form form %}
+        <input type="submit" class="save btn btn-default"value="Speichern">
+    </form>
+{% endblock %}
