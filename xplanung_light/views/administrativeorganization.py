@@ -7,7 +7,7 @@ from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from xplanung_light.forms import AdministrativeOrganizationUpdateForm
 from django.db.models import Subquery, OuterRef
-from django.db.models import Count
+from django.db.models import Q, Count
 from dal import autocomplete
 from django.core.exceptions import PermissionDenied
 
@@ -35,9 +35,9 @@ class AdministrativeOrganizationPublishingListView(SingleTableView):
 
     def get_queryset(self):
         if self.request.user.is_superuser:
-            qs = AdministrativeOrganization.objects.filter(bplan__isnull=False).distinct().annotate(num_bplan=Count('bplan'))
+            qs = AdministrativeOrganization.objects.filter(bplan__isnull=False).distinct().annotate(num_bplan=Count('bplan')).annotate(num_bplan_public=Count('bplan', filter=Q(bplan__public=True))).annotate(num_fplan=Count('fplan')).annotate(num_fplan_public=Count('fplan', filter=Q(fplan__public=True)))
         else:
-            qs = AdministrativeOrganization.objects.filter(bplan__isnull=False, users=self.request.user).distinct().annotate(num_bplan=Count('bplan'))
+            qs = AdministrativeOrganization.objects.filter(bplan__isnull=False, users=self.request.user).distinct().annotate(num_bplan=Count('bplan')).annotate(num_bplan_public=Count('bplan', filter=Q(bplan__public=True))).annotate(num_fplan=Count('fplan')).annotate(num_fplan_public=Count('fplan', filter=Q(fplan__public=True)))
         return qs
     
 

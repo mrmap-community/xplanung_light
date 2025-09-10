@@ -96,4 +96,51 @@ MAP
             "wms_extent"          "-180 -90 180 90"
         END
     END
+    LAYER
+        NAME "xplan_fp_bebauung"
+        TYPE POLYGON
+        CONNECTIONTYPE OGR
+        CONNECTION "Flaechennutzungsplan-XPlanung_EPSG25832_GML.gml"
+        #DATA "FP_BebauungsFlaeche"
+        DATA "fp_bebauungsflaeche"
+        METADATA
+            WMS_TITLE       "Bebauungspolygone"
+            WMS_SRS         "EPSG:25832"
+            WMS_ABSTRACT    "Testpolygon"
+            "wms_extent"    "361388.1170999999740161 5669905.8633000003173947 382258.3052000000025146 5686629.4944000001996756"
+        END
+        PROJECTION
+            "init=epsg:25832"
+        END
+        CLASS
+            NAME "Bebauungspolygone"
+            STYLE
+                OUTLINECOLOR 255 0 0 
+                WIDTH 2 
+            END 
+        END
+    END
+    LAYER
+        NAME "xplan_fp_wald"
+        TYPE POLYGON
+        CONNECTIONTYPE OGR
+        CONNECTION "Flaechennutzungsplan-XPlanung_EPSG25832_GML.gml"
+        DATA "fp_waldflaeche"
+        METADATA
+            WMS_TITLE       "Waldpolygone"
+            WMS_SRS         "EPSG:25832"
+            WMS_ABSTRACT    "Testpolygon"
+            "wms_extent"    "361388.1170999999740161 5669905.8633000003173947 382258.3052000000025146 5686629.4944000001996756"
+        END
+        PROJECTION
+            "init=epsg:25832"
+        END
+        CLASS
+            NAME "Waldpolygone"
+            STYLE
+                OUTLINECOLOR 0 255 0 
+                WIDTH 2 
+            END 
+        END
+    END
 END

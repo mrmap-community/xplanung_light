@@ -242,6 +242,7 @@ class XPlan(GenericMetadata):
     #history = HistoricalRecords(inherit=True)
     xplan_gml = models.FileField(null = True, blank = True, verbose_name="XPlan GML-Dokument", help_text="")
     xplan_gml_version = models.CharField(null=True, blank=True, max_length=5, verbose_name='XPlan GML-Dokument Version', help_text='')
+    public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Plan öffentlich verfügbar", help_text="Gibt an, ob Informationen zum Plan über die frei verfügbaren Schnittstellen publiziert werden.")
 
     class Meta:
         abstract = True
@@ -369,7 +370,7 @@ class FPlan(XPlan):
     history = HistoricalRecords(m2m_fields=[gemeinde])
     #planaufstellendeGemeinde [0..*], XP_Gemeinde
     #plangeber [0..*], XP_Plangeber
-    #planArt [1..*], BP_PlanArt
+    #planArt [1..*], FP_PlanArt
     planart = models.CharField(null=False, blank=False, max_length=5, choices=FPLAN_TYPE_CHOICES, default='1000', verbose_name='Typ des vorliegenden Flächennutzungsplans.', db_index=True)
 	#sonstPlanArt [0..1], BP_SonstPlanArt
     #rechtsstand [0..1], BP_Rechtsstand
@@ -377,31 +378,11 @@ class FPlan(XPlan):
     #aenderungenBisDatum [0..1], Date
     #aufstellungsbeschlussDatum [0..1], Date
     aufstellungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Aufstellungsbeschlusses", help_text="Datum des Aufstellungsbeschlusses")
-    #veraenderungssperre [0..1], BP_VeraenderungssperreDaten
-    #auslegungsStartDatum [0..*], Date
-    #auslegungsEndDatum [0..*], Date
-    #traegerbeteiligungsStartDatum [0..*], Date
-    #traegerbeteiligungsEndDatum [0..*], Date
-    #satzungsbeschlussDatum [0..1], Date
-    #satzungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Satzungsbeschlusses", help_text="Datum des Satzungsbeschlusses, falls ein Bebauungsplan als Satzung beschlossen wird.")
-    #rechtsverordnungsDatum [0..1], Date
-    #rechtsverordnungs_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Rechtsverordnung", help_text="Datum der Rechtsverordnung, falls ein Bebauungsplan als Rechtsverordnung beschlossen wird.")
-    #inkrafttretensDatum [0..1], Date
-    #inkrafttretens_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Inkrafttretens", help_text="Datum des Inkrafttretens")
-    #ausfertigungsDatum [0..1], Date
-    #ausfertigungs_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Ausfertigung", help_text="Datum der Ausfertigung")
-    #staedtebaulicherVertrag [0..1], Boolean
-    #staedtebaulicher_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Städtebaulicher Vertrag", help_text="Gibt an, ob es zum Plan einen städtebaulichen Vertrag gibt.")
-    #erschliessungsVertrag [0..1], Boolean
-    #erschliessungs_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Erschließungsvertrag", help_text="Gibt an, ob es für den Plan einen Erschließungsvertrag gibt.")
-    #durchfuehrungsVertrag [0..1], Boolean
-    #durchfuehrungs_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Durchführungsvertrag", help_text="Gibt an, ob für das Planungsgebiet einen Durchführungsvertrag (Kombination aus Städtebaulichen Vertrag und Erschließungsvertrag) gibt.")
-    #gruenordnungsplan [0..1], Boolean
-    #gruenordnungsplan = models.BooleanField(null=False, blank=False, default=False, verbose_name="Grünordnungsplan", help_text="Gibt an, ob für den Plan ein zugehöriger Grünordnungsplan existiert.")
-    #versionBauNVO [0..1], XP_GesetzlicheGrundlage
-    #versionBauGB [0..1], XP_GesetzlicheGrundlage
-    #versionSonstRechtsgrundlage [0..*], XP_GesetzlicheGrundlage
-    #bereich [0..*], BP_Bereich
+    # Aus FP_Plan https://xleitstelle.de/releases/objektartenkatalog_6_0
+    #planbeschlussDatum [0..1], Date
+    planbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Planbeschlusses", help_text="Datum des Planbeschlusses")
+    #wirksamkeitsDatum [0..1], Date
+    wirksamkeits_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Wirksamkeit", help_text="Datum der Wirksamkeit")
 
     def __str__(self):
         """Returns a string representation of a BPlan."""

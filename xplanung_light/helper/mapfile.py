@@ -1,5 +1,5 @@
 import mappyfile
-from xplanung_light.models import AdministrativeOrganization, BPlan
+from xplanung_light.models import AdministrativeOrganization, BPlan, FPlan
 from django.contrib.gis.gdal import OGRGeometry, SpatialReference
 from django.db.models import F, Func
 import os
@@ -19,7 +19,8 @@ class MapfileGenerator():
     """
     def generate_mapfile(self, admin_orga_pk:int, ows_uri:str, metadata_uri:str):
         orga = AdministrativeOrganization.objects.get(pk=admin_orga_pk)
-        bplaene = BPlan.objects.filter(gemeinde=admin_orga_pk)
+        bplaene = BPlan.objects.filter(gemeinde=admin_orga_pk, public=True)
+        fplaene = FPlan.objects.filter(gemeinde=admin_orga_pk, public=True)
         # Map Objekt Template
         current_dir = os.path.dirname(__file__)
         map = mappyfile.open(os.path.join(current_dir, "../mapserver/mapfile_templates/map_obj.map"))
@@ -50,7 +51,8 @@ class MapfileGenerator():
         if orga.published_data_rights: 
             map["web"]["metadata"]["ows_fees"] = orga.published_data_rights
         else:
-            map["web"]["metadata"]["ows_fees"] = "None"         
+            map["web"]["metadata"]["ows_fees"] = "None"           
+        # Mögliche weitere Metadaten
         """
             "ows_addresstype"                   "postal"
             "ows_contactorganization"           "Gemeinde/Stadt Aach"
@@ -64,13 +66,16 @@ class MapfileGenerator():
             "ows_contactfacsimiletelephone"     ""
             "ows_contactelectronicmailaddress"  ""
         """
-        # Abfrage der Geltungsbereiche aller Bebauungspläne einer Gemeinde zur Ableitung des Extents
+       # Berechnen des Extents aller Pläne - TODO: hier ggf. ein Aggregat aus BPlan und FPlan generieren!
         union_queryset = bplaene.annotate(
             union_geom=Func(F('geltungsbereich'), function='ST_Union')
         ).values('union_geom')
         for item in union_queryset:
             ogr_geom = item['union_geom']
         map["web"]["metadata"]["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
+        """
+        Einlesen der Templates
+        """
         # Layer Objekt Template / Vektor
         with open(os.path.join(current_dir, "../mapserver/mapfile_templates/layer_obj.map")) as file:
             layer_file_string = file.read()
@@ -87,6 +92,103 @@ class MapfileGenerator():
         # Initialisierung des Layer Arrays
         map['layers'] = []
         layer_count = 0
+        """
+        Beginn mit Flächennutzungsplänen
+        """
+        """
+        union_queryset = fplaene.annotate(
+            union_geom=Func(F('geltungsbereich'), function='ST_Union')
+        ).values('union_geom')
+        for item in union_queryset:
+            ogr_geom = item['union_geom']
+        map["web"]["metadata"]["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
+        """
+        for fplan in fplaene:
+            layer_count = layer_count + 1
+            if fplan.generic_id:
+                fplan_nummer = str(fplan.generic_id)
+            else:
+                # Falls mehrere Flächennutzungspläne mit derselben Nummer vorhanden sein sollten
+                fplan_nummer = "lc_" + str(layer_count)
+            # Check, ob eine Anlage vom Typ Karte existiert - typ = 99999, falls sie existiert, wird ein Rasterlayer erstellt, sonst einfach ein Vektorlayer des Geltungsbereichs
+            raster_map_exist = False
+            for attachment in fplan.attachments.all():
+                if attachment.typ == '99999':
+                    """
+                    Die Validierung des attachments mit dem typ 99999 wurde beim Import durchgeführt, daher ist hier klar, dass keine Fehler auftreten können.
+                    """
+                    # Anlage des Rasterlayers aus Vorlage
+                    raster_layer = raster_layer_from_template.copy()
+                    # check ob Bebauungsplan mehreren Gemeinden zugeordnet ist - fals das der Fall ist, wird der Layernamen aus der generic_id generiert!
+                    if fplan.gemeinde.all().count() > 1:
+                        raster_layer["name"] = "FPlan." + str(fplan.generic_id)
+                    else:
+                        raster_layer["name"] = "FPlan." + fplan_nummer
+                    # raster_layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer + "_raster"
+                    # Group - ist aber deprecated - muss man bei Aktualisierung  des Mapservers beachten!
+                    # Ticket in Github:
+                    # https://github.com/MapServer/MapServer/issues/7260
+                    raster_layer["group"] = "FPlan." + orga.ags
+                    #raster_layer["group_title"] = "Flächennutzungspläne"
+                    raster_metadata = raster_layer_from_template["metadata"].copy()
+                    raster_metadata["ows_title"] = fplan.name
+                    raster_metadata["wms_group_title"] = "Flächennutzungspläne"
+                    raster_metadata["ows_abstract"] = "Flächennutzungsplan " + fplan.name + " von " + orga.name + " - Abstract"
+                    # Angabe des Extents
+                    raster_metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(fplan.geltungsbereich), srs=4326).transform(SpatialReference(25832), clone=True).extent])
+                    raster_metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + str(fplan.pk) + "/").replace("/bplan/", "/fplan/")
+                    raster_layer["metadata"] = raster_metadata
+                    raster_layer["data"] = attachment.attachment.name
+                    map["layers"].append(raster_layer)
+                    raster_map_exist = True
+            if raster_map_exist == False:
+                # Darstellung der Geometrie
+                layer = layer_from_template.copy()
+                # check ob Flächennutzungsplan mehreren Gemeinden zugeordnet ist - falls das der Fall ist, wird der Layernamen aus der generic_id generiert!
+                if fplan.gemeinde.all().count() > 1:
+                    layer["name"] = "FPlan." + str(fplan.generic_id)
+                else:
+                    layer["name"] = "FPlan." + fplan_nummer
+                layer["group"] = "FPlan." + orga.ags
+                metadata = layer_from_template["metadata"].copy()
+                metadata["ows_title"] = fplan.name
+                metadata["wms_group_title"] = "Flächennutzungspläne"
+                metadata["ows_abstract"] = "Flächennutzungsplan " + fplan.name + " von " + orga.name + " - Abstract"
+                metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(fplan.geltungsbereich), srs=4326).extent])
+                metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + str(fplan.pk) + "/").replace("/bplan/", "/fplan/")
+                layer.pop('dump')
+                layer.pop('template')
+                layer["metadata"] = metadata
+                layer["data"] = "select geltungsbereich, id from xplanung_light_fplan where public = true"
+                layer["filter"] = "( '[id]' = '" + str(fplan.pk) + "' )"
+                layer["classes"] = []
+                # Layer nur hinzufügen, wenn auch ein Geltungsbereich existiert
+                if fplan.geltungsbereich:
+                    layer["classes"].append(layer_class)
+                    map["layers"].append(layer)
+        if len(fplaene) > 0:
+            # Umring Layer hinzufügen
+            umring_layer = layer_from_template.copy()
+            umring_layer["name"] = "FPlan." + orga.ags + ".0"
+            umring_layer["group"] = "FPlan." + orga.ags
+            metadata = layer_from_template["metadata"].copy()
+            metadata["ows_title"] = "Umringe der Flächennutzungspläne von " + orga.name
+            metadata["ows_abstract"] = "Umringe der Flächennutzungspläne von "  + orga.name + " - Abstract"
+            metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
+            metadata["wms_group_title"] = "Flächennutzungspläne"
+            # TODO Metadatengenerator für "Alle BPläne der Kommune X"
+            metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + "umring" + "/")
+            umring_layer["metadata"] = metadata
+            #umring_layer["filter"] = "( '[gemeinde_id]' = '" + str(orga.pk) + "' )"
+            umring_layer["filter"] = ""
+            umring_layer["data"] = "SELECT fplan.* FROM xplanung_light_fplan fplan INNER JOIN xplanung_light_fplan_gemeinde gemeinde ON fplan.id = gemeinde.fplan_id WHERE public=true AND gemeinde.administrativeorganization_id = " + str(orga.pk)
+            # TODO: add active Filter when it will be available
+            umring_layer["classes"] = []
+            umring_layer["classes"].append(layer_class)
+            map["layers"].append(umring_layer)
+        """
+        Es folgen die Bebauungspläne
+        """
         for bplan in bplaene:
             layer_count = layer_count + 1
             if bplan.nummer:
@@ -140,29 +242,31 @@ class MapfileGenerator():
                 layer.pop('dump')
                 layer.pop('template')
                 layer["metadata"] = metadata
+                print(layer['data'])
                 layer["filter"] = "( '[id]' = '" + str(bplan.pk) + "' )"
                 layer["classes"] = []
                 # Layer nur hinzufügen, wenn auch ein Geltungsbereich existiert
                 if bplan.geltungsbereich:
                     layer["classes"].append(layer_class)
                     map["layers"].append(layer)
-        # Umring Layer hinzufügen
-        umring_layer = layer_from_template.copy()
-        umring_layer["name"] = "BPlan." + orga.ags + ".0"
-        umring_layer["group"] = "BPlan." + orga.ags
-        metadata = layer_from_template["metadata"].copy()
-        metadata["ows_title"] = "Umringe der Bebauungspläne von " + orga.name
-        metadata["ows_abstract"] = "Umringe der Bebauungspläne von "  + orga.name + " - Abstract"
-        metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
-        # TODO Metadatengenerator für "Alle BPläne der Kommune X"
-        metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + "umring" + "/")
-        umring_layer["metadata"] = metadata
-        #umring_layer["filter"] = "( '[gemeinde_id]' = '" + str(orga.pk) + "' )"
-        umring_layer["filter"] = ""
-        umring_layer["data"] = "SELECT bplan.* FROM xplanung_light_bplan bplan INNER JOIN xplanung_light_bplan_gemeinde gemeinde ON bplan.id = gemeinde.bplan_id WHERE gemeinde.administrativeorganization_id = " + str(orga.pk)
-        # TODO: add active Filter when it will be available
-        umring_layer["classes"] = []
-        umring_layer["classes"].append(layer_class)
-        map["layers"].append(umring_layer)
-        #print(mappyfile.dumps(map))
-        return mappyfile.dumps(map)
+        if len(bplaene) > 0:
+            # Umring Layer hinzufügen
+            umring_layer = layer_from_template.copy()
+            umring_layer["name"] = "BPlan." + orga.ags + ".0"
+            umring_layer["group"] = "BPlan." + orga.ags
+            metadata = layer_from_template["metadata"].copy()
+            metadata["ows_title"] = "Umringe der Bebauungspläne von " + orga.name
+            metadata["ows_abstract"] = "Umringe der Bebauungspläne von "  + orga.name + " - Abstract"
+            metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
+            # TODO Metadatengenerator für "Alle BPläne der Kommune X"
+            metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + "umring" + "/")
+            umring_layer["metadata"] = metadata
+            #umring_layer["filter"] = "( '[gemeinde_id]' = '" + str(orga.pk) + "' )"
+            umring_layer["filter"] = ""
+            umring_layer["data"] = "SELECT bplan.* FROM xplanung_light_bplan bplan INNER JOIN xplanung_light_bplan_gemeinde gemeinde ON bplan.id = gemeinde.bplan_id WHERE public = true AND gemeinde.administrativeorganization_id = " + str(orga.pk)
+            # TODO: add active Filter when it will be available
+            umring_layer["classes"] = []
+            umring_layer["classes"].append(layer_class)
+            map["layers"].append(umring_layer)
+            #print(mappyfile.dumps(map))
+            return mappyfile.dumps(map)

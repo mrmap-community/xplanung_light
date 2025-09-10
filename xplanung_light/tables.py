@@ -128,6 +128,7 @@ class UvpTable(tables.Table):
 
 class BPlanTable(tables.Table):
     last_changed = tables.Column(verbose_name="Letzte Änderung")
+    public = tables.Column(verbose_name="Öffentlich")
     """
     Aus Tabelle rausgenommen, 
     xplan_gml_export = tables.LinkColumn('bplan-export-xplan-raster-6', verbose_name='XPlan-GML', text='Exportieren', args=[A('pk')], \
@@ -157,7 +158,13 @@ class BPlanTable(tables.Table):
             return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
         else:
             return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
-    
+        
+    def render_public(self, value):
+        if value:
+            return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
+        else:
+            return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
+
     def render_zoom(self, value):
         ogr_geom = OGRGeometry(str(value), srs=4326)
         extent = ogr_geom.extent
@@ -193,10 +200,11 @@ class BPlanTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "inkrafttretens_datum", "nummer", "name", "gemeinde", "planart", "count_attachments", "count_beteiligungen", "count_uvps", "detail", "xplangml", "edit", "delete")
+        fields = ( "zoom", "last_changed", "public", "inkrafttretens_datum", "nummer", "name", "gemeinde", "planart", "count_attachments", "count_beteiligungen", "count_uvps", "detail", "xplangml", "edit", "delete")
 
 
 class FPlanTable(tables.Table):
+    public = tables.Column(verbose_name="Öffentlich")
     last_changed = tables.Column(verbose_name="Letzte Änderung")
     edit = tables.LinkColumn('fplan-update', verbose_name="", text='Bearbeiten', args=[A('pk')], \
                          orderable=False, empty_values=())
@@ -218,7 +226,13 @@ class FPlanTable(tables.Table):
             return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
         else:
             return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
-    
+
+    def render_public(self, value):
+        if value:
+            return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
+        else:
+            return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
+
     def render_zoom(self, value):
         ogr_geom = OGRGeometry(str(value), srs=4326)
         extent = ogr_geom.extent
@@ -255,12 +269,16 @@ class FPlanTable(tables.Table):
     class Meta:
         model = FPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "aufstellungsbeschluss_datum", "nummer", "name", "gemeinde", "planart", "count_attachments", "count_beteiligungen", "detail", "xplangml", "edit", "delete")
+        fields = ( "zoom", "last_changed", "public", "aufstellungsbeschluss_datum", "nummer", "name","gemeinde", "planart", "count_attachments", "count_beteiligungen", "detail", "xplangml", "edit", "delete")
 
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):
-    num_bplan = tables.Column(verbose_name="Zahl BPläne")
+    num_bplan = tables.Column(verbose_name="BPläne")
+    num_bplan_public = tables.Column(verbose_name="öffentliche BPläne")
+    #TODO: auch Zahl der FPläne anzeigen - Link auf Services nur dann anzeigen, wenn Pläne existieren
+    #num_fplan = tables.Column(verbose_name="FPläne")
+    #num_fplan_public = tables.Column(verbose_name="öffentliche FPläne")
     wms = tables.LinkColumn('ows', text='WMS', args=[A('pk')], \
                          orderable=False, empty_values=())
     wfs = tables.LinkColumn('ows', text='WFS', args=[A('pk')], \
@@ -292,4 +310,4 @@ class AdministrativeOrganizationPublishingTable(tables.Table):
     class Meta:
         model = AdministrativeOrganization
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("name", "ags", "num_bplan", "wms", "wfs", )
+        fields = ("name", "ags", "num_bplan", "num_bplan_public", "wms", "wfs", )

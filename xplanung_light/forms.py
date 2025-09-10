@@ -448,6 +448,13 @@ class BPlanCreateForm(ModelForm):
         """
         self.helper.layout = Layout(
             Fieldset(
+                "Verwaltung",
+                Row(
+                    "public",
+                ),
+            ),
+            Fieldset(
+                
                 "Pflichtfelder XPlanung",
                 Row(
                     Column(
@@ -518,6 +525,7 @@ class BPlanCreateForm(ModelForm):
         model = BPlan
         fields = ["name", 
                   "nummer", 
+                  "public",
                   "geltungsbereich", 
                   "gemeinde", 
                   "planart",
@@ -599,6 +607,12 @@ class BPlanUpdateForm(ModelForm):
         #self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
         self.helper.layout = Layout(
             Fieldset(
+                "Verwaltung",
+                Row(
+                    "public",
+                ),
+            ),
+            Fieldset(
                 "Pflichtfelder XPlanung",
                 Row(
                     Column(
@@ -620,7 +634,8 @@ class BPlanUpdateForm(ModelForm):
                 "Weitere Informationen",
                 Row(
                     "beschreibung",
-                )),    
+                )
+            ),    
             Fieldset(
                 "Datumsfelder",
                 Row(
@@ -673,6 +688,7 @@ class BPlanUpdateForm(ModelForm):
                   "gemeinde", 
                   "planart",
                   "beschreibung",
+                  "public",
                   "aufstellungsbeschluss_datum", 
                   "satzungsbeschluss_datum",
                   "rechtsverordnungs_datum",
@@ -698,6 +714,20 @@ class FPlanCreateForm(ModelForm):
         # Validation Problem: https://github.com/django-crispy-forms/django-crispy-forms/issues/623
         # https://stackoverflow.com/questions/64581369/django-crispy-forms-validation-error-in-template
         self.fields['aufstellungsbeschluss_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date()),
+                }
+        )
+        self.fields['planbeschluss_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date()),
+                }
+        )
+        self.fields['wirksamkeits_datum'].widget = forms.DateInput(
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -743,6 +773,12 @@ class FPlanCreateForm(ModelForm):
         """
         self.helper.layout = Layout(
             Fieldset(
+                "Verwaltung",
+                Row(
+                    "public",
+                ),
+            ),
+            Fieldset(
                 "Pflichtfelder XPlanung",
                 Row(
                     Column(
@@ -773,6 +809,12 @@ class FPlanCreateForm(ModelForm):
                         "aufstellungsbeschluss_datum",
                     ),
                     Column(
+                        "planbeschluss_datum",
+                    ),
+                    Column(
+                        "wirksamkeits_datum",
+                    ),
+                    Column(
                         "untergangs_datum",
                     ),
                 ),
@@ -784,11 +826,14 @@ class FPlanCreateForm(ModelForm):
         model = FPlan
         fields = ["name", 
                   "nummer", 
+                  "public",
                   "geltungsbereich", 
                   "gemeinde", 
                   "planart",
                   "beschreibung",
                   "aufstellungsbeschluss_datum", 
+                  "planbeschluss_datum",
+                  "wirksamkeits_datum",
                   "untergangs_datum", 
                 ]
         # alternative to invokation above - but no possibility to have further attributes?
@@ -818,6 +863,20 @@ class FPlanUpdateForm(ModelForm):
                 'localize': True,
                 }
         )
+        self.fields['planbeschluss_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date()),
+                }
+        )
+        self.fields['wirksamkeits_datum'].widget = forms.DateInput(          
+            attrs={
+                'type': 'date',
+                'min': '1960-01-01',
+                'max': str(timezone.now().date()),
+                }
+        )
         self.fields['untergangs_datum'].widget = forms.DateInput(          
             attrs={
                 'type': 'date',
@@ -828,6 +887,12 @@ class FPlanUpdateForm(ModelForm):
         self.fields['gemeinde'].widget = GemeindeSelect2(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
         #self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
         self.helper.layout = Layout(
+            Fieldset(
+                "Verwaltung",
+                Row(
+                    "public",
+                ),
+            ),
             Fieldset(
                 "Pflichtfelder XPlanung",
                 Row(
@@ -858,6 +923,12 @@ class FPlanUpdateForm(ModelForm):
                         "aufstellungsbeschluss_datum",
                     ),
                     Column(
+                        "planbeschluss_datum",
+                    ),
+                    Column(
+                        "wirksamkeits_datum",
+                    ),
+                    Column(
                         "untergangs_datum",
                     ),
                 ),
@@ -870,11 +941,14 @@ class FPlanUpdateForm(ModelForm):
 
         fields = ["name", 
                   "nummer", 
+                  "public",
                   "geltungsbereich", 
                   "gemeinde", 
                   "planart",
                   "beschreibung",
                   "aufstellungsbeschluss_datum", 
+                  "planbeschluss_datum",
+                  "wirksamkeits_datum",
                   "untergangs_datum",
                 ]
 

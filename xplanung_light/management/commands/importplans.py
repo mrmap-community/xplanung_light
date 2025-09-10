@@ -6,7 +6,7 @@ import csv
 from django.utils.dateparse import parse_date
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.management.base import BaseCommand, CommandError, CommandParser
-from xplanung_light.models import AdministrativeOrganization, BPlan, BPlanSpezExterneReferenz
+from xplanung_light.models import AdministrativeOrganization, BPlan, BPlanSpezExterneReferenz, FPlan, FPlanSpezExterneReferenz
 
 class Command(BaseCommand):
     requires_migrations_checks = True
@@ -14,11 +14,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument("file", type=Path, help="MS Excel file")
         parser.add_argument("separator", type=str, help="Field separator")
+        parser.add_argument("plan_typ", type=str, help="Typ des XPlans - default bplan - auch fplan möglich!")
 
     def handle(self, *args: Any, **options: Any) -> Optional[str]:
-        self.import_plans(options["file"], options['separator'])
+        self.import_plans(options["file"], options['separator'], options['plan_typ'])
 
-    def add_referenz(self, bplan, file, referenz_name:str, typ:str):
+    def add_referenz(self, plan, file, referenz_name:str, typ:str, plan_typ:str):
         # Test ob Datei gefunden werden kann
         if Path(os.path.dirname(file) + referenz_name).is_file:
             print("* referenzierte Datei gefunden!")
@@ -30,9 +31,14 @@ class Command(BaseCommand):
                     print("* Dateinamen: " + file_bytesio.name)
                     valid = True
                     if valid:
-                        spez_externe_referenz, created = BPlanSpezExterneReferenz.objects.update_or_create(
-                            bplan=bplan, name=file_bytesio.name, typ=typ
-                        )
+                        if plan_typ == 'bplan':
+                            spez_externe_referenz, created = BPlanSpezExterneReferenz.objects.update_or_create(
+                                bplan=plan, name=file_bytesio.name, typ=typ
+                            )
+                        if plan_typ == 'fplan':
+                            spez_externe_referenz, created = FPlanSpezExterneReferenz.objects.update_or_create(
+                                fplan=plan, name=file_bytesio.name, typ=typ
+                            )
                         if created:
                             print("* Referenz erstellt!")
                         else:
@@ -51,7 +57,7 @@ class Command(BaseCommand):
             print("Angegebene Datei nicht gefunden!")
             return False
 
-    def import_plans(self, file: Path, separator: str=','):
+    def import_plans(self, file: Path, separator: str=',', plan_typ: str='bplan'):
         print("Funktion import_plans gestartet")
         print(os.path.dirname(file))
         print(separator)
@@ -78,13 +84,22 @@ class Command(BaseCommand):
                         'planart': False,
                     }
                     # Weitere Felder
-                    other_fields_dict = {
-                        'beschreibung': False,
-                        'inkrafttretensdatum': None,
-                        'aufstellungsbeschlussdatum': None,
-                        'ausfertigungsdatum': None,
-                        'satzungsbeschlussdatum': None,
-                    }
+                    if plan_typ == 'bplan':
+                        other_fields_dict = {
+                            'beschreibung': False,
+                            'inkrafttretensdatum': None,
+                            'aufstellungsbeschlussdatum': None,
+                            'ausfertigungsdatum': None,
+                            'satzungsbeschlussdatum': None,
+                        }
+                    if plan_typ == 'fplan':
+                        other_fields_dict = {
+                            'beschreibung': False,
+                            #'inkrafttretensdatum': None,
+                            'aufstellungsbeschlussdatum': None,
+                            #'ausfertigungsdatum': None,
+                            #'satzungsbeschlussdatum': None,
+                        }
                     # Anlagen
                     attachment_fields_dict = {
                         'texturl': {
@@ -109,12 +124,21 @@ class Command(BaseCommand):
                         },
                     }
                     # Marker
-                    marker_fields_dict = {
-                        'staedtebaulichervertrag': False,
-                        'erschliessungsvertrag': False,
-                        'durchfuehrungsvertrag': False,
-                        'staedtebaulichesanierungsmassnahme': False,
-                    }
+                    if plan_typ == 'bplan':
+                        marker_fields_dict = {
+                            'staedtebaulichervertrag': False,
+                            'erschliessungsvertrag': False,
+                            'durchfuehrungsvertrag': False,
+                            'staedtebaulichesanierungsmassnahme': False,
+                        }
+                    if plan_typ == 'fplan':
+                        marker_fields_dict = {
+                            #'staedtebaulichervertrag': False,
+                            #'erschliessungsvertrag': False,
+                            #'durchfuehrungsvertrag': False,
+                            #'staedtebaulichesanierungsmassnahme': False,
+                        }
+                    print("test1")
                     # Transformation der Pflichtfelder
                     if _object_dict['name']:
                         mandatory_fields_dict['name'] = _object_dict['name']
@@ -130,127 +154,144 @@ class Command(BaseCommand):
                             mandatory_fields_dict['nummer'] = mandatory_fields_dict['nummer'] + "." +_object_dict['nummeraenderung']
                     if _object_dict['planart']:
                         mandatory_fields_dict['planart'] = _object_dict['planart']
+                    print("test2")    
                     # Übernahme der weiteren Felder
                     for key in other_fields_dict:
                         if _object_dict[key]:
                             other_fields_dict[key] = _object_dict[key]
+                    print("test3")          
                     # Übernahme der Marker
-                    if _object_dict['staedtebaulichervertrag']:
-                        marker_fields_dict['staedtebaulichervertrag'] = True
-                    if _object_dict['erschliessungsvertrag']:
-                        marker_fields_dict['erschliessungsvertrag'] = True
-                    if _object_dict['durchfuehrungsvertrag']:
-                        marker_fields_dict['durchfuehrungsvertrag'] = True
-                    if _object_dict['staedtebaulichesanierungsmassnahme']:
-                        marker_fields_dict['staedtebaulichesanierungsmassnahme'] = True    
+                    if plan_typ == 'bplan':
+                        if _object_dict['staedtebaulichervertrag']:
+                            marker_fields_dict['staedtebaulichervertrag'] = True
+                        if _object_dict['erschliessungsvertrag']:
+                            marker_fields_dict['erschliessungsvertrag'] = True
+                        if _object_dict['durchfuehrungsvertrag']:
+                            marker_fields_dict['durchfuehrungsvertrag'] = True
+                        if _object_dict['staedtebaulichesanierungsmassnahme']:
+                            marker_fields_dict['staedtebaulichesanierungsmassnahme'] = True    
                     #if _object_dict['']:
                     #    marker_fields_dict[''] = True    
-
+                    print("test4") 
                     # Übernahme der Anlagen
                     for key in attachment_fields_dict:
                         if _object_dict[key]:
                             attachment_fields_dict[key]['value'] = _object_dict[key]
+                    print("test5") 
                     print("Mapping initialisiert - Prüfen der Pflichtfelder:")
                     if mandatory_fields_dict['name'] and mandatory_fields_dict['geometry'] and mandatory_fields_dict['nummer'] and mandatory_fields_dict['planart']:
                         print("* sind ausgefüllt")
                         print("Plan " + mandatory_fields_dict['name'] + " der Kommune " + orga.name  + " wird gesucht...")
-                        # Erstelle oder aktualisiere Bebauungsplan
-                        existing_bplan_query = BPlan.objects.filter(name=mandatory_fields_dict['name'], gemeinde=orga)
-                        if existing_bplan_query.count() > 1:
+                        # Erstelle oder aktualisiere XPlan
+
+                        if plan_typ == 'bplan':
+                            existing_plan_query = BPlan.objects.filter(name=mandatory_fields_dict['name'], gemeinde=orga)
+                        if plan_typ == 'fplan':
+                            existing_plan_query = FPlan.objects.filter(name=mandatory_fields_dict['name'], gemeinde=orga)
+                        if existing_plan_query.count() > 1:
                             print("Fehler: Mehr als ein Plan mit dem gleichen Namen in der gleichen Kommune gefunden!")   
-                        if existing_bplan_query.count() == 1:
-                            existing_bplan = existing_bplan_query.get()
+                        if existing_plan_query.count() == 1:
+                            existing_plan = existing_plan_query.get()
                             print("Plan identifiziert - Update wird vorbereitet...")
-                            existing_bplan.planart = mandatory_fields_dict['planart']
-                            existing_bplan.nummer = mandatory_fields_dict['nummer']
-                            existing_bplan.geltungsbereich = mandatory_fields_dict['geometry']
+                            existing_plan.planart = mandatory_fields_dict['planart']
+                            existing_plan.nummer = mandatory_fields_dict['nummer']
+                            existing_plan.geltungsbereich = mandatory_fields_dict['geometry']
                             # Weitere Felder
                             if other_fields_dict['beschreibung']:
-                                existing_bplan.beschreibung = other_fields_dict['beschreibung']
-                            if other_fields_dict['inkrafttretensdatum']:
-                                existing_bplan.inkrafttretens_datum = other_fields_dict['inkrafttretensdatum']
+                                existing_plan.beschreibung = other_fields_dict['beschreibung']
                             if other_fields_dict['aufstellungsbeschlussdatum']:
-                                existing_bplan.aufstellungsbeschluss_datum = other_fields_dict['aufstellungsbeschlussdatum'] 
-                            if other_fields_dict['ausfertigungsdatum']:
-                                existing_bplan.ausfertigungs_datum = other_fields_dict['ausfertigungsdatum']
-                            if other_fields_dict['satzungsbeschlussdatum']:
-                                existing_bplan.satzungsbeschluss_datum = other_fields_dict['satzungsbeschlussdatum']
-                            # Marker
-                            if marker_fields_dict['staedtebaulichervertrag']:
-                                existing_bplan.staedtebaulicher_vertrag = True
-                            if marker_fields_dict['erschliessungsvertrag']:
-                                existing_bplan.erschliessungs_vertrag = True  
-                            if marker_fields_dict['durchfuehrungsvertrag']:
-                                existing_bplan.durchfuehrungs_vertrag = True       
-                            existing_bplan.save()
+                                existing_plan.aufstellungsbeschluss_datum = other_fields_dict['aufstellungsbeschlussdatum'] 
+                            if plan_typ == 'bplan':
+                                if other_fields_dict['inkrafttretensdatum']:
+                                    existing_plan.inkrafttretens_datum = other_fields_dict['inkrafttretensdatum']
+                                if other_fields_dict['aufstellungsbeschlussdatum']:
+                                    existing_plan.aufstellungsbeschluss_datum = other_fields_dict['aufstellungsbeschlussdatum'] 
+                                if other_fields_dict['ausfertigungsdatum']:
+                                    existing_plan.ausfertigungs_datum = other_fields_dict['ausfertigungsdatum']
+                                if other_fields_dict['satzungsbeschlussdatum']:
+                                    existing_plan.satzungsbeschluss_datum = other_fields_dict['satzungsbeschlussdatum']
+                                # Marker
+                                if marker_fields_dict['staedtebaulichervertrag']:
+                                    existing_plan.staedtebaulicher_vertrag = True
+                                if marker_fields_dict['erschliessungsvertrag']:
+                                    existing_plan.erschliessungs_vertrag = True  
+                                if marker_fields_dict['durchfuehrungsvertrag']:
+                                    existing_plan.durchfuehrungs_vertrag = True       
+                            existing_plan.save()
                             print("Update wurde durchgeführt, Anlagen/Referenzen werden überprüft...")
                             # Füge Anlagen hinzu, falls sie noch nicht vorhanden sind ...
                             for key in attachment_fields_dict:
                                 if attachment_fields_dict[key]['value']:
-                                    test = self.add_referenz(existing_bplan, file, attachment_fields_dict[key]['value'], attachment_fields_dict[key]['typ'])
+                                    test = self.add_referenz(existing_plan, file, attachment_fields_dict[key]['value'], attachment_fields_dict[key]['typ'], plan_typ=plan_typ)
                                     if test:
                                         print("* Referenz vom Typ " + attachment_fields_dict[key]['typ'] + " angelegt!")
                              # Suche nach Georeferenzierten Rasterpläne
                             #file_to_search = "/BPlan2/" + orga.ls + orga.ks + orga.gs + "_" + orga.name + "/raster2/BPlan." + orga.ls + orga.ks + orga.gs + "." + bplan.nummer + ".plan.tif"
-                            file_to_search = "/BPlan2/" + orga.ls + orga.ks + orga.gs + "_" + orga.name  + "/raster2/BPlan." + orga.ls + orga.ks + orga.gs + "." + existing_bplan.nummer + ".plan.tif"
+                            if plan_typ == 'bplan':
+                                file_to_search = "/BPlan2/" + orga.ls + orga.ks + orga.gs + "_" + orga.name  + "/raster2/BPlan." + orga.ls + orga.ks + orga.gs + "." + existing_plan.nummer + ".plan.tif"
+                            if plan_typ == 'fplan':
+                                file_to_search = "/FPlan2/" + existing_plan.nummer + "/raster2/FPlan." + "." + existing_plan.nummer + ".plan.tif"
                             #if os.path.isfile(file_to_search):
                             #print(file_to_search)
-                            test = self.add_referenz(existing_bplan, file, file_to_search, '99999')
+                            test = self.add_referenz(existing_plan, file, file_to_search, '99999')
                             if test:
                                 print("* Referenz vom Typ " + '99999' + " angelegt!")
-                        if existing_bplan_query.count() == 0:
+                        if existing_plan_query.count() == 0:
                             print("Kein Plan mit dem gleichen Namen in der gleichen Kommune gefunden - Plan wird initial angelegt:") 
                             orgas = []
                             orgas.append(orga)
-                            bplan = BPlan()
-                            print("* BPlan-Objekt instantiert")
-                            bplan.name = mandatory_fields_dict['name']
-                            bplan.planart = mandatory_fields_dict['planart']
-                            bplan.nummer = mandatory_fields_dict['nummer']
-                            bplan.geltungsbereich = mandatory_fields_dict['geometry']
+                            if plan_typ == 'bplan':
+                                plan = BPlan()
+                            if plan_typ == 'fplan':
+                                plan = FPlan()
+                            print("* XPlan-Objekt instantiert")
+                            plan.name = mandatory_fields_dict['name']
+                            plan.planart = mandatory_fields_dict['planart']
+                            plan.nummer = mandatory_fields_dict['nummer']
+                            plan.geltungsbereich = mandatory_fields_dict['geometry']
                             # Weitere Felder
                             if other_fields_dict['beschreibung']:
-                                bplan.beschreibung = other_fields_dict['beschreibung']
-                            if other_fields_dict['inkrafttretensdatum']:
-                                bplan.inkrafttretens_datum = other_fields_dict['inkrafttretensdatum']
+                                plan.beschreibung = other_fields_dict['beschreibung']
                             if other_fields_dict['aufstellungsbeschlussdatum']:
-                                bplan.aufstellungsbeschluss_datum = other_fields_dict['aufstellungsbeschlussdatum']
-                            if other_fields_dict['ausfertigungsdatum']:
-                                bplan.ausfertigungs_datum = other_fields_dict['ausfertigungsdatum']
-                            if other_fields_dict['satzungsbeschlussdatum']:
-                                bplan.satzungsbeschluss_datum = other_fields_dict['satzungsbeschlussdatum']
-                            # Marker
-                            if marker_fields_dict['staedtebaulichervertrag']:
-                                bplan.staedtebaulicher_vertrag = True
-                            if marker_fields_dict['erschliessungsvertrag']:
-                                bplan.erschliessungs_vertrag = True  
-                            if marker_fields_dict['durchfuehrungsvertrag']:
-                                bplan.durchfuehrungs_vertrag = True   
-                            bplan.save()
+                                plan.aufstellungsbeschluss_datum = other_fields_dict['aufstellungsbeschlussdatum']   
+                            if plan_typ == 'bplan': 
+                                if other_fields_dict['inkrafttretensdatum']:
+                                    plan.inkrafttretens_datum = other_fields_dict['inkrafttretensdatum']
+                                if other_fields_dict['ausfertigungsdatum']:
+                                    plan.ausfertigungs_datum = other_fields_dict['ausfertigungsdatum']
+                                if other_fields_dict['satzungsbeschlussdatum']:
+                                    plan.satzungsbeschluss_datum = other_fields_dict['satzungsbeschlussdatum']
+                                # Marker
+                                if marker_fields_dict['staedtebaulichervertrag']:
+                                    plan.staedtebaulicher_vertrag = True
+                                if marker_fields_dict['erschliessungsvertrag']:
+                                    plan.erschliessungs_vertrag = True  
+                                if marker_fields_dict['durchfuehrungsvertrag']:
+                                    plan.durchfuehrungs_vertrag = True   
+                            plan.save()
                             print("* Plan-Objekt gespeichert")
-                            bplan.gemeinde.set(orgas)
+                            plan.gemeinde.set(orgas)
                             print("* Organisationen zugewiesen")
                             print("Objekt angelegt, Anlagen/Referenzen werden überprüft...")
                             # Anlagen erstellen
                             # Füge Anlagen hinzu, falls sie noch nicht vorhanden sind ...
                             for key in attachment_fields_dict:
                                 if attachment_fields_dict[key]['value']:
-                                    test = self.add_referenz(bplan, file, attachment_fields_dict[key]['value'], attachment_fields_dict[key]['typ'])
+                                    test = self.add_referenz(plan, file, attachment_fields_dict[key]['value'], attachment_fields_dict[key]['typ'], plan_typ=plan_typ)
                                     if test:
                                         print("* Referenz vom Typ " + attachment_fields_dict[key]['typ'] + " angelegt!")
                             # Suche nach Georeferenzierten Rasterpläne
-                            file_to_search = "/BPlan2/" + orga.ls + orga.ks + orga.gs + "_" + orga.name + "/raster2/BPlan." + orga.ls + orga.ks + orga.gs + "." + bplan.nummer + ".plan.tif"
+                            if plan_typ == 'bplan': 
+                                file_to_search = "/BPlan2/" + orga.ls + orga.ks + orga.gs + "_" + orga.name + "/raster2/BPlan." + orga.ls + orga.ks + orga.gs + "." + plan.nummer + ".plan.tif"
+                            if plan_typ == 'fplan':
+                                file_to_search = "/FPlan2/" + plan.nummer + "/raster2/FPlan." + plan.nummer + ".plan.tif"
                             #if os.path.isfile(file_to_search):
                             print(file_to_search)
-                            test = self.add_referenz(bplan, file, file_to_search, '99999')
+                            test = self.add_referenz(plan, file, file_to_search, '99999', plan_typ)
                             if test:
                                 print("* Referenz vom Typ " + '99999' + " angelegt!")
-
-                            #bplan.save()
-                            #print("Plan erneut gespeichert")
-                            # Füge Anlagen hinzu
                     else:
-                        print("Bebauungsgplan " + mandatory_fields_dict['name'] + " verfügt nicht über alle Pflichtfelder:")
+                        print("XPlan " + mandatory_fields_dict['name'] + " verfügt nicht über alle Pflichtfelder:")
                         print(_object_dict)
                 except:
                     print("Gemeinde mit AGS " + _object_dict['gkz'] + " nicht gefunden!")

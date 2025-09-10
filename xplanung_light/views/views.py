@@ -251,6 +251,10 @@ def ows(request, pk:int):
             id_list.append(int(id.text))
         id_list_unique = list(dict.fromkeys(id_list))
         print(id_list_unique)
+        fplan_ids = root.findall("./FPlan." + orga.ls + orga.ks + orga.gs + ".0_layer//id", None)
+        print("./FPlan." + orga.ls + orga.ks + orga.gs + ".0_feature/id")
+        for fplan_id in fplan_ids:
+            print("FPLAN: " + fplan_id.text)
         # path("organization/<int:pk>/xplan/html/", views.xplan_html, name="xplan-list-html"),
         if len(id_list_unique) > 0:
             # https://stackoverflow.com/questions/45188800/how-can-i-set-query-parameter-dynamically-to-request-get-in-django

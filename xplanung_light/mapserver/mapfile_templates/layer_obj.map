@@ -1,4 +1,5 @@
 LAYER
+        #TODO reduce attributes for featureinfo request to id! - otherwise too much information will be pulled (gml ...)
         COMPOSITE
             OPACITY 70
         END # COMPOSITE
@@ -18,6 +19,7 @@ LAYER
             "ows_metadataurl_href"      "https://geodaten.statistik.rlp.de/metadata/bev4_BEV4L1KREIS.xml"
             "ows_metadataurl_format"    "text/xml"
             "ows_metadataurl_type"      "TC211"
+            "gml_exclude_items"         "xplan_gml"
             #"ows_enable_request" "* !GetCapabilities"
         END
         DUMP TRUE
@@ -25,7 +27,7 @@ LAYER
         TYPE            POLYGON
         CONNECTIONTYPE 	OGR
    	    CONNECTION 	"db.sqlite3"
-   	    DATA 		"xplanung_light_bplan"
+   	    DATA 		"select geltungsbereich, id from xplanung_light_bplan where public = true"
    	    FILTER 		('[id]' = '10')
    	    PROCESSING 	"CLOSE_CONNECTION=DEFER" # for maximum performance
         PROJECTION
