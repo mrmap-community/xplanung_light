@@ -12,7 +12,7 @@ from xplanung_light.helper.xplanung import XPlanung
 from django.contrib import messages
 from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanImportArchivForm, FPlanImportForm, FPlanImportArchivForm
 
-from xplanung_light.filter import BPlanIdFilter
+from xplanung_light.filter import BPlanIdFilter, FPlanIdFilter
 from django.http import HttpResponse
 import mapscript
 from urllib.parse import parse_qs
@@ -61,10 +61,13 @@ def xplan_html(request, pk:int):
     orga = AdministrativeOrganization.objects.get(pk=pk)
     #bplan_list = BPlan.objects.filter(gemeinde=orga)
     #print(bplaene)
+    print(request.GET)
     bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.filter(gemeinde=orga))
+    fplan_filter = FPlanIdFilter(request.GET, queryset=FPlan.objects.filter(gemeinde=orga))
     #context = { 'bplan_list': bplan_list }
+    print(fplan_filter.queryset)
     print(bplan_filter.queryset)
-    return render(request, 'xplanung_light/xplan_list_html.html', {'bplan_list': bplan_filter})
+    return render(request, 'xplanung_light/xplan_list_html.html', {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
     #return HttpResponse("Liste der XPlan-Objekte einer Organisation!", status=200) 
 
 def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
@@ -251,17 +254,29 @@ def ows(request, pk:int):
             id_list.append(int(id.text))
         id_list_unique = list(dict.fromkeys(id_list))
         print(id_list_unique)
+        
+        
+        
         fplan_ids = root.findall("./FPlan." + orga.ls + orga.ks + orga.gs + ".0_layer//id", None)
         print("./FPlan." + orga.ls + orga.ks + orga.gs + ".0_feature/id")
+        fplan_id_list = []
         for fplan_id in fplan_ids:
             print("FPLAN: " + fplan_id.text)
+            fplan_id_list.append(int(fplan_id.text))
+        fplan_id_list_unique = list(dict.fromkeys(fplan_id_list))
+
+
         # path("organization/<int:pk>/xplan/html/", views.xplan_html, name="xplan-list-html"),
-        if len(id_list_unique) > 0:
+        if len(id_list_unique) > 0 or len(fplan_id_list_unique) > 0:
             # https://stackoverflow.com/questions/45188800/how-can-i-set-query-parameter-dynamically-to-request-get-in-django
             if not request.GET._mutable:
                 request.GET._mutable = True
+                # TODO: löschen aller vorherigen GET-Parameter
             # Setzen der ID-Filter-Parameter
-            request.GET['bplan_id__in'] = (',').join(str(v) for v in id_list_unique)
+            if len(id_list_unique) > 0:
+                request.GET['bplan_id__in'] = (',').join(str(v) for v in id_list_unique)
+            if len(fplan_id_list_unique) > 0:
+                request.GET['fplan_id__in'] = (',').join(str(v) for v in fplan_id_list_unique)    
             return views.xplan_html(pk=pk, request=request)#, bplan_id__in=(',').join(str(v) for v in id_list_unique), request=request).render()
             #return BPlanListViewHtml.as_view(template_name="xplanung_light/xplan_list_html.html")(pk=1, bplan_id__in=(',').join(str(v) for v in id_list_unique), request=request).render()
         #bplan_html = BPlanDetailView.as_view(template_name="xplanung_light/bplan_detail.html")(pk=53, request=request).render()

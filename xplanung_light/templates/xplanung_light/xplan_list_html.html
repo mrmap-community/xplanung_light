@@ -2,12 +2,14 @@
 {% load django_bootstrap5 %}
 {% bootstrap_css %}
 {% load leaflet_tags %}
+{%for fplan in fplan_list.qs %}
+{{ fplan.name }} - {{ fplan.id }}
+{% endfor %}
 
 {%for bplan in bplan_list.qs %}
-
 {% block title %}
 <center>
-<h3>Bebauungsplan "<b>{{ bplan.name }}</b>"</h3>
+<h3>Bebauungsplan "<b>{{ bplan.name }} ({{ bplan.id }})</b>"</h3>
 </center>
 <center>
 {% for gemeinde in bplan.gemeinde.all %}

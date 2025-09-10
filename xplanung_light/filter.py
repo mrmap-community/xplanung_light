@@ -71,10 +71,16 @@ class FPlanFilterHtml(FilterSet):
         model = FPlan
         fields = ["id"] 
 
-
 class BPlanIdFilter(FilterSet):
     bplan_id__in = NumberInFilter(field_name='id', lookup_expr='in')
 
     class Meta:
         model = BPlan
+        fields = ["id"] 
+
+class FPlanIdFilter(FilterSet):
+    fplan_id__in = NumberInFilter(field_name='id', lookup_expr='in')
+
+    class Meta:
+        model = FPlan
         fields = ["id"] 
