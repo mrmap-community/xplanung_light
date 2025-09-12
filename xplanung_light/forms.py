@@ -476,8 +476,12 @@ class BPlanCreateForm(ModelForm):
             Fieldset(
                 "Weitere Informationen",
                 Row(
+                    "massstab",
+                ),
+                Row(
                     "beschreibung",
-                )),    
+                ),
+            ),    
             Fieldset(
                 "Datumsfelder",
                 Row(
@@ -529,6 +533,7 @@ class BPlanCreateForm(ModelForm):
                   "geltungsbereich", 
                   "gemeinde", 
                   "planart",
+                  "massstab",
                   "beschreibung",
                   "aufstellungsbeschluss_datum", 
                   "satzungsbeschluss_datum",
@@ -633,8 +638,11 @@ class BPlanUpdateForm(ModelForm):
             Fieldset(
                 "Weitere Informationen",
                 Row(
+                    "massstab",
+                ),
+                Row(
                     "beschreibung",
-                )
+                ),
             ),    
             Fieldset(
                 "Datumsfelder",
@@ -687,6 +695,7 @@ class BPlanUpdateForm(ModelForm):
                   "geltungsbereich", 
                   "gemeinde", 
                   "planart",
+                  "massstab",
                   "beschreibung",
                   "public",
                   "aufstellungsbeschluss_datum", 
@@ -800,8 +809,12 @@ class FPlanCreateForm(ModelForm):
             Fieldset(
                 "Weitere Informationen",
                 Row(
+                    "massstab",
+                ),
+                Row(
                     "beschreibung",
-                )),    
+                ),
+            ),    
             Fieldset(
                 "Datumsfelder",
                 Row(
@@ -830,6 +843,7 @@ class FPlanCreateForm(ModelForm):
                   "geltungsbereich", 
                   "gemeinde", 
                   "planart",
+                  "massstab",
                   "beschreibung",
                   "aufstellungsbeschluss_datum", 
                   "planbeschluss_datum",
@@ -914,8 +928,12 @@ class FPlanUpdateForm(ModelForm):
             Fieldset(
                 "Weitere Informationen",
                 Row(
+                    "massstab",
+                ),
+                Row(
                     "beschreibung",
-                )),    
+                ),
+            ),    
             Fieldset(
                 "Datumsfelder",
                 Row(
@@ -945,6 +963,7 @@ class FPlanUpdateForm(ModelForm):
                   "geltungsbereich", 
                   "gemeinde", 
                   "planart",
+                  "massstab",
                   "beschreibung",
                   "aufstellungsbeschluss_datum", 
                   "planbeschluss_datum",

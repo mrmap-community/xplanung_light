@@ -1,0 +1,711 @@
+MAP
+    NAME "beteiligungen"
+    STATUS ON
+    SIZE 600 600
+    MAXSIZE 5000
+    UNITS METERS
+    PROJECTION
+        "init=epsg:4326"
+    END
+    EXTENT -180 -90 180 90
+    #CONFIG "MS_ERRORFILE" "/tmp/ms_error.txt"
+    WEB	
+        IMAGEPATH "/tmp/"
+        METADATA
+            "wms_feature_info_mime_type" "text/html"
+            OWS_TITLE "XPlan-light Laufende Beteiligungsverfahren"
+            OWS_ABSTRACT "XPlan-light Laufende Beteiligungsverfahren"
+            OWS_ONLINERESOURCE "<wms_onlineresource>"	
+            OWS_SRS "epsg:4326 epsg:25832 epsg:3857 epsg:900913"
+            ows_extent "-180 -90 180 90"
+            "ows_keywordlist" "XPlanung-light"
+            "ows_fees" "none"
+            "ows_accessconstraints" "none"
+            "ows_addresstype" "postal"
+            "ows_address" "Musterstraße 1"
+            "ows_city" "Musterstadt"
+            "ows_stateorprovince" "Muster Bundesland"
+            "ows_postcode" "00000"
+            "ows_country" "Germany"
+            "ows_contactperson" "Max Mustermann" 
+            "ows_contactorganization" "Musterorganisation"
+            "ows_contactposition" "Position"
+            "ows_contactelectronicmailaddress" "test@example.com"
+            "ows_contactfacsimiletelephone" "1111"
+            "ows_contactvoicetelephone" "1111"
+            "ows_enable_request" "*"
+        END
+    END
+    SYMBOLSET 'xplanung_light/mapserver/symbols/symbols.sym'
+    FONTSET 'xplanung_light/mapserver/fonts/fonts.list'
+    OUTPUTFORMAT
+        NAME 'png'
+        DRIVER 'AGG/PNG'
+        MIMETYPE 'image/png'
+        EXTENSION PNG
+        IMAGEMODE PC256
+        TRANSPARENT ON
+    END
+    LEGEND
+        STATUS ON
+        KEYSIZE 10 8
+        KEYSPACING 10 10
+        IMAGECOLOR 255 255 255
+        LABEL
+            COLOR 128 128 128
+            TYPE TRUETYPE
+            #FONT "arial"
+            SIZE 8
+        END
+    END
+    LAYER
+        NAME "offenlagen"
+        TYPE POLYGON
+        TEMPLATE "xplanung_light/mapserver/templates/offenlagen.html"
+        DUMP TRUE
+        CONNECTIONTYPE OGR
+        CONNECTION 	"db.sqlite3"
+        #DEBUG 5
+       
+        DATA "<datastring_polygon>"
+
+        METADATA
+            OWS_TITLE       "Test Bauleitpläne in Offenlage"
+            OWS_SRS         "EPSG:4326 EPSG:25832"
+            OWS_ABSTRACT    "Bauleitpläne in Offenlage - Abstract"
+            "ows_extent"    "-180 -90 180 90"
+            "gml_include_items" "all"
+            #"wfs_include_items" "*"
+            "gml_featureid"     "plan_id" ## REQUIRED
+            "wfs_enable_request" "*"
+            #"gml_geometries" "geltungsbereich"
+            "gml_geometry_type" "MultiPolygon"
+            "gml_id_alias" "identifier"
+            #"wfs_featureid" "plan_id"
+            "gml_geometries" "geometry"
+	        "gml_geometry_type" "MultiPolygon"
+            #"gml_id_alias" "identifier"
+	        #"wfs_featureid" "id"
+        END
+        PROJECTION
+            "init=epsg:4326"
+        END
+        CLASS
+			NAME 'einfacher Bebauungsplan (Entwurf- und Beteiligungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "BPlan") AND ([planart] = 10000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 0 0 255
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 0 0 255
+				SIZE 8
+				OUTLINECOLOR 0 0 255
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#qualifizierter Bebauungsplan
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'qualifizierter Bebauungsplan (Entwurf- und Beteiligungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "BPlan") AND ( [planart] = 10001))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 0 0 139
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 0 0 139
+				SIZE 8
+				OUTLINECOLOR 0 0 139
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#Bebauungsplan nach § 13
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'Bebauungsplan nach Paragraph 13 (Entwurf- und Beteiligungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "BPlan") AND ([planart] = 2000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 0 255 0
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 0 255 0
+				SIZE 8
+				OUTLINECOLOR 0 255 0
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#vorhabenbezogener Bebauungsplan
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'vorhabenbezogener Bebauungsplan (Entwurf- und Beteiligungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "BPlan") AND ([planart] = 3000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 166 166 166
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 166 166 166
+				SIZE 8
+				OUTLINECOLOR 166 166 166
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#Innenbereichssatzung
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'vorhabenbezogener Bebauungsplan (Entwurf- und Beteiligungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "BPlan") AND ([planart] = 4000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 130 110 255
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 130 110 255
+				SIZE 8
+				OUTLINECOLOR 130 110 255
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#Klarstellungssatzung
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'Klarstellungssatzung (Entwurf- und Beteiligungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "BPlan") AND ([planart] = 40000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 0 0
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 0 0
+				SIZE 8
+				OUTLINECOLOR 255 0 0
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#Entwicklungssatzung
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'Entwicklungssatzung (Entwurf- und Beteiligungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "BPlan") AND ([planart] = 40001))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 170 80
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 170 80
+				SIZE 8
+				OUTLINECOLOR 255 170 80
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#Ergänzungssatzung
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'Ergaenzungssatzung (Entwurf- und Beteiligungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "BPlan") AND ([planart] = 40002))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 170 180
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 170 180
+				SIZE 8
+				OUTLINECOLOR 255 170 180
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#Aussenbereichssatzung
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'Aussenbereichssatzung (Entwurf- und Beteiligungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "BPlan") AND ([planart] = 5000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 140 90 0
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 140 90 0
+				SIZE 8
+				OUTLINECOLOR 140 90 0
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#Bebauungsplan Innenentwicklung
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'Bebauungsplan Innenentwicklung (Entwurf- und Beteiligungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "BPlan") AND ([planart] = 6000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 255 0
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 255 0
+				SIZE 8
+				OUTLINECOLOR 255 255 0
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#örtliche Bauvorschrift
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'oertliche Bauvorschrift (Entwurf- und Beteiligungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "BPlan") AND ([planart] = 7000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 155 255 155
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 155 255 155
+				SIZE 8
+				OUTLINECOLOR 155 255 155
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#sonstiges
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'BPlan - sonstiges (Entwurf- und Beteiligungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "BPlan") AND ([planart] = 9999))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 0 255
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 0 255
+				SIZE 8
+				OUTLINECOLOR 255 0 255
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+#Flaechennutzungsplan
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'Flaechennutzungsplan (Aufstellungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "FPlan") AND ([planart] = 10000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 0 0 255
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 0 0 255
+				SIZE 8
+				OUTLINECOLOR 0 0 255
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS	
+
+
+               CLASS
+                        NAME 'Flaechennutzungsplan_kom (Aufstellungsphase)'
+                        GROUP "default"
+                        EXPRESSION (("[typ]" = "FPlan") AND ([planart] = 1000))
+                        STYLE
+                                WIDTH 3
+                                OUTLINECOLOR 0 0 255
+                        END #End of STYLE
+                        STYLE
+                                WIDTH 1
+                                SYMBOL 'schraffur'
+                                ANGLE 315
+                                COLOR 0 0 255
+                                SIZE 8
+                                OUTLINECOLOR 0 0 255
+                        END #End of STYLE
+                        LABEL
+                                COLOR 5 10 90
+                                FONT "verdana"
+                                TYPE truetype
+                                SIZE 10
+                                MINSCALEDENOM 0
+                                MAXSCALEDENOM 50000
+                                POSITION AUTO
+                                PARTIALS FALSE
+                        END
+                END #End of CLASS
+
+#Gemeinsamer Flaechennutzungsplan
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'Gemeinsamer Flaechennutzungsplan (Aufstellungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "FPlan") AND ([planart] = 2000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 0 0
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 0 0
+				SIZE 8
+				OUTLINECOLOR 255 0 0
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+		
+#Regionaler Flaechennutzungsplan
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'Regionaler Flaechennutzungsplan (Aufstellungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "FPlan") AND ([planart] = 3000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 0 255 0
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 0 255 0
+				SIZE 8
+				OUTLINECOLOR 0 255 0
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#Flaechennutzungsplan mit regionalpl. Festl.
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'Flaechennutzungsplan mit regionalpl. Festl. (Aufstellungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "FPlan") AND ([planart] = 4000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 0 0
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 0 0
+				SIZE 8
+				OUTLINECOLOR 255 0 0
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#Flaechennutzungsplan nach § 13 BauGB
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'Flaechennutzungsplan nach Paragraph 13 BauGB (Aufstellungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "FPlan") AND ([planart] = 5000))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 0 255 255
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 0 255 255
+				SIZE 8
+				OUTLINECOLOR 0 255 255
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+
+#sonstiges
+#-----------------------------------------------------------------------------------
+		CLASS
+			NAME 'FPlan - sonstiges (Aufstellungsphase)'
+			GROUP "default"
+ 			EXPRESSION (("[typ]" = "FPlan") AND ([planart] = 9999))
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 0 255
+			END #End of STYLE
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 0 255
+				SIZE 8
+				OUTLINECOLOR 255 0 255
+			END #End of STYLE
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END #End of CLASS
+    END
+    LAYER
+        NAME "offenlagen_cluster"
+        TYPE POINT
+        CONNECTIONTYPE OGR
+        CONNECTION 	"db.sqlite3"
+        DATA "<datastring_point>"
+        STATUS DEFAULT
+        #TEMPLATE "xplanung_light/mapserver/templates/offenlagen.html"
+        METADATA
+            "wms_title" "Offenlagen von Bauleitplänen gem. §4a (4) BauGB"
+            "wms_srs" "EPSG:25832 EPSG:4326 EPSG:31466 EPSG:31467 EPSG:3857"
+            'wms_extent'         '270000 5423000 467000 5646000'
+            'ows_keywordlist' 'INSPIRE, Download, WMS'
+            'wms_abstract' 'INSPIRE Download Layer Abstract 1'
+            'ows_enable_request' '!GetCapabilities'
+            'wms_encoding' 'UTF-8'
+        END
+        CLUSTER
+            MAXDISTANCE 20
+            REGION "ellipse"
+        END
+        LABELITEM "Cluster_FeatureCount"
+        CLASSITEM "Cluster_FeatureCount"
+        CLASS
+            NAME 'offenlage_multi'
+            STYLE
+                SYMBOL 'punkt'
+                SIZE 30
+                COLOR 163 198 117
+            END
+            STYLE
+                SYMBOL 'punkt'
+                SIZE 25 #[Cluster:FeatureCount]
+                COLOR 110 170 40
+            END
+            LABEL
+                ANTIALIAS true
+                ENCODING 'UTF8'
+                TYPE truetype
+                FONT tahomabold
+                SIZE 9
+                COLOR 50 50 50
+                OUTLINECOLOR 255 255 254
+                ALIGN CENTER
+                PRIORITY 10
+                BUFFER 1
+                PARTIALS TRUE
+                POSITION cc
+            END
+        END
+    END
+    
+END

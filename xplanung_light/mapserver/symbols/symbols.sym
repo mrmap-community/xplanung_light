@@ -1,0 +1,89 @@
+SYMBOLSET
+SYMBOL
+  NAME 'schraffur'
+  TYPE HATCH
+END
+
+SYMBOL
+  NAME 'punkt'
+  TYPE ELLIPSE
+  POINTS 1 1 END
+  FILLED true
+END
+
+SYMBOL
+  NAME 'quadrat'
+  TYPE VECTOR
+  POINTS 
+   0 0
+   0 1
+   2 1
+   2 0
+   0 0 
+  END
+  FILLED true
+END
+
+SYMBOL
+  NAME "grenze"
+  TYPE ellipse
+  POINTS 2 2 END
+  FILLED TRUE
+  #STYLE 2 2 2 2 END
+END
+
+SYMBOL
+  NAME 'windrad'
+  TYPE PIXMAP
+  IMAGE "windrad.gif"
+END
+
+SYMBOL
+  NAME 'baum'
+  TYPE PIXMAP
+  IMAGE "baum.gif"
+END
+
+SYMBOL
+  NAME 'turm'
+  TYPE PIXMAP
+  IMAGE "turm.gif"
+END
+
+SYMBOL
+  NAME 'denkmal'
+  TYPE PIXMAP
+  IMAGE "denkmal.gif"
+END
+
+SYMBOL
+  NAME 'felsen'
+  TYPE PIXMAP
+  IMAGE "felsen.gif"
+END
+
+SYMBOL
+  NAME 'gestrichelt'
+  TYPE ELLIPSE
+  POINTS 1 1 END
+ # STYLE
+  #  20 20 20 20
+ # END
+END
+SYMBOL
+  NAME 'bahn'
+  TYPE VECTOR
+  POINTS
+    0 0
+    0 0.6
+    1 0.6
+    1 0
+    0 0
+  END
+  FILLED TRUE
+ # STYLE
+ #   8 12 8 12
+ # END
+END
+
+END

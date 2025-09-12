@@ -118,7 +118,7 @@ class XPlanRelationsUpdateView(UpdateView):
                 gemeinden = object.bplan.gemeinde.all()
             if self.reference_model_name_lower == 'fplan':  
                 # TODO alter to fplan
-                gemeinden = object.bplan.gemeinde.all()
+                gemeinden = object.fplan.gemeinde.all()
             for gemeinde in gemeinden:
                 for user in gemeinde.organization_users.all():
                     if user.user == self.request.user and user.is_admin:                        

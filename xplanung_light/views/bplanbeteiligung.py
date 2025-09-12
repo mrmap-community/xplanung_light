@@ -12,7 +12,7 @@ View Klassen zur Verwaltung von Beteiligungen
 class BPlanBeteiligungCreateView(XPlanRelationsCreateView):
     model = BPlanBeteiligung
     reference_model = BPlan
-    reference_model_name_lower = 'fplan'
+    reference_model_name_lower = 'bplan'
     form_class = BPlanBeteiligungForm
     list_url_name = 'bplanbeteiligung-list'
 

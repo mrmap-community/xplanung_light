@@ -34,6 +34,8 @@ MAP
             "wms_enable_request" "*"
         END
     END
+    SYMBOLSET 'xplanung_light/mapserver/symbols/symbols.sym'
+    FONTSET 'xplanung_light/mapserver/fonts/fonts.list'
     OUTPUTFORMAT
         NAME 'png'
         DRIVER 'AGG/PNG'
@@ -141,6 +143,102 @@ MAP
                 OUTLINECOLOR 0 255 0 
                 WIDTH 2 
             END 
+        END
+    END
+    LAYER
+        NAME "offenlagen"
+        TYPE POLYGON
+        TEMPLATE "xplanung_light/mapserver/templates/offenlagen.html"
+        DUMP TRUE
+        CONNECTIONTYPE OGR
+        CONNECTION 	"db.sqlite3"
+   	    DATA 		"select geltungsbereich, xplanung_light_bplan.id as plan_id from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
+                    xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
+                    and bekanntmachung_datum <= date() and end_datum >= date()
+                    union 
+                    select geltungsbereich, xplanung_light_fplan.id as plan_id from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on 
+                    xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
+                    and bekanntmachung_datum <= date() and end_datum >= date()
+                    "
+        METADATA
+            WMS_TITLE       "Test Bauleitpläne in Offenlage"
+            WMS_SRS         "EPSG:4326"
+            WMS_ABSTRACT    "Bauleitpläne in Offenlage - Abstract"
+            "wms_extent"    "48 6 52 9"
+        END
+        PROJECTION
+            "init=epsg:4326"
+        END
+        CLASS
+            NAME "Offenlagen"
+            STYLE
+                OUTLINECOLOR 0 255 255 
+                WIDTH 1 
+            END 
+        END
+    END
+    LAYER
+        NAME "offenlagen_cluster"
+        TYPE POINT
+        #DEBUG 5
+        #CONNECTIONTYPE postgis
+        #CONNECTION "user=postgres dbname=baugb_offenlage_rlp host=10.227.0.136 port=5432" # reference to the source layers
+        #DATA "the_geom2 from (select *, st_centroid(the_geom) as the_geom2 from offenlagen_baugb_4_a where public is true AND to_timestamp(offenlage_bekanntmachung,'YYYY-MM-DD') <= now()::date and to_timestamp(offenlage_ende,'YYYY-MM-DD') >= now()::date) as foo USING unique id USING SRID=25832"
+        CONNECTIONTYPE OGR
+        CONNECTION 	"db.sqlite3"
+   	    DATA 		"select st_centroid(geltungsbereich), xplanung_light_bplan.id as plan_id from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
+                    xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
+                    and bekanntmachung_datum <= date() and end_datum >= date()
+                    union 
+                    select st_centroid(geltungsbereich), xplanung_light_fplan.id as plan_id from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on 
+                    xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
+                    and bekanntmachung_datum <= date() and end_datum >= date()
+                    "
+        
+        
+        STATUS DEFAULT
+        #TEMPLATE "xplanung_light/mapserver/templates/offenlagen.html"
+        METADATA
+            "wms_title" "Offenlagen von Bauleitplänen gem. §4a (4) BauGB"
+            "wms_srs" "EPSG:25832 EPSG:4326 EPSG:31466 EPSG:31467 EPSG:3857"
+            'wms_extent'         '270000 5423000 467000 5646000'
+            'ows_keywordlist' 'INSPIRE, Download, WMS'
+            'wms_abstract' 'INSPIRE Download Layer Abstract 1'
+            'ows_enable_request' '!GetCapabilities'
+            'wms_encoding' 'UTF-8'
+        END
+        CLUSTER
+            MAXDISTANCE 20
+            REGION "ellipse"
+        END
+        LABELITEM "Cluster_FeatureCount"
+        CLASSITEM "Cluster_FeatureCount"
+        CLASS
+            NAME 'offenlage_multi'
+            STYLE
+                SYMBOL 'punkt'
+                SIZE 30
+                COLOR 163 198 117
+            END
+            STYLE
+                SYMBOL 'punkt'
+                SIZE 25 #[Cluster:FeatureCount]
+                COLOR 110 170 40
+            END
+            LABEL
+                ANTIALIAS true
+                ENCODING 'UTF8'
+                TYPE truetype
+                FONT tahomabold
+                SIZE 9
+                COLOR 50 50 50
+                OUTLINECOLOR 255 255 254
+                ALIGN CENTER
+                PRIORITY 10
+                BUFFER 1
+                PARTIALS TRUE
+                POSITION cc
+            END
         END
     END
 END

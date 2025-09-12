@@ -98,6 +98,8 @@ urlpatterns = [
     path("contact/", ContactOrganizationListView.as_view(), name="contact-list"),
     path("contact/<int:pk>/update/", ContactOrganizationUpdateView.as_view(), name="contact-update"),
     path("contact/<int:pk>/delete/", ContactOrganizationDeleteView.as_view(), name="contact-delete"),
+    # Offenlagen
+    path("beteiligungen/map/", views.ows_beteiligungen, name="beteiligungen-map"),
     # Dokumentation
     path('docs/', include('docs.urls')),
 ]

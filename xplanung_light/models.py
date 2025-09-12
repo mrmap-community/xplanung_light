@@ -227,6 +227,7 @@ class XPlan(GenericMetadata):
     #aendertPlanBereich [0..*], Referenz, Testphase
     #wurdeGeaendertVonPlanBereich [0..*], Referenz, Testphase
     #erstellungsMassstab [0..1], Integer
+    massstab = models.IntegerField(null=True, blank=True, default=1000, verbose_name="Kartenmaßstab des Plans", help_text="Der bei der Erstellung des Plans benutzter Kartenmaßstab.")
     #bezugshoehe [0..1], Length
     #hoehenbezug [0..1]
     #technischerPlanersteller, [0..1]

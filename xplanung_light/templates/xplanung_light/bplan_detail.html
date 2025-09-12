@@ -45,105 +45,126 @@
       <td>{{ bplan.nummer }}</td>
     </tr>
     <tr>
-      <th scope="row"><s>Name der Änderung des Plans</s></th>
-      <td></td>
-    </tr>
-    <tr>
-      <th scope="row"><s>Fortlaufende Nummer der Änderung des Plans</s></th>
-      <td></td>
-    </tr>
-    <tr>
       <th scope="row">Kommentierende Beschreibung des Bebauungsplans</th>
+      {% if bplan.beschreibung %}
+      <td>{{ bplan.beschreibung }}</td>
+      {% else %}
       <td>Bebauungsplan "<b>{{ bplan.name }}</b>" der Kommune(n): {{ bplan.gemeinde.all|join:", " }}</td>
+      {% endif %}
     </tr>
     <tr>
       <th scope="row">Amtliche(r) Gemeindeschlüssel (AGS)</th>
       <td>{% for single_gemeinde in bplan.gemeinde.all %}{{ single_gemeinde.ls }}{{ single_gemeinde.ks }}{{ single_gemeinde.gs }};{% endfor %}</td>
     </tr>
     <tr>
-      <th scope="row"><s>Planart</s></th>
-      <td></td>
-    </tr>
-    <tr>
       <th scope="row">Rechtsstand</th>
       <td></td>
     </tr>
     <tr>
-      <th scope="row">Datum des Aufstellungsbeschlusses</th>
-      <td>{{ bplan.aufstellungsbeschluss_datum|default:"nicht erfasst" }}</td>
-    </tr>
-    <tr>
-      <th scope="row">Datum des Satzungsbeschlusses</th>
-      <td>{{ bplan.satzungsbeschluss_datum|default:"nicht erfasst" }}</td>
-    </tr>
-    <tr>
-      <th scope="row">Ausfertigungsdatum</th>
-      <td>{{ bplan.ausfertigungs_datum|default:"nicht erfasst" }}</td>
-    </tr>
-    <tr>
-      <th scope="row">Datum des Inkrafttretens</th>
-      <td>{{ bplan.inkrafttretens_datum|default:"nicht erfasst" }}</td>
-    </tr>
-    <tr>
       <th scope="row">Erstellungsmassstab</th>
-      <td></td>
+      <td>{{ bplan.massstab|default:"--" }}</td>
     </tr>
+    {% if bplan.attachments %}
     <tr>
-      <th scope="row">Besonderheiten</th>
-      <td></td>
+      <td colspan="2">
+        <table class="table mb-0">
+          <tr>
+            <thead>
+              <b>Dokumente</b>
+            </thead>
+          </tr>
+          {% for anlage in bplan.attachments.all %}
+          <tr>
+            <td><a href="{% url 'bplanattachment-download' pk=anlage.id %}">{{ anlage.name }} (<i>{{ anlage.get_typ_display }})</a></td>
+          </tr>
+          {% endfor %}
+        </table>
+      </td>
     </tr>
-    {% for anlage in bplan.attachments.all %}
+    {% endif %}
+    {% if bplan.beteiligungen %}
     <tr>
-      <th scope="row">Anlage vom Typ <i>{{ anlage.get_typ_display }}</i></th>
-      <td><a href="{% url 'bplanattachment-download' pk=anlage.id %}">{{ anlage.name }}</a></td>
+      <td colspan="2">
+        <table class="table mb-0">
+          <tr>
+            <thead>
+              <b>Beteiligungsverfahren</b>
+            </thead>
+          </tr>
+          {% for beteiligung in bplan.beteiligungen.all %}
+          <tr>
+            <td>{{ beteiligung.bekanntmachung_datum }}: <a href="">{{beteiligung.get_typ_display }}</a></td>
+          </tr>
+          {% endfor %}
+        </table>
+      </td>
     </tr>
-    {% endfor %}
-    {% for beteiligung in bplan.beteiligungen.all %}
+    {% endif %}
     <tr>
-      <th scope="row">Beteiligung <i>{{beteiligung.get_typ_display }}</i> - Bekanntmachung</th>
-      <td>{{ beteiligung.bekanntmachung_datum }}</td>
+      <td colspan="2">
+        <table class="table mb-0">
+          <tr>
+            <thead>
+              <b>Historie</b>
+            </thead>
+          </tr>
+          <tr>
+            <th scope="row">Aufstellungsbeschluss</th>
+            <td>{{ bplan.aufstellungsbeschluss_datum }}</td>
+          </tr>
+          {% if bplan.satzungsbeschluss_datum %}
+          <tr>
+            <th scope="row">Satzungsbeschluss</th>
+            <td>{{ bplan.satzungsbeschluss_datum }}</td>
+          </tr>
+          {% endif %}
+          {% if bplan.rechtsverordnungs_datum %}
+          <tr>
+            <th scope="row">Rechtsverordnung</th>
+            <td>{{ bplan.rechtsverordnungs_datum }}</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <th scope="row">Ausfertigung</th>
+            <td>{{ plan.ausfertigungs_datum }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Inkrafttreten</th>
+            <td>{{ bplan.inkrafttretens_datum }}</td>
+          </tr>
+        </table>
+      </td>
     </tr>
+    {% if bplan.gemeinde %}
     <tr>
-      <th scope="row">Beteiligung <i>{{beteiligung.get_typ_display }}</i> - Beginn</th>
-      <td>{{ beteiligung.start_datum }}</td>
+      <td colspan="2">
+        <table class="table mb-0">
+          <tr>
+            <thead>
+              <b>Auskunft</b>
+            </thead>
+          </tr>
+          <tr>
+          {% for gemeinde in bplan.gemeinde.all %}
+            <td>
+              <b>{{ gemeinde }}</b><br>
+              {{ gemeinde.contacts.first.name }} - {{ gemeinde.contacts.first.unit }}<br>
+              <a href="mailto:gemeinde.contacts.first.email">{{ gemeinde.contacts.first.email }}</a><br>
+              <b>Tel.:</b> {{ gemeinde.contacts.first.phone }}<br>
+              <b>Fax.:</b> {{ gemeinde.contacts.first.facsimile }}
+            </td>
+          {% endfor %}
+          </tr>
+        </table>
+      </td>
     </tr>
+    {% endif %}
     <tr>
-      <th scope="row">Beteiligung <i>{{beteiligung.get_typ_display }}</i> - Ende</th>
-      <td>{{ beteiligung.end_datum }}</td>
-    </tr>
-    {% endfor %}
-    <tr>
-      <th scope="row"><s>Nummer der Gemarkung</s></th>
-      <td></td>
-    </tr>
-    {% for gemeinde in bplan.gemeinde.all %}
-    <tr>
-      <th scope="row">Inhaltlich für den Plan verantwortliche Organisation</th>
-      <td>{{ gemeinde.contacts.first.name }}</td>
-    </tr>
-    <tr>
-      <th scope="row"><s>Adresse der Organisation</s></th>
-      <td></td>
-    </tr>
-    <tr>
-      <th scope="row">Telefonnummer der Organisation</th>
-      <td>{{ gemeinde.contacts.first.phone }}</td>
-    </tr>
-    <tr>
-      <th scope="row">Faxnummer der Organisation</th>
-      <td>{{ gemeinde.contacts.first.facsimile }}</td>
-    </tr>
-    <tr>
-      <th scope="row">E-Mail der Organisation</th>
-      <td>{{ gemeinde.contacts.first.email }}</td>
-    </tr>
-    {% endfor %}
-    <tr>
-      <th scope="row">XPlan-GML V {% if bplan.xplan_gml_version %}{{bplan.xplan_gml_version}}{% else %}6.0{% endif %}</th>
+      <th scope="row">XPlan-GML V {% if bplan.xplan_gml_version %}{{ bplan.xplan_gml_version }}{% else %}6.0{% endif %}</th>
       <td><a href="{% url 'bplan-export-xplan-raster-6' pk=bplan.id %}">GML herunterladen</a></td>
     </tr>
     <tr>
-      <th scope="row">XPlan-ZIP-Archiv V {% if bplan.xplan_gml_version %}{{bplan.xplan_gml_version}}{% else %}6.0{% endif %}</th>
+      <th scope="row">XPlan-ZIP-Archiv V {% if bplan.xplan_gml_version %}{{ bplan.xplan_gml_version }}{% else %}6.0{% endif %}</th>
       <td><a href="{% url 'bplan-export-xplan-raster-6-zip' pk=bplan.id %}">ZIP-Archiv herunterladen</a></td>
     </tr>
     <tr>
