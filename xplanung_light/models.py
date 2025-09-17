@@ -388,10 +388,44 @@ class FPlan(XPlan):
     def __str__(self):
         """Returns a string representation of a BPlan."""
         return f"{self.name} ({self.get_planart_display()})"
+
+
 """
 Informationen zur Durchführung von UVPs
 """
-class Uvp(GenericMetadata):
+class XPlanUvp(GenericMetadata):
+        
+    TYPE_CHOICES = [
+        ( '18.1: Feriendorf Außenbereich',
+            (
+                ('18_1_1', '18.1.1 (X): Betten >= 300 oder GZ >= 200'),
+                ('18_1_2', '18.1.2 (A): Betten >= 100 < 300 oder GZ >=80 < 200'), 
+            ),
+        ),
+        ( '18.2: Campingplatz Außenbereich',
+            (
+                ('18_2_1', '18.2.1 (X): StPl 200+'),
+                ('18_2_2', '18.2.2 (A): StPl >=50 < 200'), 
+            ),
+        ),
+    ]
+
+    uvp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP durchgeführt", help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP durchgeführt wurde.")
+    typ = models.CharField(null=True, blank=True, max_length=7, choices=TYPE_CHOICES, verbose_name='Kategorie für Bauvorhaben gem. Anlage 1 UVPG', help_text="Kategorie für Bauvorhaben gem. Anlage 1 UVPG - https://www.gesetze-im-internet.de/uvpg/anlage_1.html", db_index=True)
+    uvp_beginn_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Beginns der UVP", help_text="Datum des Beginns der UVP.")
+    uvp_ende_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Abschlusses der UVP", help_text="Datum des Abschlusses der UVP.")
+    #bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="uvps")
+    #history = HistoricalRecords()
+
+    def __str__(self):
+        """Returns a string representation of the Info about the UVP."""
+        return f"UVP - { self.id } ({self.get_typ_display()})"
+    
+    class Meta:
+        abstract = True
+
+
+class Uvp(XPlanUvp):
 
     TYPE_CHOICES = [
         ( '18.1: Feriendorf Außenbereich',
@@ -409,16 +443,26 @@ class Uvp(GenericMetadata):
     ]
 
     uvp_vp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP Vorprüfung durchgeführt", help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP Vorprüfung durchgeführt wurde.")
-    uvp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP durchgeführt", help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP durchgeführt wurde.")
-    typ = models.CharField(null=True, blank=True, max_length=7, choices=TYPE_CHOICES, verbose_name='Kategorie für Bauvorhaben gem. Anlage 1 UVPG', help_text="Kategorie für Bauvorhaben gem. Anlage 1 UVPG - https://www.gesetze-im-internet.de/uvpg/anlage_1.html", db_index=True)
-    uvp_beginn_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Beginns der UVP", help_text="Datum des Beginns der UVP.")
-    uvp_ende_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Abschlusses der UVP", help_text="Datum des Abschlusses der UVP.")
+    #uvp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP durchgeführt", help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP durchgeführt wurde.")
+    #typ = models.CharField(null=True, blank=True, max_length=7, choices=TYPE_CHOICES, verbose_name='Kategorie für Bauvorhaben gem. Anlage 1 UVPG', help_text="Kategorie für Bauvorhaben gem. Anlage 1 UVPG - https://www.gesetze-im-internet.de/uvpg/anlage_1.html", db_index=True)
+    #uvp_beginn_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Beginns der UVP", help_text="Datum des Beginns der UVP.")
+    #uvp_ende_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Abschlusses der UVP", help_text="Datum des Abschlusses der UVP.")
     bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="uvps")
     history = HistoricalRecords()
 
-    def __str__(self):
-        """Returns a string representation of the Info about the UVP."""
-        return f"UVP - { self.id } ({self.get_typ_display()})"
+
+class FPlanUvp(XPlanUvp):
+
+    SUP = "1000"
+
+    TYPE_CHOICES = [
+        (SUP,  "Strategische Umweltprüfung"),
+    ]
+    
+    typ = models.CharField(null=True, blank=True, max_length=7, choices=TYPE_CHOICES, verbose_name='Kategorie für Umweltprüfungen gem. UVPG', help_text="Kategorie für Umweltprüfungen - weitere Infos: https://www.umweltbundesamt.de/sites/default/files/medien/11850/publikationen/112_2023_texte_evaluation_der_praxis_der_strategischen_umweltpruefung_in_deutschland.pdf", db_index=True)
+    fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE, verbose_name="FPlan", help_text="FPlan", related_name="uvps")
+    history = HistoricalRecords()
+
 
 """
 Um die verschieden Beteiligungsverfahren abbilden zu können, macht es Sinn die Verfahren über einen ForeignKey an die 

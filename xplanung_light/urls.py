@@ -10,6 +10,7 @@ from xplanung_light.views.fplanspezexternereferenz import FPlanSpezExterneRefere
 from xplanung_light.views.bplanbeteiligung import BPlanBeteiligungCreateView, BPlanBeteiligungUpdateView, BPlanBeteiligungDeleteView, BPlanBeteiligungListView
 from xplanung_light.views.fplanbeteiligung import FPlanBeteiligungCreateView, FPlanBeteiligungUpdateView, FPlanBeteiligungDeleteView, FPlanBeteiligungListView
 from xplanung_light.views.uvp import UvpCreateView, UvpUpdateView, UvpDeleteView, UvpListView
+from xplanung_light.views.fplanuvp import FPlanUvpCreateView, FPlanUvpUpdateView, FPlanUvpDeleteView, FPlanUvpListView
 from xplanung_light.views.administrativeorganization import AdministrativeOrganizationPublishingListView, AdministrativeOrganizationAutocomplete, AdministrativeOrganizationListView, AdministrativeOrganizationUpdateView
 from xplanung_light.views.contactorganization import ContactOrganizationCreateView, ContactOrganizationListView, ContactOrganizationUpdateView, ContactOrganizationDeleteView
 from django.urls import re_path as url
@@ -79,6 +80,11 @@ urlpatterns = [
     path("fplan/<int:planid>/attachment/<int:pk>/update/", FPlanSpezExterneReferenzUpdateView.as_view(), name="fplanattachment-update"),
     path("fplan/<int:planid>/attachment/<int:pk>/delete/", FPlanSpezExterneReferenzDeleteView.as_view(), name="fplanattachment-delete"),
     path("fplanattachment/<int:pk>/", views.get_fplan_attachment, name="fplanattachment-download"),
+    # FPlan UP Info
+    path("fplan/<int:planid>/uvp/create/", FPlanUvpCreateView.as_view(), name="fplan-uvp-create"),
+    path("fplan/<int:planid>/uvp/", FPlanUvpListView.as_view(), name="fplan-uvp-list"),
+    path("fplan/<int:planid>/uvp/<int:pk>/update/", FPlanUvpUpdateView.as_view(), name="fplan-uvp-update"),
+    path("fplan/<int:planid>/uvp/<int:pk>/delete/", FPlanUvpDeleteView.as_view(), name="fplan-uvp-delete"),
     # Organisationen
     path("organization/<int:pk>/ows/", views.ows, name="ows"),
     # Organisations XPlan-Liste für GetFeatureInfo - hier müssen alle Plantypen zurückgeliefert werden können
@@ -100,6 +106,7 @@ urlpatterns = [
     path("contact/<int:pk>/delete/", ContactOrganizationDeleteView.as_view(), name="contact-delete"),
     # Offenlagen
     path("beteiligungen/map/", views.ows_beteiligungen, name="beteiligungen-map"),
+    path("beteiligungen/", views.beteiligungen, name="beteiligungen"),
     # Dokumentation
     path('docs/', include('docs.urls')),
 ]

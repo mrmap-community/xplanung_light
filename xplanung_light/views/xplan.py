@@ -263,7 +263,7 @@ class XPlanListView(FilterView, SingleTableView):
             if self.model_name_lower == 'fplan':
                 qs = self.model.objects.prefetch_related('gemeinde').distinct().annotate(last_changed=Subquery(
                     self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-                )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True))
+                )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True)).annotate(count_uvps=Count('uvps', distinct=True))
         else:
             # admin für alle Gemeinden eines Plans
             if self.model_name_lower == 'bplan':
@@ -277,7 +277,7 @@ class XPlanListView(FilterView, SingleTableView):
                 # user ist Organisation zugewiesen - ohen id_admin=True
                 #qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
                     self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-                )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True))
+                )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True)).annotate(count_uvps=Count('uvps', distinct=True))
         self.filter_set = self.filterset_class(self.request.GET, queryset=qs)
         return self.filter_set.qs
 

@@ -8,6 +8,7 @@ import magic
 from django.db.models import FileField
 from xplanung_light.validators import geotiff_raster_validator
 import re
+import datetime 
 
 class XPlanung():
     """Klasse mit Hilfsfunktionen für den Import und die Validierung von XPlan Dokumenten. 
@@ -105,6 +106,14 @@ class XPlanung():
         #print("gml:featureMember/" + path_element + "/xplan:name")
         name = root.find("gml:featureMember/" + path_element + "/xplan:name", ns).text
         planart = root.find("gml:featureMember/" + path_element + "/xplan:planArt", ns).text
+        """
+        Zusatzfelder
+        """
+        plannummer = None
+        try:
+            plannummer = root.find("gml:featureMember/" + path_element + "/xplan:nummer", ns).text
+        except:
+            pass
         geltungsbereich_element = root.find("gml:featureMember/" + path_element + "/xplan:raeumlicherGeltungsbereich/*", ns)        
         geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()  
         # Bauen eines GEOS-Geometrie Objektes aus dem GML
@@ -163,6 +172,8 @@ class XPlanung():
                 existing_plan.geltungsbereich = geometry
                 existing_plan.xplan_gml = self.xml_string.strip()
                 existing_plan.xplan_gml_version = xplan_version
+                if plannummer:
+                    existing_plan.nummer = plannummer
                 existing_plan.save()
                 return True
             return False
@@ -178,6 +189,10 @@ class XPlanung():
         plan.geltungsbereich = geometry
         plan.save()
         plan.gemeinde.set(orgas)
+        #
+        if plannummer:
+            plan.nummer = plannummer
+        #
         plan.xplan_gml = self.xml_string.strip()
         plan.xplan_gml_version = xplan_version
         try:
@@ -213,6 +228,16 @@ class XPlanung():
             #raise forms.ValidationError("Fehler beim Auslesen des Namens")
             return False
         planart = root.find("gml:featureMember/" + path_element + "/xplan:planArt", ns).text
+        """
+        Zusatzfelder
+        """
+        plannummer = None
+        try:
+            plannummer = root.find("gml:featureMember/" + path_element + "/xplan:nummer", ns).text
+        except:
+            pass
+        """
+        """
         geltungsbereich_element = root.find("gml:featureMember/" + path_element + "/xplan:raeumlicherGeltungsbereich/*", ns) 
         geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()  
         # Bauen eines GEOS-Geometrie Objektes aus dem GML
@@ -269,6 +294,10 @@ class XPlanung():
             # TODO testen ob mehrere zurückgeliefert werden ...
             if overwrite:
                 existing_plan.planart = planart
+                #
+                if plannummer:
+                    existing_plan.nummer = plannummer
+                #
                 existing_plan.geltungsbereich = geometry
                 existing_plan.xplan_gml = self.xml_string.strip()
                 existing_plan.xplan_gml_version = "6.0"
@@ -287,6 +316,8 @@ class XPlanung():
             plan = FPlan()    
         plan.name = name
         plan.planart = planart
+        if plannummer:
+                    plan.nummer = plannummer
         plan.geltungsbereich = geometry
         plan.save()
         plan.gemeinde.set(orgas)
@@ -393,8 +424,95 @@ class XPlanung():
             xplan_typ = ET.SubElement(xp_spez_externe_referenz, 'xplan:typ')
             xplan_typ.text = attachment.typ
             bplan_element.insert(index + 1, externe_referenz)
-        # TODO: Überschreiben der Inhalte des XML mit weiteren Infos aus der Datenbank!
-        # Datumswerte, Nummer, ... 
+        # TODO: Überschreiben der Inhalte des XML mit weiteren Infos aus der Datenbank! - Überprüfen der Reihenfolge anhand der Sequences in den XSDs
+        # Struktur:
+        # https://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanGML_BPlan.xsd
+        # https://xleitstelle.de/releases/objektartenkatalog_6_0
+        last_found_element_name = None
+        bplan_attribute_array = { "name": { "managed": True, "name": "name", "overwrite": False, "mandatory": True, "multiValue": False, "type": "string" },
+                        "nummer": { "managed": True, "name": "nummer", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        "internalId" : None,
+                        "beschreibung" : { "managed": True, "name": "beschreibung", "overwrite": True, "mandatory": True, "multiValue": False, "type": "string" },
+                        "kommentar" : None,
+                        "technHerstellDatum" : None,
+                        "genehmigungsDatum" : None,
+                        "untergangsDatum" : { "managed": True, "name": "untergangs_datum", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        "aendertPlan" : None,
+                        "wurdeGeandertVonPlan" : None,
+                        "aendertPlanBereich" : None,
+                        "wurdeGeaendertVonPlanBereich" : None,
+                        "erstellungsMassstab" : { "managed": True, "name": "massstab", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        "bezugshoehe" : None,
+                        "hoehenbezug" : None,
+                        "technischerPlanersteller" : None, 
+                        "raeumlicherGeltungsbereich" : None,
+                        "verfahrensMerkmale" : None,
+                        "hatGenerAttribut" : None,
+                        "externeReferenz" : None,
+                        "texte" : None,
+                        "begruendungsTexte" : None,
+                        "gemeinde" : None,
+                        "planaufstellendeGemeinde" : None,
+                        "plangeber" : None,
+                        "planArt" :  { "managed": True, "name": "planart", "overwrite": True, "mandatory": True, "multiValue": False, "type": "string" },
+                        "sonstPlanArt" : None,
+                        "rechtsstand" : None,
+                        "status" : None,
+                        "aenderungenBisDatum" : None,
+                        "aufstellungsbeschlussDatum" : { "managed": True, "name": "aufstellungsbeschluss_datum", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        "veraenderungssperre" : None,
+                        "auslegungsStartDatum" : None,
+                        "auslegungsEndDatum" : None,
+                        "traegerBeteiligungsStartDatum" : None,
+                        "traegerBeteiligungsEndDatum" : None,
+                        "satzungsbeschlussDatum" : { "managed": True, "name": "satzungsbeschluss_datum", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        "rechtsverordnungsDatum" : None,
+                        "inkrafttretensDatum" : { "managed": True, "name": "inkrafttretens_datum", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        "ausfertigungsDatum" : { "managed": True, "name": "ausfertigungs_datum", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        "staedtebaulicherVertrag" : { "managed": True, "name": "staedtebaulicher_vertrag", "overwrite": True, "mandatory": False, "multiValue": False, "type": "boolean" },
+                        "erschliessungsVertrag" : { "managed": True, "name": "erschliessungs_vertrag", "overwrite": True, "mandatory": False, "multiValue": False, "type": "boolean" },
+                        "durchfuehrungsVertrag" : { "managed": True, "name": "durchfuehrungs_vertrag", "overwrite": True, "mandatory": False, "multiValue": False, "type": "boolean" },
+                        "gruenordnungsplan" : { "managed": True, "name": "gruenordnungsplan", "overwrite": True, "mandatory": False, "multiValue": False, "type": "boolean" },
+                        "versionBauNVO" : None,
+                        "versionBauGB" : None,
+                        "versionSonstRechtsgrundlage" : None,
+                        "bereich" : None,
+                    }
+        # https://stackoverflow.com/questions/3763048/elementtree-element-index-look-up
+        # Check Dauer des Überschreibens 
+        #print(datetime.datetime.now())
+        for key, value in bplan_attribute_array.items():
+            try:
+                element = bplan_element.find("xplan:" + key, ns)
+                #print(type(element).__name__)
+                if type(element).__name__ == 'Element':
+                    last_found_element_name = key
+                if value['managed'] and value['multiValue'] == False:
+                    if element.text:
+                        print("Element *" + key + "* gefunden ;-) ")
+                    if str(getattr(bplan, value['name'])) != 'None':
+                        if value['overwrite'] == True:
+                            if value['type'] == "string":
+                                element.text = str(getattr(bplan, value['name']))
+                            if value['type'] == "boolean":
+                                element.text = str(getattr(bplan, value['name'])).lower()
+                            print("Element *" + key + " überschrieben!")
+            except:
+                print("Element *" + key + "* nicht gefunden!")
+                if value and value['managed'] and value['multiValue'] == False and value['type'] == "string":
+                    last_element_index = list(bplan_element).index(bplan_element.find("xplan:" + last_found_element_name, ns))
+                    # Füge neues Element hinter dem letzten bekannten ein
+                    # Wichtig: der namespace ist nötig, um im bplan_element das Objekt wiederzufinden. Wenn er fehlt klappt das sonst nicht!
+                    if str(getattr(bplan, value['name'])) != 'None':
+                        new_element = ET.Element('{' + xplan_namespace + '}' + key)
+                        if value['type'] == "string":
+                            new_element.text = str(getattr(bplan, value['name']))
+                        if value['type'] == "boolean":
+                            new_element.text = str(getattr(bplan, value['name'])).lower()
+                        bplan_element.insert(last_element_index + 1, new_element)
+                        last_found_element_name = key
+                        print("Element *" + key + ' eingefügt!')
+        #print(datetime.datetime.now())
         """
         <xplan:externeReferenz>
         <xplan:XP_SpezExterneReferenz>
@@ -457,8 +575,96 @@ class XPlanung():
             xplan_typ = ET.SubElement(xp_spez_externe_referenz, 'xplan:typ')
             xplan_typ.text = attachment.typ
             fplan_element.insert(index + 1, externe_referenz)
-        # TODO: Überschreiben der Inhalte des XML mit weiteren Infos aus der Datenbank!
-        # Datumswerte, Nummer, ... 
+        # TODO: Überschreiben der Inhalte des XML mit weiteren Infos aus der Datenbank! - Überprüfen der Reihenfolge anhand der Sequences in den XSDs
+        fplan_attribute_array = { "name": { "managed": True, "name": "name", "overwrite": False, "mandatory": True, "multiValue": False, "type": "string" },
+                        "nummer": { "managed": True, "name": "nummer", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        "internalId" : None,
+                        "beschreibung" : { "managed": True, "name": "beschreibung", "overwrite": True, "mandatory": True, "multiValue": False, "type": "string" },
+                        "kommentar" : None,
+                        "technHerstellDatum" : None,
+                        "genehmigungsDatum" : None,
+                        "untergangsDatum" : { "managed": True, "name": "untergangs_datum", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        "aendertPlan" : None,
+                        "wurdeGeandertVonPlan" : None,
+                        "aendertPlanBereich" : None,
+                        "wurdeGeaendertVonPlanBereich" : None,
+                        "erstellungsMassstab" : { "managed": True, "name": "massstab", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        "bezugshoehe" : None,
+                        "hoehenbezug" : None,
+                        "technischerPlanersteller" : None, 
+                        "raeumlicherGeltungsbereich" : None,
+                        "verfahrensMerkmale" : None,
+                        "hatGenerAttribut" : None,
+                        "externeReferenz" : None,
+                        "texte" : None,
+                        "begruendungsTexte" : None,
+                        "gemeinde" : None,
+                        "planaufstellendeGemeinde" : None,
+                        "plangeber" : None,
+                        "planArt" :  { "managed": True, "name": "planart", "overwrite": True, "mandatory": True, "multiValue": False, "type": "string" },
+                        "sonstPlanArt" : None,
+                        "sachgebiet": None,
+                        "verfahren": None,
+                        "rechtsstand" : None,
+                        "status" : None,
+                        #"aenderungenBisDatum" : None,
+                        "aufstellungsbeschlussDatum" : { "managed": True, "name": "aufstellungsbeschluss_datum", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        #"veraenderungssperre" : None,
+                        "auslegungsStartDatum" : None,
+                        "auslegungsEndDatum" : None,
+                        "traegerBeteiligungsStartDatum" : None,
+                        "traegerBeteiligungsEndDatum" : None,
+                        #"satzungsbeschlussDatum" : { "managed": True, "name": "satzungsbeschluss_datum", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        #"rechtsverordnungsDatum" : None,
+                        #"inkrafttretensDatum" : { "managed": True, "name": "inkrafttretens_datum", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        #"ausfertigungsDatum" : { "managed": True, "name": "ausfertigungs_datum", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        "aenderungenBisDatum": None,
+                        "entwurfsbeschlussDatum": None,
+                        "planbeschlussDatum": { "managed": True, "name": "planbeschluss_datum", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        "wirksamkeitsDatum": { "managed": True, "name": "wirksamkeits_datum", "overwrite": True, "mandatory": False, "multiValue": False, "type": "string" },
+                        #"staedtebaulicherVertrag" : { "managed": True, "name": "staedtebaulicher_vertrag", "overwrite": True, "mandatory": False, "multiValue": False, "type": "boolean" },
+                        #"erschliessungsVertrag" : { "managed": True, "name": "erschliessungs_vertrag", "overwrite": True, "mandatory": False, "multiValue": False, "type": "boolean" },
+                        #"durchfuehrungsVertrag" : { "managed": True, "name": "durchfuehrungs_vertrag", "overwrite": True, "mandatory": False, "multiValue": False, "type": "boolean" },
+                        #"gruenordnungsplan" : { "managed": True, "name": "gruenordnungsplan", "overwrite": True, "mandatory": False, "multiValue": False, "type": "boolean" },
+                        "versionBauNVO" : None,
+                        "versionBauGB" : None,
+                        "versionSonstRechtsgrundlage" : None,
+                        "bereich" : None,
+                    }
+        # Check Dauer des Überschreibens 
+        #print(datetime.datetime.now())
+        for key, value in fplan_attribute_array.items():
+            try:
+                element = fplan_element.find("xplan:" + key, ns)
+                #print(type(element).__name__)
+                if type(element).__name__ == 'Element':
+                    last_found_element_name = key
+                if value['managed'] and value['multiValue'] == False:
+                    if element.text:
+                        print("Element *" + key + "* gefunden ;-) ")
+                    if str(getattr(fplan, value['name'])) != 'None':
+                        if value['overwrite'] == True:
+                            if value['type'] == "string":
+                                element.text = str(getattr(fplan, value['name']))
+                            if value['type'] == "boolean":
+                                element.text = str(getattr(fplan, value['name'])).lower()
+                            print("Element *" + key + " überschrieben!")
+            except:
+                print("Element *" + key + "* nicht gefunden!")
+                if value and value['managed'] and value['multiValue'] == False and value['type'] == "string":
+                    last_element_index = list(fplan_element).index(fplan_element.find("xplan:" + last_found_element_name, ns))
+                    # Füge neues Element hinter dem letzten bekannten ein
+                    # Wichtig: der namespace ist nötig, um im fplan_element das Objekt wiederzufinden. Wenn er fehlt klappt das sonst nicht!
+                    if str(getattr(fplan, value['name'])) != 'None':
+                        new_element = ET.Element('{' + xplan_namespace + '}' + key)
+                        if value['type'] == "string":
+                            new_element.text = str(getattr(fplan, value['name']))
+                        if value['type'] == "boolean":
+                            new_element.text = str(getattr(fplan, value['name'])).lower()
+                        fplan_element.insert(last_element_index + 1, new_element)
+                        last_found_element_name = key
+                        print("Element *" + key + ' eingefügt!')
+        #print(datetime.datetime.now())
         """
         <xplan:externeReferenz>
         <xplan:XP_SpezExterneReferenz>

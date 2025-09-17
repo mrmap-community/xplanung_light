@@ -5,7 +5,7 @@ from django.contrib.gis.gdal import OGRGeometry
 from django.shortcuts import redirect
 from django.contrib.auth import login
 from xplanung_light.models import AdministrativeOrganization, BPlanSpezExterneReferenz, BPlan, FPlan, FPlanSpezExterneReferenz
-from xplanung_light.models import BPlanBeteiligung
+from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung
 import uuid
 import xml.etree.ElementTree as ET
 from django.urls import reverse
@@ -28,6 +28,7 @@ from xplanung_light.views.bplan import BPlanDetailView, BPlanListViewHtml
 from xplanung_light.views import views
 from django.utils import timezone
 import datetime
+from django.db.models import Count, F
 
 def get_bplan_attachment(request, pk):
     try:
@@ -78,6 +79,49 @@ def xplan_html(request, pk:int):
     else:
         return render(request, 'xplanung_light/xplan_list_html.html', {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
 
+def beteiligungen(request):
+
+    beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('bplan__name')).annotate(gemeinden=F('bplan__gemeinde__name'))
+    beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('fplan__name')).annotate(gemeinden=F('fplan__gemeinde__name'))
+    
+    beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene)
+    
+    
+    for offenlage in beteiligungen_plaene:
+        print(offenlage.xplan_name + " - " + offenlage.gemeinden)
+
+
+    orga_beteiligungen_bplaene = AdministrativeOrganization.objects.filter(bplan__beteiligungen__bekanntmachung_datum__lte=timezone.now()).filter(bplan__beteiligungen__end_datum__gte=timezone.now()).only('id', 'name').annotate(xplan_name=F('bplan__name'))
+    orga_beteiligungen_fplaene = AdministrativeOrganization.objects.filter(fplan__beteiligungen__bekanntmachung_datum__lte=timezone.now()).filter(fplan__beteiligungen__end_datum__gte=timezone.now()).only('id', 'name').annotate(xplan_name=F('fplan__name'))
+
+    orga_beteiligungen_plaene = orga_beteiligungen_bplaene.union(orga_beteiligungen_fplaene)
+                                                                 
+    for offenlage in orga_beteiligungen_plaene:
+        print("Gemeinde: " + offenlage.name + " - Plan: " + offenlage.xplan_name)
+
+    offengelegte_bplaene = BPlan.objects.filter(beteiligungen__end_datum__gte=timezone.now()).filter(beteiligungen__bekanntmachung_datum__lte=timezone.now()).only('geltungsbereich', 'name','id').annotate(sum_offenlage=Count('beteiligungen'))
+    offengelegte_fplaene = FPlan.objects.filter(beteiligungen__end_datum__gte=timezone.now()).filter(beteiligungen__bekanntmachung_datum__lte=timezone.now()).only('geltungsbereich', 'name','id').annotate(sum_offenlage=Count('beteiligungen'))
+    
+    
+    offengelegte_plaene = offengelegte_bplaene.union(offengelegte_fplaene)
+    
+    
+    print(offengelegte_plaene.query)
+    print(len(offengelegte_plaene))
+    
+    for offenlage in offengelegte_plaene:
+        print(offenlage.name + ": " + str(offenlage.sum_offenlage))
+
+    # Über Gebietskörperschaften
+    offenlagen_bplan = AdministrativeOrganization.objects.filter(bplan__beteiligungen__bekanntmachung_datum__lte=timezone.now()).filter(bplan__beteiligungen__end_datum__gte=timezone.now()).only('name')
+    #for offenlage in offenlagen_bplan:
+    print(offenlagen_bplan.query)
+    #    print(offenlage['n_bplan'])
+    #print(offenlagen_bplan)
+    #print(offengelegte_plaene.query)
+    print(len(offengelegte_plaene))
+    pass
+
 def ows_beteiligungen(request):
     """
     OWS für die laufenden Beteiligungsverfahren
@@ -95,7 +139,7 @@ def ows_beteiligungen(request):
         map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('beteiligungen-map')))
         # Versuch das SQL aus django generieren zu lassen
         #
-        offengelegte_plaene = BPlan.objects.filter(beteiligungen__end_datum__lte=timezone.now()).filter(beteiligungen__bekanntmachung_datum__gte=timezone.now()).only('geltungsbereich', 'name','id')
+        #offengelegte_plaene = BPlan.objects.filter(beteiligungen__end_datum__lte=timezone.now()).filter(beteiligungen__bekanntmachung_datum__gte=timezone.now()).only('geltungsbereich', 'name','id')
         #offengelegte_plaene = BPlan.objects.all().only('geltungsbereich', 'name','id')
         #print(str(offengelegte_plaene.query))
         # TODO - check warum es bei der Definition des SQL durch Django Unterschiede zum fest vorgegebenen SQL gibt ...
@@ -117,7 +161,7 @@ def ows_beteiligungen(request):
         """
         #map_file_string = map_file_string.replace('<datastring>', str(offengelegte_plaene.query).replace('CAST (AsEWKB(', '').replace(') AS BLOB)', ''))
         map_file_string = map_file_string.replace('<datastring_polygon>', datastring_polygon).replace('<datastring_point>', datastring_point)
-        print(map_file_string)
+        #print(map_file_string)
     map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
     dispatch_status = map.OWSDispatch(req)
@@ -166,6 +210,10 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
         print(wgs84_extent)
     map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
+    #try:
+    #    dispatch_status = map.OWSDispatch(req)
+    #except:
+    #    return HttpResponse("Fehler beim Mapserver aufgetreten!")
     dispatch_status = map.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
         if dispatch_status == mapscript.MS_DONE:

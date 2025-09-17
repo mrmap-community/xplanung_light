@@ -4,7 +4,7 @@ from django.utils import timezone
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
-from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization, Uvp
+from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization, Uvp, FPlanUvp
 from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung
 from xplanung_light.models import ContactOrganization
 from xplanung_light.validators import fplan_upload_file_validator, geotiff_raster_validator, bplan_content_validator, fplan_content_validator, bplan_upload_file_validator
@@ -301,6 +301,83 @@ class UvpForm(forms.ModelForm):
     class Meta:
        model = Uvp
        fields = ["uvp", "uvp_vp", "typ", "uvp_beginn_datum", "uvp_ende_datum"] # list of fields you want from model
+
+
+"""
+Formular zur Verwaltung von Informationen zu durchgeführten UVPs
+"""
+class FPlanUvpForm(forms.ModelForm):
+    #typ = forms.CharField(required=True, label="Typ des Anhangs")
+    #name = forms.CharField
+    #attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super(FPlanUvpForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        #self.fields['bekanntmachung_datum'].widget = forms.DateInput(
+        #    attrs={
+        #        'type': 'date',
+        #        'min': str((timezone.now() - timedelta(days=29200)).date()),
+        #        'max': str(timezone.now().date() + timedelta(days=30)),
+        #        }
+        #)
+        self.fields['uvp'].label = "Umweltprüfung durchgeführt"
+        #self.fields['uvp_vp'].label = "Vorprüfung durchgeführt"
+        self.fields['uvp'].help_text = "Umweltprüfung durchgeführt"
+        #self.fields['uvp_vp'].help_text = "Vorprüfung durchgeführt"
+
+        self.fields['uvp_beginn_datum'].label = "Beginns UP"
+        self.fields['uvp_ende_datum'].label = "Ende UP"
+        self.fields['uvp_beginn_datum'].help_text = "Datum des Beginns der Umweltprüfung"
+        self.fields['uvp_ende_datum'].help_text = "Datum des Beginns der Umweltprüfung"
+
+        self.fields['uvp_beginn_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date() + timedelta(days=30)),
+                }
+        )
+        self.fields['uvp_ende_datum'].widget = forms.DateInput(
+            attrs={
+                'type': 'date',
+                'min': str((timezone.now() - timedelta(days=29200)).date()),
+                'max': str(timezone.now().date() + timedelta(days=30)),
+                }
+        )
+        self.helper.layout = Layout(
+            Fieldset("Information zur Umweltprüfung",      
+                "typ",
+                "uvp_vp",
+                "uvp",
+                Fieldset(
+                    "Datumsfelder",
+                    Row(
+                        Column(
+                            "uvp_beginn_datum",
+                        ),
+                        Column(
+                            "uvp_ende_datum",
+                        ),
+                        #Column(
+                        #    "end_datum",
+                        #),
+                    ),
+                ),
+                #Fieldset(
+                #    "Weitere Informationen",
+                #    "publikation_internet",
+                #),
+            ),
+            Submit("submit", "Anlegen/Aktualisieren")
+        )
+        
+
+    class Meta:
+       model = FPlanUvp
+       fields = ["uvp", "typ", "uvp_beginn_datum", "uvp_ende_datum"] # list of fields you want from model
 
 
 class RegistrationForm(UserCreationForm):

@@ -125,6 +125,19 @@ class UvpTable(tables.Table):
         fields = ( "id", "uvp_vp", "uvp", "typ", "uvp_beginn_datum", "uvp_ende_datum", "edit", "delete")
 
 
+class FPlanUvpTable(tables.Table):
+
+    edit = tables.LinkColumn('fplan-uvp-update', verbose_name='', text='Bearbeiten', args=[A('fplan.id'), A('pk')], \
+                         orderable=False, empty_values=())
+    delete = tables.LinkColumn('fplan-uvp-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')], \
+                         orderable=False, empty_values=())
+    typ = tables.Column(verbose_name="Typ der Umweltprüfung")
+
+    class Meta:
+        model = Uvp
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ( "id", "uvp", "typ", "uvp_beginn_datum", "uvp_ende_datum", "edit", "delete")
+
 
 class BPlanTable(tables.Table):
     last_changed = tables.Column(verbose_name="Letzte Änderung")
@@ -214,6 +227,7 @@ class FPlanTable(tables.Table):
     zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
     count_attachments = tables.Column(verbose_name="Anlagen", accessor='count_attachments', orderable=False)
     count_beteiligungen = tables.Column(verbose_name="Beteiligungen", accessor='count_beteiligungen', orderable=False)
+    count_uvps = tables.Column(verbose_name="Umweltprüfungen", accessor='count_uvps', orderable=False)
     #count_uvps = tables.Column(verbose_name="UVPs", accessor='count_uvps', orderable=False)
     detail = tables.LinkColumn('fplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
                          orderable=False, empty_values=())
@@ -250,14 +264,14 @@ class FPlanTable(tables.Table):
             return format_html('<a href="' + reverse('fplanbeteiligung-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
         else:
             return format_html('<a href="' + reverse('fplanbeteiligung-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
-    """    
+        
     def render_count_uvps(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('uvp-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('fplan-uvp-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('uvp-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('fplan-uvp-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
         
-    """
+    
     """
     geojson = Column(
         accessor=A('geojson'),
@@ -269,7 +283,7 @@ class FPlanTable(tables.Table):
     class Meta:
         model = FPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "public", "aufstellungsbeschluss_datum", "nummer", "name","gemeinde", "planart", "count_attachments", "count_beteiligungen", "detail", "xplangml", "edit", "delete")
+        fields = ( "zoom", "last_changed", "public", "aufstellungsbeschluss_datum", "nummer", "name","gemeinde", "planart", "count_attachments", "count_beteiligungen", "count_uvps", "detail", "xplangml", "edit", "delete")
 
 
 

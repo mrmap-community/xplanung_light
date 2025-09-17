@@ -47,11 +47,12 @@ class XPlanRelationsCreateView(CreateView):
 
     def form_valid(self, form):
         planid = self.kwargs['planid']
-
+        #print("ID des Plans: " + str(planid) + " - TYP: " + str(self.reference_model) + " name lower: " + self.reference_model_name_lower)
         if self.reference_model_name_lower == 'bplan':
             form.instance.bplan = self.reference_model.objects.get(pk=planid)
         if self.reference_model_name_lower == 'fplan':
             form.instance.fplan = self.reference_model.objects.get(pk=planid)    
+        #print(form.instance)
         # TODO: check ob der Extent des Rasterbilds innerhalb der Abgrenzung der AdministrativeUnit liegt ...  
         return super().form_valid(form)
 
@@ -75,7 +76,7 @@ class XPlanRelationsListView(SingleTableView):
             context['bplanid'] = self.kwargs['planid']
         if self.reference_model_name_lower == 'fplan':
             # TODO alter to fplanid
-            context['bplanid'] = self.kwargs['planid']
+            context['fplanid'] = self.kwargs['planid']
         context[self.reference_model_name_lower] = self.reference_model.objects.get(pk=self.kwargs['planid'])
         return context
     
@@ -103,7 +104,9 @@ class XPlanRelationsUpdateView(UpdateView):
     def get_context_data(self, **kwargs):
         planid = self.kwargs['planid']
         context = super().get_context_data(**kwargs)
-        context['bplan'] = self.reference_model.objects.get(pk=planid)
+        
+        context[self.reference_model_name_lower] = self.reference_model.objects.get(pk=planid)
+
         return context
 
     def get_form(self, form_class=None):
@@ -132,7 +135,7 @@ class XPlanRelationsUpdateView(UpdateView):
             form.instance.bplan = self.reference_model.objects.get(pk=planid)
         if self.reference_model_name_lower == 'fplan':
             # TODO alter to fplan
-            form.instance.bplan = self.reference_model.objects.get(pk=planid)
+            form.instance.fplan = self.reference_model.objects.get(pk=planid)
         
         return super().form_valid(form)
 

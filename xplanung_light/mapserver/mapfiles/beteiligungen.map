@@ -12,12 +12,13 @@ MAP
     WEB	
         IMAGEPATH "/tmp/"
         METADATA
+            # TODO automatisch von Django setzen lassen
             "wms_feature_info_mime_type" "text/html"
-            OWS_TITLE "XPlan-light Laufende Beteiligungsverfahren"
-            OWS_ABSTRACT "XPlan-light Laufende Beteiligungsverfahren"
-            OWS_ONLINERESOURCE "<wms_onlineresource>"	
-            OWS_SRS "epsg:4326 epsg:25832 epsg:3857 epsg:900913"
-            ows_extent "-180 -90 180 90"
+            "ows_title" "XPlan-light Laufende Beteiligungsverfahren"
+            "ows_abstract" "XPlan-light Laufende Beteiligungsverfahren"
+            "ows_onlineresource" "<wms_onlineresource>"	
+            "ows_srs" "epsg:4326 epsg:25832 epsg:3857 epsg:900913"
+            "ows_extent" "-180 -90 180 90"
             "ows_keywordlist" "XPlanung-light"
             "ows_fees" "none"
             "ows_accessconstraints" "none"
@@ -66,30 +67,26 @@ MAP
         CONNECTIONTYPE OGR
         CONNECTION 	"db.sqlite3"
         #DEBUG 5
-       
         DATA "<datastring_polygon>"
-
         METADATA
-            OWS_TITLE       "Test Bauleitpläne in Offenlage"
-            OWS_SRS         "EPSG:4326 EPSG:25832"
-            OWS_ABSTRACT    "Bauleitpläne in Offenlage - Abstract"
-            "ows_extent"    "-180 -90 180 90"
-            "gml_include_items" "all"
-            #"wfs_include_items" "*"
-            "gml_featureid"     "plan_id" ## REQUIRED
-            "wfs_enable_request" "*"
-            #"gml_geometries" "geltungsbereich"
-            "gml_geometry_type" "MultiPolygon"
-            "gml_id_alias" "identifier"
-            #"wfs_featureid" "plan_id"
-            "gml_geometries" "geometry"
-	        "gml_geometry_type" "MultiPolygon"
-            #"gml_id_alias" "identifier"
-	        #"wfs_featureid" "id"
+            "ows_title"             "Test Bauleitpläne in Offenlage"
+            "ows_srs"               "EPSG:4326 EPSG:25832"
+            "ows_abstract"          "Bauleitpläne in Offenlage - Abstract"
+            "ows_extent"            "-180 -90 180 90"
+            "gml_include_items"     "all"
+            "gml_featureid"         "plan_id" ## REQUIRED
+            "wfs_enable_request"    "*"
+            "gml_geometry_type"     "MultiPolygon"
+            "gml_id_alias"          "identifier"
+            "gml_geometries"        "geometry"
+	        "gml_geometry_type"     "MultiPolygon"
         END
         PROJECTION
             "init=epsg:4326"
         END
+
+#einfacher Bebauungsplan
+#-----------------------------------------------------------------------------------        
         CLASS
 			NAME 'einfacher Bebauungsplan (Entwurf- und Beteiligungsphase)'
 			GROUP "default"
@@ -97,7 +94,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 0 0 255
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -105,7 +102,7 @@ MAP
 				COLOR 0 0 255
 				SIZE 8
 				OUTLINECOLOR 0 0 255
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -116,7 +113,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END 
 
 #qualifizierter Bebauungsplan
 #-----------------------------------------------------------------------------------
@@ -127,7 +124,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 0 0 139
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -135,7 +132,7 @@ MAP
 				COLOR 0 0 139
 				SIZE 8
 				OUTLINECOLOR 0 0 139
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -146,7 +143,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #Bebauungsplan nach § 13
 #-----------------------------------------------------------------------------------
@@ -157,7 +154,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 0 255 0
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -165,7 +162,7 @@ MAP
 				COLOR 0 255 0
 				SIZE 8
 				OUTLINECOLOR 0 255 0
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -176,7 +173,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #vorhabenbezogener Bebauungsplan
 #-----------------------------------------------------------------------------------
@@ -187,7 +184,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 166 166 166
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -195,7 +192,7 @@ MAP
 				COLOR 166 166 166
 				SIZE 8
 				OUTLINECOLOR 166 166 166
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -206,7 +203,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #Innenbereichssatzung
 #-----------------------------------------------------------------------------------
@@ -217,7 +214,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 130 110 255
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -225,7 +222,7 @@ MAP
 				COLOR 130 110 255
 				SIZE 8
 				OUTLINECOLOR 130 110 255
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -236,7 +233,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #Klarstellungssatzung
 #-----------------------------------------------------------------------------------
@@ -247,7 +244,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 255 0 0
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -255,7 +252,7 @@ MAP
 				COLOR 255 0 0
 				SIZE 8
 				OUTLINECOLOR 255 0 0
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -266,7 +263,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #Entwicklungssatzung
 #-----------------------------------------------------------------------------------
@@ -277,7 +274,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 255 170 80
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -285,7 +282,7 @@ MAP
 				COLOR 255 170 80
 				SIZE 8
 				OUTLINECOLOR 255 170 80
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -296,7 +293,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #Ergänzungssatzung
 #-----------------------------------------------------------------------------------
@@ -307,7 +304,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 255 170 180
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -315,7 +312,7 @@ MAP
 				COLOR 255 170 180
 				SIZE 8
 				OUTLINECOLOR 255 170 180
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -326,7 +323,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #Aussenbereichssatzung
 #-----------------------------------------------------------------------------------
@@ -337,7 +334,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 140 90 0
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -345,7 +342,7 @@ MAP
 				COLOR 140 90 0
 				SIZE 8
 				OUTLINECOLOR 140 90 0
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -356,7 +353,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #Bebauungsplan Innenentwicklung
 #-----------------------------------------------------------------------------------
@@ -367,7 +364,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 255 255 0
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -375,7 +372,7 @@ MAP
 				COLOR 255 255 0
 				SIZE 8
 				OUTLINECOLOR 255 255 0
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -386,7 +383,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #örtliche Bauvorschrift
 #-----------------------------------------------------------------------------------
@@ -397,7 +394,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 155 255 155
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -405,7 +402,7 @@ MAP
 				COLOR 155 255 155
 				SIZE 8
 				OUTLINECOLOR 155 255 155
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -416,7 +413,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #sonstiges
 #-----------------------------------------------------------------------------------
@@ -427,7 +424,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 255 0 255
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -435,7 +432,7 @@ MAP
 				COLOR 255 0 255
 				SIZE 8
 				OUTLINECOLOR 255 0 255
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -446,7 +443,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 #Flaechennutzungsplan
 #-----------------------------------------------------------------------------------
 		CLASS
@@ -456,7 +453,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 0 0 255
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -464,7 +461,7 @@ MAP
 				COLOR 0 0 255
 				SIZE 8
 				OUTLINECOLOR 0 0 255
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -475,7 +472,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS	
+		END	
 
 
                CLASS
@@ -485,7 +482,7 @@ MAP
                         STYLE
                                 WIDTH 3
                                 OUTLINECOLOR 0 0 255
-                        END #End of STYLE
+                        END
                         STYLE
                                 WIDTH 1
                                 SYMBOL 'schraffur'
@@ -493,7 +490,7 @@ MAP
                                 COLOR 0 0 255
                                 SIZE 8
                                 OUTLINECOLOR 0 0 255
-                        END #End of STYLE
+                        END
                         LABEL
                                 COLOR 5 10 90
                                 FONT "verdana"
@@ -504,7 +501,7 @@ MAP
                                 POSITION AUTO
                                 PARTIALS FALSE
                         END
-                END #End of CLASS
+                END
 
 #Gemeinsamer Flaechennutzungsplan
 #-----------------------------------------------------------------------------------
@@ -515,7 +512,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 255 0 0
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -523,7 +520,7 @@ MAP
 				COLOR 255 0 0
 				SIZE 8
 				OUTLINECOLOR 255 0 0
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -534,7 +531,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 		
 #Regionaler Flaechennutzungsplan
 #-----------------------------------------------------------------------------------
@@ -545,7 +542,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 0 255 0
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -553,7 +550,7 @@ MAP
 				COLOR 0 255 0
 				SIZE 8
 				OUTLINECOLOR 0 255 0
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -564,7 +561,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #Flaechennutzungsplan mit regionalpl. Festl.
 #-----------------------------------------------------------------------------------
@@ -575,7 +572,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 255 0 0
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -583,7 +580,7 @@ MAP
 				COLOR 255 0 0
 				SIZE 8
 				OUTLINECOLOR 255 0 0
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -594,7 +591,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #Flaechennutzungsplan nach § 13 BauGB
 #-----------------------------------------------------------------------------------
@@ -605,7 +602,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 0 255 255
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -613,7 +610,7 @@ MAP
 				COLOR 0 255 255
 				SIZE 8
 				OUTLINECOLOR 0 255 255
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -624,7 +621,7 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
 
 #sonstiges
 #-----------------------------------------------------------------------------------
@@ -635,7 +632,7 @@ MAP
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 255 0 255
-			END #End of STYLE
+			END
 			STYLE
 				WIDTH 1
 				SYMBOL 'schraffur'
@@ -643,7 +640,7 @@ MAP
 				COLOR 255 0 255
 				SIZE 8
 				OUTLINECOLOR 255 0 255
-			END #End of STYLE
+			END
    			LABEL
      				COLOR 5 10 90
      				FONT "verdana"
@@ -654,8 +651,10 @@ MAP
      				POSITION AUTO
      				PARTIALS FALSE
    			END
-		END #End of CLASS
+		END
     END
+    # Layer für die Clusterdarstellung - ist default, d.h. immer aktiv und kann nicht ausgeschaltet werden
+    # Im Capabilities-Dokument nicht vorhanden
     LAYER
         NAME "offenlagen_cluster"
         TYPE POINT
@@ -663,7 +662,6 @@ MAP
         CONNECTION 	"db.sqlite3"
         DATA "<datastring_point>"
         STATUS DEFAULT
-        #TEMPLATE "xplanung_light/mapserver/templates/offenlagen.html"
         METADATA
             "wms_title" "Offenlagen von Bauleitplänen gem. §4a (4) BauGB"
             "wms_srs" "EPSG:25832 EPSG:4326 EPSG:31466 EPSG:31467 EPSG:3857"
@@ -707,5 +705,4 @@ MAP
             END
         END
     END
-    
 END
