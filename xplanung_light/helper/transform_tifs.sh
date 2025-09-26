@@ -4,6 +4,7 @@
 #directory="/home/armin/GDI-RP/xplanung/testdaten/komserv/mendig/BPlan2/07137069_Mendig/raster2"
 # Script thinks that the tif has srs 31466!
 # It will destroy the reference, if the image is not given in 31466
+#bash transform_tifs.sh /home/armin/GDI-RP/xplanung/testdaten/komserv/rieden/BPlan2/07137093_Rieden/raster2
 directory=$1
 # Check if the target is not a directory
 if [ ! -d "$directory" ]; then

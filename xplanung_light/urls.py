@@ -3,6 +3,7 @@ from xplanung_light.views import views
 from django.contrib.auth import views as auth_views
 from xplanung_light.views.bplan import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView, BPlanDetailView, BPlanListViewHtml
 from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDeleteView, FPlanListView, FPlanDetailView, FPlanListViewHtml
+from xplanung_light.views.beteiligung import BeteiligungenListView
 from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views.bplanspezexternereferenz import BPlanSpezExterneReferenzCreateView, BPlanSpezExterneReferenzUpdateView, BPlanSpezExterneReferenzDeleteView, BPlanSpezExterneReferenzListView
@@ -106,7 +107,8 @@ urlpatterns = [
     path("contact/<int:pk>/delete/", ContactOrganizationDeleteView.as_view(), name="contact-delete"),
     # Offenlagen
     path("beteiligungen/map/", views.ows_beteiligungen, name="beteiligungen-map"),
-    path("beteiligungen/", views.beteiligungen, name="beteiligungen"),
+    #path("beteiligungen/", views.beteiligungen, name="beteiligungen"),
+    path("beteiligungen/", BeteiligungenListView.as_view(), name="beteiligungen"),
     # Dokumentation
     path('docs/', include('docs.urls')),
 ]

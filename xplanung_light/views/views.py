@@ -28,7 +28,7 @@ from xplanung_light.views.bplan import BPlanDetailView, BPlanListViewHtml
 from xplanung_light.views import views
 from django.utils import timezone
 import datetime
-from django.db.models import Count, F
+from django.db.models import Count, F, Value
 
 def get_bplan_attachment(request, pk):
     try:
@@ -81,14 +81,14 @@ def xplan_html(request, pk:int):
 
 def beteiligungen(request):
 
-    beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('bplan__name')).annotate(gemeinden=F('bplan__gemeinde__name'))
-    beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('fplan__name')).annotate(gemeinden=F('fplan__gemeinde__name'))
+    beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('bplan__name')).annotate(gemeinden=F('bplan__gemeinde__name')).annotate(plantyp=Value('BPlan'))
+    beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('fplan__name')).annotate(gemeinden=F('fplan__gemeinde__name')).annotate(plantyp=Value('FPlan'))    
+    beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
     
-    beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene)
-    
+    return render(request, 'xplanung_light/beteiligungen.html', {'beteiligungen': beteiligungen_plaene})
     
     for offenlage in beteiligungen_plaene:
-        print(offenlage.xplan_name + " - " + offenlage.gemeinden)
+        print(str(offenlage.end_datum) + ": " +offenlage.xplan_name + " - " + offenlage.gemeinden)
 
 
     orga_beteiligungen_bplaene = AdministrativeOrganization.objects.filter(bplan__beteiligungen__bekanntmachung_datum__lte=timezone.now()).filter(bplan__beteiligungen__end_datum__gte=timezone.now()).only('id', 'name').annotate(xplan_name=F('bplan__name'))
@@ -120,7 +120,6 @@ def beteiligungen(request):
     #print(offenlagen_bplan)
     #print(offengelegte_plaene.query)
     print(len(offengelegte_plaene))
-    pass
 
 def ows_beteiligungen(request):
     """

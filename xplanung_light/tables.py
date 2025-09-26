@@ -75,6 +75,18 @@ class FPlanSpezExterneReferenzTable(tables.Table):
         template_name = "django_tables2/bootstrap5.html"
         fields = ( "id", "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
 
+class BeteiligungenTable(tables.Table):
+    # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
+    end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='End Datum')
+    xplan_name = tables.columns.TemplateColumn(template_code=u"""{{ record.xplan_name }}""", orderable=True, verbose_name='Name des Plans')
+    plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
+    gemeinde = tables.columns.TemplateColumn(template_code=u"""{{ record.bplan.gemeinde }}""", orderable=True, verbose_name='Gemeinden')
+    #gemeinde = tables.columns.TemplateColumn(template_code=u"""{{ record.gemeinde }}""", orderable=True, verbose_name='Gemeinde')
+
+    class Meta:
+        #model = BPlanBeteiligung
+        template_name = "django_tables2/bootstrap5.html"
+        #fields = ("end_datum", "plantyp")
 
 class BPlanBeteiligungTable(tables.Table):
 
@@ -132,6 +144,9 @@ class FPlanUvpTable(tables.Table):
     delete = tables.LinkColumn('fplan-uvp-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')], \
                          orderable=False, empty_values=())
     typ = tables.Column(verbose_name="Typ der Umweltprüfung")
+    #uvp = tables.Column(verbose_name="Umweltprüfung durchgeführt")
+    uvp_beginn_datum = tables.Column(verbose_name="Beginn Umweltprüfung")
+    uvp_ende_datum = tables.Column(verbose_name="Ende Umweltprüfung")
 
     class Meta:
         model = Uvp

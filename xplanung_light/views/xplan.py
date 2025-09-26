@@ -23,7 +23,7 @@ from django.urls import reverse_lazy, reverse
 from xplanung_light.helper.xplanung import XPlanung
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
-from django.db.models import Subquery, OuterRef
+from django.db.models import Subquery, OuterRef, Q
 from django.contrib.gis.db.models import Extent
 from django.http import FileResponse
 import json
@@ -33,6 +33,7 @@ from django.core.exceptions import PermissionDenied
 import uuid
 import xml.etree.ElementTree as ET
 from django.conf import settings
+from django.utils import timezone
 
 def qualify_gml_geometry(gml_from_db:str):
     ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
@@ -254,30 +255,102 @@ class XPlanListView(FilterView, SingleTableView):
         #print(context["markers"])
         return context
 
+    # https://www.geeksforgeeks.org/python/filter-objects-with-count-annotation-in-django/
+
     def get_queryset(self):
         if self.request.user.is_superuser:
             if self.model_name_lower == 'bplan':
-                qs = self.model.objects.prefetch_related('gemeinde').distinct().annotate(last_changed=Subquery(
-                    self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-                )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True)).annotate(count_uvps=Count('uvps', distinct=True))
+                qs = self.model.objects.prefetch_related('gemeinde').distinct().annotate(
+                    last_changed=Subquery(
+                        self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                    )
+                ).order_by(
+                    '-last_changed'
+                ).annotate(
+                    bbox=Envelope("geltungsbereich")
+                ).annotate(
+                    count_attachments=Count('attachments', distinct=True)
+                ).annotate(
+                    count_beteiligungen=Count('beteiligungen', distinct=True)
+                ).annotate(
+                    count_current_beteiligungen=Count(
+                        'beteiligungen', distinct=True, filter=(
+                            Q(beteiligungen__end_datum__gte=timezone.now()) & Q(beteiligungen__start_datum__lte=timezone.now())
+                        )
+                    )
+                ).annotate(
+                    count_uvps=Count('uvps', distinct=True)
+                )
             if self.model_name_lower == 'fplan':
-                qs = self.model.objects.prefetch_related('gemeinde').distinct().annotate(last_changed=Subquery(
-                    self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-                )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True)).annotate(count_uvps=Count('uvps', distinct=True))
+                qs = self.model.objects.prefetch_related('gemeinde').distinct().annotate(
+                    last_changed=Subquery(
+                        self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                    )
+                ).order_by('-last_changed').annotate(
+                    bbox=Envelope("geltungsbereich")
+                ).annotate(
+                    count_attachments=Count('attachments', distinct=True)
+                ).annotate(
+                    count_beteiligungen=Count('beteiligungen', distinct=True)
+                ).annotate(
+                    count_current_beteiligungen=Count(
+                        'beteiligungen', distinct=True, filter=(
+                            Q(beteiligungen__end_datum__gte=timezone.now()) & Q(beteiligungen__start_datum__lte=timezone.now())
+                        )
+                    )
+                ).annotate(
+                    count_uvps=Count('uvps', distinct=True)
+                )
         else:
             # admin für alle Gemeinden eines Plans
             if self.model_name_lower == 'bplan':
-                qs = self.model.objects.filter(gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
-                # user ist Organisation zugewiesen - ohen id_admin=True
-                #qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
-                    self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-                )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True)).annotate(count_uvps=Count('uvps', distinct=True))
+                qs = self.model.objects.filter(
+                    gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True
+                ).distinct().prefetch_related('gemeinde').annotate(
+                    last_changed=Subquery(
+                        # user ist Organisation zugewiesen - ohen id_admin=True
+                        #qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+                        self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                    )
+                ).order_by('-last_changed').annotate(
+                    bbox=Envelope("geltungsbereich")
+                ).annotate(
+                    count_attachments=Count('attachments', distinct=True)
+                ).annotate(
+                    count_beteiligungen=Count('beteiligungen', distinct=True)
+                ).annotate(
+                    count_current_beteiligungen=Count(
+                        'beteiligungen', distinct=True, filter=(
+                            Q(beteiligungen__end_datum__gte=timezone.now()) & Q(beteiligungen__start_datum__lte=timezone.now())
+                        )
+                    )
+                ).annotate(
+                    count_uvps=Count('uvps', distinct=True)
+                )
             if self.model_name_lower == 'fplan':
-                qs = self.model.objects.filter(gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
-                # user ist Organisation zugewiesen - ohen id_admin=True
-                #qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
-                    self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-                )).order_by('-last_changed').annotate(bbox=Envelope("geltungsbereich")).annotate(count_attachments=Count('attachments', distinct=True)).annotate(count_beteiligungen=Count('beteiligungen', distinct=True)).annotate(count_uvps=Count('uvps', distinct=True))
+                qs = self.model.objects.filter(
+                    gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True
+                ).distinct().prefetch_related('gemeinde').annotate(
+                    last_changed=Subquery(
+                        # user ist Organisation zugewiesen - ohen id_admin=True
+                        #qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+                        self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                    )
+                ).order_by('-last_changed').annotate(
+                    bbox=Envelope("geltungsbereich")
+                ).annotate(
+                    count_attachments=Count('attachments', distinct=True)
+                ).annotate(
+                    count_beteiligungen=Count('beteiligungen', distinct=True)
+                ).annotate(
+                    count_current_beteiligungen=Count(
+                        'beteiligungen', distinct=True, filter=(
+                            Q(beteiligungen__end_datum__gte=timezone.now()) & Q(beteiligungen__start_datum__lte=timezone.now())
+                        )
+                    )
+                ).annotate(
+                    count_uvps=Count('uvps', distinct=True)
+                )
         self.filter_set = self.filterset_class(self.request.GET, queryset=qs)
         return self.filter_set.qs
 
