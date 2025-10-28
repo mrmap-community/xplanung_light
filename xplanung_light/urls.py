@@ -3,7 +3,8 @@ from xplanung_light.views import views
 from django.contrib.auth import views as auth_views
 from xplanung_light.views.bplan import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView, BPlanDetailView, BPlanListViewHtml
 from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDeleteView, FPlanListView, FPlanDetailView, FPlanListViewHtml
-from xplanung_light.views.beteiligung import BeteiligungenListView
+from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView
+from xplanung_light.views.beteiligungbeitrag import BPlanBeteiligungBeitragCreateView, BPlanBeteiligungBeitragListView, BPlanBeteiligungBeitragDeleteView
 from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views.bplanspezexternereferenz import BPlanSpezExterneReferenzCreateView, BPlanSpezExterneReferenzUpdateView, BPlanSpezExterneReferenzDeleteView, BPlanSpezExterneReferenzListView
@@ -49,6 +50,10 @@ urlpatterns = [
     path("bplan/<int:planid>/beteiligung/", BPlanBeteiligungListView.as_view(), name="bplanbeteiligung-list"),
     path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(), name="bplanbeteiligung-update"),
     path("bplan/<int:planid>/beteiligung/<int:pk>/delete/", BPlanBeteiligungDeleteView.as_view(), name="bplanbeteiligung-delete"),
+    # BPlan Beteiligung Beitrag
+    path("bplan/<int:planid>/beteiligung/<int:pk>/beitrag/create/", BPlanBeteiligungBeitragCreateView.as_view(), name="bplanbeteiligungbeitrag-create"),
+    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/", BPlanBeteiligungBeitragListView.as_view(), name="bplanbeteiligungbeitrag-list"),
+    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<int:pk>/delete/", BPlanBeteiligungBeitragDeleteView.as_view(), name="bplanbeteiligungbeitrag-delete"),
     # BPlan UVP Info
     path("bplan/<int:planid>/uvp/create/", UvpCreateView.as_view(), name="uvp-create"),
     path("bplan/<int:planid>/uvp/", UvpListView.as_view(), name="uvp-list"),
@@ -88,8 +93,13 @@ urlpatterns = [
     path("fplan/<int:planid>/uvp/<int:pk>/delete/", FPlanUvpDeleteView.as_view(), name="fplan-uvp-delete"),
     # Organisationen
     path("organization/<int:pk>/ows/", views.ows, name="ows"),
+    # Laufende Beteiligungsverfahren für Gebietskörperschaft
+    #path("organization/<int:pk>/beteiligungen/", views.ows, name="orga-beteiligungen-list"),
+
     # Organisations XPlan-Liste für GetFeatureInfo - hier müssen alle Plantypen zurückgeliefert werden können
     path("organization/<int:pk>/xplan/html/", views.xplan_html, name="xplan-list-html"),
+    # Liste der aktuell laufeden Beteiligungsverfahren in einer Gebietskörperschaft 
+    path("organization/<int:pk>/beteiligungen/", BeteiligungenOrgaListView.as_view(), name="organization-beteiligungen-list"),
     # 
     path("organization/publishing/", AdministrativeOrganizationPublishingListView.as_view(), name="organization-publishing-list"),
     url(

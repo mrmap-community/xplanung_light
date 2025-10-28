@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization, Uvp, FPlanUvp
 from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung
 from xplanung_light.models import ContactOrganization
+from xplanung_light.models import BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang
 from xplanung_light.validators import fplan_upload_file_validator, geotiff_raster_validator, bplan_content_validator, fplan_content_validator, bplan_upload_file_validator
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Row, Column, Field
@@ -1184,3 +1185,138 @@ class AdministrativeOrganizationUpdateForm(ModelForm):
         model = AdministrativeOrganization
 
         fields = ["coat_of_arms_url", "published_data_license", "published_data_license_source_note", "published_data_accessrights", "published_data_rights", ]
+
+
+"""
+Neues Formular zur Editierung der Beteiligungsbeiträge - basierend auf django-formset
+https://django-formset.fly.dev/model-forms/#
+"""
+
+from django.forms.models import ModelForm
+#from formset.widgets import DateInput, Selectize, UploadedFileInput
+#from formset.widgets.richtext import RichTextarea
+from formset.richtext.widgets import RichTextarea
+from django.forms import widgets, fields
+from xplanung_light.models import BPlanBeteiligungBeitrag
+from formset.fields import Activator
+from formset.renderers import ButtonVariant
+from formset.widgets import Button
+from formset.widgets import UploadedFileInput
+
+from formset.collection import FormCollection
+from formset.renderers.bootstrap import FormRenderer
+#from formset.views import FormCollectionView
+from django.forms.fields import IntegerField
+from django.forms.widgets import HiddenInput
+
+"""
+Klasse für das Formular zum Hochladen der Anhänge eines Beteiligungsbeitrags
+https://django-formset.fly.dev/model-collections/
+Das Model wird nur für das schon vorgegebene id Feld genutzt.
+Die url lautet in dem Fall: /plan/<int:planid/beteiligung/<int;pk>/beitrag/create/
+"""
+class BPlanBeteiligungForm(ModelForm):
+    id = IntegerField(
+        required=False,
+        widget=HiddenInput,
+    )
+    """
+    submit = Activator(
+        label="Erstellen",
+        widget=Button(
+            action='disable -> spinner -> delay(200) -> submit -> reload !~ scrollToError',
+            button_variant=ButtonVariant.PRIMARY,
+            icon_path='formset/icons/send.svg',
+        ),
+    )
+    """
+
+    class Meta:
+        model = BPlanBeteiligung
+        fields = ['id']
+
+
+"""
+Einfache ModelForm für das BPlanBeteiligungBeitragBeitrag-Objekt
+Zunächst nur soll nur das Feld beschrebung editierbar sein.
+Und das über ein RichtText-widget - mal sehen, ob das so ok ist - ggf. muessen wir das Model-Field ändern.
+"""
+class BPlanBeteiligungBeitragForm(ModelForm):
+    
+    class Meta:
+        model = BPlanBeteiligungBeitrag
+        fields = ['beschreibung']
+        widgets = {
+            #'beschreibung': widgets.Textarea(attrs={'cols': '80', 'rows': '3'}),
+            'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+        }
+
+
+"""
+Einfache ModelForm für das BPlanBeteiligungBeitragAnhang-Objekt
+"""
+class BeteiligungBeitragAnhangForm(ModelForm):
+    id = IntegerField(
+        required=False,
+        widget=HiddenInput,
+    )
+    
+    attachment = fields.FileField(
+        label="Anhang",
+        widget=UploadedFileInput(attrs={
+            'max-size': 1024 * 1024,
+        }),
+        help_text="Please do not upload files larger than 1MB",
+        required=True,
+    )
+    
+    class Meta:
+        model = BPlanBeteiligungBeitragAnhang
+        fields = ['id', 'name', 'typ', 'attachment']
+
+
+"""
+Collection für die über ein ForeignKey mit dem BPlanBeteiligungBeitrag-Objekt verbundenen BPlanBeteiligungBeitragAnhang-Objekte.
+"""
+class BeteiligungBeitragAnhangCollection(FormCollection):
+    legend = "Anlagen"
+    add_label = "Anlage hinzufügen"
+    related_field = 'beitrag'
+    attachment = BeteiligungBeitragAnhangForm()
+    #beitrag = BPlanBeteiligungBeitragCollection()
+    min_siblings = 0
+    max_siblings = 4
+
+    def retrieve_instance(self, data):
+        if data := data.get('attachment'):
+            try:
+                return self.instance.attachment.get(id=data.get('id') or 0)
+            except (AttributeError, BPlanBeteiligungBeitragAnhang.DoesNotExist, ValueError):
+                return BPlanBeteiligungBeitragAnhang(name=data.get('name'), attachment=data.get('attachment'), beitrag=self.instance)
+
+
+"""
+Collection für die über ein ForeignKey mit dem BPlanBeteiligung-Objekt verbundenen BPlanBeteiligungBeitrag-Objekte.
+"""
+class BPlanBeteiligungBeitragCollection(FormCollection):
+    legend = "Beitrag"
+    add_label = "Beitrag hinzufügen"
+    related_field = 'bplan_beteiligung' # hier wird der releted_name des verbundenen Objketes genutzt!
+    beitrag = BPlanBeteiligungBeitragForm()
+    attachments = BeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+    min_siblings = 1
+    max_siblings = 1
+
+    def retrieve_instance(self, data):
+        if data := data.get('beitrag'):
+            try:
+                return self.instance.beitrag.get(id=data.get('id') or 0)
+            except (AttributeError, BPlanBeteiligungBeitrag.DoesNotExist, ValueError):
+                #print("BPlanBeteiligungBeitrag nicht gefunden!")
+                return BPlanBeteiligungBeitrag(beschreibung=data.get('beschreibung'), bplan_beteiligung=self.instance)
+
+
+class BPlanBeteiligungCollection(FormCollection):
+    default_renderer = FormRenderer(field_css_classes='mb-3')
+    bplan_beteiligung = BPlanBeteiligungForm()
+    beitrag = BPlanBeteiligungBeitragCollection()

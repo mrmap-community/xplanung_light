@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'docs',
     'organizations',
+    'formset',
 ]
 
 MIDDLEWARE = [

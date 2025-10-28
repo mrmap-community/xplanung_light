@@ -66,18 +66,26 @@ def xplan_html(request, pk:int):
     #bplan_list = BPlan.objects.filter(gemeinde=orga)
     #print(bplaene)
     print(request.GET)
-    if len(request.GET['bplan_id__in']) == 0:
+    if 'bplan_id__in' in request.GET.keys():
+        if len(request.GET['bplan_id__in']) == 0:
+            bplan_filter = []
+        else:
+            bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.filter(gemeinde=orga))
+    else:
         bplan_filter = []
+    if 'fplan_id__in' in request.GET.keys():    
+        if len(request.GET['fplan_id__in']) == 0:
+            fplan_filter = []
+        else:
+            fplan_filter = FPlanIdFilter(request.GET, queryset=FPlan.objects.filter(gemeinde=orga))
     else:
-        bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.filter(gemeinde=orga))
-    if len(request.GET['fplan_id__in']) == 0:
         fplan_filter = []
-    else:
-        fplan_filter = FPlanIdFilter(request.GET, queryset=FPlan.objects.filter(gemeinde=orga))
     if bplan_filter == [] and fplan_filter == []:
         return render(request, 'xplanung_light/empty_feature_info.html')
     else:
         return render(request, 'xplanung_light/xplan_list_html.html', {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
+    
+
 
 def beteiligungen(request):
 

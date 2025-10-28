@@ -1,0 +1,14 @@
+{% extends "xplanung_light/layout.html" %}
+{% load leaflet_tags %}
+{% block title %}
+    Liste der aktuellen Bauleitplanbeteiligungsverfahren in {{ gemeinde.name }}
+{% endblock %}
+{% load render_table from django_tables2 %}
+{% block content %}
+Gemeinde: {{ gemeinde.name }}
+<!-- add boostrap form css - if wished -->
+{% load django_bootstrap5 %}
+<!-- https://stackoverflow.com/questions/44572682/dynamically-set-per-page-in-django-tables2 -->
+{% render_table table %}
+<p>Anzahl: {{ object_list.count }}</p>
+{% endblock %}

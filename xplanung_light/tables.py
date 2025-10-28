@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import A
 from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp
-from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz
+from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz, BPlanBeteiligungBeitrag
 from django.urls import reverse
 from django.utils.html import format_html
 from django.contrib.gis.gdal import OGRGeometry
@@ -75,18 +75,39 @@ class FPlanSpezExterneReferenzTable(tables.Table):
         template_name = "django_tables2/bootstrap5.html"
         fields = ( "id", "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
 
+
 class BeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
     end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='End Datum')
     xplan_name = tables.columns.TemplateColumn(template_code=u"""{{ record.xplan_name }}""", orderable=True, verbose_name='Name des Plans')
     plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
-    gemeinde = tables.columns.TemplateColumn(template_code=u"""{{ record.bplan.gemeinde }}""", orderable=True, verbose_name='Gemeinden')
+    gemeinde = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}{{ record.bplan.gemeinde.all|join:"; " }}{% endif%}{% if record.plantyp == "FPlan"%}{{ record.fplan.gemeinde.all|join:"; " }}{% endif%}""", orderable=False, verbose_name='Gemeinden')
+    #gemeinde1 = tables.Column(verbose_name='Gebietskörperschaften')
     #gemeinde = tables.columns.TemplateColumn(template_code=u"""{{ record.gemeinde }}""", orderable=True, verbose_name='Gemeinde')
+
 
     class Meta:
         #model = BPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
         #fields = ("end_datum", "plantyp")
+
+
+class BeteiligungenOrgaTable(tables.Table):
+    # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
+    end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='End Datum')
+    typ =  tables.columns.TemplateColumn(template_code=u"""{{ record.get_typ_display }}""", orderable=True, verbose_name='Art des Verfahrens')
+    xplan_name = tables.columns.TemplateColumn(template_code=u"""{{ record.xplan_name }}""", orderable=True, verbose_name='Name des Plans')
+    plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
+    #gemeinde = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}{{ record.bplan.gemeinde.all|join:"; " }}{% endif%}{% if record.plantyp == "FPlan"%}{{ record.fplan.gemeinde.all|join:"; " }}{% endif%}""", orderable=False, verbose_name='Gemeinden')
+    #gemeinde1 = tables.Column(verbose_name='Gebietskörperschaften')
+    #gemeinde = tables.columns.TemplateColumn(template_code=u"""{{ record.gemeinde }}""", orderable=True, verbose_name='Gemeinde')
+    
+
+    class Meta:
+        #model = BPlanBeteiligung
+        template_name = "django_tables2/bootstrap5.html"
+        #fields = ("end_datum", "plantyp")
+
 
 class BPlanBeteiligungTable(tables.Table):
 
@@ -98,12 +119,22 @@ class BPlanBeteiligungTable(tables.Table):
     #download = tables.LinkColumn('bplanbeteiligung-download', text='Download', args=[A('pk')], \
     #                     orderable=False, empty_values=())
     #name = tables.Column(verbose_name="Name/Bezeichnung")
+    #comments = tables.LinkColumn('bplanbeteiligung-update', verbose_name='', text='Beiträge/Kommentare', args=[A('bplan.id'), A('pk')], \
+    #                     orderable=False, empty_values=())
+    count_comments = tables.Column(verbose_name="Kommentare/Beträge", accessor='count_comments', orderable=False)
     typ = tables.Column(verbose_name="Art der Beteiligung")
 
     class Meta:
         model = BPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "edit", "delete")
+        fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "count_comments", "edit", "delete")
+
+    def render_count_comments(self, value, record):
+        if value == 0:
+            return format_html('<a href="' + reverse('bplanbeteiligungbeitrag-create', kwargs={'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
+        else:
+            return format_html('<a href="' + reverse('bplanbeteiligungbeitrag-list', kwargs={'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
+
 
 class FPlanBeteiligungTable(tables.Table):
 
@@ -121,6 +152,18 @@ class FPlanBeteiligungTable(tables.Table):
         model = FPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
         fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "edit", "delete")
+
+
+class BPlanBeteiligungBeitragTable(tables.Table):
+
+    delete = tables.LinkColumn('bplanbeteiligungbeitrag-delete', verbose_name='', text='Löschen', args=[A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], \
+                         orderable=False, empty_values=())
+    
+    class Meta:
+        model = BPlanBeteiligungBeitrag
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ( "id", "beschreibung", "delete")
+
 
 
 class UvpTable(tables.Table):

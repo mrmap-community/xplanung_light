@@ -20,3 +20,4 @@ django-docs==0.3.3
 sphinx-rtd-theme==3.0.2
 Pillow==11.3.0
 django-organizations==2.5.0
+django-formset==1.7.9

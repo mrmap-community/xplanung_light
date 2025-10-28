@@ -515,15 +515,19 @@ Die folgenden Klassen dienen der Abbildung eines Beteiligungsprozesses - zuminde
 die sich in der Offenlage befindlichen Pläne zu kommentieren, sowohl durch den Bürger, als auch durch eine andere Behörde.
 Die Frage ist aber, ob es für diese Zwecke nicht schon speziell entwickelte Software gibt, die schon länger eingesetzt wird.
 """
-"""
+
 class BPlanBeteiligungBeitrag(GenericMetadata):
 
-    titel = models.CharField(null=False, blank=False, verbose_name="Titel des Beitrags")
-    beschreibung = models.TextField(null=False, blank=False, verbose_name="Beitrag (Textform)")
-    bplan = HistoricForeignKey(BPlanBeteiligung, on_delete=models.CASCADE, verbose_name="BPlanBeteiligung", help_text="BPlanBeteiligung", related_name="comments")
+    #titel = models.CharField(null=False, blank=False, verbose_name="Titel des Beitrags")
+    beschreibung = models.TextField(null=False, blank=False, verbose_name="Beitrag / Kommentar (Textform)")
+    bplan_beteiligung = HistoricForeignKey(BPlanBeteiligung, on_delete=models.CASCADE, verbose_name="BPlanBeteiligung", help_text="BPlanBeteiligung", related_name="comments")
     # tags?
-    public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Öffentlich einsehbar")
-    considered = models.BooleanField(null=False, blank=False, default=False, verbose_name="Wurde in Abwägung einbezogen")
+    # bplan attachment - manytomany - bezieht sich auf ... spezielle Anlagen
+
+    #attachment = models.FileField(null = True, blank = True, upload_to='uploads', verbose_name="Dokument (PDF)")
+
+    #public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Öffentlich einsehbar")
+    #onsidered = models.BooleanField(null=False, blank=False, default=False, verbose_name="Wurde in Abwägung einbezogen")
     history = HistoricalRecords()
 
 
@@ -539,12 +543,14 @@ class BPlanBeteiligungBeitragAnhang(GenericMetadata):
         (KARTE, "Karte/Skizze"),
     ]
 
-    name = models.CharField(null=False, blank=False)
-    beitrag = HistoricForeignKey(BPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zur Kommetierung", help_text="Dateianhänge für die Kommentierung", related_name="attachments")
+    name = models.CharField(null=False, blank=False, max_length=256)
+    beitrag = HistoricForeignKey(BPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zum Beitrag / Kommentar", help_text="Dateianhänge zum Beitrag / Kommentar", related_name="attachments")
     typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_ATTACHMENT_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des Anhangs', help_text="Typ / Inhalt des Anhngs zum Kommentar", db_index=True)
     attachment = models.FileField(null = True, blank = True, upload_to='uploads', verbose_name="Dokument")
+    history = HistoricalRecords()
 
 
+"""
 class BPlanBeteiligungBeitragAntwort():
     pass
 """
