@@ -131,9 +131,9 @@ class BPlanBeteiligungTable(tables.Table):
 
     def render_count_comments(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('bplanbeteiligungbeitrag-create', kwargs={'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('bplanbeteiligungbeitrag-create', kwargs={'planid': record.bplan.id, 'pk': record.id}) + '">' +  str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('bplanbeteiligungbeitrag-list', kwargs={'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('bplanbeteiligungbeitrag-list', kwargs={'planid': record.bplan.id, 'beteiligung': record.id}) + '">' +  str(value) + '</a>')
 
 
 class FPlanBeteiligungTable(tables.Table):
