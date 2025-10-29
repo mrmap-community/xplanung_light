@@ -1215,7 +1215,7 @@ https://django-formset.fly.dev/model-collections/
 Das Model wird nur für das schon vorgegebene id Feld genutzt.
 Die url lautet in dem Fall: /plan/<int:planid/beteiligung/<int;pk>/beitrag/create/
 """
-class BPlanBeteiligungForm(ModelForm):
+class BPlanBeteiligungFormFormset(ModelForm):
     id = IntegerField(
         required=False,
         widget=HiddenInput,
@@ -1318,5 +1318,5 @@ class BPlanBeteiligungBeitragCollection(FormCollection):
 
 class BPlanBeteiligungCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
-    bplan_beteiligung = BPlanBeteiligungForm()
+    bplan_beteiligung = BPlanBeteiligungFormFormset()
     beitrag = BPlanBeteiligungBeitragCollection()
