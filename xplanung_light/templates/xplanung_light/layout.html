@@ -26,6 +26,7 @@
     <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"> -->
     <!-- https://django-formset.fly.dev/installation/ -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" crossorigin="anonymous">
+    <!-- <link rel="stylesheet" type="text/css" href="{% static 'xplanung_light/site.css' %}"/> -->
 </head>
 <body>
     <!-- https://getbootstrap.com/docs/5.0/components/navbar/ -->
@@ -54,9 +55,12 @@
                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
                   <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'organization-list' %}">Meine Gebietskörperschaften</a></li>
                   <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'contact-list' %}">Meine Kontaktstellen</a></li>
-                  <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'organization-publishing-list' %}">Übersicht Schnittstellen</a></li>
+                  <!-- <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'organization-publishing-list' %}">Übersicht Schnittstellen</a></li> -->
                   <!--<li><hr class="dropdown-divider"></li>-->
                 </ul>
+              </li>
+              <li class="nav-item">
+                 <a class="nav-link" aria-current="page" href="{% url 'organization-publishing-list' %}">Liste / Übersicht</a>
               </li>
               {% if user.is_superuser %}
               <li class="nav-item">
@@ -87,7 +91,7 @@
         <hr/>
         <footer>
             <p>&copy; 2025</p>
-            <p>Letzte Änderung: 2025-06-27 15:00 Upload/Download von ZIP-Archiven mit Anlagen</p>
+            <p>Letzte Änderung: 2025-11-26 Dashboard hinzugefügt</p>
         </footer>
     </div>
 </body>

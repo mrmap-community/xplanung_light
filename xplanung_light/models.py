@@ -42,7 +42,6 @@ TODO: UserProfile - Nutzer hat m2m Relation zu AdministrativeOrganization - dadu
 """
 
 
-
 """
 Klasse zur Abbildung einer Liste von standardisierten Lizenzen. Aus der Liste der Lizenzen können die Datenbereitsteller eine passende aussuchen.
 Die Lizenzen beziehen sich immer auf alle publizierten Pläne einer Gebietskörperschaft. Hier haben wir derzeit nicht vorgesehen,
@@ -78,14 +77,28 @@ class License(GenericMetadata):
     def __str__(self):
         return f"{self.label} ({self.identifier})"
 
+
+"""Basisklassen von django-organizations zur Abbildung der Benutzerverwaltung für die Gebietskörperschaften, ...
+Die Klasse kann nur einmal pro app erstellt werden: https://django-organizations.readthedocs.io/en/latest/cookbook.html#advanced-customization-using-abstract-models
 """
-Basisklassen von django-organizations zur Abbildung der Benutzerverwaltung, ...
-"""
+
 class AdminOrgaUser(OrganizationUserBase):
     is_admin = models.BooleanField(blank=False, null=False, verbose_name='Nutzer ist Administrator für Organisation', default=False)
-
+    #give_statements = models.BooleanField(blank=False, null=False, verbose_name='Nutzer darf Stellungnahmen für Organisation abgeben', default=False)
+    # Einfache Rollen
+    AUSKUNFT = "1000"
+    VERWALTER = "2000"
+    KOMMENTATOR = "3000"
+    USER_TYPE_CHOICES = [
+        (AUSKUNFT,  "Beauskunftung von Plandaten"),
+        (VERWALTER,  "Verwalter von Plandaten"),
+        (KOMMENTATOR, "Abgabe von Stellungnahmen"),
+    ]
+    user_type = models.IntegerField(choices=USER_TYPE_CHOICES, default='1000', verbose_name='Typ / Rolle des Nutzers', db_index=True)
+    
     def __str__(self):
         return f"{self.user} - {self.organization}"
+
 
 class AdminOrgaOwner(OrganizationOwnerBase):
     pass
@@ -95,7 +108,7 @@ class AdminOrgaInvitation(OrganizationInvitationBase):
     pass
 
 
-# administrative organizations
+# administrative organizations - Klasse 
 class AdministrativeOrganization(GenericMetadata, OrganizationBase):
 
     COUNTY = "KR"
@@ -125,6 +138,8 @@ class AdministrativeOrganization(GenericMetadata, OrganizationBase):
     type = models.CharField(max_length=3, choices=ADMIN_CLASS_CHOICES, default='UK', verbose_name='Typ der Gebietskörperschaft', db_index=True)
     name_part = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name des Teils der Gebietskörperschaft', help_text='Offizieller Namen eines Teils der Gebietskörperschaft - z.B. Arzheim - als Ortsbezirk 2 der Stadt Koblenz')
     
+    #is_toeb = ... 
+
     address_street = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Straße mit Hausnummer', help_text='Straße und Hausnummer')
     address_postcode = models.CharField(blank=True, null=True, max_length=5, verbose_name='Postleitzahl', help_text='Postleitzahl')
     
@@ -173,6 +188,32 @@ class AdministrativeOrganization(GenericMetadata, OrganizationBase):
             return f"{self.name} ({self.get_type_display()})"
         #return f"{self.name} ({self.get_type_display()})"
 
+
+"""
+class AdministrativeAuthority(GenericMetadata, OrganizationBase):
+    LANDESAMT = "LA"
+    BUNDESAMT = "BA"
+    KREISVERWALTUNG = "KV"
+
+    ADMIN_CLASS_CHOICES = [
+        (LANDESAMT,  "Landesamt"),
+        (BUNDESAMT, "Bundesamt"),
+        (KREISVERWALTUNG, "Kreisverwaltung"),
+    ]
+
+    name = models.CharField(max_length=1024, verbose_name='Name der Behörde / Organisation', help_text='Offizieller Name der Behörde / Organisation - z.B. Landesamt für Geologie und Bergbau Rheinland-Pfalz')
+    name_kurz = models.CharField(max_length=1024, verbose_name='Kürzel für die Behörde / Organisation', help_text='Offizielle Abkürzung für die Bezeichnung der Behörde / Organisation - z.B.  LGB ( ür Landesamt für Geologie und Bergbau Rheinland-Pfalz)')
+    typ = models.CharField(max_length=3, choices=ADMIN_CLASS_CHOICES, default='LA', verbose_name='Typ der Behörde / Organisation', db_index=True)
+    history = HistoricalRecords()
+"""
+"""   
+class AdminAuthorityUser(OrganizationUserBase):
+    is_commentator = models.BooleanField(blank=False, null=False, verbose_name='Nutzer kann Stellungnahmen für Organisation abgeben', default=False)
+    history = HistoricalRecords()
+
+    def __str__(self):
+        return f"{self.user} - {self.organization}"
+"""
 
 """
 Klasse um Kontaktinformationen über eine Relation zu verwalten.
@@ -487,9 +528,7 @@ class XPlanBeteiligung(GenericMetadata):
     end_datum = models.DateField(null=False, blank=False, verbose_name="Ende", help_text="Enddatum des Beteiligungsverfahrens")
     typ = models.CharField(null=False, blank=False, max_length=5, choices=TYPE_CHOICES, default='1000', verbose_name='Typ des Beteiligungsverfahrens', help_text="Typ des Beteiligungsverfahrens - aktuell Auslegung oder TÖB", db_index=True)
     publikation_internet = models.URLField(null=True, blank=True, verbose_name="Publikation im Internet", help_text="Link zur Publikation auf der Hompage der jeweiligen Organisation")
-    #bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="beteiligungen")
-    #history = HistoricalRecords()
-
+    
     def __str__(self):
             """Returns a string representation of Beteiligung."""
             return f"{self.get_typ_display()} - vom {self.bekanntmachung_datum}"
@@ -502,12 +541,16 @@ class XPlanBeteiligung(GenericMetadata):
 class BPlanBeteiligung(XPlanBeteiligung):
 
     bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="beteiligungen")
+    #allowed_toeb = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Kontakt für Gemeinde(n)", related_name="toeb_comments")
+    #history = HistoricalRecords(m2m_fields=[allowed_toeb])
     history = HistoricalRecords()
 
 
 class FPlanBeteiligung(XPlanBeteiligung):
 
     fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE, verbose_name="FPlan", help_text="FPlan", related_name="beteiligungen")
+    #allowed_toeb = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Kontakt für Gemeinde(n)", related_name="toeb_comments")
+    #history = HistoricalRecords(m2m_fields=[allowed_toeb])
     history = HistoricalRecords()
 
 """
@@ -523,6 +566,7 @@ class BPlanBeteiligungBeitrag(GenericMetadata):
     bplan_beteiligung = HistoricForeignKey(BPlanBeteiligung, on_delete=models.CASCADE, verbose_name="BPlanBeteiligung", help_text="BPlanBeteiligung", related_name="comments")
     # tags?
     # bplan attachment - manytomany - bezieht sich auf ... spezielle Anlagen
+    #toeb = HistoricForeignKey(Toeb, on_delete=models.CASCADE, verbose_name="Träger öffentlicher Belange", help_text="Träger öffentlicher Belange", related_name="toeb_comments")
 
     #attachment = models.FileField(null = True, blank = True, upload_to='uploads', verbose_name="Dokument (PDF)")
 
@@ -556,7 +600,11 @@ class BPlanBeteiligungBeitragAntwort():
 """
 
 class XPlanSpezExterneReferenz(GenericMetadata):
-
+    """
+    Klasse für die Modellierung von Externen Referenzen (Dateiuploads)
+    Zur Sicherheit soll clamav eingesetzt werden
+    https://wiki.debian.org/ClamAV
+    """
     # https://gist.github.com/chhantyal/5370749
     def get_upload_path(self, filename):
         name, ext = os.path.splitext(filename)

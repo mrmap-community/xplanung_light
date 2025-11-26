@@ -1,7 +1,8 @@
 from django.views.generic import (UpdateView)
-from xplanung_light.models import AdministrativeOrganization
+from xplanung_light.models import AdministrativeOrganization, BPlan
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableView
+
 from xplanung_light.tables import AdministrativeOrganizationTable, AdministrativeOrganizationPublishingTable
 from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
@@ -10,7 +11,7 @@ from django.db.models import Subquery, OuterRef
 from django.db.models import Q, Count
 from dal import autocomplete
 from django.core.exceptions import PermissionDenied
-
+from django.utils import timezone
 
 class AdministrativeOrganizationAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
@@ -34,10 +35,19 @@ class AdministrativeOrganizationPublishingListView(SingleTableView):
     success_url = reverse_lazy("orga-publishing-list") 
 
     def get_queryset(self):
+        qs = super().get_queryset().only('id', 'name', 'ls', 'ks', 'gs')
         if self.request.user.is_superuser:
-            qs = AdministrativeOrganization.objects.filter(bplan__isnull=False).distinct().annotate(num_bplan=Count('bplan')).annotate(num_bplan_public=Count('bplan', filter=Q(bplan__public=True))).annotate(num_fplan=Count('fplan')).annotate(num_fplan_public=Count('fplan', filter=Q(fplan__public=True)))
+            qs = qs.filter(bplan__isnull=False).distinct()
         else:
-            qs = AdministrativeOrganization.objects.filter(bplan__isnull=False, users=self.request.user).distinct().annotate(num_bplan=Count('bplan')).annotate(num_bplan_public=Count('bplan', filter=Q(bplan__public=True))).annotate(num_fplan=Count('fplan')).annotate(num_fplan_public=Count('fplan', filter=Q(fplan__public=True)))
+            qs = qs.filter(bplan__isnull=False, users=self.request.user).distinct()
+        qs = qs.annotate(
+                num_bplan=Count('bplan', distinct=True),
+                num_bplan_public=Count('bplan', distinct=True, filter=Q(bplan__public=True)),
+                num_fplan=Count('fplan', distinct=True),
+                num_fplan_public=Count('fplan', distinct=True, filter=Q(fplan__public=True)),
+                num_fplan_beteiligung=Count('fplan', distinct=True, filter=Q(fplan__public=True) & Q(fplan__beteiligungen__end_datum__gte=timezone.now()) & Q(fplan__beteiligungen__bekanntmachung_datum__lte=timezone.now())),
+                num_bplan_beteiligung=Count('bplan', distinct=True, filter=Q(bplan__public=True) & Q(bplan__beteiligungen__end_datum__gte=timezone.now()) & Q(bplan__beteiligungen__bekanntmachung_datum__lte=timezone.now())),
+        )
         return qs
     
 

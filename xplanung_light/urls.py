@@ -54,6 +54,8 @@ urlpatterns = [
     path("bplan/<int:planid>/beteiligung/<int:pk>/beitrag/create/", BPlanBeteiligungBeitragCreateView.as_view(), name="bplanbeteiligungbeitrag-create"),
     path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/", BPlanBeteiligungBeitragListView.as_view(), name="bplanbeteiligungbeitrag-list"),
     path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<int:pk>/delete/", BPlanBeteiligungBeitragDeleteView.as_view(), name="bplanbeteiligungbeitrag-delete"),
+    # BPlan Beteiligung Beitrag Anhang - erst mal ganz einfach per id
+    path("bplanbeteiligungbeitragattachment/<int:pk>/", views.get_bplan_beteiligung_beitrag_attachment, name="bplan-beteiligung-beitrag-attachment-download"),
     # BPlan UVP Info
     path("bplan/<int:planid>/uvp/create/", UvpCreateView.as_view(), name="uvp-create"),
     path("bplan/<int:planid>/uvp/", UvpListView.as_view(), name="uvp-list"),

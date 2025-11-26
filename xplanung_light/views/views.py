@@ -5,7 +5,7 @@ from django.contrib.gis.gdal import OGRGeometry
 from django.shortcuts import redirect
 from django.contrib.auth import login
 from xplanung_light.models import AdministrativeOrganization, BPlanSpezExterneReferenz, BPlan, FPlan, FPlanSpezExterneReferenz
-from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung
+from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung, BPlanBeteiligungBeitragAnhang
 import uuid
 import xml.etree.ElementTree as ET
 from django.urls import reverse
@@ -28,7 +28,7 @@ from xplanung_light.views.bplan import BPlanDetailView, BPlanListViewHtml
 from xplanung_light.views import views
 from django.utils import timezone
 import datetime
-from django.db.models import Count, F, Value
+from django.db.models import Count, F, Value, Q
 
 def get_bplan_attachment(request, pk):
     try:
@@ -46,6 +46,22 @@ def get_bplan_attachment(request, pk):
     else:
         return HttpResponse("Object not found", status=404)
     
+def get_bplan_beteiligung_beitrag_attachment(request, pk):
+    try:
+        #attachment = BPlanSpezExterneReferenz.objects.get(owned_by_user=request.user, pk=pk)
+        attachment = BPlanBeteiligungBeitragAnhang.objects.get(pk=pk)
+    except BPlanBeteiligungBeitragAnhang.DoesNotExist:
+        attachment = None
+    print(str(attachment))
+    if attachment:
+        if os.path.exists(attachment.attachment.file.name):
+            response = FileResponse(attachment.attachment)
+            return response
+        else:
+           return HttpResponse("File not found", status=404) 
+    else:
+        return HttpResponse("Object not found", status=404)
+
 def get_fplan_attachment(request, pk):
     try:
         attachment = FPlanSpezExterneReferenz.objects.get(pk=pk)
@@ -585,7 +601,58 @@ def fplan_import_archiv(request):
     return render(request, "xplanung_light/fplan_import_archiv.html", {"form": form})
 
 def home(request):
-    return render(request, "xplanung_light/home.html")
+    # Lade alle Informationen zu den vorhandenen Daten für das Dashboard
+    bplan_info = {}
+    fplan_info = {}
+    orga_info = {}
+    beteiligungen_info = {}
+    # Initiale querysets
+    bplan_qs = BPlan.objects.only('id')
+    fplan_qs = FPlan.objects.only('id')
+    orga_qs = AdministrativeOrganization.objects.only('id')
+    bplan_beteiligungen_qs = BPlanBeteiligung.objects.only('id')
+    fplan_beteiligungen_qs = FPlanBeteiligung.objects.only('id')
+    # Filtern der querysets auf nicht anonyme Nutzer die kein Administrator sind (my...)
+    if not request.user.is_superuser and request.user.is_anonymous == False:
+        orga_qs = orga_qs.filter(organization_users__user=request.user, organization_users__is_admin=True)
+        bplan_qs = bplan_qs.filter(gemeinde__organization_users__user=request.user, gemeinde__organization_users__is_admin=True)
+        fplan_qs = fplan_qs.filter(gemeinde__organization_users__user=request.user, gemeinde__organization_users__is_admin=True)
+        bplan_beteiligungen_qs = bplan_beteiligungen_qs.filter(bplan__gemeinde__organization_users__user=request.user, bplan__gemeinde__organization_users__is_admin=True)
+        fplan_beteiligungen_qs = fplan_beteiligungen_qs.filter(fplan__gemeinde__organization_users__user=request.user, fplan__gemeinde__organization_users__is_admin=True)
+
+    plan_orga_qs = orga_qs.annotate(count_plan=Count('bplan') + Count('fplan')).filter(count_plan__gt=0)
+    plan_orga_public_qs = orga_qs.annotate(count_plan=Count('bplan', distinct=True, filter=Q(bplan__public=True)) + Count('fplan', distinct=True, filter=Q(fplan__public=True))).filter(count_plan__gt=0)
+
+    bplan_info['all_objects'] = bplan_qs.distinct().count()
+    fplan_info['all_objects']  = fplan_qs.distinct().count()
+
+    bplan_info['public_objects'] = bplan_qs.filter(public=True).distinct().count()
+    fplan_info['public_objects']  = fplan_qs.filter(public=True).distinct().count()
+
+    count_bplan_beteiligungen = bplan_beteiligungen_qs.distinct().count()
+    count_fplan_beteiligungen = fplan_beteiligungen_qs.distinct().count()
+
+    count_actual_bplan_beteiligungen = bplan_beteiligungen_qs.filter(bplan__public=True, end_datum__gte=timezone.now(), bekanntmachung_datum__lte=timezone.now()).only('id').distinct().count()
+    count_actual_fplan_beteiligungen = fplan_beteiligungen_qs.filter(fplan__public=True, end_datum__gte=timezone.now(), bekanntmachung_datum__lte=timezone.now()).only('id').distinct().count()
+    
+    beteiligungen_info['all_objects']  = count_fplan_beteiligungen + count_bplan_beteiligungen
+    beteiligungen_info['actual_public_objects']  = count_actual_fplan_beteiligungen + count_actual_bplan_beteiligungen
+    
+    orga_info['all_objects']  = orga_qs.only('id').distinct().count()
+    orga_info['objects_with_plans'] = plan_orga_qs.distinct().count()
+    orga_info['objects_with_public_plans'] = plan_orga_public_qs.distinct().count()
+
+    # Für den anonymen Benutzer sind nur die publizierten Verfahren sichtbar!
+    #if request.user.is_anonymous == True:
+
+
+    #bplan_info['public_objects'] = BPlan.objects.filter(public=True).only('id').count()
+    #fplan_info['public_objects']  = FPlan.objects.filter(public=True).only('id').count()
+
+    #orga_info['public_objects']  = AdministrativeOrganization.filter(public=True).objects.only('id').count()
+
+
+    return render(request, "xplanung_light/home.html", {'bplan_info': bplan_info, 'fplan_info': fplan_info, 'orga_info': orga_info, 'beteiligungen_info': beteiligungen_info})
     
 def about(request):
     return render(request, "xplanung_light/about.html")

@@ -2,3 +2,7 @@
     font-weight: 600;
     color: blue;
 }
+.card-title {
+    text-align:center;
+    font-weight:bold;
+}

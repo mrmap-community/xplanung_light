@@ -49,8 +49,12 @@ class BPlanFilter(FilterSet):
         method='laufende_beteiligung',
         label='Laufendes Beteiligungsverfahren',
     )
+    is_public = BooleanFilter(
+        widget=CheckboxInput(),
+        method='publiziert',
+        label='Öffentlich sichtbar',
+    )
     
-
     class Meta:
         model = BPlan
         fields = ["name", "gemeinde", "planart", "bbox"]
@@ -59,6 +63,11 @@ class BPlanFilter(FilterSet):
         if not value:
             return queryset
         return queryset.filter(count_current_beteiligungen__gte=1)
+    
+    def publiziert(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(public=True)
     
     def bbox_filter(self, queryset, name, value):
         #print("name from DocumentFilter.bbox_filter: " + name)
@@ -74,6 +83,11 @@ class FPlanFilter(FilterSet):
         method='laufende_beteiligung',
         label='Laufendes Beteiligungsverfahren',
     )
+    is_public = BooleanFilter(
+        widget=CheckboxInput(),
+        method='publiziert',
+        label='Öffentlich sichtbar',
+    )
 
     class Meta:
         model = FPlan
@@ -84,6 +98,11 @@ class FPlanFilter(FilterSet):
             return queryset
         return queryset.filter(count_current_beteiligungen__gte=1)
 
+    def publiziert(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(public=True)
+    
     def bbox_filter(self, queryset, name, value):
         #print("name from DocumentFilter.bbox_filter: " + name)
         return bbox_filter(queryset, value)

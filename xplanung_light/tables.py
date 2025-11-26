@@ -99,14 +99,13 @@ class BeteiligungenOrgaTable(tables.Table):
     xplan_name = tables.columns.TemplateColumn(template_code=u"""{{ record.xplan_name }}""", orderable=True, verbose_name='Name des Plans')
     plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
     #gemeinde = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}{{ record.bplan.gemeinde.all|join:"; " }}{% endif%}{% if record.plantyp == "FPlan"%}{{ record.fplan.gemeinde.all|join:"; " }}{% endif%}""", orderable=False, verbose_name='Gemeinden')
-    #gemeinde1 = tables.Column(verbose_name='Gebietskörperschaften')
+    id = tables.columns.TemplateColumn('<a href=" {% if record.plantyp == "BPlan" %}{% url "bplanbeteiligung-update" planid=record.xplan_id pk=record.id %}{% else %}{% url "fplanbeteiligung-update" planid=record.xplan_id pk=record.id %}{% endif %}">Öffnen</a>', orderable=True, verbose_name='Plan-ID')
     #gemeinde = tables.columns.TemplateColumn(template_code=u"""{{ record.gemeinde }}""", orderable=True, verbose_name='Gemeinde')
     
 
     class Meta:
-        #model = BPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
-        #fields = ("end_datum", "plantyp")
+        
 
 
 class BPlanBeteiligungTable(tables.Table):
@@ -156,13 +155,17 @@ class FPlanBeteiligungTable(tables.Table):
 
 class BPlanBeteiligungBeitragTable(tables.Table):
 
+    beschreibung = tables.TemplateColumn(
+        template_code='''{{ record.beschreibung |safe }}''',
+    )
+    attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("bplan-beteiligung-beitrag-attachment-download", {"pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
     delete = tables.LinkColumn('bplanbeteiligungbeitrag-delete', verbose_name='', text='Löschen', args=[A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], \
                          orderable=False, empty_values=())
     
     class Meta:
         model = BPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "beschreibung", "delete")
+        fields = ( "id", "beschreibung", "attachments", "delete")
 
 
 
@@ -344,13 +347,16 @@ class FPlanTable(tables.Table):
         fields = ( "zoom", "last_changed", "public", "aufstellungsbeschluss_datum", "nummer", "name","gemeinde", "planart", "count_attachments", "count_beteiligungen", "count_uvps", "detail", "xplangml", "edit", "delete")
 
 
-
 class AdministrativeOrganizationPublishingTable(tables.Table):
     num_bplan = tables.Column(verbose_name="BPläne")
     num_bplan_public = tables.Column(verbose_name="öffentliche BPläne")
     #TODO: auch Zahl der FPläne anzeigen - Link auf Services nur dann anzeigen, wenn Pläne existieren
-    #num_fplan = tables.Column(verbose_name="FPläne")
-    #num_fplan_public = tables.Column(verbose_name="öffentliche FPläne")
+    num_fplan = tables.Column(verbose_name="FPläne")
+    num_fplan_public = tables.Column(verbose_name="öffentliche FPläne")
+    #Laufende Verfahren
+    laufende_verfahren = tables.LinkColumn('organization-beteiligungen-list', verbose_name='Laufende Verfahren', args=[A('pk')], orderable=False, empty_values=())
+    #laufende_verfahren = tables.Column(verbose_name="Laufende Verfahren")
+   
     wms = tables.LinkColumn('ows', text='WMS', args=[A('pk')], \
                          orderable=False, empty_values=())
     wfs = tables.LinkColumn('ows', text='WFS', args=[A('pk')], \
@@ -369,6 +375,20 @@ class AdministrativeOrganizationPublishingTable(tables.Table):
         else:
             return format_html(record.name)
 
+    def render_num_bplan(self, record):
+        if not record.num_bplan == 0:
+            url = reverse('bplan-list')
+            return format_html('<a href="{}?gemeinde={}">{}</a>', url, record.id, record.num_bplan)
+        else:
+            return format_html('{}', record.num_bplan)
+
+    def render_num_fplan(self, record):
+        if not record.num_fplan == 0:
+            url = reverse('fplan-list')
+            return format_html('<a href="{}?gemeinde={}">{}</a>', url, record.id, record.num_fplan)
+        else:
+            return format_html('{}', record.num_fplan)
+
     # https://stackoverflow.com/questions/36698387/how-to-add-get-parameters-to-django-tables2-linkcolumn
     def render_wms(self, record):
         url = reverse('ows', kwargs={'pk': record.id})
@@ -377,9 +397,18 @@ class AdministrativeOrganizationPublishingTable(tables.Table):
     def render_wfs(self, record):
         url = reverse('ows', kwargs={'pk': record.id})
         return format_html('<a href="{}?REQUEST=GetCapabilities&SERVICE=WFS">{}</a>', url, 'WFS GetCapabilities')
-
+    
+    def render_laufende_verfahren(self, record):
+        url = reverse('organization-beteiligungen-list', kwargs={'pk': record.id})
+        sum_laufende_verfahren = record.num_bplan_beteiligung + record.num_fplan_beteiligung
+        #return format_html('<a href="{}">{}</a>', url, sum_laufende_verfahren)
+        if not sum_laufende_verfahren == 0:
+            return format_html('<a href="{}">{}</a>', url, sum_laufende_verfahren)
+        else:
+            return format_html('{}', 0)
+    
 
     class Meta:
         model = AdministrativeOrganization
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("name", "ags", "num_bplan", "num_bplan_public", "wms", "wfs", )
+        fields = ("name", "ags", "num_bplan", "num_bplan_public", "num_fplan", "num_fplan_public", "laufende_verfahren", "wms", "wfs", )

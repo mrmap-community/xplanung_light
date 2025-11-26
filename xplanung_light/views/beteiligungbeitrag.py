@@ -22,6 +22,10 @@ class BPlanBeteiligungBeitragListView(SingleTableView):
     table_class = BPlanBeteiligungBeitragTable
     reference_model_name_lower = 'bplan'
     
+    def get_queryset(self, **kwargs):
+        qs = super().get_queryset()
+        return qs.filter(bplan_beteiligung_id=self.kwargs['beteiligungid'])
+
     def get_context_data(self, **kwargs):
         planid = self.kwargs['planid']
         beteiligungid = self.kwargs['beteiligungid']

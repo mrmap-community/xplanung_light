@@ -34,6 +34,7 @@ import uuid
 import xml.etree.ElementTree as ET
 from django.conf import settings
 from django.utils import timezone
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 def qualify_gml_geometry(gml_from_db:str):
     ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
@@ -66,7 +67,7 @@ def qualify_gml_geometry(gml_from_db:str):
         return '<gml:MultiSurface srsName="EPSG:25832"><gml:surfaceMember>' + ET.tostring(polygon_element, encoding="utf-8", method="xml").decode('utf8') + '</gml:surfaceMember></gml:MultiSurface>'
 
 
-class XPlanCreateView(CreateView):
+class XPlanCreateView(CreateView, LoginRequiredMixin):
     """
     Anlagen eines XPlanPlan-Datensatzes über Formular.
     Generische Klasse zur Vererbung an BPlan und FPlan
@@ -75,7 +76,7 @@ class XPlanCreateView(CreateView):
     model = BPlan
     model_name_lower = str(model._meta).lower()
     # copy fields to form class - cause form class will handle the form now!
-    #fields = ["name", "nummer", "geltungsbereich", "gemeinde", "planart", "inkrafttretens_datum", "staedtebaulicher_vetrag"]
+    # fields = ["name", "nummer", "geltungsbereich", "gemeinde", "planart", "inkrafttretens_datum", "staedtebaulicher_vetrag"]
     success_url = reverse_lazy(model_name_lower + "-list") 
 
     def get_context_data(self, **kwargs):
@@ -83,7 +84,7 @@ class XPlanCreateView(CreateView):
         context = super().get_context_data(**kwargs)
         # check ob user ein admin einer AdministrativeOrganization ist - sonst nicht zulässig
         # TODO
-        #raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        # raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
         return context
 
     def get_form(self, form_class=None):
@@ -117,7 +118,7 @@ class XPlanCreateView(CreateView):
         return super().form_valid(form)
     
 
-class XPlanUpdateView(SuccessMessageMixin, UpdateView):
+class XPlanUpdateView(SuccessMessageMixin, UpdateView, LoginRequiredMixin):
     """
     Editieren eines XPlan-Datensatzes.
     """
@@ -180,7 +181,7 @@ class XPlanUpdateView(SuccessMessageMixin, UpdateView):
         return object  
       
 
-class XPlanDeleteView(SuccessMessageMixin, DeleteView):
+class XPlanDeleteView(SuccessMessageMixin, DeleteView, LoginRequiredMixin):
     """
     Löschen eines XPlan-Datensatzes.
     """
@@ -224,7 +225,7 @@ class XPlanDeleteView(SuccessMessageMixin, DeleteView):
         return reverse_lazy(self.model_name_lower+ "-list")
 
 
-class XPlanListView(FilterView, SingleTableView):
+class XPlanListView(FilterView, SingleTableView, LoginRequiredMixin):
     """
     Liste der Plan-Datensätze.
 
