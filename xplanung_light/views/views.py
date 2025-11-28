@@ -654,6 +654,40 @@ def home(request):
 
     return render(request, "xplanung_light/home.html", {'bplan_info': bplan_info, 'fplan_info': fplan_info, 'orga_info': orga_info, 'beteiligungen_info': beteiligungen_info})
     
+def bauleitplanung_orga_html(request, pk:int):
+    orga = AdministrativeOrganization.objects.get(id=pk)
+    bplaene = BPlan.objects.filter(public=True, gemeinde__id=pk)
+    fplaene = FPlan.objects.filter(public=True, gemeinde__id=pk)
+    beteiligungen_bplaene = BPlanBeteiligung.objects.filter(
+            bplan__gemeinde__id=pk
+        ).filter(
+            end_datum__gte=timezone.now(),
+            bekanntmachung_datum__lte=timezone.now()
+        ).annotate(
+            xplan_name=F('bplan__name'),
+            xplan_id=F('bplan__id'),
+            plantyp=Value('BPlan'),
+            geltungsbereich=F('bplan__geltungsbereich')
+        )
+    beteiligungen_fplaene = FPlanBeteiligung.objects.filter(
+            fplan__gemeinde__id=pk
+        ).filter(
+            end_datum__gte=timezone.now(),
+            bekanntmachung_datum__lte=timezone.now()
+        ).annotate(
+            xplan_name=F('fplan__name'),
+            xplan_id=F('fplan__id'),
+            plantyp=Value('FPlan'),
+            geltungsbereich=F('fplan__geltungsbereich')
+        )
+        # https://pythonguides.com/union-operation-on-models-django/
+    beteiligungen_qs = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')   
+    for beteiligung in beteiligungen_qs:
+        print(beteiligung.xplan_name)
+        print(beteiligung.geltungsbereich)
+    return render(request, "xplanung_light/bauleitplanung_orga_list.html", {'orga': orga, 'beteiligungen': beteiligungen_qs, 'bplaene': bplaene, 'fplaene': fplaene})
+    
+
 def about(request):
     return render(request, "xplanung_light/about.html")
 

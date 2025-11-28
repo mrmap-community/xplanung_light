@@ -1,0 +1,256 @@
+{# Load the tag library #}
+{% load django_bootstrap5 %}
+{# Load CSS and JavaScript #}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+{# load leaflet specific parts #}
+{% load leaflet_tags %}
+{# Display django.contrib.messages as Bootstrap alerts #}
+{% bootstrap_messages %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="description" content="Author: GDI-RP, Armin Retterath, XPlanung, Django, Formular, Easy, kostenfrei, Open Source"/>
+    <title>{% block title %}{% endblock %}</title>
+    {% load static %}
+    <!--<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>-->
+    <link rel="stylesheet" type="text/css" href="{% static 'xplanung_light/site.css' %}"/>
+    <!-- django-formset -->
+    <script type="module" src="{% static 'formset/js/django-formset.js' %}"></script>
+    <link href="{% static 'formset/css/bootstrap5-extra.css' %}" rel="stylesheet">
+    <link href="{% static 'formset/css/collections.css' %}" rel="stylesheet">
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"> -->
+    <!-- https://django-formset.fly.dev/installation/ -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" crossorigin="anonymous">
+    <!-- <link rel="stylesheet" type="text/css" href="{% static 'xplanung_light/site.css' %}"/> -->
+    {% leaflet_css plugins="ALL" %}
+    {% leaflet_js plugins="ALL" %}
+    <style>
+
+    .leaflet-container {  /* all maps */
+        width:  300px;
+        height: 300px;
+    }
+
+    #specialbigmap {
+        height: 800px;
+    }
+
+    /* Resize the "display_raw" textbox */
+    .django-leaflet-raw-textarea {
+        width: 100%;
+    }
+
+    </style>
+</head>
+<body>
+<h1>Bauleitplanung - {{ orga.name }}</h1>
+<!-- Bootstrap modal - https://getbootstrap.com/docs/5.0/components/modal/ -->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Karte</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schliessen"></button>
+      </div>
+      <div class="modal-body">
+        <!--<p class="modal-inner-content">Inhalt</p>-->
+        <!--<img class="modal-body-image" src="" alt="test"/>-->
+        {% leaflet_map "karte" callback="window.map_init_basic"%}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schliessen</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Bootstrap modal - end -->
+<!-- Bootstrap modal - alternative Leaflet ... -->
+
+<script>
+        var mapGlobal = {}
+        var feature = {}
+        function map_init_basic (map, options) {
+            mapGlobal = map;
+        };
+        var exampleModal = document.getElementById('exampleModal')
+        exampleModal.addEventListener('show.bs.modal', function (event) {
+            // Button that triggered the modal
+            var button = event.relatedTarget
+            // Extract info from data-bs-* attributes
+            var title = button.getAttribute('data-bs-title')
+            //var map = button.getAttribute('data-bs-image-href')
+            // If necessary, you could initiate an AJAX request here
+            // and then do the updating in a callback.
+            //
+            // Update the modal's content.
+            var modalTitle = exampleModal.querySelector('.modal-title')
+            //var modalBody = exampleModal.querySelector('.modal-inner-content')
+            //var modalBodyImage = exampleModal.querySelector('.modal-body-image')
+            modalTitle.textContent = title
+            //modalBody.textContent  = title
+            //modalBodyImage.src = map
+        });
+        exampleModal.addEventListener('shown.bs.modal', function (event) {
+            
+            // https://stackoverflow.com/questions/49305901/leaflet-and-mapbox-in-modal-not-displaying-properly
+            mapGlobal.invalidateSize();
+            //console.log(mapGlobal);
+            var button = event.relatedTarget
+            var geojson = button.getAttribute('data-bs-geojson')
+            mapGlobal.setZoom(10);
+            feature = L.geoJSON(JSON.parse(geojson), {
+                style: function(feature) {
+                    return {color: "#0000ff"};
+                }
+            }
+            ).addTo(mapGlobal);
+            //let bounds = feature.getBounds()
+            //mapGlobal.fitBounds([[ bounds._southWest.lat , bounds._southWest.lng ], [ bounds._northEast.lat ,  bounds._northEast.lng ]]);
+            mapGlobal.fitBounds(feature.getBounds());
+            //console.log(feature.getBounds())
+            //console.log(mapGlobal.getBounds())
+        });
+        exampleModal.addEventListener('hidden.bs.modal', function (event) {
+            //alert("clear geojson");
+            //console.log(feature.getLayers());
+            mapGlobal.removeLayer(feature);
+        });
+
+</script>
+<div class="accordion" id="accordionExample">
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingOne">
+      <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+        Pläne in laufenden Verfahren
+      </button>
+    </h2>
+    <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+      <div class="accordion-body">
+        {% if beteiligungen %}
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col"></th>
+                <th scope="col">Verfahrensstand</th>
+                <th scope="col">Ende der Frist</th>
+                <th scope="col">Typ des Plans</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for beteiligung in beteiligungen %}
+                <tr>
+                  <th scope="row">{{ forloop.counter }}</th>
+                  {% if beteiligung.plantyp == "BPlan" %}
+                  <td>
+                    <a href="{% url  'bplan-detail' pk=beteiligung.xplan_id %}" target="_blank">{{ beteiligung.xplan_name }}</a>
+                    <button type="button" class="btn btn-transparent" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-title="Übersichtskarte {{ beteiligung.xplan_name }}" data-bs-geojson="{{ beteiligung.geltungsbereich.geojson }}"> <i class="fa-regular fa-map"></i></button>
+                  </td>
+                  {% else %}
+                  <td>
+                    <a href="{% url  'fplan-detail' pk=beteiligung.xplan_id %}" target="_blank">{{ beteiligung.xplan_name }}</a>
+                    <button type="button" class="btn btn-transparent" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-title="Übersichtskarte {{ beteiligung.xplan_name }}" data-bs-geojson="{{ beteiligung.geltungsbereich.geojson }}"> <i class="fa-regular fa-map"></i></button>
+                  </td>
+                  {% endif %}
+                  <td>{{ beteiligung.get_typ_display }}</td>
+                  <td>{{ beteiligung.end_datum }}</td>
+                  <td>{{ beteiligung.plantyp }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          Aktuell gibt es keine öffentlichen Beteiligungsverfahren.
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingTwo">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+        Rechtskräftige Bebauungspläne
+      </button>
+    </h2>
+    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
+      <div class="accordion-body">
+        {% if bplaene %}
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col"></th>                    
+                <th scope="col">Inkraftgetreten am</th>
+                <th scope="col">Planart</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for bplan in bplaene %}
+                <tr>
+                  <th scope="row">{{ forloop.counter }}</th>
+                  <td>
+                    <a href="{% url  'bplan-detail' pk=bplan.id %}" target="_blank">{{ bplan.name }}</a>
+                    <button type="button" class="btn btn-transparent" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-title="Übersichtskarte {{ bplan.name }}" data-bs-geojson="{{ bplan.geltungsbereich.geojson }}"> <i class="fa-regular fa-map"></i></button>
+                  </td>
+                  
+                  <td>{{ bplan.inkrafttretens_datum }}</td>
+                  <td>{{ bplan.get_planart_display }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          Aktuell sind keine rechtskräftigen Bebauungspläne publiziert.
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingThree">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+        Wirksame Flächennutzungspläne
+      </button>
+    </h2>
+    <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
+      <div class="accordion-body">
+        {% if fplaene %}
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col"></th>
+                <th scope="col">Wirksam seit</th>
+                <th scope="col">Planart</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for fplan in fplaene %}
+                <tr>
+                  <th scope="row">{{ forloop.counter }}</th>
+                  <td>
+                    <a href="{% url  'fplan-detail' pk=fplan.id %}" target="_blank">{{ fplan.name }}</a>
+                    <button type="button" class="btn btn-transparent" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-title="Übersichtskarte {{ fplan.name }}" data-bs-geojson="{{ fplan.geltungsbereich.geojson }}"> <i class="fa-regular fa-map"></i></button>
+                  </td>
+                  <td>{{ fplan.wirksamkeits_datum }}</td>
+                  <td>{{ fplan.get_planart_display }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          Aktuell sind keine rechtskräftigen Flächennutzungspläne publiziert.
+        {% endif %}      
+      </div>
+    </div>
+  </div>
+</div>
+<div class="body-content">
+        {% block content %}
+        {% endblock %}
+        <footer>
+            <p>&copy; 2025</p>
+            <p>powered by <a href="https://mrmap-community.github.io/xplanung_light/" target="_blank">XPlanung-light</a></p>
+        </footer>
+</div>
+</body>

@@ -100,8 +100,11 @@ urlpatterns = [
 
     # Organisations XPlan-Liste für GetFeatureInfo - hier müssen alle Plantypen zurückgeliefert werden können
     path("organization/<int:pk>/xplan/html/", views.xplan_html, name="xplan-list-html"),
+
     # Liste der aktuell laufeden Beteiligungsverfahren in einer Gebietskörperschaft 
     path("organization/<int:pk>/beteiligungen/", BeteiligungenOrgaListView.as_view(), name="organization-beteiligungen-list"),
+    # Einfache Liste aller Informationen zu Bauleitplänen einer Kommune
+    path("organization/<int:pk>/bauleitplanung/", views.bauleitplanung_orga_html, name="organization-bauleitplanung-list"),
     # 
     path("organization/publishing/", AdministrativeOrganizationPublishingListView.as_view(), name="organization-publishing-list"),
     url(

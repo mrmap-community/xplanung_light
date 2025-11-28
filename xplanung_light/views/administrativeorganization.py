@@ -12,6 +12,7 @@ from django.db.models import Q, Count
 from dal import autocomplete
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 class AdministrativeOrganizationAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
@@ -51,7 +52,7 @@ class AdministrativeOrganizationPublishingListView(SingleTableView):
         return qs
     
 
-class AdministrativeOrganizationListView(SingleTableView):
+class AdministrativeOrganizationListView(LoginRequiredMixin, SingleTableView):
     """
     Liste der Organisations-Datensätze.
 
@@ -79,7 +80,7 @@ class AdministrativeOrganizationListView(SingleTableView):
         return qs
 
 
-class AdministrativeOrganizationUpdateView(SuccessMessageMixin, UpdateView):
+class AdministrativeOrganizationUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Editieren eines Organisations-Datensatzes.
 

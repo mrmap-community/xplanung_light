@@ -8,6 +8,9 @@ from django_tables2 import SingleTableView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 class BeteiligungenListView(SingleTableView):
+    """
+    Klasse zur Anzeige 
+    """
     template_name = "xplanung_light/beteiligungen.html"
     #model = BPlan
     #model_name_lower = str(model._meta.model_name).lower()

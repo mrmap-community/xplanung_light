@@ -67,7 +67,7 @@ def qualify_gml_geometry(gml_from_db:str):
         return '<gml:MultiSurface srsName="EPSG:25832"><gml:surfaceMember>' + ET.tostring(polygon_element, encoding="utf-8", method="xml").decode('utf8') + '</gml:surfaceMember></gml:MultiSurface>'
 
 
-class XPlanCreateView(CreateView, LoginRequiredMixin):
+class XPlanCreateView(LoginRequiredMixin, CreateView):
     """
     Anlagen eines XPlanPlan-Datensatzes über Formular.
     Generische Klasse zur Vererbung an BPlan und FPlan
@@ -118,7 +118,7 @@ class XPlanCreateView(CreateView, LoginRequiredMixin):
         return super().form_valid(form)
     
 
-class XPlanUpdateView(SuccessMessageMixin, UpdateView, LoginRequiredMixin):
+class XPlanUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Editieren eines XPlan-Datensatzes.
     """
@@ -181,7 +181,7 @@ class XPlanUpdateView(SuccessMessageMixin, UpdateView, LoginRequiredMixin):
         return object  
       
 
-class XPlanDeleteView(SuccessMessageMixin, DeleteView, LoginRequiredMixin):
+class XPlanDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Löschen eines XPlan-Datensatzes.
     """
@@ -225,7 +225,7 @@ class XPlanDeleteView(SuccessMessageMixin, DeleteView, LoginRequiredMixin):
         return reverse_lazy(self.model_name_lower+ "-list")
 
 
-class XPlanListView(FilterView, SingleTableView, LoginRequiredMixin):
+class XPlanListView(LoginRequiredMixin, FilterView, SingleTableView):
     """
     Liste der Plan-Datensätze.
 

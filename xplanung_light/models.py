@@ -522,12 +522,13 @@ class XPlanBeteiligung(GenericMetadata):
         (FAUSLEGUNG,  "Frühzeitige Öffentlichkeitsbeteiligung"),
         (TOEB, "Träger öffentlicher Belange"),
         (AUSLEGUNG,  "Öffentliche Auslegung"),
+
     ]
     bekanntmachung_datum = models.DateField(null=False, blank=False, verbose_name="Datum der Bekanntmachung", help_text="Datum der Bekanntmachung des Verfahrens")
     start_datum = models.DateField(null=False, blank=False, verbose_name="Beginn", help_text="Datum des Beginns des Beteiligungsverfahrens")
     end_datum = models.DateField(null=False, blank=False, verbose_name="Ende", help_text="Enddatum des Beteiligungsverfahrens")
     typ = models.CharField(null=False, blank=False, max_length=5, choices=TYPE_CHOICES, default='1000', verbose_name='Typ des Beteiligungsverfahrens', help_text="Typ des Beteiligungsverfahrens - aktuell Auslegung oder TÖB", db_index=True)
-    publikation_internet = models.URLField(null=True, blank=True, verbose_name="Publikation im Internet", help_text="Link zur Publikation auf der Hompage der jeweiligen Organisation")
+    publikation_internet = models.URLField(null=True, blank=True, verbose_name="Publikation im Internet", help_text="Link zur Publikation auf der Homepage der jeweiligen Organisation")
     
     def __str__(self):
             """Returns a string representation of Beteiligung."""
