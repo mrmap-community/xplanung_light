@@ -86,6 +86,7 @@ class AdminOrgaUser(OrganizationUserBase):
     is_admin = models.BooleanField(blank=False, null=False, verbose_name='Nutzer ist Administrator für Organisation', default=False)
     #give_statements = models.BooleanField(blank=False, null=False, verbose_name='Nutzer darf Stellungnahmen für Organisation abgeben', default=False)
     # Einfache Rollen
+    """
     AUSKUNFT = "1000"
     VERWALTER = "2000"
     KOMMENTATOR = "3000"
@@ -95,6 +96,7 @@ class AdminOrgaUser(OrganizationUserBase):
         (KOMMENTATOR, "Abgabe von Stellungnahmen"),
     ]
     user_type = models.IntegerField(choices=USER_TYPE_CHOICES, default='1000', verbose_name='Typ / Rolle des Nutzers', db_index=True)
+    """
     
     def __str__(self):
         return f"{self.user} - {self.organization}"
@@ -529,14 +531,15 @@ class XPlanBeteiligung(GenericMetadata):
     end_datum = models.DateField(null=False, blank=False, verbose_name="Ende", help_text="Enddatum des Beteiligungsverfahrens")
     typ = models.CharField(null=False, blank=False, max_length=5, choices=TYPE_CHOICES, default='1000', verbose_name='Typ des Beteiligungsverfahrens', help_text="Typ des Beteiligungsverfahrens - aktuell Auslegung oder TÖB", db_index=True)
     publikation_internet = models.URLField(null=True, blank=True, verbose_name="Publikation im Internet", help_text="Link zur Publikation auf der Homepage der jeweiligen Organisation")
-    
+    beschreibung = models.TextField(null=True, blank=True, verbose_name="Erläuternde Beschreibung des Beteiligungsverfahrens")
+    allow_online_beitrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Online-Stellungnahme zulassen", help_text="Gibt an, ob das Online-Verfahren für den Beteiligungsprozess zugelassen wird.")
+
     def __str__(self):
             """Returns a string representation of Beteiligung."""
             return f"{self.get_typ_display()} - vom {self.bekanntmachung_datum}"
     
     class Meta:
         abstract = True
-
 
 
 class BPlanBeteiligung(XPlanBeteiligung):
@@ -566,13 +569,16 @@ class BPlanBeteiligungBeitrag(GenericMetadata):
     beschreibung = models.TextField(null=False, blank=False, verbose_name="Beitrag / Kommentar (Textform)")
     bplan_beteiligung = HistoricForeignKey(BPlanBeteiligung, on_delete=models.CASCADE, verbose_name="BPlanBeteiligung", help_text="BPlanBeteiligung", related_name="comments")
     # tags?
+    # consent - auch Erklärung speichern zu der zugestimmt wurde!
+    #consent = models.BooleanField(null=False, blank=False, default=False, verbose_name="Online-Stellungnahme zulassen", help_text="Gibt an, ob das Online-Verfahren für den Beteiligungsprozess zugelassen wird.")
+    #consent_text = models.TextField(null=False, blank=False, verbose_name="")
     # bplan attachment - manytomany - bezieht sich auf ... spezielle Anlagen
     #toeb = HistoricForeignKey(Toeb, on_delete=models.CASCADE, verbose_name="Träger öffentlicher Belange", help_text="Träger öffentlicher Belange", related_name="toeb_comments")
 
     #attachment = models.FileField(null = True, blank = True, upload_to='uploads', verbose_name="Dokument (PDF)")
 
     #public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Öffentlich einsehbar")
-    #onsidered = models.BooleanField(null=False, blank=False, default=False, verbose_name="Wurde in Abwägung einbezogen")
+    #considered = models.BooleanField(null=False, blank=False, default=False, verbose_name="Wurde in Abwägung einbezogen")
     history = HistoricalRecords()
 
 
