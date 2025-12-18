@@ -5,7 +5,7 @@ from django.contrib.gis.gdal import OGRGeometry
 from django.shortcuts import redirect
 from django.contrib.auth import login
 from xplanung_light.models import AdministrativeOrganization, BPlanSpezExterneReferenz, BPlan, FPlan, FPlanSpezExterneReferenz
-from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung, BPlanBeteiligungBeitragAnhang
+from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung, BPlanBeteiligungBeitragAnhang, BPlanBeteiligungBeitrag
 import uuid
 import xml.etree.ElementTree as ET
 from django.urls import reverse
@@ -29,8 +29,27 @@ from xplanung_light.views import views
 from django.utils import timezone
 import datetime
 from django.db.models import Count, F, Value, Q
+from django.core.serializers import serialize
+import json
+from django.contrib.gis.db.models.functions import AsGeoJSON
+from django.contrib.gis.geos import GEOSGeometry
+from xplanung_light.forms import GastBeitragAuthenticateForm
+from django.db.models import Subquery, OuterRef, Q
 
 def get_bplan_attachment(request, pk):
+    # Nur admins der Gebietskörperschaften oder superuser
+    gemeinden = AdministrativeOrganization.objects.filter(bplan__attachments__in=[pk])
+    access_allowed = False
+    if request.user.is_superuser == False:
+        for gemeinde in gemeinden:
+            for user in gemeinde.organization_users.all():
+                if user.user == request.user and user.is_admin:   
+                    # Zugriff wird erteilt                     
+                    access_allowed = True
+    else:
+        access_allowed = True
+    if not access_allowed:
+        return HttpResponse("401 Unauthorized", status=401) 
     try:
         #attachment = BPlanSpezExterneReferenz.objects.get(owned_by_user=request.user, pk=pk)
         attachment = BPlanSpezExterneReferenz.objects.get(pk=pk)
@@ -47,12 +66,38 @@ def get_bplan_attachment(request, pk):
         return HttpResponse("Object not found", status=404)
     
 def get_bplan_beteiligung_beitrag_attachment(request, pk):
+    """
+    Auslieferung der Anlagen aus den Stellungnahmen
+    
+    :param request: Description
+    :param pk: Description
+    """
+    beitrag = BPlanBeteiligungBeitrag.objects.get(attachments__in=[pk])
+    # Nur admins der Gebietskörperschaften oder superuser
+    gemeinden = AdministrativeOrganization.objects.filter(bplan__beteiligungen__comments__attachments__in=[pk])
+    access_allowed = False
+    if request.user.is_superuser == False:
+        for gemeinde in gemeinden:
+            for user in gemeinde.organization_users.all():
+                if user.user == request.user and user.is_admin:   
+                    # Zugriff wird erteilt                     
+                    access_allowed = True
+    else:
+        access_allowed = True
+    # Auch authentifizierten Gast-Nutzern ermöglichen ihre Uploads einzusehen
+    if request.user.is_anonymous:
+        if 'beitrag_generic_id' in request.session.keys():
+            if request.session['beitrag_generic_id'] == str(beitrag.generic_id):
+                print('beitrag id steht in session - activate ...!')
+                access_allowed = True
+            else:
+                return HttpResponse("401 Unauthorized", status=401) 
     try:
         #attachment = BPlanSpezExterneReferenz.objects.get(owned_by_user=request.user, pk=pk)
         attachment = BPlanBeteiligungBeitragAnhang.objects.get(pk=pk)
     except BPlanBeteiligungBeitragAnhang.DoesNotExist:
         attachment = None
-    print(str(attachment))
+    #print(str(attachment))
     if attachment:
         if os.path.exists(attachment.attachment.file.name):
             response = FileResponse(attachment.attachment)
@@ -63,11 +108,24 @@ def get_bplan_beteiligung_beitrag_attachment(request, pk):
         return HttpResponse("Object not found", status=404)
 
 def get_fplan_attachment(request, pk):
+    # Nur admins der Gebietskörperschaften oder superuser
+    gemeinden = AdministrativeOrganization.objects.filter(fplan__attachments__in=[pk])
+    access_allowed = False
+    if request.user.is_superuser == False:
+        for gemeinde in gemeinden:
+            for user in gemeinde.organization_users.all():
+                if user.user == request.user and user.is_admin:   
+                    # Zugriff wird erteilt                     
+                    access_allowed = True
+    else:
+        access_allowed = True
+    if not access_allowed:
+        return HttpResponse("401 Unauthorized", status=401) 
     try:
         attachment = FPlanSpezExterneReferenz.objects.get(pk=pk)
     except FPlanSpezExterneReferenz.DoesNotExist:
         attachment = None
-    print(str(attachment))
+    #print(str(attachment))
     if attachment:
         if os.path.exists(attachment.attachment.file.name):
             response = FileResponse(attachment.attachment)
@@ -81,7 +139,7 @@ def xplan_html(request, pk:int):
     orga = AdministrativeOrganization.objects.get(pk=pk)
     #bplan_list = BPlan.objects.filter(gemeinde=orga)
     #print(bplaene)
-    print(request.GET)
+    #print(request.GET)
     if 'bplan_id__in' in request.GET.keys():
         if len(request.GET['bplan_id__in']) == 0:
             bplan_filter = []
@@ -411,6 +469,72 @@ def ows(request, pk:int):
     http_response.headers['Content-Length'] = str(len(result))
     return http_response
 
+def vg_list(request):
+    verbandsgemeinden = AdministrativeOrganization.objects.filter(gs='000').exclude(vs='00').only('id', 'name')
+    return render(request, "xplanung_light/verbandsgemeinden.html", {"verbandsgemeinden": verbandsgemeinden})
+
+def childs_map(request, pk:int):
+    orga = AdministrativeOrganization.objects.get(pk=pk)
+    if orga.gs == '000' and not orga.vs == '00':
+        print("Verbandsgemeinde gefunden!")
+        # alle Gemeinden der VG laden
+        # https://dakdeniz.medium.com/increase-django-geojson-serialization-performance-7cd8cb66e366
+        #ortsgemeinden = AdministrativeOrganization.objects.filter(ls=orga.ls, ks=orga.ks, vs=orga.vs). exclude(gs='000').annotate(geojson=AsGeoJSON('geometry'))
+        ortsgemeinden = AdministrativeOrganization.objects.filter(ls=orga.ls, ks=orga.ks, vs=orga.vs). exclude(gs='000')
+
+        
+        #print(len(ortsgemeinden))
+        #for ortsgemeinde in ortsgemeinden:
+        #    print(ortsgemeinde.name + " - " + ortsgemeinde.gs)
+        # for postgres there is a good hint at:
+        # https://gist.github.com/bahoo/fca19de157fde5bb34b30dea8f1352d8
+        # https://stackoverflow.com/questions/48040545/how-to-do-performance-optimization-while-serializing-lots-of-geodjango-geometry
+        """
+        geojson = json.loads(
+            serialize("geojson", ortsgemeinden, fields=["id", "name"], geometry_field='geometry')
+        )
+        """
+        
+
+        # Alternativ alle features in eine Collection überführen 
+        featurecollection = {}
+        featurecollection['type'] = "FeatureCollection"
+        featurecollection['crs'] = {}
+        featurecollection['crs']['type'] = "name"
+        featurecollection['crs']['properties'] = {}
+        featurecollection['crs']['properties']['name'] = "EPSG:4326"
+        featurecollection['features'] = []
+        
+        for ortsgemeinde in ortsgemeinden:
+            # feature = json.loads(ortsgemeinde.geojson)
+            feature = {}
+            feature['type'] = "Feature"
+            feature['id'] = ortsgemeinde.id
+            feature['properties'] = {}
+            feature['properties']['name'] = ortsgemeinde.name
+            # feature['geometry'] = json.loads(ortsgemeinde.geojson)
+            # Alternativ - geometry über geos vereinfachen ;-)
+            geosgeometry = GEOSGeometry(ortsgemeinde.geometry)
+            feature['geometry'] = json.loads(geosgeometry.simplify(0.0005).json)
+            # feature['geometry'] = json.loads(geosgeometry.json)
+            featurecollection['features'].append(feature)
+        geojson = featurecollection
+        
+
+    """
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # TODO: Anstatt object_list.data vlt. table.data? ... - dann haben wir mehr Einfluss auf die Darstellung im Leaflet Client
+        #print(len(context['table'].page.object_list.data))
+        #for obj in context['table'].page.object_list.data:
+        #    print(obj.bbox)
+        context["markers"] = json.loads(
+            serialize("geojson", context['table'].page.object_list.data, fields=["id", "name", "pk", "planart"], geometry_field='geltungsbereich')
+        )
+    """
+    return render(request, "xplanung_light/orga_childs_map.html", {"orga": orga, "ortsgemeinden": ortsgemeinden, "geojson": geojson})
+
+
 def bplan_import(request):
     if request.method == "POST":
         form = BPlanImportForm(request.POST, request.FILES)
@@ -658,7 +782,7 @@ def bauleitplanung_orga_html(request, pk:int):
     orga = AdministrativeOrganization.objects.get(id=pk)
     bplaene = BPlan.objects.filter(public=True, gemeinde__id=pk)
     fplaene = FPlan.objects.filter(public=True, gemeinde__id=pk)
-    beteiligungen_bplaene = BPlanBeteiligung.objects.filter(
+    beteiligungen_bplaene = BPlanBeteiligung.objects.distinct().filter(
             bplan__gemeinde__id=pk
         ).filter(
             end_datum__gte=timezone.now(),
@@ -668,7 +792,7 @@ def bauleitplanung_orga_html(request, pk:int):
             xplan_id=F('bplan__id'),
             plantyp=Value('BPlan'),
             geltungsbereich=F('bplan__geltungsbereich')
-        )
+        ).distinct()
     beteiligungen_fplaene = FPlanBeteiligung.objects.filter(
             fplan__gemeinde__id=pk
         ).filter(
@@ -679,13 +803,15 @@ def bauleitplanung_orga_html(request, pk:int):
             xplan_id=F('fplan__id'),
             plantyp=Value('FPlan'),
             geltungsbereich=F('fplan__geltungsbereich')
-        )
+        ).distinct()
         # https://pythonguides.com/union-operation-on-models-django/
-    beteiligungen_qs = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')   
+    beteiligungen_qs = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum') 
+    other_info = {}
+    other_info['today'] = datetime.date.today() 
     for beteiligung in beteiligungen_qs:
-        print(beteiligung.xplan_name)
-        print(beteiligung.geltungsbereich)
-    return render(request, "xplanung_light/bauleitplanung_orga_list.html", {'orga': orga, 'beteiligungen': beteiligungen_qs, 'bplaene': bplaene, 'fplaene': fplaene})
+        print(str(beteiligung.id) + " - " + beteiligung.xplan_name)
+        #print(beteiligung.geltungsbereich)
+    return render(request, "xplanung_light/bauleitplanung_orga_list.html", {'orga': orga, 'beteiligungen': beteiligungen_qs, 'bplaene': bplaene, 'fplaene': fplaene, 'other_info': other_info})
     
 
 def about(request):
@@ -706,3 +832,215 @@ def register(request):
             print('form is invalid')
     context = {'form': form}
     return render(request, 'registration/register.html', context)
+
+"""
+Funktionen für die Steuerung der Abgabe von Stellungnahmen - insbesondere durch Gast-Nutzer
+"""
+
+def beitrag_activate(request, **kwargs):
+    """
+    Funktion um einen BPlanBeteiligungBeitrag (Stellungnahme) zu aktivieren
+    
+    :param request: Description
+    :param kwargs: Description
+    """
+    
+    # Zunächst Nur admins der Gebietskörperschaften oder superuser
+    gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
+    access_allowed = False
+    if request.user.is_superuser == False:
+        for gemeinde in gemeinden:
+            for user in gemeinde.organization_users.all():
+                if user.user == request.user and user.is_admin:   
+                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird                  
+                    access_allowed = True
+    else:
+        # Superuser dürfen immer freischalten
+        access_allowed = True
+    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat 
+    if request.user.is_anonymous:
+        if 'beitrag_generic_id' in request.session.keys():
+            if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
+                print('beitrag id steht in session - activate ...!')
+                access_allowed = True
+    if not access_allowed:
+        # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
+        return redirect("bplanbeteiligungbeitrag-authenticate", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
+    # Aktivieren des Beitrags
+    beitrag = BPlanBeteiligungBeitrag.objects.get(generic_id=kwargs['generic_id'])
+    if beitrag.approved == False:
+        beitrag.approved = True
+        beitrag.save()
+    # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
+    if request.user.is_anonymous:
+        context={}
+        context['object'] = beitrag
+        context['beitrag_generic_id'] = beitrag.generic_id
+        return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
+    else:
+        return redirect("bplanbeteiligungbeitrag-list", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
+
+def beitrag_withdraw(request, **kwargs):
+    """
+    Funktion um einen BPlanBeteiligungBeitrag (Stellungnahme) zurückzuziehen
+    
+    :param request: Description
+    :param kwargs: Description
+    """
+    
+    # Zunächst Nur admins der Gebietskörperschaften oder superuser
+    gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
+    access_allowed = False
+    if request.user.is_superuser == False:
+        for gemeinde in gemeinden:
+            for user in gemeinde.organization_users.all():
+                if user.user == request.user and user.is_admin:   
+                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird                  
+                    access_allowed = True
+    else:
+        # Superuser dürfen immer freischalten
+        access_allowed = True
+    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat 
+    if request.user.is_anonymous:
+        if 'beitrag_generic_id' in request.session.keys():
+            if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
+                print('beitrag id steht in session - activate ...!')
+                access_allowed = True
+    if not access_allowed:
+        # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
+        return redirect("bplanbeteiligungbeitrag-authenticate", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
+    # Aktivieren des Beitrags
+    beitrag = BPlanBeteiligungBeitrag.objects.get(generic_id=kwargs['generic_id'])
+    if beitrag.withdrawn == False:
+        beitrag.withdrawn = True
+        beitrag.save()
+    # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
+    if request.user.is_anonymous:
+        context={}
+        context['object'] = beitrag
+        context['beitrag_generic_id'] = beitrag.generic_id
+        return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
+    else:
+        return redirect("bplanbeteiligungbeitrag-list", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
+    
+def beitrag_reactivate(request, **kwargs):
+    """
+    Funktion um einen BPlanBeteiligungBeitrag (Stellungnahme) zurückzuziehen
+    
+    :param request: Description
+    :param kwargs: Description
+    """
+    
+    # Zunächst Nur admins der Gebietskörperschaften oder superuser
+    gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
+    access_allowed = False
+    if request.user.is_superuser == False:
+        for gemeinde in gemeinden:
+            for user in gemeinde.organization_users.all():
+                if user.user == request.user and user.is_admin:   
+                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird                  
+                    access_allowed = True
+    else:
+        # Superuser dürfen immer freischalten
+        access_allowed = True
+    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat 
+    if request.user.is_anonymous:
+        if 'beitrag_generic_id' in request.session.keys():
+            if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
+                print('beitrag id steht in session - reactivate ...!')
+                access_allowed = True
+    if not access_allowed:
+        # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
+        return redirect("bplanbeteiligungbeitrag-authenticate", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
+    # Aktivieren des Beitrags
+    beitrag = BPlanBeteiligungBeitrag.objects.get(generic_id=kwargs['generic_id'])
+    if beitrag.withdrawn == True:
+        beitrag.withdrawn = False
+        beitrag.save()
+    # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
+    if request.user.is_anonymous:
+        context={}
+        context['object'] = beitrag
+        context['beitrag_generic_id'] = beitrag.generic_id
+        return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
+    else:
+        return redirect("bplanbeteiligungbeitrag-list", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
+
+def beitrag_authenticate(request, **kwargs):
+    """
+    Funktion zur Authentifizierung eines Gast Nutzers. Die Authentifizierung erfolgt auf Basis der bei der Stellungnahme
+    angegebenen EMail-Adresse. Die generic_id des Beitrags wird als Variable in die Session geschrieben und dient
+    zur Prüfung der Berechtigung für das Aktivieren/Zurückziehen des Beitrags (Stellungnahme).
+    
+    :param request: Description
+    :param kwargs: Description
+    """
+
+    beitrag = BPlanBeteiligungBeitrag.objects.get(generic_id=kwargs['generic_id'])
+    gast_beitrag_authenticate_form = GastBeitragAuthenticateForm(request.POST)
+    if request.method =="POST":
+        if gast_beitrag_authenticate_form.is_valid():
+            if beitrag.email == gast_beitrag_authenticate_form.cleaned_data['email']:
+                # Speichern der uuid in die Session
+                request.session['beitrag_generic_id'] = str(beitrag.generic_id)
+                # Weiterleitung zur Detailseite der Stellungnahme
+                return redirect("gastbplanbeteiligungbeitrag-detail", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=beitrag.generic_id)
+            else:
+                messages.error(request, 'Die angegebene E-Mail wurde nicht für das Anlegen der Stellungnahme genutzt!')
+                context = {}
+                context['object'] = beitrag
+                context['beitrag_generic_id'] = beitrag.generic_id
+                context["form"] = gast_beitrag_authenticate_form
+                # Erneute Aufforderung zur Authentifizierung - ggf. ändern, damit das nicht automatisch ausgefüllt werden kann.
+                # Captcha bringt etwas Hilfe
+                return render(request, "xplanung_light/gastbeteiligungbeitrag_authenticate.html", context)
+    context = {}
+    context['object'] = beitrag
+    context['beitrag_generic_id'] = beitrag.generic_id
+    context["form"] = gast_beitrag_authenticate_form
+    return render(request, "xplanung_light/gastbeteiligungbeitrag_authenticate.html", context)
+
+def beitrag_detail(request, **kwargs):
+    """
+    View für die Detailseite des Beitrags zum Beteiligungsverfahren. Der View dient in erster Linie für die Gast-Nutzer und 
+    wird im Gegensatz zum View für die admins per generic_id aufgerufen.
+    
+    :param request: Description
+    :param kwargs: Description
+    """
+    # Wir brauchen auch das Datum des Beitrags - ziehen wir aus der History
+    beitrag = BPlanBeteiligungBeitrag.objects.annotate(
+                    last_changed=Subquery(
+                        BPlanBeteiligungBeitrag.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                    )
+                ).annotate(
+                    last_changed=Subquery(
+                        BPlanBeteiligungBeitrag.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                    )    
+                ).get(generic_id=kwargs['generic_id'])
+    # Permissions prüfen
+    # Nur admins der Gebietskörperschaften oder superuser
+    gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
+    access_allowed = False
+    if request.user.is_superuser == False:
+        for gemeinde in gemeinden:
+            for user in gemeinde.organization_users.all():
+                if user.user == request.user and user.is_admin:   
+                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird                  
+                    access_allowed = True
+    else:
+        # Superuser dürfen immer freischalten
+        access_allowed = True
+    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat 
+    if request.user.is_anonymous:
+        if 'beitrag_generic_id' in request.session.keys():
+            if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
+                print('beitrag id steht in session!')
+                access_allowed = True
+    if not access_allowed:
+        # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
+        return redirect("bplanbeteiligungbeitrag-authenticate", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
+    context = {}
+    context['object'] = beitrag
+    context['beitrag_generic_id'] = beitrag.generic_id
+    return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)

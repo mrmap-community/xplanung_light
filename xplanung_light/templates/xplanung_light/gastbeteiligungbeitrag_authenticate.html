@@ -1,0 +1,25 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% load richtext %}
+{% bootstrap_css %}
+{% block title %}
+Authentifizierung für die Stellungnahme
+{% endblock %}
+{% block content %}
+{% if object.bplan_beteiligung %}
+<p>{{ object.bplan_beteiligung.get_typ_display }} zum Bebauungsplan <b>{{ object.bplan_beteiligung.bplan.name }}</b> der Kommune(n):<br>
+    <ul>
+        {% for gemeinde in object.bplan_beteiligung.bplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
+    </ul>
+</p>  
+<p>Beteiligung möglich bis zum <!--<i title="Datumsangabe" class="fa-regular fa-calendar"></i>-->{{ object.bplan_beteiligung.end_datum }}</p>
+{% endif %}
+<hr>
+<h3>Identitätsbestätigung für die Stellungnahme {{ beitrag_generic_id }}</h3>
+<form method="post">
+        {% csrf_token %}
+        {% bootstrap_form form %}
+        {% bootstrap_button button_type="submit" content="Absenden" %}
+</form>
+
+{% endblock %}

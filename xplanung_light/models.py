@@ -11,6 +11,8 @@ from django.core.files.base import ContentFile
 import slugify
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from io import BytesIO
+# Um gewisse Auszeichnungen zu unterstützen, nutzen wir eine formset Erweiterung - ab 2.0 liegt sie woanders
+from formset.richtext.fields import RichTextField
 # django-organizations
 # einfache Klasse nutzen, weil slug und weitere Attribute sich in die Quere kommen und auch unnötig sind
 from organizations.base import (
@@ -233,6 +235,7 @@ class ContactOrganization(GenericMetadata):
     facsimile = models.CharField(blank=True, null=True, max_length=256, verbose_name='Fax')
     email = models.EmailField(blank=False, null=False, max_length=512, verbose_name='EMail')
     homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
+    datenschutz_link = models.URLField(blank=False, null=False, verbose_name='Link zur Datenschutzerklärung der Kontaktstelle', help_text='Hier muss ein Link auf die Datenschutzerklärung der für die Verwaltung und Publikation zuständigen Kontaktstelle angegeben werden. Ohne Angabe dieses Links, sind Online-Stellungnahmen nicht möglich.')
     gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Kontakt für Gemeinde(n)", related_name="contacts")
     history = HistoricalRecords(m2m_fields=[gemeinde])
 
@@ -531,7 +534,9 @@ class XPlanBeteiligung(GenericMetadata):
     end_datum = models.DateField(null=False, blank=False, verbose_name="Ende", help_text="Enddatum des Beteiligungsverfahrens")
     typ = models.CharField(null=False, blank=False, max_length=5, choices=TYPE_CHOICES, default='1000', verbose_name='Typ des Beteiligungsverfahrens', help_text="Typ des Beteiligungsverfahrens - aktuell Auslegung oder TÖB", db_index=True)
     publikation_internet = models.URLField(null=True, blank=True, verbose_name="Publikation im Internet", help_text="Link zur Publikation auf der Homepage der jeweiligen Organisation")
-    beschreibung = models.TextField(null=True, blank=True, verbose_name="Erläuternde Beschreibung des Beteiligungsverfahrens")
+    #beschreibung = models.TextField(null=True, blank=True, verbose_name="Erläuternde Beschreibung des Beteiligungsverfahrens")
+    #from formset.modelfields import RichTextField
+    beschreibung = RichTextField(null=True, blank=True, verbose_name="Erläuternde Beschreibung des Beteiligungsverfahrens")
     allow_online_beitrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Online-Stellungnahme zulassen", help_text="Gibt an, ob das Online-Verfahren für den Beteiligungsprozess zugelassen wird.")
 
     def __str__(self):
@@ -565,9 +570,12 @@ Die Frage ist aber, ob es für diese Zwecke nicht schon speziell entwickelte Sof
 
 class BPlanBeteiligungBeitrag(GenericMetadata):
 
-    #titel = models.CharField(null=False, blank=False, verbose_name="Titel des Beitrags")
-    beschreibung = models.TextField(null=False, blank=False, verbose_name="Beitrag / Kommentar (Textform)")
+    titel = models.CharField(null=False, blank=False, max_length=300, verbose_name="Titel des Beitrags", help_text="Geben Sie hier bitte einen aussagekräftigen Titel für Ihren Beitrag an.")
+    beschreibung = RichTextField(null=False, blank=False, verbose_name="Beitrag / Kommentar (Textform)")
     bplan_beteiligung = HistoricForeignKey(BPlanBeteiligung, on_delete=models.CASCADE, verbose_name="BPlanBeteiligung", help_text="BPlanBeteiligung", related_name="comments")
+    approved = models.BooleanField(null=False, blank=False, default=False, verbose_name="Stellungnahme bestätigt")
+    email = models.EmailField(null=False, blank=False, verbose_name='EMail', help_text='EMail-Adresse zur Bestätigung der Abgabe Ihrer Stellungnahme. Sie bekommen eine Aktivierungsmail geschickt.')
+    withdrawn = models.BooleanField(null=False, blank=False, default=False, verbose_name="Stellungnahme zurückgezogen")
     # tags?
     # consent - auch Erklärung speichern zu der zugestimmt wurde!
     #consent = models.BooleanField(null=False, blank=False, default=False, verbose_name="Online-Stellungnahme zulassen", help_text="Gibt an, ob das Online-Verfahren für den Beteiligungsprozess zugelassen wird.")

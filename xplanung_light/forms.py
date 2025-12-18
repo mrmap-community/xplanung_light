@@ -15,6 +15,10 @@ from crispy_forms.bootstrap import TabHolder, Tab, AccordionGroup, Accordion
 from django.forms import ModelForm
 from django_select2.forms import Select2MultipleWidget
 from dal import autocomplete
+from formset.richtext.widgets import RichTextarea
+from captcha.fields import CaptchaField
+from formset.utils import FormMixin
+from django.core.exceptions import ValidationError
 
 class BPlanImportForm(forms.Form):
     confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
@@ -113,7 +117,7 @@ class FPlanSpezExterneReferenzForm(forms.ModelForm):
        fields = ["typ", "name", "attachment"] # list of fields you want from model
 
 
-class BPlanBeteiligungForm(forms.ModelForm):
+class BPlanBeteiligungFormOld(forms.ModelForm):
     #typ = forms.CharField(required=True, label="Typ des Anhangs")
     #name = forms.CharField
     #attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
@@ -121,7 +125,7 @@ class BPlanBeteiligungForm(forms.ModelForm):
     for crispy-forms
     """
     def __init__(self, *args, **kwargs):
-        super(BPlanBeteiligungForm, self).__init__(*args, **kwargs)
+        super(BPlanBeteiligungFormOld, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.fields['bekanntmachung_datum'].widget = forms.DateInput(
             attrs={
@@ -144,6 +148,9 @@ class BPlanBeteiligungForm(forms.ModelForm):
                 'max': str(timezone.now().date() + timedelta(days=30)),
                 }
         )
+        #self.fields['beschreibung'].widget =
+        
+        
         self.helper.layout = Layout(
             Fieldset("Information zur Beteiligung / Offenlage", 
                 "typ",
@@ -163,19 +170,20 @@ class BPlanBeteiligungForm(forms.ModelForm):
                 ),
                 Fieldset(
                     "Weitere Informationen",
+                    "allow_online_beitrag",
+                    "beschreibung",
                     "publikation_internet",
                 ),
             ),
             Submit("submit", "Anlegen/Aktualisieren")
         )
         
-
     class Meta:
        model = BPlanBeteiligung
-       fields = ["typ", "bekanntmachung_datum", "start_datum", "end_datum", "publikation_internet"] # list of fields you want from model
+       fields = ["typ", "bekanntmachung_datum", "start_datum", "end_datum", "allow_online_beitrag", "beschreibung", "publikation_internet"] # list of fields you want from model
 
 
-class FPlanBeteiligungForm(forms.ModelForm):
+class FPlanBeteiligungForOld(forms.ModelForm):
     #typ = forms.CharField(required=True, label="Typ des Anhangs")
     #name = forms.CharField
     #attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
@@ -1087,6 +1095,9 @@ class ContactOrganizationCreateForm(ModelForm):
                     ),
                 ),
                 Row(
+                    'datenschutz_link',
+                ),
+                Row(
                     'homepage',
                 ),
             ),
@@ -1096,7 +1107,7 @@ class ContactOrganizationCreateForm(ModelForm):
     class Meta:
         model = ContactOrganization
 
-        fields = ["gemeinde", "name", "unit", "person", "email", "phone", "facsimile", "homepage", ]
+        fields = ["gemeinde", "name", "unit", "person", "email", "phone", "facsimile", "homepage", "datenschutz_link"]
 
 
 class ContactOrganizationUpdateForm(ModelForm):
@@ -1136,6 +1147,9 @@ class ContactOrganizationUpdateForm(ModelForm):
                     ),
                 ),
                 Row(
+                    'datenschutz_link',
+                ),
+                Row(
                     'homepage',
                 ),
             ),
@@ -1145,7 +1159,7 @@ class ContactOrganizationUpdateForm(ModelForm):
     class Meta:
         model = ContactOrganization
 
-        fields = ["gemeinde", "name", "unit", "person", "email", "phone", "facsimile", "homepage", ]
+        fields = ["gemeinde", "name", "unit", "person", "email", "phone", "facsimile", "homepage", "datenschutz_link" ]
 
 
 class AdministrativeOrganizationUpdateForm(ModelForm):
@@ -1195,19 +1209,84 @@ https://django-formset.fly.dev/model-forms/#
 from django.forms.models import ModelForm
 #from formset.widgets import DateInput, Selectize, UploadedFileInput
 #from formset.widgets.richtext import RichTextarea
-from formset.richtext.widgets import RichTextarea
+#from formset.richtext.widgets import RichTextarea
 from django.forms import widgets, fields
 from xplanung_light.models import BPlanBeteiligungBeitrag
 from formset.fields import Activator
 from formset.renderers import ButtonVariant
 from formset.widgets import Button
-from formset.widgets import UploadedFileInput
+from formset.widgets import UploadedFileInput, DateInput
 
 from formset.collection import FormCollection
 from formset.renderers.bootstrap import FormRenderer
 #from formset.views import FormCollectionView
 from django.forms.fields import IntegerField
+from django.forms.fields import ChoiceField
 from django.forms.widgets import HiddenInput
+
+class BPlanBeteiligungForm(ModelForm):
+    """
+    Neue Klasse für das Anlegen und Update von Informationen zum BPlanBeteiligungsverfahren - diesmal mit django-formset
+    Überlegung  mehrseitiges Formular: https://django-formset.fly.dev/bootstrap/checkout
+    https://django-formset.fly.dev/form-stepper/
+    Problem bei Firefox unter debian: Richtext Formular Elemente bleiben nicht an fester Position ...
+
+    """
+    default_renderer = FormRenderer(
+        
+        field_css_classes={
+            'typ': 'mb-2 col-12',
+            
+            'bekanntmachung_datum': 'mb-2 col-4',
+            'start_datum': 'mb-2 col-4',
+            'end_datum': 'mb-2 col-4',
+            'allow_online_beitrag': 'mb-2 col-4',
+            'publikation_internet': 'mb-2 col-4',
+        },
+    )
+
+    class Meta:
+        model = BPlanBeteiligung
+        fields = ['typ', 'beschreibung', 'bekanntmachung_datum', 'start_datum', 'end_datum' , "allow_online_beitrag", "publikation_internet"]
+        widgets = {
+            'beschreibung': RichTextarea(),
+            'bekanntmachung_datum': DateInput(),
+            'start_datum': DateInput(),
+            'end_datum': DateInput(),
+        }
+
+
+class FPlanBeteiligungForm(ModelForm):
+    """
+    Neue Klasse für das Anlegen und Update von Informationen zum FPlanBeteiligungsverfahren - diesmal mit django-formset
+    Überlegung  mehrseitiges Formular: https://django-formset.fly.dev/bootstrap/checkout
+    https://django-formset.fly.dev/form-stepper/
+    Problem bei Firefox unter debian: Richtext Formular Elemente bleiben nicht an fester Position ...
+
+    """
+   
+    class Meta:
+        model = FPlanBeteiligung
+        fields = ['typ', 'beschreibung', 'bekanntmachung_datum', 'start_datum', 'end_datum' , "allow_online_beitrag", "publikation_internet"]
+        widgets = {
+            'beschreibung': RichTextarea(),
+            'bekanntmachung_datum': DateInput(),
+            'start_datum': DateInput(),
+            'end_datum': DateInput(),
+        }
+
+
+class CaptchaForm(forms.Form):
+    consent = forms.BooleanField(required=True, label="Ich habe die Datenschutzbestimmungen gelesen und akzeptiere sie.")
+    captcha = CaptchaField()
+
+
+class GastBeitragAuthenticateForm(ModelForm):
+    captcha = CaptchaField()
+    class Meta:
+        model = BPlanBeteiligungBeitrag
+        fields = ['email']
+
 
 """
 Klasse für das Formular zum Hochladen der Anhänge eines Beteiligungsbeitrags
@@ -1238,14 +1317,14 @@ class BPlanBeteiligungFormFormset(ModelForm):
 
 """
 Einfache ModelForm für das BPlanBeteiligungBeitragBeitrag-Objekt
-Zunächst nur soll nur das Feld beschrebung editierbar sein.
+Zunächst nur soll nur das Feld beschreibung editierbar sein.
 Und das über ein RichtText-widget - mal sehen, ob das so ok ist - ggf. muessen wir das Model-Field ändern.
 """
 class BPlanBeteiligungBeitragForm(ModelForm):
-    
+
     class Meta:
         model = BPlanBeteiligungBeitrag
-        fields = ['beschreibung']
+        fields = ['email', 'titel', 'beschreibung']
         widgets = {
             #'beschreibung': widgets.Textarea(attrs={'cols': '80', 'rows': '3'}),
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
@@ -1256,6 +1335,7 @@ class BPlanBeteiligungBeitragForm(ModelForm):
 Einfache ModelForm für das BPlanBeteiligungBeitragAnhang-Objekt
 """
 class BeteiligungBeitragAnhangForm(ModelForm):
+
     id = IntegerField(
         required=False,
         widget=HiddenInput,
@@ -1299,7 +1379,7 @@ class BeteiligungBeitragAnhangCollection(FormCollection):
 Collection für die über ein ForeignKey mit dem BPlanBeteiligung-Objekt verbundenen BPlanBeteiligungBeitrag-Objekte.
 """
 class BPlanBeteiligungBeitragCollection(FormCollection):
-    legend = "Beitrag"
+    legend = "Ihr Beitrag"
     add_label = "Beitrag hinzufügen"
     related_field = 'bplan_beteiligung' # hier wird der releted_name des verbundenen Objketes genutzt!
     beitrag = BPlanBeteiligungBeitragForm()
@@ -1320,3 +1400,6 @@ class BPlanBeteiligungCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
     bplan_beteiligung = BPlanBeteiligungFormFormset()
     beitrag = BPlanBeteiligungBeitragCollection()
+    captcha = CaptchaForm()
+
+    

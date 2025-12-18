@@ -35,6 +35,7 @@ import xml.etree.ElementTree as ET
 from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.gis.geos import GEOSGeometry
 
 def qualify_gml_geometry(gml_from_db:str):
     ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
@@ -242,22 +243,37 @@ class XPlanListView(LoginRequiredMixin, FilterView, SingleTableView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # TODO: Anstatt object_list.data vlt. table.data? ... - dann haben wir mehr Einfluss auf die Darstellung im Leaflet Client
-        #print(len(context['table'].page.object_list.data))
-        #for obj in context['table'].page.object_list.data:
-        #    print(obj.bbox)
-        context["markers"] = json.loads(
-            serialize("geojson", context['table'].page.object_list.data, fields=["id", "name", "pk", "planart"], geometry_field='geltungsbereich')
-        )
-        #print(context["bbox"])
         #context["markers"] = json.loads(
-        #    serialize("geojson", context['table'].page.object_list.data, geometry_field='geltungsbereich')
+        #    serialize("geojson", context['table'].page.object_list.data, fields=["id", "name", "pk", "planart"], geometry_field='geltungsbereich')
         #)
-        #context['markers'] = None
-        #print(context["markers"])
+        # Alternativ alle features in eine Collection überführen und vereinfachen ...
+        featurecollection = {}
+        featurecollection['type'] = "FeatureCollection"
+        featurecollection['crs'] = {}
+        featurecollection['crs']['type'] = "name"
+        featurecollection['crs']['properties'] = {}
+        featurecollection['crs']['properties']['name'] = "EPSG:4326"
+        featurecollection['features'] = []
+        for plan in context['table'].page.object_list.data:
+            # feature = json.loads(ortsgemeinde.geojson)
+            feature = {}
+            feature['type'] = "Feature"
+            feature['id'] = plan.id
+            feature['properties'] = {}
+            feature['properties']['id'] = plan.id
+            feature['properties']['name'] = plan.name
+            feature['properties']['pk'] = plan.pk
+            feature['properties']['planart'] = plan.planart
+            # Alternativ - geometry über geos vereinfachen ;-)
+            geosgeometry = GEOSGeometry(plan.geltungsbereich)
+            # Simplify beschleunigt den View um fast 40% - je nach Komplexität der Geometrien
+            feature['geometry'] = json.loads(geosgeometry.simplify(0.0005).json)
+            #feature['geometry'] = json.loads(geosgeometry.json)
+            featurecollection['features'].append(feature)
+        context["markers"] = featurecollection
         return context
-
+    
     # https://www.geeksforgeeks.org/python/filter-objects-with-count-annotation-in-django/
-
     def get_queryset(self):
         if self.request.user.is_superuser:
             if self.model_name_lower == 'bplan':

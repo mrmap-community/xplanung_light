@@ -11,7 +11,7 @@
 <html>
 <head>
     <meta charset="utf-8"/>
-    <meta name="description" content="Author: GDI-RP, Armin Retterath, XPlanung, Django, Formular, Easy, kostenfrei, Open Source"/>
+    <meta name="description" content="Author: GDI-RP, XPlanung, Django, Formular, Easy, kostenfrei, Open Source"/>
     <title>{% block title %}{% endblock %}</title>
     {% load static %}
     <!--<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>-->
@@ -45,7 +45,21 @@
     </style>
 </head>
 <body>
-<h1>Bauleitplanung - {{ orga.name }}</h1>
+    <table>
+        <tr>
+            <td>
+                <img width="120px" height="132px" src="{{ orga.coat_of_arms_url }}">
+            </td>
+            <td>
+                <h1>Bauleitplanung - {{ orga.name }}</h1>
+            </td>
+        </td>
+    </table>
+<h2>Auskunft</h2>
+<p>{{ orga.contacts.first.name }} - {{ orga.contacts.first.unit }}</p>
+<p><i class="fa-solid fa-at"></i><b>EMail:</b><a href="mailto:orga.contacts.first.email">{{ orga.contacts.first.email }}</a></p>
+<p><i class="fa-solid fa-phone"></i><b>Tel.:</b> {{ orga.contacts.first.phone }}</p>
+<p><i class="fa-solid fa-fax"></i><b>Fax.:</b> {{ orga.contacts.first.facsimile }}</p>
 <!-- Bootstrap modal - https://getbootstrap.com/docs/5.0/components/modal/ -->
 <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -137,6 +151,7 @@
                 <th scope="col">Verfahrensstand</th>
                 <th scope="col">Ende der Frist</th>
                 <th scope="col">Typ des Plans</th>
+                <th scope="col">Online Stellungnahmen</th>
               </tr>
             </thead>
             <tbody>
@@ -146,17 +161,34 @@
                   {% if beteiligung.plantyp == "BPlan" %}
                   <td>
                     <a href="{% url  'bplan-detail' pk=beteiligung.xplan_id %}" target="_blank">{{ beteiligung.xplan_name }}</a>
-                    <button type="button" class="btn btn-transparent" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-title="Übersichtskarte {{ beteiligung.xplan_name }}" data-bs-geojson="{{ beteiligung.geltungsbereich.geojson }}"> <i class="fa-regular fa-map"></i></button>
+                    <button type="button" class="btn btn-transparent" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-title="Übersichtskarte {{ beteiligung.xplan_name }}" data-bs-geojson="{{ beteiligung.geltungsbereich.geojson }}"><i title="Übersichtskarte" class="fa-regular fa-map"></i></button>
                   </td>
                   {% else %}
                   <td>
                     <a href="{% url  'fplan-detail' pk=beteiligung.xplan_id %}" target="_blank">{{ beteiligung.xplan_name }}</a>
-                    <button type="button" class="btn btn-transparent" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-title="Übersichtskarte {{ beteiligung.xplan_name }}" data-bs-geojson="{{ beteiligung.geltungsbereich.geojson }}"> <i class="fa-regular fa-map"></i></button>
+                    <button type="button" class="btn btn-transparent" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-title="Übersichtskarte {{ beteiligung.xplan_name }}" data-bs-geojson="{{ beteiligung.geltungsbereich.geojson }}"><i title="Übersichtskarte" class="fa-regular fa-map"></i></button>
                   </td>
                   {% endif %}
                   <td>{{ beteiligung.get_typ_display }}</td>
                   <td>{{ beteiligung.end_datum }}</td>
                   <td>{{ beteiligung.plantyp }}</td>
+                  <td>
+                    {% if beteiligung.start_datum <= other_info.today %}
+                        {% if beteiligung.allow_online_beitrag %}
+                          <!-- https://getbootstrap.com/docs/5.3/components/buttons/ -->
+                          {% if beteiligung.plantyp == "BPlan" %}
+                          <a class="btn btn-success" href="{% url 'bplanbeteiligungbeitrag-create-orga' planid=beteiligung.xplan_id pk=beteiligung.id orga_id=orga.id%}" tabindex="-1" role="button">Abgeben<span class="badge text-bg-secondary">{{ beteiligung.comments.count }}</span></a>
+                          {% else %}
+                          <!-- TODO: create fplanbeteiligung-beitrag ...-->
+                          <a class="btn btn-success" href="{% url 'bplanbeteiligungbeitrag-create-orga' planid=beteiligung.xplan_id pk=beteiligung.id orga_id=orga.id%}" tabindex="-1" role="button">Abgeben<span class="badge text-bg-secondary">0</span></a>
+                          {% endif %}
+                        {% else %}
+                          <button type="button" class="btn btn-danger">Nicht möglich</button>
+                        {% endif %}
+                    {% else %}              
+                        <a href="#" class="btn btn-warning disabled" tabindex="-1" role="button" aria-disabled="true">Ankündigung</a>
+                    {% endif %}
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -191,7 +223,7 @@
                   <th scope="row">{{ forloop.counter }}</th>
                   <td>
                     <a href="{% url  'bplan-detail' pk=bplan.id %}" target="_blank">{{ bplan.name }}</a>
-                    <button type="button" class="btn btn-transparent" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-title="Übersichtskarte {{ bplan.name }}" data-bs-geojson="{{ bplan.geltungsbereich.geojson }}"> <i class="fa-regular fa-map"></i></button>
+                    <button type="button" class="btn btn-transparent" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-title="Übersichtskarte {{ bplan.name }}" data-bs-geojson="{{ bplan.geltungsbereich.geojson }}"> <i title="Übersichtskarte" class="fa-regular fa-map"></i></button>
                   </td>
                   
                   <td>{{ bplan.inkrafttretens_datum }}</td>
@@ -229,8 +261,8 @@
                 <tr>
                   <th scope="row">{{ forloop.counter }}</th>
                   <td>
-                    <a href="{% url  'fplan-detail' pk=fplan.id %}" target="_blank">{{ fplan.name }}</a>
-                    <button type="button" class="btn btn-transparent" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-title="Übersichtskarte {{ fplan.name }}" data-bs-geojson="{{ fplan.geltungsbereich.geojson }}"> <i class="fa-regular fa-map"></i></button>
+                    <a href="{% url 'fplan-detail' pk=fplan.id %}" target="_blank">{{ fplan.name }}</a>
+                    <button type="button" class="btn btn-transparent" data-bs-toggle="modal" data-bs-target="#exampleModal" data-bs-title="Übersichtskarte {{ fplan.name }}" data-bs-geojson="{{ fplan.geltungsbereich.geojson }}"> <i title="Übersichtskarte" class="fa-regular fa-map"></i></button>
                   </td>
                   <td>{{ fplan.wirksamkeits_datum }}</td>
                   <td>{{ fplan.get_planart_display }}</td>
@@ -239,7 +271,7 @@
             </tbody>
           </table>
         {% else %}
-          Aktuell sind keine rechtskräftigen Flächennutzungspläne publiziert.
+          Aktuell sind keine wirksamen Flächennutzungspläne publiziert.
         {% endif %}      
       </div>
     </div>
@@ -249,7 +281,6 @@
         {% block content %}
         {% endblock %}
         <footer>
-            <p>&copy; 2025</p>
             <p>powered by <a href="https://mrmap-community.github.io/xplanung_light/" target="_blank">XPlanung-light</a></p>
         </footer>
 </div>

@@ -1,0 +1,110 @@
+{# Load the tag library #}
+{% load django_bootstrap5 %}
+{# Load CSS and JavaScript #}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+{# load leaflet specific parts #}
+{% load leaflet_tags %}
+{# Display django.contrib.messages as Bootstrap alerts #}
+{% bootstrap_messages %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="description" content="Author: GDI-RP, Armin Retterath, XPlanung, Django, Formular, Easy, kostenfrei, Open Source"/>
+    <title>{% block title %}Karte{% endblock %}</title>
+    {% load static %}
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'xplanung_light/site.css' %}"/>
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"> -->
+    <!-- https://django-formset.fly.dev/installation/ -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" crossorigin="anonymous">
+    <!-- <link rel="stylesheet" type="text/css" href="{% static 'xplanung_light/site.css' %}"/> -->
+    {% leaflet_css plugins="ALL" %}
+    {% leaflet_js plugins="ALL" %}
+    <style>
+    
+    </style>
+    <script>
+    //const geojson = {  type:”FeatureCollection”,  features:     ({{ geojson|safe }}).map(segment=>({        “type”:”Feature”,        “geometry”: JSON.parse(segment.json),        “properties”: {           “id”: segment.id        }     })  )}
+    let mapGlobal = {};
+    function map_init_basic (map, options) {
+        mapGlobal = map;
+        //https://stackoverflow.com/questions/43007019/leaflet-event-how-to-propagate-to-overlapping-layers
+        const data = document.getElementById("markers-data");
+        const markers = JSON.parse(data.textContent);
+        let feature = L.geoJSON(markers, {
+                style: function(feature) {
+                    return {color: "#0000ff"};
+                }
+                /*
+                    switch (feature.properties.planart) {
+                        case '1000': return {color: "#ff0000"};
+                        case '10000':   return {color: "#0000ff"};
+                    }
+                }*/ //,
+                //onEachFeature: onEachFeature
+                //zoomToBounds: zoomToBounds
+            }).addTo(map);       
+        map.fitBounds(feature.getBounds());
+        //feature info
+        var popup = L.popup()
+        map.on('click', e => {
+            //var thisMap = map;
+            const { lat, lng } = e.latlng;
+            const point = turf.point([lng, lat]);
+            const polygonsClicked = [];
+            //console.log(map._layers)
+            for (var id in map._layers) {
+                const layer = map._layers[id]
+                if (typeof layer.feature !== "undefined"){
+                    //map._layers.forEach((p, i) => {
+                    //const polygon= p.toGeoJSON();
+                    const polygon = layer.feature;
+                    //console.log(polygon)
+                    //console.log(point)
+                    if (turf.booleanPointInPolygon(point, polygon)) polygonsClicked.push(layer);
+                }
+            }
+            if (polygonsClicked.length > 0) {
+                popupContent = "";
+                for (var id in polygonsClicked) {
+                    //console.log(polygonsClicked[id]);
+                    bounds = polygonsClicked[id].getBounds();
+                    //console.log(bounds);
+                    popupContent += "<a href='" + window.location.protocol + "//" + window.location.host + "/organization/" + polygonsClicked[id].feature.id + "/bauleitplanung/'><b>" + polygonsClicked[id].feature.properties.name + "</b></a>";
+                    //popupContent += "<a onclick='mapGlobal.fitBounds([[" + bounds._southWest.lat + ", " + bounds._southWest.lng + "], [" + bounds._northEast.lat + ", " + bounds._northEast.lng + "]]);'>+</a> ";
+                    //popupContent += "<a href='" + polygonsClicked[id].feature.properties.pk + "/update/'><b>" + polygonsClicked[id].feature.properties.name + " (" + polygonsClicked[id].feature.properties.pk + ")</b></a>; Planart: " + polygonsClicked[id].feature.properties.planart;
+                    //popupContent += " - <a href='" + polygonsClicked[id].feature.properties.pk + "/xplan/' target='_blank'>XPlan-GML" + "</a><br>";
+                }
+                popup
+                    .setLatLng(e.latlng)
+                    .setContent(popupContent)
+                    .openOn(map);
+            } else {
+                /*
+                popup
+                .setLatLng(e.latlng)
+                .setContent("You clicked the map at " + e.latlng.toString())
+                .openOn(map);
+                */
+            }
+        });
+        //console.log(feature);
+        //map.setZoom(14);
+    }
+    </script>
+</head>
+<body>
+{% block content %}
+<h3>Bauleitplanung nach Kommunen (Verbandsgemeinde {{ orga.name }})</h3>
+{{ geojson|json_script:"markers-data" }}
+<h4>Auswahl über Namen</h4>
+{% for ortsgemeinde in ortsgemeinden %}
+    <a href="{% url 'organization-bauleitplanung-list' pk=ortsgemeinde.id %}">{{ ortsgemeinde.name }}<a/>
+{% endfor %}
+<h4>Auswahl über Karte</h4>
+{% leaflet_map "sub_orga_map" callback="window.map_init_basic" %}
+{% endblock %}
+</body>
+</html>

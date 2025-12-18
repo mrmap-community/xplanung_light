@@ -4,7 +4,7 @@ from django.contrib.auth import views as auth_views
 from xplanung_light.views.bplan import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView, BPlanDetailView, BPlanListViewHtml
 from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDeleteView, FPlanListView, FPlanDetailView, FPlanListViewHtml
 from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView
-from xplanung_light.views.beteiligungbeitrag import BPlanBeteiligungBeitragCreateView, BPlanBeteiligungBeitragListView, BPlanBeteiligungBeitragDeleteView
+from xplanung_light.views.beteiligungbeitrag import BPlanBeteiligungBeitragCreateView, BPlanBeteiligungBeitragListView, BPlanBeteiligungBeitragDeleteView, BPlanBeteiligungBeitragDetailView, BPlanBeteiligungBeitragActivate
 from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views.bplanspezexternereferenz import BPlanSpezExterneReferenzCreateView, BPlanSpezExterneReferenzUpdateView, BPlanSpezExterneReferenzDeleteView, BPlanSpezExterneReferenzListView
@@ -46,16 +46,28 @@ urlpatterns = [
     path("bplan/<int:planid>/attachment/<int:pk>/delete/", BPlanSpezExterneReferenzDeleteView.as_view(), name="bplanattachment-delete"),
     path("bplanattachment/<int:pk>/", views.get_bplan_attachment, name="bplanattachment-download"),
     # BPlan Beteiligungen
-    path("bplan/<int:planid>/beteiligung/create/", BPlanBeteiligungCreateView.as_view(), name="bplanbeteiligung-create"),
     path("bplan/<int:planid>/beteiligung/", BPlanBeteiligungListView.as_view(), name="bplanbeteiligung-list"),
-    path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(), name="bplanbeteiligung-update"),
     path("bplan/<int:planid>/beteiligung/<int:pk>/delete/", BPlanBeteiligungDeleteView.as_view(), name="bplanbeteiligung-delete"),
+    # Test für django-formsets - sollte mit einem view möglich sein, klappt aber nicht
+    path("bplan/<int:planid>/beteiligung/create/", BPlanBeteiligungCreateView.as_view(extra_context={'create': True}), name="bplanbeteiligung-create"),
+    path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="bplanbeteiligung-update"),
     # BPlan Beteiligung Beitrag
     path("bplan/<int:planid>/beteiligung/<int:pk>/beitrag/create/", BPlanBeteiligungBeitragCreateView.as_view(), name="bplanbeteiligungbeitrag-create"),
+    path("bplan/<int:planid>/beteiligung/<int:pk>/beitrag/create/organization/<int:orga_id>/", BPlanBeteiligungBeitragCreateView.as_view(), name="bplanbeteiligungbeitrag-create-orga"),
     path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/", BPlanBeteiligungBeitragListView.as_view(), name="bplanbeteiligungbeitrag-list"),
     path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<int:pk>/delete/", BPlanBeteiligungBeitragDeleteView.as_view(), name="bplanbeteiligungbeitrag-delete"),
     # BPlan Beteiligung Beitrag Anhang - erst mal ganz einfach per id
     path("bplanbeteiligungbeitragattachment/<int:pk>/", views.get_bplan_beteiligung_beitrag_attachment, name="bplan-beteiligung-beitrag-attachment-download"),
+    # BPlan Beteiligung Beitrag Detail
+    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<int:pk>/", BPlanBeteiligungBeitragDetailView.as_view(), name="bplanbeteiligungbeitrag-detail"),
+    # Aktivierungslink
+    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/activate/", views.beitrag_activate, name="bplanbeteiligungbeitrag-activate"),
+    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/withdraw/", views.beitrag_withdraw, name="bplanbeteiligungbeitrag-withdraw"),
+    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/reactivate/", views.beitrag_reactivate, name="bplanbeteiligungbeitrag-reactivate"),
+    # Authentifizierung für guest
+    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/authenticate/", views.beitrag_authenticate, name="bplanbeteiligungbeitrag-authenticate"),
+    
+    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/detail/", views.beitrag_detail, name="gastbplanbeteiligungbeitrag-detail"),
     # BPlan UVP Info
     path("bplan/<int:planid>/uvp/create/", UvpCreateView.as_view(), name="uvp-create"),
     path("bplan/<int:planid>/uvp/", UvpListView.as_view(), name="uvp-list"),
@@ -78,9 +90,12 @@ urlpatterns = [
     path("fplan/import/", views.fplan_import, name="fplan-import"),
     path("fplan/import-archiv/", views.fplan_import_archiv, name="fplan-import-archiv"),
     # FPlan Beteiligungen
-    path("fplan/<int:planid>/beteiligung/create/", FPlanBeteiligungCreateView.as_view(), name="fplanbeteiligung-create"),
+    #path("fplan/<int:planid>/beteiligung/create/", FPlanBeteiligungCreateView.as_view(), name="fplanbeteiligung-create"),
     path("fplan/<int:planid>/beteiligung/", FPlanBeteiligungListView.as_view(), name="fplanbeteiligung-list"),
-    path("fplan/<int:planid>/beteiligung/<int:pk>/update/", FPlanBeteiligungUpdateView.as_view(), name="fplanbeteiligung-update"),
+    #path("fplan/<int:planid>/beteiligung/<int:pk>/update/", FPlanBeteiligungUpdateView.as_view(), name="fplanbeteiligung-update"),
+    path("fplan/<int:planid>/beteiligung/create/", FPlanBeteiligungCreateView.as_view(extra_context={'create': True}), name="fplanbeteiligung-create"),
+    path("fplan/<int:planid>/beteiligung/<int:pk>/update/", FPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="fplanbeteiligung-update"),
+
     path("fplan/<int:planid>/beteiligung/<int:pk>/delete/", FPlanBeteiligungDeleteView.as_view(), name="fplanbeteiligung-delete"),
      # FPlan Anlagen
     path("fplan/<int:planid>/attachment/create/", FPlanSpezExterneReferenzCreateView.as_view(), name="fplanattachment-create"),
@@ -94,10 +109,14 @@ urlpatterns = [
     path("fplan/<int:planid>/uvp/<int:pk>/update/", FPlanUvpUpdateView.as_view(), name="fplan-uvp-update"),
     path("fplan/<int:planid>/uvp/<int:pk>/delete/", FPlanUvpDeleteView.as_view(), name="fplan-uvp-delete"),
     # Organisationen
+    # WMS / WFS pro Organisation
     path("organization/<int:pk>/ows/", views.ows, name="ows"),
     # Laufende Beteiligungsverfahren für Gebietskörperschaft
     #path("organization/<int:pk>/beteiligungen/", views.ows, name="orga-beteiligungen-list"),
-
+    # Pfad für Verbandsgemeinden - zur Generierung der Liste/Karte der Gebietsköperschaften
+    path("organization/<int:pk>/childs_map/", views.childs_map, name="childs-map"),
+    # Pfad für Liste der Verbandsgemeinden
+    path("organization/verbandsgemeinden/", views.vg_list, name="vg-list"),
     # Organisations XPlan-Liste für GetFeatureInfo - hier müssen alle Plantypen zurückgeliefert werden können
     path("organization/<int:pk>/xplan/html/", views.xplan_html, name="xplan-list-html"),
 
@@ -120,10 +139,15 @@ urlpatterns = [
     path("contact/", ContactOrganizationListView.as_view(), name="contact-list"),
     path("contact/<int:pk>/update/", ContactOrganizationUpdateView.as_view(), name="contact-update"),
     path("contact/<int:pk>/delete/", ContactOrganizationDeleteView.as_view(), name="contact-delete"),
-    # Offenlagen
+    # Offenlagen / Beteiligungen
+    # WMS 
     path("beteiligungen/map/", views.ows_beteiligungen, name="beteiligungen-map"),
     #path("beteiligungen/", views.beteiligungen, name="beteiligungen"),
+    # Liste aller aktuellen Beteiligungsverfahren
     path("beteiligungen/", BeteiligungenListView.as_view(), name="beteiligungen"),
     # Dokumentation
     path('docs/', include('docs.urls')),
+]
+urlpatterns += [
+    path('captcha/', include('captcha.urls')),
 ]

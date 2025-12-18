@@ -1,0 +1,9 @@
+{% extends "xplanung_light/layout.html" %}
+{% block title %}
+Verbandsgemeinden
+{% endblock %}
+{% block content %}
+{% for vg in verbandsgemeinden %}
+<p>{{ forloop.counter }} - <a href={% url 'childs-map' pk=vg.id %}>{{ vg.name }}</a></p>
+{% endfor %}
+{% endblock %}

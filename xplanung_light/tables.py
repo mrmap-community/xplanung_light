@@ -141,10 +141,6 @@ class FPlanBeteiligungTable(tables.Table):
                          orderable=False, empty_values=())
     delete = tables.LinkColumn('fplanbeteiligung-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')], \
                          orderable=False, empty_values=())
-    #attachment = tables.Column(verbose_name="Ablage", orderable=False)
-    #download = tables.LinkColumn('bplanbeteiligung-download', text='Download', args=[A('pk')], \
-    #                     orderable=False, empty_values=())
-    #name = tables.Column(verbose_name="Name/Bezeichnung")
     typ = tables.Column(verbose_name="Art der Beteiligung")
 
     class Meta:
@@ -155,9 +151,13 @@ class FPlanBeteiligungTable(tables.Table):
 
 class BPlanBeteiligungBeitragTable(tables.Table):
 
+    id = tables.LinkColumn('bplanbeteiligungbeitrag-detail', args=[A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')])
+    last_changed = tables.Column(verbose_name='Letzte Änderung')
+    """
     beschreibung = tables.TemplateColumn(
         template_code='''{{ record.beschreibung |safe }}''',
     )
+    """
     attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("bplan-beteiligung-beitrag-attachment-download", {"pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
     delete = tables.LinkColumn('bplanbeteiligungbeitrag-delete', verbose_name='', text='Löschen', args=[A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], \
                          orderable=False, empty_values=())
@@ -165,8 +165,7 @@ class BPlanBeteiligungBeitragTable(tables.Table):
     class Meta:
         model = BPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "beschreibung", "attachments", "delete")
-
+        fields = ("id", "last_changed", "titel", "email", "approved", "withdrawn", "attachments", "delete")
 
 
 class UvpTable(tables.Table):
@@ -364,10 +363,11 @@ class AdministrativeOrganizationPublishingTable(tables.Table):
     ags = tables.Column(verbose_name="AGS", orderable=False)
 
     def render_ags(self, record):
+        url = reverse('organization-bauleitplanung-list', kwargs={'pk': record.id})
         if record.ts:
-            return format_html(record.ags + ' - ' + record.ts)
+            return format_html('<a href="{}">{}</a>', url, record.ags + ' - ' + record.ts)
         else:
-            return format_html(record.ags)
+            return format_html('<a href="{}">{}</a>', url, record.ags)
         
     def render_name(self, record):
         if record.name_part:

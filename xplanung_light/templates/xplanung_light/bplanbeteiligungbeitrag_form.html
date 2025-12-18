@@ -1,23 +1,38 @@
 {% extends "xplanung_light/layout.html" %}
 {% load django_bootstrap5 %}
-
 {% load render_form from formsetify %}
+{% load richtext %}
 {% bootstrap_css %}
 {% block title %}
+    {% if beteiligung %}
     Beitrag im Beteiligungsverfahren zum Bebauungsplan
+    {%  else %}
+    Beteiligung nicht möglich!
+    {% endif %}
 {% endblock %}
 {% block content %}
-<p>Abgabe einer Stellungnahme</p>
+{% if beteiligung %}
+<h3>Abgabe einer Stellungnahme</h3>
 <p>{{ beteiligung.get_typ_display }} zum Bebauungsplan <b>{{ bplan.name }}</b> der Kommune(n):<br>
     <ul>
         {% for gemeinde in bplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
     </ul>
 </p>  
-<p>Beteiligung möglich bis zum {{ beteiligung.end_datum }}</p>
+<p>Beteiligung möglich bis zum <!--<i title="Datumsangabe" class="fa-regular fa-calendar"></i>-->{{ beteiligung.end_datum }}</p>
+{% if beteiligung.beschreibung %}
+<h3>Nähere Informationen zum Verfahren</h3>
+<p>{% render_richtext beteiligung.beschreibung %}</p>
+{% endif %}
+<p><a href='{{ orga.contacts.first.datenschutz_link }}' target='_blank'>Datenschutzbestimmungen</a></p>
+<!-- email -->
+<!-- datenschutzerklärung -->
 <django-formset endpoint="{{ request.path }}" csrf-token="{{ csrf_token }}">
   {{ form_collection }}
   <div>
     <button type="button" class="btn btn-primary" df-click="submit -> proceed">Erstellen</button>
   </div>
 </django-formset> 
+{% else %}
+Beteiligung nicht möglich!
+{% endif %}
 {% endblock %}
