@@ -19,10 +19,11 @@ from formset.richtext.widgets import RichTextarea
 from captcha.fields import CaptchaField
 from formset.utils import FormMixin
 from django.core.exceptions import ValidationError
+from django_clamd.validators import validate_file_infection
 
 class BPlanImportForm(forms.Form):
     confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
-    file = forms.FileField(required=True, label="BPlan GML", validators=[bplan_content_validator])
+    file = forms.FileField(required=True, label="BPlan GML", validators=[bplan_content_validator, validate_file_infection]),
     """
     for crispy-forms
     """
@@ -34,7 +35,7 @@ class BPlanImportForm(forms.Form):
 
 class FPlanImportForm(forms.Form):
     confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
-    file = forms.FileField(required=True, label="FPlan GML", validators=[fplan_content_validator])
+    file = forms.FileField(required=True, label="FPlan GML", validators=[fplan_content_validator, validate_file_infection])
     """
     for crispy-forms
     """
@@ -46,7 +47,7 @@ class FPlanImportForm(forms.Form):
 
 class BPlanImportArchivForm(forms.Form):
     confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
-    file = forms.FileField(required=True, label="BPlan ZIP-Archiv", validators=[bplan_upload_file_validator])
+    file = forms.FileField(required=True, label="BPlan ZIP-Archiv", validators=[bplan_upload_file_validator, validate_file_infection])
     """
     for crispy-forms
     """
@@ -58,7 +59,7 @@ class BPlanImportArchivForm(forms.Form):
 
 class FPlanImportArchivForm(forms.Form):
     confirm = forms.BooleanField(label="Vorhandenen FPlan überschreiben", initial=False, required=False)
-    file = forms.FileField(required=True, label="FPlan ZIP-Archiv", validators=[fplan_upload_file_validator])
+    file = forms.FileField(required=True, label="FPlan ZIP-Archiv", validators=[fplan_upload_file_validator, validate_file_infection])
     """
     for crispy-forms
     """
@@ -1348,6 +1349,7 @@ class BeteiligungBeitragAnhangForm(ModelForm):
         }),
         help_text="Please do not upload files larger than 1MB",
         required=True,
+        validators=[validate_file_infection],
     )
     
     class Meta:

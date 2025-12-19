@@ -163,7 +163,8 @@ class BPlanBeteiligungBeitragCreateView(EditCollectionView):
         return context
 
     def form_collection_invalid(self, form_collection):
-        form_collection._errors['captcha']['captcha_1'] = form_collection._errors['captcha']['captcha']
+        if 'captcha' in form_collection._errors['captcha'].keys():
+            form_collection._errors['captcha']['captcha_1'] = form_collection._errors['captcha']['captcha']
         return JsonResponse(form_collection._errors, status=422, safe=False)
     
     def form_collection_valid(self, form_collection):

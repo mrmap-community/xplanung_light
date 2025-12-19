@@ -21,6 +21,7 @@ from organizations.base import (
     OrganizationOwnerBase,
     OrganizationInvitationBase,
 )
+from django_clamd.validators import validate_file_infection
 
 # generic meta model
 class GenericMetadata(models.Model):
@@ -698,7 +699,7 @@ class XPlanSpezExterneReferenz(GenericMetadata):
     #datum [0..1], Date
     #typ [1], XP_ExterneReferenzTyp
     typ = models.CharField(null=False, blank=False, max_length=5, choices=REF_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des referierten Dokuments oder Rasterplans', help_text="Typ / Inhalt des referierten Dokuments oder Rasterplans", db_index=True)
-    attachment = models.FileField(null = True, blank = True, upload_to='uploads', verbose_name="Dokument")
+    attachment = models.FileField(null = True, blank = True, upload_to='uploads', verbose_name="Dokument", validators=[validate_file_infection])
     #bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
     #bplan = models.ForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
     

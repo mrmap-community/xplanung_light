@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'organizations',
     'formset',
     'captcha',
+    'django_clamd',
 ]
 
 MIDDLEWARE = [
@@ -200,3 +201,10 @@ XPLANUNG_LIGHT_CONFIG = {
     },
     'metadata_keywords': ['bebauungsplan', 'kommunal', ],
 }
+
+CLAMD_SOCKET = '/var/run/clamav/clamd.ctl'
+CLAMD_USE_TCP = False
+CLAMD_TCP_SOCKET = 3310
+CLAMD_TCP_ADDR = '127.0.0.1'
+CLAMD_FAIL_BY_DEFAULT = True
+CLAMD_ENABLED = False
