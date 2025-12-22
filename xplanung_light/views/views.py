@@ -791,7 +791,9 @@ def bauleitplanung_orga_html(request, pk:int):
             xplan_name=F('bplan__name'),
             xplan_id=F('bplan__id'),
             plantyp=Value('BPlan'),
-            geltungsbereich=F('bplan__geltungsbereich')
+            geltungsbereich=F('bplan__geltungsbereich')#).distinct()
+        ).annotate(
+            confirmed_comments=Count('comments', distinct=True, filter=Q(comments__approved=True, comments__withdrawn=False))
         ).distinct()
     beteiligungen_fplaene = FPlanBeteiligung.objects.filter(
             fplan__gemeinde__id=pk
@@ -802,7 +804,9 @@ def bauleitplanung_orga_html(request, pk:int):
             xplan_name=F('fplan__name'),
             xplan_id=F('fplan__id'),
             plantyp=Value('FPlan'),
-            geltungsbereich=F('fplan__geltungsbereich')
+            geltungsbereich=F('fplan__geltungsbereich')#).distinct()
+        ).annotate(
+            confirmed_comments=Count('comments', distinct=True, filter=Q(comments__approved=True, comments__withdrawn=False))
         ).distinct()
         # https://pythonguides.com/union-operation-on-models-django/
     beteiligungen_qs = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum') 
