@@ -23,7 +23,7 @@ from django_clamd.validators import validate_file_infection
 
 class BPlanImportForm(forms.Form):
     confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
-    file = forms.FileField(required=True, label="BPlan GML", validators=[bplan_content_validator, validate_file_infection]),
+    file = forms.FileField(required=True, label="BPlan GML", validators=[bplan_content_validator, validate_file_infection])
     """
     for crispy-forms
     """
