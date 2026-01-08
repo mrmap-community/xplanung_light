@@ -3,10 +3,22 @@ from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung, Administra
 from xplanung_light.tables import BeteiligungenTable, BeteiligungenOrgaTable
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.utils import timezone
-from django.db.models import Count, F, Value
+from django.db.models import Count, F, Value, OuterRef, Subquery
 from django.db.models.functions import Concat
 from django_tables2 import SingleTableView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core import serializers
+from django.db.models import JSONField
+from django.db.models.aggregates import Aggregate
+
+# https://stackoverflow.com/questions/74111981/django-aggregate-into-array
+# TODO: for sqlite - für Postgres gibt es eigene Aggregatfunktionen!
+class JsonGroupArray(Aggregate):
+    function = 'JSON_GROUP_ARRAY'
+    output_field = JSONField()
+    template = '%(function)s(%(distinct)s%(expressions)s)'
+
+
 
 class BeteiligungenListView(SingleTableView):
     """
@@ -24,8 +36,11 @@ class BeteiligungenListView(SingleTableView):
         """
         if 'pk' in self.kwargs.keys():
             print("Got pk: " + str(self.kwargs['pk']))
-        beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name')).annotate(plantyp=Value('BPlan'))#.values('bekanntmachung_datum', 'plantyp', 'xplan_name', 'bplan__gemeinde')#.select_related('bplan__gemeinde')#.annotate(gemeinden=Concat(F('bplan__gemeinde__name')))
-        beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name')).annotate(plantyp=Value('FPlan'))#.values('bekanntmachung_datum', 'plantyp', 'xplan_name', 'fplan__gemeinde')#.select_related('fplan__gemeinde')#.annotate(gemeinden=Concat(F('fplan__gemeinde__name')))
+
+        beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=JsonGroupArray('bplan__gemeinde__name'))
+        beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), gemeinden=JsonGroupArray('fplan__gemeinde__name'))
+        
+        
         if not self.request.user.is_superuser and not self.request.user.is_anonymous:
             beteiligungen_bplaene = beteiligungen_bplaene.filter(bplan__gemeinde__organization_users__user=self.request.user, bplan__gemeinde__organization_users__is_admin=True)
             beteiligungen_fplaene = beteiligungen_fplaene.filter(fplan__gemeinde__organization_users__user=self.request.user, fplan__gemeinde__organization_users__is_admin=True)
@@ -35,8 +50,8 @@ class BeteiligungenListView(SingleTableView):
         beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
         
         #for beteiligung in beteiligungen_plaene:
-        #    print(beteiligung.plantyp + " - " + str(beteiligung.bekanntmachung_datum) + " - " + str(beteiligung.xplan_name))
-        
+        #    print(beteiligung.plantyp + " - " + str(beteiligung.bekanntmachung_datum) + " - " + str(beteiligung.xplan_name) + " - " + str(beteiligung.gemeinden))
+            #beteiligung.gemeinden = json.loads(beteiligung.gemeinden)
         return beteiligungen_plaene  
     
 

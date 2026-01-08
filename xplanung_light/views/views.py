@@ -779,8 +779,8 @@ def home(request):
     
 def bauleitplanung_orga_html(request, pk:int):
     orga = AdministrativeOrganization.objects.get(id=pk)
-    bplaene = BPlan.objects.filter(public=True, gemeinde__id=pk)
-    fplaene = FPlan.objects.filter(public=True, gemeinde__id=pk)
+    bplaene = BPlan.objects.filter(public=True, gemeinde__id=pk, inkrafttretens_datum__lte=timezone.now())
+    fplaene = FPlan.objects.filter(public=True, gemeinde__id=pk, wirksamkeits_datum__lte=timezone.now())
     beteiligungen_bplaene = BPlanBeteiligung.objects.distinct().filter(
             bplan__gemeinde__id=pk
         ).filter(

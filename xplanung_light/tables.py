@@ -78,14 +78,13 @@ class FPlanSpezExterneReferenzTable(tables.Table):
 
 class BeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
-    end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='End Datum')
+    end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
     xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.bplan.id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.bplan.id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
     plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
-    #gemeinde = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}{% for gemeinde in record.bplan.gemeinde.all %}{{ gemeinde.name }}<br>{% endfor %}{% endif%}{% if record.plantyp == "FPlan"%}{% for gemeinde in record.bplan.gemeinde.all %}{{ gemeinde.name }}{% endfor %}{% endif%}""", orderable=False, verbose_name='Gemeinden')
-    #problem: man kann im view nicht über relationen gehen - alles was man braucht muss man vor dem union ziehen!
-    #gemeinde1 = tables.Column(verbose_name='Gebietskörperschaften')
-    #gemeinde = tables.columns.TemplateColumn(template_code=u"""{{ record.gemeinde }}""", orderable=True, verbose_name='Gemeinde')
-
+    gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
+  {{ value }}<br />{% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
+    #Problem: Man kann im view nicht über Relationen gehen - alles was man braucht, muss man vor dem union ziehen, bzw. als JSON rausgeben!
+    
 
     class Meta:
         #model = BPlanBeteiligung
