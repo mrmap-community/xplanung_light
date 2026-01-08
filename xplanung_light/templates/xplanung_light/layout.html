@@ -64,6 +64,9 @@
               </li>
               {% if user.is_superuser %}
               <li class="nav-item">
+                  <a class="nav-link" aria-current="page" href="{% url 'aggregates' %}">Schnittstellen (Aggregate)</a>
+              </li>
+              <li class="nav-item">
                   <a class="nav-link" aria-current="page" href="{% url 'admin:index' %}">Admin Backend</a>
               </li>
               {% endif %}
@@ -90,8 +93,8 @@
         {% endblock %}
         <hr/>
         <footer>
-            <p>&copy; 2025</p>
-            <p>Letzte Änderung: 2025-11-26 Dashboard hinzugefügt</p>
+            <p>&copy; 2026</p>
+            <p>powered by <a href="https://mrmap-community.github.io/xplanung_light/" target="_blank">xplanung-light</a> & <a href="https://www.djangoproject.com/" target="_blank">Django</a></p>
         </footer>
     </div>
 </body>

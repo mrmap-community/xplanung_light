@@ -724,6 +724,9 @@ def fplan_import_archiv(request):
         form = FPlanImportArchivForm()
     return render(request, "xplanung_light/fplan_import_archiv.html", {"form": form})
 
+def aggregates(request):
+     return render(request, "xplanung_light/aggregates.html")
+
 def home(request):
     # Lade alle Informationen zu den vorhandenen Daten für das Dashboard
     bplan_info = {}
@@ -768,13 +771,9 @@ def home(request):
 
     # Für den anonymen Benutzer sind nur die publizierten Verfahren sichtbar!
     #if request.user.is_anonymous == True:
-
-
     #bplan_info['public_objects'] = BPlan.objects.filter(public=True).only('id').count()
     #fplan_info['public_objects']  = FPlan.objects.filter(public=True).only('id').count()
-
     #orga_info['public_objects']  = AdministrativeOrganization.filter(public=True).objects.only('id').count()
-
 
     return render(request, "xplanung_light/home.html", {'bplan_info': bplan_info, 'fplan_info': fplan_info, 'orga_info': orga_info, 'beteiligungen_info': beteiligungen_info})
     
@@ -793,6 +792,7 @@ def bauleitplanung_orga_html(request, pk:int):
             plantyp=Value('BPlan'),
             geltungsbereich=F('bplan__geltungsbereich')#).distinct()
         ).annotate(
+            # TODO check warum filter nicht zieht...
             confirmed_comments=Count('comments', distinct=True, filter=Q(comments__approved=True, comments__withdrawn=False))
         ).distinct()
     beteiligungen_fplaene = FPlanBeteiligung.objects.filter(
@@ -812,12 +812,11 @@ def bauleitplanung_orga_html(request, pk:int):
     beteiligungen_qs = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum') 
     other_info = {}
     other_info['today'] = datetime.date.today() 
-    for beteiligung in beteiligungen_qs:
-        print(str(beteiligung.id) + " - " + beteiligung.xplan_name)
+    #for beteiligung in beteiligungen_qs:
+    #    print(str(beteiligung.id) + " - " + beteiligung.xplan_name)
         #print(beteiligung.geltungsbereich)
     return render(request, "xplanung_light/bauleitplanung_orga_list.html", {'orga': orga, 'beteiligungen': beteiligungen_qs, 'bplaene': bplaene, 'fplaene': fplaene, 'other_info': other_info})
     
-
 def about(request):
     return render(request, "xplanung_light/about.html")
 

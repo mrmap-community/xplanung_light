@@ -3,26 +3,20 @@
 Home
 {% endblock %}
 {% block content %}
-<p>Einfache Webanwendung zur Verwaltung kommunaler Pläne gemäß dem aktuellen Standard <a href="https://xleitstelle.de/xplanung" target="_blank">XPlanung</a></p>
+<p>Einfache Webanwendung zur Verwaltung und Publikation kommunaler Pläne gemäß dem aktuellen Standard <a href="https://xleitstelle.de/xplanung" target="_blank">XPlanung</a></p>
 <p>Der Betreiber übernimmt keinerlei Verantwortung für die Funktionsfähigkeit und Zuverlässigkeit der Anwendung. Es handelt sich aktuell um ein <b>Proof of Concept</b>.
 Solange die Anwendung online ist, kann und darf sie von jedermann kostenfrei verwendet werden. 
-
-Das Projekt dient auch als Test zur Prüfung von Funktionen des zugrundeliegenden Webframeworks 
-<a href="https://www.djangoproject.com/" target="_blank">Django</a> und wurde innerhalb weniger Tage unter Nutzung von <a href="https://docs.djangoproject.com/en/5.0/topics/class-based-views/generic-display/" target="_blank">class-based generic views</a>
-  umgesetzt ;-) .</p>
 <h4>Funktionen</h4>
 <ul>
-    <li>Homepage</li>
-    <li>Authentifizierung gegen Datenbank</li>
-    <li>Registrierung</li>
+    <li>Dashboard</li>
     <li>Admin-Backend</li>
-    <li>Organisations Registry</li>
-    <li>CRUD BPlan</li>
+    <li>Organisations-Registry</li>
+    <li>CRUD XPlan</li>
     <li>Historisierung von XPlan und AdministrativeOrganisation</li>
     <li>CRUD Anlagen</li>
-    <li>Import XPlan-GML (6.0)</li>
-    <li>Export XPlan-GML (6.0)</li>
-    <li>WMS/WFS based on Mapserver</li>
+    <li>Import XPlan-GML/zip (6.0, 5.1, ...)</li>
+    <li>Export XPlan-GML/zip (6.0)</li>
+    <li>WMS/WFS powered by <a href="https://mapserver.org/" target="_blank">Mapserver</a></li>
     <li>ISO19139 Metadaten Export</li>
     <li>...</li>
 </ul>

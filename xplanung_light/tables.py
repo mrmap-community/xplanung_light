@@ -79,9 +79,10 @@ class FPlanSpezExterneReferenzTable(tables.Table):
 class BeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
     end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='End Datum')
-    xplan_name = tables.columns.TemplateColumn(template_code=u"""{{ record.xplan_name }}""", orderable=True, verbose_name='Name des Plans')
+    xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.bplan.id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.bplan.id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
     plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
-    gemeinde = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}{{ record.bplan.gemeinde.all|join:"; " }}{% endif%}{% if record.plantyp == "FPlan"%}{{ record.fplan.gemeinde.all|join:"; " }}{% endif%}""", orderable=False, verbose_name='Gemeinden')
+    #gemeinde = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}{% for gemeinde in record.bplan.gemeinde.all %}{{ gemeinde.name }}<br>{% endfor %}{% endif%}{% if record.plantyp == "FPlan"%}{% for gemeinde in record.bplan.gemeinde.all %}{{ gemeinde.name }}{% endfor %}{% endif%}""", orderable=False, verbose_name='Gemeinden')
+    #problem: man kann im view nicht über relationen gehen - alles was man braucht muss man vor dem union ziehen!
     #gemeinde1 = tables.Column(verbose_name='Gebietskörperschaften')
     #gemeinde = tables.columns.TemplateColumn(template_code=u"""{{ record.gemeinde }}""", orderable=True, verbose_name='Gemeinde')
 
@@ -99,7 +100,8 @@ class BeteiligungenOrgaTable(tables.Table):
     xplan_name = tables.columns.TemplateColumn(template_code=u"""{{ record.xplan_name }}""", orderable=True, verbose_name='Name des Plans')
     plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
     #gemeinde = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}{{ record.bplan.gemeinde.all|join:"; " }}{% endif%}{% if record.plantyp == "FPlan"%}{{ record.fplan.gemeinde.all|join:"; " }}{% endif%}""", orderable=False, verbose_name='Gemeinden')
-    id = tables.columns.TemplateColumn('<a href=" {% if record.plantyp == "BPlan" %}{% url "bplanbeteiligung-update" planid=record.xplan_id pk=record.id %}{% else %}{% url "fplanbeteiligung-update" planid=record.xplan_id pk=record.id %}{% endif %}">Öffnen</a>', orderable=True, verbose_name='Plan-ID')
+    id = tables.columns.TemplateColumn('<a href=" {% if record.plantyp == "BPlan" %}{% url "bplanbeteiligung-update" planid=record.xplan_id pk=record.id %}{% else %}{% url "fplanbeteiligung-update" planid=record.xplan_id pk=record.id %}{% endif %}">Bearbeiten</a>', orderable=True, verbose_name='')
+    beteiligungen = tables.columns.TemplateColumn('<a href=" {% if record.plantyp == "BPlan" %}{% url "bplanbeteiligung-list" planid=record.xplan_id %}{% else %}{% url "fplanbeteiligung-list" planid=record.xplan_id %}{% endif %}">Alle Beteiligungen</a>', orderable=True, verbose_name='')
     #gemeinde = tables.columns.TemplateColumn(template_code=u"""{{ record.gemeinde }}""", orderable=True, verbose_name='Gemeinde')
     
 
@@ -347,20 +349,21 @@ class FPlanTable(tables.Table):
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):
+    name = tables.Column(verbose_name="Gebietskörperschaft")
     num_bplan = tables.Column(verbose_name="BPläne")
     num_bplan_public = tables.Column(verbose_name="öffentliche BPläne")
     #TODO: auch Zahl der FPläne anzeigen - Link auf Services nur dann anzeigen, wenn Pläne existieren
     num_fplan = tables.Column(verbose_name="FPläne")
     num_fplan_public = tables.Column(verbose_name="öffentliche FPläne")
     #Laufende Verfahren
-    laufende_verfahren = tables.LinkColumn('organization-beteiligungen-list', verbose_name='Laufende Verfahren', args=[A('pk')], orderable=False, empty_values=())
+    laufende_verfahren = tables.Column(verbose_name='Laufende Verfahren', orderable=False, empty_values=())
     #laufende_verfahren = tables.Column(verbose_name="Laufende Verfahren")
    
     wms = tables.LinkColumn('ows', text='WMS', args=[A('pk')], \
                          orderable=False, empty_values=())
     wfs = tables.LinkColumn('ows', text='WFS', args=[A('pk')], \
                          orderable=False, empty_values=())
-    ags = tables.Column(verbose_name="AGS", orderable=False)
+    ags = tables.Column(verbose_name="Auskunft", orderable=False)
 
     def render_ags(self, record):
         url = reverse('organization-bauleitplanung-list', kwargs={'pk': record.id})
@@ -388,6 +391,20 @@ class AdministrativeOrganizationPublishingTable(tables.Table):
             return format_html('<a href="{}?gemeinde={}">{}</a>', url, record.id, record.num_fplan)
         else:
             return format_html('{}', record.num_fplan)
+        
+    def render_num_bplan_public(self, record):
+        if not record.num_bplan_public == 0:
+            url = reverse('bplan-list')
+            return format_html('<a href="{}?gemeinde={}&is_public=on">{}</a>', url, record.id, record.num_bplan_public)
+        else:
+            return format_html('{}', record.num_bplan_public)
+
+    def render_num_fplan_public(self, record):
+        if not record.num_fplan_public == 0:
+            url = reverse('fplan-list')
+            return format_html('<a href="{}?gemeinde={}&is_public=on">{}</a>', url, record.id, record.num_fplan_public)
+        else:
+            return format_html('{}', record.num_fplan_public)
 
     # https://stackoverflow.com/questions/36698387/how-to-add-get-parameters-to-django-tables2-linkcolumn
     def render_wms(self, record):

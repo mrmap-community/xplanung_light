@@ -4,6 +4,7 @@ from xplanung_light.tables import BeteiligungenTable, BeteiligungenOrgaTable
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.utils import timezone
 from django.db.models import Count, F, Value
+from django.db.models.functions import Concat
 from django_tables2 import SingleTableView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
@@ -23,19 +24,19 @@ class BeteiligungenListView(SingleTableView):
         """
         if 'pk' in self.kwargs.keys():
             print("Got pk: " + str(self.kwargs['pk']))
-        beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('bplan__name')).annotate(plantyp=Value('BPlan'))
-        beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('fplan__name')).annotate(plantyp=Value('FPlan'))
+        beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name')).annotate(plantyp=Value('BPlan'))#.values('bekanntmachung_datum', 'plantyp', 'xplan_name', 'bplan__gemeinde')#.select_related('bplan__gemeinde')#.annotate(gemeinden=Concat(F('bplan__gemeinde__name')))
+        beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name')).annotate(plantyp=Value('FPlan'))#.values('bekanntmachung_datum', 'plantyp', 'xplan_name', 'fplan__gemeinde')#.select_related('fplan__gemeinde')#.annotate(gemeinden=Concat(F('fplan__gemeinde__name')))
         if not self.request.user.is_superuser and not self.request.user.is_anonymous:
             beteiligungen_bplaene = beteiligungen_bplaene.filter(bplan__gemeinde__organization_users__user=self.request.user, bplan__gemeinde__organization_users__is_admin=True)
             beteiligungen_fplaene = beteiligungen_fplaene.filter(fplan__gemeinde__organization_users__user=self.request.user, fplan__gemeinde__organization_users__is_admin=True)
         # Info:
         # union(), intersection(), and difference() return model instances of the type of the first QuerySet even if the arguments are QuerySets of other models. Passing different models works as long as the SELECT list is the same in all QuerySets (at least the types, the names don’t matter as long as the types in the same order).   
         # https://pythonguides.com/union-operation-on-models-django/
-        beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene)
-        """
-        for beteiligung in beteiligungen_plaene:
-            print(beteiligung.plantyp + " - " + str(beteiligung.bekanntmachung_datum))
-        """
+        beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
+        
+        #for beteiligung in beteiligungen_plaene:
+        #    print(beteiligung.plantyp + " - " + str(beteiligung.bekanntmachung_datum) + " - " + str(beteiligung.xplan_name))
+        
         return beteiligungen_plaene  
     
 

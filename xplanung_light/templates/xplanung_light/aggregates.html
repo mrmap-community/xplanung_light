@@ -1,0 +1,9 @@
+{% extends "xplanung_light/layout.html" %}
+{% block title %}
+Schnittstellen (Aggregate)
+{% endblock %}
+{% block content %}
+<ul>
+    <li><a href="{% url 'beteiligungen-map' %}?VERSION=1.3.0&SERVICE=WMS&REQUEST=GetCapabilities" target="_blank">Laufende Verfahren (WMS)</a></li>
+</ul>
+{% endblock %}

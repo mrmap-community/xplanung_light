@@ -24,6 +24,7 @@ urlpatterns = [
     # https://dev.to/donesrom/how-to-set-up-django-built-in-registration-in-2023-41hg
     path("register/", views.register, name = "register"),
     path("about/", views.about, name="about"),
+    path("aggregates/", views.aggregates, name="aggregates"),
     # BPlan CRUD
     path("bplan/", BPlanListView.as_view(), name="bplan-list"),
     path("bplan/create/", BPlanCreateView.as_view(), name="bplan-create"),
