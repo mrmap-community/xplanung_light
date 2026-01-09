@@ -8,8 +8,9 @@ from django.db.models.functions import Concat
 from django_tables2 import SingleTableView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import serializers
-from django.db.models import JSONField
-from django.db.models.aggregates import Aggregate
+from django.db.models import JSONField, CharField, Func, Aggregate
+import json
+#from django.db.models.aggregates import Aggregate
 
 # https://stackoverflow.com/questions/74111981/django-aggregate-into-array
 # TODO: for sqlite - für Postgres gibt es eigene Aggregatfunktionen!
@@ -18,6 +19,50 @@ class JsonGroupArray(Aggregate):
     output_field = JSONField()
     template = '%(function)s(%(distinct)s%(expressions)s)'
 
+"""
+Nach KI-Recherche - Abstraktion für postgresql und sqlite
+"""
+from django.contrib.postgres.aggregates import JSONBAgg
+from django.db.models.functions import JSONObject
+from django.db import connection
+
+
+class SQLiteJSONGroupArray(Aggregate):
+    function = "JSON_GROUP_ARRAY"
+    output_field = JSONField()
+
+class SQLiteJSONObject(Func):
+    function = "json_object"
+
+
+def sqlite_organization_aggregation(plantyp='bplan'):
+    return SQLiteJSONGroupArray(
+        SQLiteJSONObject(
+            Value("id"), plantyp + "__gemeinde__id",
+            Value("name"), plantyp + "__gemeinde__name",
+        )
+    )   
+
+def postgres_organization_aggregation(plantyp='bplan'):
+    return JSONBAgg(
+        JSONObject(
+            id = plantyp + "__gemeinde__id",
+            name = plantyp + "__gemeinde__name",
+        )
+    )
+
+def organization_json_aggregation(plantyp='bplan'):
+    if connection.vendor == "postgresql":
+
+        return postgres_organization_aggregation(plantyp)
+
+    if connection.vendor == "sqlite":
+        result = sqlite_organization_aggregation(plantyp)
+        print(type(result))
+        print(result)
+        return result
+
+    raise NotImplementedError
 
 
 class BeteiligungenListView(SingleTableView):
@@ -37,9 +82,24 @@ class BeteiligungenListView(SingleTableView):
         if 'pk' in self.kwargs.keys():
             print("Got pk: " + str(self.kwargs['pk']))
 
+        # Info: https://forum.djangoproject.com/t/group-concat-in-orm/21149
+        # https://stackoverflow.com/questions/73668842/django-with-mysql-subquery-returns-more-than-1-row
+        # https://djangosnippets.org/snippets/10860/
+        gemeinden_bplaene = AdministrativeOrganization.objects.filter(bplan__id=OuterRef("bplan__id"))
+        #beteiligungen_bplaene_1 = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=serializers.serialize('json', Subquery(gemeinden_bplaene)))
+        #beteiligungen_bplaene_1 = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=Subquery(gemeinden_bplaene))
+
+        #for test in beteiligungen_bplaene_1:
+        #    print(serializers.serialize('json', test.gemeinden))
+
+
         beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=JsonGroupArray('bplan__gemeinde__name'))
+
+        beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=organization_json_aggregation())
+
         beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), gemeinden=JsonGroupArray('fplan__gemeinde__name'))
-        
+        beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), gemeinden=organization_json_aggregation(plantyp='fplan'))
+
         
         if not self.request.user.is_superuser and not self.request.user.is_anonymous:
             beteiligungen_bplaene = beteiligungen_bplaene.filter(bplan__gemeinde__organization_users__user=self.request.user, bplan__gemeinde__organization_users__is_admin=True)

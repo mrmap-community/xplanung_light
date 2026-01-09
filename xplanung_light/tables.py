@@ -82,7 +82,7 @@ class BeteiligungenTable(tables.Table):
     xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.bplan.id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.bplan.id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
     plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
     gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
-  {{ value }}<br />{% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
+  <a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a><br />{% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
     #Problem: Man kann im view nicht über Relationen gehen - alles was man braucht, muss man vor dem union ziehen, bzw. als JSON rausgeben!
     
 
@@ -107,7 +107,6 @@ class BeteiligungenOrgaTable(tables.Table):
     class Meta:
         template_name = "django_tables2/bootstrap5.html"
         
-
 
 class BPlanBeteiligungTable(tables.Table):
 
