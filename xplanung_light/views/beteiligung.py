@@ -21,6 +21,8 @@ class JsonGroupArray(Aggregate):
 
 """
 Nach KI-Recherche - Abstraktion für postgresql und sqlite
+Eigentlich wird JSONAgg vorgeschlagen - ob JSONBAgg klappt müssen wir noch ausprobieren
+
 """
 from django.contrib.postgres.aggregates import JSONBAgg
 from django.db.models.functions import JSONObject
@@ -30,6 +32,7 @@ from django.db import connection
 class SQLiteJSONGroupArray(Aggregate):
     function = "JSON_GROUP_ARRAY"
     output_field = JSONField()
+
 
 class SQLiteJSONObject(Func):
     function = "json_object"
@@ -58,8 +61,6 @@ def organization_json_aggregation(plantyp='bplan'):
 
     if connection.vendor == "sqlite":
         result = sqlite_organization_aggregation(plantyp)
-        print(type(result))
-        print(result)
         return result
 
     raise NotImplementedError
@@ -79,28 +80,21 @@ class BeteiligungenListView(SingleTableView):
         
         :param self: Description
         """
-        if 'pk' in self.kwargs.keys():
-            print("Got pk: " + str(self.kwargs['pk']))
+        #if 'pk' in self.kwargs.keys():
+        #    print("Got pk: " + str(self.kwargs['pk']))
 
         # Info: https://forum.djangoproject.com/t/group-concat-in-orm/21149
         # https://stackoverflow.com/questions/73668842/django-with-mysql-subquery-returns-more-than-1-row
         # https://djangosnippets.org/snippets/10860/
-        gemeinden_bplaene = AdministrativeOrganization.objects.filter(bplan__id=OuterRef("bplan__id"))
+        #gemeinden_bplaene = AdministrativeOrganization.objects.filter(bplan__id=OuterRef("bplan__id"))
         #beteiligungen_bplaene_1 = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=serializers.serialize('json', Subquery(gemeinden_bplaene)))
         #beteiligungen_bplaene_1 = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=Subquery(gemeinden_bplaene))
 
-        #for test in beteiligungen_bplaene_1:
-        #    print(serializers.serialize('json', test.gemeinden))
-
-
-        beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=JsonGroupArray('bplan__gemeinde__name'))
-
+        #beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=JsonGroupArray('bplan__gemeinde__name'))
         beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=organization_json_aggregation())
-
-        beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), gemeinden=JsonGroupArray('fplan__gemeinde__name'))
+        #beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), gemeinden=JsonGroupArray('fplan__gemeinde__name'))
         beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), gemeinden=organization_json_aggregation(plantyp='fplan'))
 
-        
         if not self.request.user.is_superuser and not self.request.user.is_anonymous:
             beteiligungen_bplaene = beteiligungen_bplaene.filter(bplan__gemeinde__organization_users__user=self.request.user, bplan__gemeinde__organization_users__is_admin=True)
             beteiligungen_fplaene = beteiligungen_fplaene.filter(fplan__gemeinde__organization_users__user=self.request.user, fplan__gemeinde__organization_users__is_admin=True)
@@ -108,10 +102,6 @@ class BeteiligungenListView(SingleTableView):
         # union(), intersection(), and difference() return model instances of the type of the first QuerySet even if the arguments are QuerySets of other models. Passing different models works as long as the SELECT list is the same in all QuerySets (at least the types, the names don’t matter as long as the types in the same order).   
         # https://pythonguides.com/union-operation-on-models-django/
         beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
-        
-        #for beteiligung in beteiligungen_plaene:
-        #    print(beteiligung.plantyp + " - " + str(beteiligung.bekanntmachung_datum) + " - " + str(beteiligung.xplan_name) + " - " + str(beteiligung.gemeinden))
-            #beteiligung.gemeinden = json.loads(beteiligung.gemeinden)
         return beteiligungen_plaene  
     
 

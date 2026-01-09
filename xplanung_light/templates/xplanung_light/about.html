@@ -1,22 +1,24 @@
 {% extends "xplanung_light/layout.html" %}
 {% block title %}
-Home
+XPlanung-light - about
 {% endblock %}
 {% block content %}
-<p>Einfache Webanwendung zur Verwaltung und Publikation kommunaler Pläne gemäß dem aktuellen Standard <a href="https://xleitstelle.de/xplanung" target="_blank">XPlanung</a></p>
-<p>Der Betreiber übernimmt keinerlei Verantwortung für die Funktionsfähigkeit und Zuverlässigkeit der Anwendung. Es handelt sich aktuell um ein <b>Proof of Concept</b>.
-Solange die Anwendung online ist, kann und darf sie von jedermann kostenfrei verwendet werden. 
+<p>Einfache Webanwendung zur Verwaltung und Publikation von Bauleitplänen gem. <a href="https://www.gesetze-im-internet.de/bbaug/__1.html" target="_blank">§1 Abs. (2) BauGB</a>. Die Modellierung der Planinformation basiert auf dem deutschen Standard <a href="https://xleitstelle.de/xplanung" target="_blank">XPlanung</a>.</p>
+<p>Die Anwendung basiert ausschließlich auf bewährten lizenzkostenfreien OpenSource-Softwarekomponenten und steht unter <a href="https://de.wikipedia.org/wiki/MIT-Lizenz" target="_blank">MIT-Lizenz</a>.<p>
+<p>Die vorhandenen Schnittstellen setzen zum einen den <a href="https://www.it-planungsrat.de/beschluss/beschluss-2017-37" target="_blank">Beschlusses 2017/37 des IT-Planungsrat</a> um, zum anderen werden die Vorgaben der <a href="https://eur-lex.europa.eu/eli/dir/2007/2/oj/deu" target="_blank">EU-INSPIRE-Richtlinie (2007/2/EG)</a>, sowie der <a href="https://eur-lex.europa.eu/legal-content/DE/ALL/?uri=CELEX:32023R0138" target="_blank">HVD-Verordnung (2023/138)</a> eingehalten.</p>   
 <h4>Funktionen</h4>
 <ul>
-    <li>Dashboard</li>
-    <li>Admin-Backend</li>
     <li>Organisations-Registry</li>
-    <li>CRUD XPlan</li>
-    <li>Historisierung von XPlan und AdministrativeOrganisation</li>
-    <li>CRUD Anlagen</li>
+    <li>Verwaltung von BPlan- und FPlan-Objekten</li>
+    <li>Verwaltung beliebiger Anlagen</li>
+    <li>Erfassung von Imformationen zu durchgeführten UVPs (Umsetzung der Berichtspflichten gem. <a href="https://eur-lex.europa.eu/legal-content/DE/TXT/HTML/?uri=CELEX:32014L0052" target="_blank">EU UVP-Richtlinie (2014/52/EU)</a>)</li>
+    <li>Verwaltung von Informationen zu durchgeführten Beteiligungsverfahren</li>
+    <li>Planauskunft für einzelne Gebietskörperschaften</li>
+    <li>Online-Stellungnahmen (ohne Notwendigkeit einer vorherigen Registrierung)</li>
     <li>Import XPlan-GML/zip (6.0, 5.1, ...)</li>
     <li>Export XPlan-GML/zip (6.0)</li>
-    <li>WMS/WFS powered by <a href="https://mapserver.org/" target="_blank">Mapserver</a></li>
+    <li>Historisierung von XPlan-Objekten und AdministrativeOrganisation</li>
+    <li>GDI-DE / INSPIRE konforme WMS/WFS Schnittstellen powered by <a href="https://mapserver.org/" target="_blank">Mapserver</a></li>
     <li>ISO19139 Metadaten Export</li>
     <li>...</li>
 </ul>
