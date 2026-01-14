@@ -151,6 +151,7 @@ INTERNAL_IPS = [
 ]
 
 LEAFLET_CONFIG = {
+    # https://stackoverflow.com/questions/66938889/how-to-add-leaflet-extensions-marker-basemap-geocoder-to-django-leaflet
     # conf here
     # RLP
     #'SPATIAL_EXTENT': (6.0, 49.0, 8.5, 52),
@@ -163,6 +164,16 @@ LEAFLET_CONFIG = {
     'MAX_ZOOM': 20,
     'DEFAULT_PRECISION': 6,
     'NO_GLOBALS': False,
+    'PLUGINS': {
+        'filelayer': {
+            'js': ['https://unpkg.com/@tmcw/togeojson', 'https://cdn.jsdelivr.net/npm/leaflet-filelayer@1.2.0/src/leaflet.filelayer.min.js'],
+            'auto-include': True,
+        },
+        #'geocoder': {
+        # 'css': ['https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css'],
+        # 'js': ['https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js'],
+        #},
+    }
 }
 
 SERIALIZATION_MODULES = {

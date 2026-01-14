@@ -1,6 +1,8 @@
 {% extends "xplanung_light/layout.html" %}
 {% load crispy_forms_tags %}
-
+{% load leaflet_tags %}
+{% leaflet_css plugins="ALL" %}
+{% leaflet_js plugins="ALL" %}
 {% block title %}
     Bebauungsplan anlegen
 {% endblock %}
@@ -16,8 +18,63 @@
                 maxZoom: 20,
                 transparent: true,
             }).addTo(map);
+            //L.Control.geocoder().addTo(detail.map);
+            var control = new L.Control.FileLayerLoad({
+                // Allows you to use a customized version of L.geoJson.
+                // For example if you are using the Proj4Leaflet leaflet plugin,
+                // you can pass L.Proj.geoJson and load the files into the
+                // L.Proj.GeoJson instead of the L.geoJson.
+                layer: L.geoJson,
+                // See http://leafletjs.com/reference.html#geojson-options
+                layerOptions: {style: {color:'red'}},
+                // Add to map after loading (default: true) ?
+                addToMap: true,
+                // File size limit in kb (default: 1024) ?
+                fileSizeLimit: 2048,
+                // Restrict accepted file formats (default: .geojson, .json, .kml, and .gpx) ?
+                formats: [
+                    '.geojson',
+                    '.kml',
+                    '.gpx',
+                ]
+            }).addTo(map);
+            // hard to find - but it work as expected ;-) : https://github.com/makinacorpus/Leaflet.FileLayer/issues/22
+            var drawnItems;
+            var store;
+            map.on('map:loadfield', function (e) {
+                drawnItems = e.field.drawnItems;
+                store = e.field.store;
+            });
+            control.loader.on('data:loaded', function (event) {
+                // event.layer gives you access to the layers you just uploaded!
+                //console.log("layer loaded!");
+                //console.log(map);
+                const layer = event.layer;
+                // remove old layers 
+                drawnItems.eachLayer(function(l) {
+                    map.removeLayer(l);
+                })
+                drawnItems.clearLayers();
+                // Add the polygon to the map, not sure why this is required but django-leaflet does this
+                map.addLayer(layer)
+                // Add the polygon to the drawnItems featureGroup
+                drawnItems.addLayer(layer);
+                // Django-leaflet does this so just copy it, it seems to make the fileLayer geojson 
+                // get saved to the form
+                store.save(drawnItems);
+                // weitere hilfreiche Informationen
+                // howto tweak draw control to set actual layer editable?
+                // https://gis.stackexchange.com/questions/213247/how-put-leaflet-filelayer-data-into-editable-layer-so-i-can-edit-after-upload
+                // https://github.com/makinacorpus/Leaflet.FileLayer/issues/22
+            });
+            control.loader.on('data:error', function (error) {
+                // Do something usefull with the error!
+                console.error(error);
+            });
+            //console.log('upload module initialized');
         }, false
     ); //end of window.addEventListener
+    
     // function for zooming to some extent - https://django-leaflet.readthedocs.io/en/latest/widget.html#programmatically-appended-maps
     function zoomToExtent(select) {
         var selectedOption = select.options[select.selectedIndex];
