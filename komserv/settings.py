@@ -166,7 +166,7 @@ LEAFLET_CONFIG = {
     'NO_GLOBALS': False,
     'PLUGINS': {
         'filelayer': {
-            'js': ['https://unpkg.com/@tmcw/togeojson', 'https://cdn.jsdelivr.net/npm/leaflet-filelayer@1.2.0/src/leaflet.filelayer.min.js'],
+            'js': ['https://unpkg.com/@tmcw/togeojson@7.1.2/dist/togeojson.umd.js', 'https://cdn.jsdelivr.net/npm/leaflet-filelayer@1.2.0/src/leaflet.filelayer.min.js'],
             'auto-include': True,
         },
         #'geocoder': {

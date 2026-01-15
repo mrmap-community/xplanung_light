@@ -8,6 +8,23 @@
 {% endblock %}
 {% block content %}
 <script type="text/javascript">
+    /*
+    Funktion stammt aus Hinweis von chatgpt. Polygone nicht direkt editierbar, weil sie in einem L.GeoJson Container geliefert werde.
+    Multipolygone müssen vorher auch in Polygone überführt werden.
+    */
+    function multipolygonToPolygons(layer) {
+        const coords = layer.feature.geometry.coordinates;
+
+        return coords.map(polygonCoords =>
+            L.polygon(
+            polygonCoords.map(ring =>
+                ring.map(([lng, lat]) => [lat, lng])
+            ),
+            layer.options
+            )
+        );
+    }
+
     window.addEventListener("map:init", function(e) {
             var detail = e.detail;
             var map = detail.map;
@@ -44,22 +61,37 @@
             map.on('map:loadfield', function (e) {
                 drawnItems = e.field.drawnItems;
                 store = e.field.store;
+                //_drawControl = e.field._drawControl;
+                //console.log(e.field);
             });
             control.loader.on('data:loaded', function (event) {
-                // event.layer gives you access to the layers you just uploaded!
-                //console.log("layer loaded!");
-                //console.log(map);
-                const layer = event.layer;
-                // remove old layers 
+                //help: https://gis.stackexchange.com/questions/203540/how-to-edit-an-existing-layer-using-leaflet
                 drawnItems.eachLayer(function(l) {
                     map.removeLayer(l);
                 })
                 drawnItems.clearLayers();
+                // 
+                // folgende Logik kam von chatgpt (siehe Funktion multipolygonToPolygons): 
+                event.layer.eachLayer(function (layer) {
+
+                    const geomType = layer.feature?.geometry?.type;
+
+                    if (geomType === "MultiPolygon") {
+
+                        const polygons = multipolygonToPolygons(layer);
+
+                        polygons.forEach(polygon => {
+                            drawnItems.addLayer(polygon); // editierbar
+                        });
+
+                    } else if (geomType === "Polygon") {
+
+                        drawnItems.addLayer(layer); // editierbar
+
+                    }
+                });
                 // Add the polygon to the map, not sure why this is required but django-leaflet does this
-                map.addLayer(layer)
-                // Add the polygon to the drawnItems featureGroup
-                drawnItems.addLayer(layer);
-                // Django-leaflet does this so just copy it, it seems to make the fileLayer geojson 
+                // map.addLayer(layer);
                 // get saved to the form
                 store.save(drawnItems);
                 // weitere hilfreiche Informationen
@@ -73,8 +105,7 @@
             });
             //console.log('upload module initialized');
         }, false
-    ); //end of window.addEventListener
-    
+    );
     // function for zooming to some extent - https://django-leaflet.readthedocs.io/en/latest/widget.html#programmatically-appended-maps
     function zoomToExtent(select) {
         var selectedOption = select.options[select.selectedIndex];

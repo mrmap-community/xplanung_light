@@ -1,11 +1,30 @@
 {% extends "xplanung_light/layout.html" %}
 {% load crispy_forms_tags %}
-
+{% load leaflet_tags %}
+{% leaflet_css plugins="ALL" %}
+{% leaflet_js plugins="ALL" %}
 {% block title %}
     Flächennutzungsplan anlegen
 {% endblock %}
 {% block content %}
 <script type="text/javascript">
+    /*
+    Funktion stammt aus Hinweis von chatgpt. Polygone nicht direkt editierbar, weil sie in einem L.GeoJson Container geliefert werde.
+    Multipolygone müssen vorher auch in Polygone überführt werden.
+    */
+    function multipolygonToPolygons(layer) {
+        const coords = layer.feature.geometry.coordinates;
+
+        return coords.map(polygonCoords =>
+            L.polygon(
+            polygonCoords.map(ring =>
+                ring.map(([lng, lat]) => [lat, lng])
+            ),
+            layer.options
+            )
+        );
+    }
+
     window.addEventListener("map:init", function(e) {
             var detail = e.detail;
             var map = detail.map;
@@ -16,8 +35,77 @@
                 maxZoom: 20,
                 transparent: true,
             }).addTo(map);
+            //L.Control.geocoder().addTo(detail.map);
+            var control = new L.Control.FileLayerLoad({
+                // Allows you to use a customized version of L.geoJson.
+                // For example if you are using the Proj4Leaflet leaflet plugin,
+                // you can pass L.Proj.geoJson and load the files into the
+                // L.Proj.GeoJson instead of the L.geoJson.
+                layer: L.geoJson,
+                // See http://leafletjs.com/reference.html#geojson-options
+                layerOptions: {style: {color:'red'}},
+                // Add to map after loading (default: true) ?
+                addToMap: true,
+                // File size limit in kb (default: 1024) ?
+                fileSizeLimit: 2048,
+                // Restrict accepted file formats (default: .geojson, .json, .kml, and .gpx) ?
+                formats: [
+                    '.geojson',
+                    '.kml',
+                    '.gpx',
+                ]
+            }).addTo(map);
+            // hard to find - but it work as expected ;-) : https://github.com/makinacorpus/Leaflet.FileLayer/issues/22
+            var drawnItems;
+            var store;
+            map.on('map:loadfield', function (e) {
+                drawnItems = e.field.drawnItems;
+                store = e.field.store;
+                //_drawControl = e.field._drawControl;
+                //console.log(e.field);
+            });
+            control.loader.on('data:loaded', function (event) {
+                //help: https://gis.stackexchange.com/questions/203540/how-to-edit-an-existing-layer-using-leaflet
+                drawnItems.eachLayer(function(l) {
+                    map.removeLayer(l);
+                })
+                drawnItems.clearLayers();
+                // 
+                // folgende Logik kam von chatgpt (siehe Funktion multipolygonToPolygons): 
+                event.layer.eachLayer(function (layer) {
+
+                    const geomType = layer.feature?.geometry?.type;
+
+                    if (geomType === "MultiPolygon") {
+
+                        const polygons = multipolygonToPolygons(layer);
+
+                        polygons.forEach(polygon => {
+                            drawnItems.addLayer(polygon); // editierbar
+                        });
+
+                    } else if (geomType === "Polygon") {
+
+                        drawnItems.addLayer(layer); // editierbar
+
+                    }
+                });
+                // Add the polygon to the map, not sure why this is required but django-leaflet does this
+                // map.addLayer(layer);
+                // get saved to the form
+                store.save(drawnItems);
+                // weitere hilfreiche Informationen
+                // howto tweak draw control to set actual layer editable?
+                // https://gis.stackexchange.com/questions/213247/how-put-leaflet-filelayer-data-into-editable-layer-so-i-can-edit-after-upload
+                // https://github.com/makinacorpus/Leaflet.FileLayer/issues/22
+            });
+            control.loader.on('data:error', function (error) {
+                // Do something usefull with the error!
+                console.error(error);
+            });
+            //console.log('upload module initialized');
         }, false
-    ); //end of window.addEventListener
+    );
     // function for zooming to some extent - https://django-leaflet.readthedocs.io/en/latest/widget.html#programmatically-appended-maps
     function zoomToExtent(select) {
         var selectedOption = select.options[select.selectedIndex];
