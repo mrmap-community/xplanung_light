@@ -24,8 +24,26 @@ python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
+```
+
+Für Debian 12 wird mapscript 8.0.0 benötigt!
+```shell
+python3 -m pip install mapscript==8.0.0
+```
+
+Debian 11
+```shell
 cd .venv/lib64/python3.9/site-packages/mapscript
 cp /usr/lib/python3/dist-packages/mapscript/_mapscript.cpython-39-x86_64-linux-gnu.so _mapscript.so
+```
+
+Debian 12
+```shell
+cd .venv/lib64/python3.11/site-packages/mapscript
+cp /usr/lib/python3/dist-packages/mapscript/_mapscript.cpython-311-x86_64-linux-gnu.so _mapscript.so
+```
+
+```shell
 cd ../../../../../
 python3 manage.py shell -c "import django;django.db.connection.cursor().execute('SELECT InitSpatialMetaData(1);')";
 python3 manage.py migrate
