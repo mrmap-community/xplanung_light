@@ -68,3 +68,86 @@ Der Prozess kann mehrfach gestartet werden. Das **AdministrativeOrganization**-m
 [Startseite](http://127.0.0.1:8000/)
 
 **Viel Spass**
+
+# Wechsel von spatialite zu PostGIS
+
+## Debian 11
+
+### Installieren der Betriebssystempakete
+
+```shell
+apt install postgresql-13 postgresql-13-postgis-3 postgresql-server-dev-13 python3-psycopg2
+```
+
+### Einrichten der Test-Datenbank
+
+```shell
+sudo -u postgres psql -p 5432 -c "CREATE USER geodjango PASSWORD 'geodjango_password';"
+su - postgres -c "createdb -p 5432 -E UTF8 xplanung_light -T template0"
+sudo -u postgres psql -p 5432 -d xplanung_light -c "CREATE EXTENSION postgis;"
+sudo -u postgres psql -p 5432 -c "ALTER DATABASE xplanung_light OWNER TO geodjango;"
+```
+
+### Anpassung der settings.py
+
+```python
+"""
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.spatialite',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+"""
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'xplanung_light',
+        'USER': 'geodjango',
+        'PASSWORD': 'geodjango_password',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
+```
+
+### Konfiguration der Zugangsberechtigungen für die Datenbank
+
+```shell
+vi /etc/postgresql/13/main/pg_hba.conf
+```
+
+Folgendermaßen anpassen
+
+```shell
+  #...
+  # TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+  # "local" is for Unix domain socket connections only
+  local   all             postgres                                peer
+  # IPv4 local connections:
+  #...
+  host    xplanung_light    geodjango       127.0.0.1/32          md5
+  #...
+  # IPv6 local connections:
+  #...
+  host    xplanung_light    geodjango       ::1/128               md5 
+  #...
+```
+
+Datenbank neu starten
+
+```shell
+/etc/init.d/postgresql restart
+```
+
+### Initialisieren der Datenbank 
+
+Da die neue Datenbank zunächst leer ist
+
+```shell
+source .venv/bin/activate
+python3 manage.py migrate
+python3 manage.py createsuperuser
+```
