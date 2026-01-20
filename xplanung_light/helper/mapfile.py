@@ -168,7 +168,7 @@ class MapfileGenerator():
                 if connection.vendor == "postgresql":
                     layer["connectiontype"] = "POSTGIS"
                     layer["connection"] = 'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
-                    layer["data"] = "geom from (select geltungsbereich, id from xplanung_light_fplan where public = true) as foo using unique id using srid=25832"
+                    layer["data"] = "geltungsbereich from (select geltungsbereich, id from xplanung_light_fplan where public = true) as foo using unique id using srid=25832"
                 layer["filter"] = "( '[id]' = '" + str(fplan.pk) + "' )"
                 layer["classes"] = []
                 # Layer nur hinzufügen, wenn auch ein Geltungsbereich existiert
@@ -197,7 +197,7 @@ class MapfileGenerator():
             if connection.vendor == "postgresql":
                 umring_layer["connectiontype"] = "POSTGIS"
                 umring_layer["connection"] = 'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
-                umring_layer["data"] = "geom from (SELECT fplan.* FROM xplanung_light_fplan fplan INNER JOIN xplanung_light_fplan_gemeinde gemeinde ON fplan.id = gemeinde.fplan_id WHERE public=true AND gemeinde.administrativeorganization_id = " + str(orga.pk) + ") as foo using unique id using srid=25832"
+                umring_layer["data"] = "geltungsbereich from (SELECT fplan.* FROM xplanung_light_fplan fplan INNER JOIN xplanung_light_fplan_gemeinde gemeinde ON fplan.id = gemeinde.fplan_id WHERE public=true AND gemeinde.administrativeorganization_id = " + str(orga.pk) + ") as foo using unique id using srid=25832"
             #umring_layer["data"] = "SELECT fplan.* FROM xplanung_light_fplan fplan INNER JOIN xplanung_light_fplan_gemeinde gemeinde ON fplan.id = gemeinde.fplan_id WHERE public=true AND gemeinde.administrativeorganization_id = " + str(orga.pk)
             # TODO: add active Filter when it will be available
             umring_layer["classes"] = []
@@ -266,7 +266,7 @@ class MapfileGenerator():
                 if connection.vendor == "postgresql":
                     layer["connectiontype"] = "POSTGIS"
                     layer["connection"] = 'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
-                    layer["data"] = "geom from (select geltungsbereich, id from xplanung_light_bplan where public = true) as foo using unique id using srid=25832"
+                    layer["data"] = "geltungsbereich from (select geltungsbereich, id from xplanung_light_bplan where public = true) as foo using unique id using srid=25832"
                 print(layer['data'])
                 layer["filter"] = "( '[id]' = '" + str(bplan.pk) + "' )"
                 layer["classes"] = []
@@ -300,5 +300,5 @@ class MapfileGenerator():
             umring_layer["classes"] = []
             umring_layer["classes"].append(layer_class)
             map["layers"].append(umring_layer)
-            #print(mappyfile.dumps(map))
+            print(mappyfile.dumps(map))
             return mappyfile.dumps(map)
