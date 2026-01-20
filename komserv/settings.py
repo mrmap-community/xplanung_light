@@ -92,14 +92,37 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
+"""
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.spatialite',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+"""
+"""
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "OPTIONS": {
+            "service": "my_service",
+            "passfile": ".my_pgpass",
+            
+        },
+    }
+}
+"""
 
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'xplanung_light',
+        'USER': 'geodjango',
+        'PASSWORD': 'testgeodjango11',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -211,6 +234,8 @@ XPLANUNG_LIGHT_CONFIG = {
         'postcode': '11111',
     },
     'metadata_keywords': ['bebauungsplan', 'kommunal', ],
+    'mapfile_cache_duration_seconds': 20,
+    "mapfile_force_online_resource_https": False,
 }
 
 CLAMD_SOCKET = '/var/run/clamav/clamd.ctl'

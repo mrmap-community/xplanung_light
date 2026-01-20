@@ -35,6 +35,7 @@ from django.contrib.gis.db.models.functions import AsGeoJSON
 from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.forms import GastBeitragAuthenticateForm
 from django.db.models import Subquery, OuterRef, Q
+from django.db import connection
 
 def get_bplan_attachment(request, pk):
     # Nur admins der Gebietskörperschaften oder superuser
@@ -205,43 +206,79 @@ def beteiligungen(request):
 
 def ows_beteiligungen(request):
     """
-    OWS für die laufenden Beteiligungsverfahren
+    OWS für die laufenden Beteiligungsverfahren, hier müssen wir zwischen Spatialite und PostGIS unterscheiden!
     """
     qs = parse_qs(request.META['QUERY_STRING'])
     req =  mapscript.OWSRequest()
     # TODO - auch POST unterstützen!
     for k, v in qs.items():
         req.setParameter(k, ','.join(v))
-        print(str(k) + "-" + str(v))
+        #print(str(k) + "-" + str(v))
     map_file_string = ''
     with open(os.path.join(str(settings.BASE_DIR), "xplanung_light/mapserver/mapfiles/beteiligungen.map")) as file:
         map_file_string = file.read()
         # Überschreiben der Online Resource
-        map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('beteiligungen-map')))
-        # Versuch das SQL aus django generieren zu lassen
+        # TODO http/https zentral konfigurieren 
+        if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
+            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('beteiligungen-map')).replace('http://','https://'))
+        else:
+            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('beteiligungen-map')))
+        # Alternativer Versuch das SQL aus django generieren zu lassen
         #
         #offengelegte_plaene = BPlan.objects.filter(beteiligungen__end_datum__lte=timezone.now()).filter(beteiligungen__bekanntmachung_datum__gte=timezone.now()).only('geltungsbereich', 'name','id')
         #offengelegte_plaene = BPlan.objects.all().only('geltungsbereich', 'name','id')
         #print(str(offengelegte_plaene.query))
         # TODO - check warum es bei der Definition des SQL durch Django Unterschiede zum fest vorgegebenen SQL gibt ...
-        datastring_point = """select st_centroid(geltungsbereich), xplanung_light_bplan.id as plan_id from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
-                    xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
-                    and bekanntmachung_datum <= date() and end_datum >= date()
-                    union 
-                    select st_centroid(geltungsbereich), xplanung_light_fplan.id as plan_id from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on 
-                    xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
-                    and bekanntmachung_datum <= date() and end_datum >= date()
-        """
-        datastring_polygon = """select geltungsbereich, xplanung_light_bplan.id as plan_id, 'BPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
-                    xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
-                    and bekanntmachung_datum <= date() and end_datum >= date()
-                    union 
-                    select geltungsbereich, xplanung_light_fplan.id as plan_id, 'FPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on 
-                    xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
-                    and bekanntmachung_datum <= date() and end_datum >= date()
-        """
+        #print(str(connection.vendor))
+        if connection.vendor == "sqlite":
+            #print('sqlite used')
+            datastring_point = """select st_centroid(geltungsbereich), xplanung_light_bplan.id as plan_id from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
+                        xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
+                        and bekanntmachung_datum <= date() and end_datum >= date()
+                        union 
+                        select st_centroid(geltungsbereich), xplanung_light_fplan.id as plan_id from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on 
+                        xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
+                        and bekanntmachung_datum <= date() and end_datum >= date()
+            """
+            datastring_polygon = """select geltungsbereich, xplanung_light_bplan.id as plan_id, 'BPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
+                        xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
+                        and bekanntmachung_datum <= date() and end_datum >= date()
+                        union 
+                        select geltungsbereich, xplanung_light_fplan.id as plan_id, 'FPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on 
+                        xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
+                        and bekanntmachung_datum <= date() and end_datum >= date()
+            """
+        if connection.vendor == "postgresql":
+            datastring_point = """select st_centroid(geltungsbereich) as geom, xplanung_light_bplan.id as plan_id from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
+                        xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
+                        and bekanntmachung_datum <= now() and end_datum >= now()
+                        union 
+                        select st_centroid(geltungsbereich) as geom, xplanung_light_fplan.id as plan_id from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on 
+                        xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
+                        and bekanntmachung_datum <= now() and end_datum >= now()
+            """
+            datastring_polygon = """select geltungsbereich as geom, xplanung_light_bplan.id as plan_id, 'BPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
+                        xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
+                        and bekanntmachung_datum <= now() and end_datum >= now()
+                        union 
+                        select geltungsbereich as geom, xplanung_light_fplan.id as plan_id, 'FPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on 
+                        xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
+                        and bekanntmachung_datum <= now() and end_datum >= now()
+            """
+
+        if connection.vendor == "postgresql":
+           datastring_polygon =  "geom from (" + datastring_polygon + ") as foo using unique plan_id using srid=25832"
+           datastring_point = "geom from (" + datastring_point + ") as foo using unique plan_id using srid=25832"
         #map_file_string = map_file_string.replace('<datastring>', str(offengelegte_plaene.query).replace('CAST (AsEWKB(', '').replace(') AS BLOB)', ''))
         map_file_string = map_file_string.replace('<datastring_polygon>', datastring_polygon).replace('<datastring_point>', datastring_point)
+        if connection.vendor == "sqlite":
+            map_file_string = map_file_string.replace('<connection_type>', 'OGR').replace('<connection>', "db.sqlite3")
+        if connection.vendor == "postgresql":
+            map_file_string = map_file_string.replace('<connection_type>', 'POSTGIS').replace('<connection>', 'host=' + str(settings.DATABASES['default']['HOST']) +
+                                                                                               ' dbname=' + str(settings.DATABASES['default']['NAME']) +
+                                                                                               ' user=' + str(settings.DATABASES['default']['USER']) +
+                                                                                               ' password=' + str(settings.DATABASES['default']['PASSWORD']) +
+                                                                                               ' port='+ str(settings.DATABASES['default']['PORT']))
         #print(map_file_string)
     map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
@@ -288,7 +325,7 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
         map_file_string = map_file_string.replace('<wkt>', wkt.replace('SRID=4326;',''))
         geometry = OGRGeometry(str(plan.geltungsbereich), srs=4326)
         wgs84_extent = geometry.extent
-        print(wgs84_extent)
+        #print(wgs84_extent)
     map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
     #try:
@@ -338,7 +375,7 @@ def ows_fplan_overview(request, pk:int, plan_typ='fplan'):
         map_file_string = map_file_string.replace('<wkt>', wkt.replace('SRID=4326;',''))
         geometry = OGRGeometry(str(plan.geltungsbereich), srs=4326)
         wgs84_extent = geometry.extent
-        print(wgs84_extent)
+        #print(wgs84_extent)
     map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
     dispatch_status = map.OWSDispatch(req)
@@ -411,7 +448,7 @@ def ows(request, pk:int):
         mapfile = cache.get("mapfile_" + orga.ags)
     else:
         mapfile = mapfile_generator.generate_mapfile(pk, request.build_absolute_uri(reverse('ows', kwargs={"pk": pk})), metadata_uri)
-        cache.set("mapfile_" + orga.ags, mapfile, 10)
+        cache.set("mapfile_" + orga.ags, mapfile, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
     #print(mapfile)
     map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()

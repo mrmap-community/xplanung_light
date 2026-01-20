@@ -64,8 +64,8 @@ MAP
         TYPE POLYGON
         TEMPLATE "xplanung_light/mapserver/templates/offenlagen.html"
         DUMP TRUE
-        CONNECTIONTYPE OGR
-        CONNECTION 	"db.sqlite3"
+        CONNECTIONTYPE <connection_type>
+        CONNECTION 	"<connection>"
         #DEBUG 5
         DATA "<datastring_polygon>"
         METADATA
@@ -658,8 +658,8 @@ MAP
     LAYER
         NAME "offenlagen_cluster"
         TYPE POINT
-        CONNECTIONTYPE OGR
-        CONNECTION 	"db.sqlite3"
+        CONNECTIONTYPE <connection_type>
+        CONNECTION 	"<connection>"
         DATA "<datastring_point>"
         STATUS DEFAULT
         METADATA

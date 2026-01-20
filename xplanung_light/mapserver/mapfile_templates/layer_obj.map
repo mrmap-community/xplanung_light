@@ -28,7 +28,7 @@ LAYER
         CONNECTIONTYPE 	OGR
    	    CONNECTION 	"db.sqlite3"
    	    DATA 		"select geltungsbereich, id from xplanung_light_bplan where public = true"
-   	    FILTER 		('[id]' = '10')
+   	    #FILTER 		('[id]' = '10')
    	    PROCESSING 	"CLOSE_CONNECTION=DEFER" # for maximum performance
         PROJECTION
             "init=epsg:4326"
