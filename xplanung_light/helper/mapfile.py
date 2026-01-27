@@ -158,8 +158,8 @@ class MapfileGenerator():
                 metadata["ows_abstract"] = "Flächennutzungsplan " + fplan.name + " von " + orga.name + " - Abstract"
                 metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(fplan.geltungsbereich), srs=4326).extent])
                 metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + str(fplan.pk) + "/").replace("/bplan/", "/fplan/")
-                layer.pop('dump')
-                layer.pop('template')
+                layer.pop('dump', None)
+                layer.pop('template', None)
                 layer["metadata"] = metadata
                 if connection.vendor == "sqlite":
                     layer["connectiontype"] = "OGR"
@@ -256,8 +256,8 @@ class MapfileGenerator():
                 metadata["ows_abstract"] = "Bebauungsplan " + bplan.name + " von " + orga.name + " - Abstract"
                 metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(bplan.geltungsbereich), srs=4326).extent])
                 metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + str(bplan.pk) + "/")
-                layer.pop('dump')
-                layer.pop('template')
+                layer.pop('dump', None)
+                layer.pop('template', None)
                 layer["metadata"] = metadata
                 if connection.vendor == "sqlite":
                     layer["connectiontype"] = "OGR"
@@ -300,5 +300,5 @@ class MapfileGenerator():
             umring_layer["classes"] = []
             umring_layer["classes"].append(layer_class)
             map["layers"].append(umring_layer)
-            print(mappyfile.dumps(map))
+            #print(mappyfile.dumps(map))
             return mappyfile.dumps(map)

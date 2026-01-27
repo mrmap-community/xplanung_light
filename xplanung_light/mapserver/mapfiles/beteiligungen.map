@@ -63,7 +63,6 @@ MAP
         NAME "offenlagen"
         TYPE POLYGON
         TEMPLATE "xplanung_light/mapserver/templates/offenlagen.html"
-        DUMP TRUE
         CONNECTIONTYPE <connection_type>
         CONNECTION 	"<connection>"
         #DEBUG 5

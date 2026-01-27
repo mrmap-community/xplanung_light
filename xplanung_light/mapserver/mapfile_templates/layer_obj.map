@@ -22,7 +22,6 @@ LAYER
             "gml_exclude_items"         "xplan_gml"
             #"ows_enable_request" "* !GetCapabilities"
         END
-        DUMP TRUE
         TEMPLATE        "xplanung_light/mapserver/templates/bplan.html"
         TYPE            POLYGON
         CONNECTIONTYPE 	OGR

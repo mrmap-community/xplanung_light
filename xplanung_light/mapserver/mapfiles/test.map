@@ -92,7 +92,6 @@ MAP
             "ows_metadataurl_type" "TC211"
             #"ows_enable_request" "* !GetCapabilities"
         END
-        DUMP TRUE
         TEMPLATE "xplanung_light/mapserver/templates/bplan.html"
         TYPE POLYGON
         CONNECTIONTYPE OGR
@@ -135,7 +134,6 @@ MAP
             "ows_metadataurl_type" "TC211"
             "ows_enable_request" "* !GetCapabilities"
         END
-        DUMP TRUE
         TEMPLATE "xplanung_light/mapserver/templates/bplan.html"
         TYPE QUERY
         CONNECTIONTYPE OGR
