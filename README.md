@@ -151,3 +151,7 @@ source .venv/bin/activate
 python3 manage.py migrate
 python3 manage.py createsuperuser
 ```
+
+# Projekt auf OpenCode.de
+
+[OpenCode.de](https://gitlab.opencode.de/gdi-rp/xplanung_light/)
