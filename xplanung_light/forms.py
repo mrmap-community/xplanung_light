@@ -548,18 +548,17 @@ class BPlanCreateForm(ModelForm):
                         Field("gemeinde"),
                         "name",
                         "planart",
+                        Fieldset(
+                            "Pflichtfeld XPlanung-light",
+                            Row(
+                                "nummer",
+                        )),
                     ),
                     Column(
                         "geltungsbereich",
                     ),
                 ),
             ),
-            Fieldset(
-                "Pflichtfelder XPlanung-light",
-                Row(
-                    "nummer",
-                ),
-            ),  
             Fieldset(
                 "Weitere Informationen",
                 Row(
@@ -711,17 +710,17 @@ class BPlanUpdateForm(ModelForm):
                         Field("gemeinde"),
                         "name",
                         "planart",
+                        Fieldset(
+                            "Pflichtfeld XPlanung-light",
+                            Row(
+                                "nummer",
+                        )),
                     ),
                     Column(
                         "geltungsbereich",
                     ),
                 ),
             ),
-            Fieldset(
-                "Pflichtfelder XPlanung-light",
-                Row(
-                    "nummer",
-                )),
             Fieldset(
                 "Weitere Informationen",
                 Row(
