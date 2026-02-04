@@ -288,7 +288,7 @@ class XPlan(GenericMetadata):
     # https://stackoverflow.com/questions/35312334/how-can-i-store-history-of-manytomanyfield-using-django-simple-history
     #history = HistoricalRecords(inherit=True, m2m_fields=)
     #history = HistoricalRecords(inherit=True)
-    xplan_gml = models.FileField(null = True, max_length=1014, blank = True, verbose_name="XPlan GML-Dokument", help_text="")
+    xplan_gml = models.TextField(null = True, blank = True, verbose_name="XPlan GML-Dokument", help_text="")
     xplan_gml_version = models.CharField(null=True, blank=True, max_length=5, verbose_name='XPlan GML-Dokument Version', help_text='')
     public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Plan öffentlich verfügbar", help_text="Gibt an, ob Informationen zum Plan über die frei verfügbaren Schnittstellen publiziert werden.")
 
@@ -595,7 +595,7 @@ class BPlanBeteiligungBeitragAnhang(GenericMetadata):
     name = models.CharField(null=False, blank=False, max_length=256)
     beitrag = HistoricForeignKey(BPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zum Beitrag / Kommentar", help_text="Dateianhänge zum Beitrag / Kommentar", related_name="attachments")
     typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_ATTACHMENT_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des Anhangs', help_text="Typ / Inhalt des Anhngs zum Kommentar", db_index=True)
-    attachment = models.FileField(null = True, blank = True, max_length=1014, upload_to='uploads', verbose_name="Dokument")
+    attachment = models.FileField(null = True, blank = True, max_length=1024, upload_to='uploads', verbose_name="Dokument")
     history = HistoricalRecords()
 
 
@@ -631,7 +631,7 @@ class FPlanBeteiligungBeitragAnhang(GenericMetadata):
     name = models.CharField(null=False, blank=False, max_length=256)
     beitrag = HistoricForeignKey(FPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zum Beitrag / Kommentar", help_text="Dateianhänge zum Beitrag / Kommentar", related_name="attachments")
     typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_ATTACHMENT_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des Anhangs', help_text="Typ / Inhalt des Anhngs zum Kommentar", db_index=True)
-    attachment = models.FileField(null = True, blank = True, max_length=1014, upload_to='uploads', verbose_name="Dokument")
+    attachment = models.FileField(null = True, blank = True, max_length=1024, upload_to='uploads', verbose_name="Dokument")
     history = HistoricalRecords()
 
 
@@ -719,7 +719,7 @@ class XPlanSpezExterneReferenz(GenericMetadata):
     #datum [0..1], Date
     #typ [1], XP_ExterneReferenzTyp
     typ = models.CharField(null=False, blank=False, max_length=5, choices=REF_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des referierten Dokuments oder Rasterplans', help_text="Typ / Inhalt des referierten Dokuments oder Rasterplans", db_index=True)
-    attachment = models.FileField(null = True, blank = True, max_length=1014, upload_to='uploads', verbose_name="Dokument", validators=[validate_file_infection])
+    attachment = models.FileField(null = True, blank = True, max_length=1024, upload_to='uploads', verbose_name="Dokument", validators=[validate_file_infection])
     #bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
     #bplan = models.ForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
     
