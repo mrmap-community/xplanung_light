@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 from django import forms
 from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
+from django.contrib.gis.gdal import OGRGeometry
 from xplanung_light.models import BPlan, FPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, FPlanSpezExterneReferenz
 from io import BytesIO
 from zipfile import ZipFile
@@ -125,6 +126,15 @@ class XPlanung():
         #print(geometry.wkt)
         # Transformation in WGS84 für die Ablage im System
         geometry.transform(4326)
+        # Lösen des Problems, dass manchmal auch 3d Koordinaten geliefert werden - wir transformieren nehmen wir nur die 2d Infos heraus
+        # https://forum.djangoproject.com/t/geodjango-model-field-for-multipoint-with-z-dimension/1217
+        # https://stackoverflow.com/questions/35851577/strip-z-dimension-on-geodjango-force-2d-geometry
+        # if geometry.coord_dim == 3:
+        # Convert to OGR, change dimension, convert back
+        if geometry.dims == 3:
+            ogr_geom = OGRGeometry(geometry.wkt)
+            ogr_geom.coord_dim = 2 # Strip Z
+            geometry = GEOSGeometry(ogr_geom.wkb) # Convert back to GEOS
         # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
         gemeinde_name = root.find("gml:featureMember/" + path_element + "/xplan:gemeinde/xplan:XP_Gemeinde/xplan:gemeindeName", ns).text
         gemeinde_ags = root.find("gml:featureMember/" + path_element + "/xplan:gemeinde/xplan:XP_Gemeinde/xplan:ags", ns).text
