@@ -131,10 +131,11 @@ class XPlanung():
         # https://stackoverflow.com/questions/35851577/strip-z-dimension-on-geodjango-force-2d-geometry
         # if geometry.coord_dim == 3:
         # Convert to OGR, change dimension, convert back
-        if geometry.dims == 3:
-            ogr_geom = OGRGeometry(geometry.wkt)
-            ogr_geom.coord_dim = 2 # Strip Z
-            geometry = GEOSGeometry(ogr_geom.wkb) # Convert back to GEOS
+        #if geometry.dims == 3:
+        # TODO: check, wie man das anders prüfen könnte 
+        ogr_geom = OGRGeometry(geometry.wkt)
+        ogr_geom.coord_dim = 2 # Strip Z
+        geometry = GEOSGeometry(ogr_geom.wkb) # Convert back to GEOS
         # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
         gemeinde_name = root.find("gml:featureMember/" + path_element + "/xplan:gemeinde/xplan:XP_Gemeinde/xplan:gemeindeName", ns).text
         gemeinde_ags = root.find("gml:featureMember/" + path_element + "/xplan:gemeinde/xplan:XP_Gemeinde/xplan:ags", ns).text
