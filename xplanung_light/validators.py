@@ -215,11 +215,14 @@ def bplan_content_validator(xplan_file):
             validation_error_messages.append("ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
             raise forms.ValidationError(validation_error_messages)
     else:
-        print("contenttype of gml in zip: " + xplan_file.content_type)
         if xplan_file.content_type not in ('application/gml', 'text/xml', 'text/plain', 'application/gml+xml'):
             validation_error_messages.append("Es handelt sich nicht um eine GML-Datei!")
             raise forms.ValidationError(validation_error_messages)
-    xml_string = xplan_file.read().decode('UTF-8')
+    try:
+        xml_string = xplan_file.read().decode('UTF-8')
+    except:
+        validation_error_messages.append("Das decodieren nach UTF-8 war nicht erfolgreich!")
+        raise forms.ValidationError(validation_error_messages)
     #validation_error_messages.append('test')
     try:
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
@@ -265,7 +268,6 @@ def bplan_content_validator(xplan_file):
                     else:
                        validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!")) 
                 else:
-                    # kein direktes text Element
                     if value['type'] == 'array':
                         test = root.findall(value['xpath'], ns)
                         if len(test) == 0:
@@ -285,7 +287,7 @@ def bplan_content_validator(xplan_file):
                                             validation_error_messages.append(forms.ValidationError("Es wurden kein Eintrag für eine Gemeinde mit dem AGS  *" + gemeinde_ags +  "* in der Datenbank gefunden!"))
                                         if orga and gemeinde_name:
                                             if orga.name != gemeinde_name:
-                                                validation_error_messages.append(forms.ValidationError("Das Element xplan:gemeindeName: **" + result['gemeinde_name'] + "** stimmt nicht mit dem name der Organisation aus der DB für den AGS " + orga.ags + ": **" + orga.name + "** überein!"))
+                                                validation_error_messages.append(forms.ValidationError("Das Element xplan:gemeindeName: **" + str(gemeinde_name) + "** stimmt nicht mit dem name der Organisation aus der DB für den AGS " + orga.ags + ": **" + orga.name + "** überein!"))
                                     else:
                                         validation_error_messages.append(forms.ValidationError("Es wurden kein ags-Attribut im XP_Gemeinde-Objekt gefunden!"))
             # Erst mal alle Geometrietypen erlauben - ggf. Einschränkung auf MultiPolygon und Polygon
@@ -405,10 +407,10 @@ def fplan_content_validator(xplan_file):
                                             orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
                                         except:
                                             orga = None
-                                            validation_error_messages.append(forms.ValidationError("Es wurden kein Eintrag für eine Gemeinde mit dem AGS  *" + gemeinde_ags +  "* in der Datenbank gefunden!"))
+                                            validation_error_messages.append(forms.ValidationError("Es wurden kein Eintrag für eine Gemeinde mit dem AGS  *" + str(gemeinde_ags) +  "* in der Datenbank gefunden!"))
                                         if orga and gemeinde_name:
                                             if orga.name != gemeinde_name:
-                                                validation_error_messages.append(forms.ValidationError("Das Element xplan:gemeindeName: **" + result['gemeinde_name'] + "** stimmt nicht mit dem name der Organisation aus der DB für den AGS " + orga.ags + ": **" + orga.name + "** überein!"))
+                                                validation_error_messages.append(forms.ValidationError("Das Element xplan:gemeindeName: **" + str(gemeinde_name) + "** stimmt nicht mit dem name der Organisation aus der DB für den AGS " + orga.ags + ": **" + orga.name + "** überein!"))
                                     else:
                                         validation_error_messages.append(forms.ValidationError("Es wurden kein ags-Attribut im XP_Gemeinde-Objekt gefunden!"))
             # Erst mal alle Geometrietypen erlauben - ggf. Einschränkung auf MultiPolygon und Polygon
