@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='historicalrequestfororganizationadmin',
             name='delete_reason',
-            field=models.CharField(blank=True, choices=[('c', 'Bestätigt'), ('r', 'Zurückgewiesen')], default='1000', help_text='Grund für die Löschung des Antrags', max_length=1, null=True, verbose_name='Grund für die Löschung'),
+            field=models.CharField(blank=True, choices=[('c', 'Bestätigt'), ('r', 'Zurückgewiesen')], default='1000', help_text='Grund für die Löschung des Antrags', max_length=10, null=True, verbose_name='Grund für die Löschung'),
         ),
         migrations.AddField(
             model_name='historicalrequestfororganizationadmin',
@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='requestfororganizationadmin',
             name='delete_reason',
-            field=models.CharField(blank=True, choices=[('c', 'Bestätigt'), ('r', 'Zurückgewiesen')], default='1000', help_text='Grund für die Löschung des Antrags', max_length=1, null=True, verbose_name='Grund für die Löschung'),
+            field=models.CharField(blank=True, choices=[('c', 'Bestätigt'), ('r', 'Zurückgewiesen')], default='1000', help_text='Grund für die Löschung des Antrags', max_length=10, null=True, verbose_name='Grund für die Löschung'),
         ),
         migrations.AddField(
             model_name='requestfororganizationadmin',
