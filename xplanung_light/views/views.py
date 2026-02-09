@@ -6,12 +6,13 @@ from django.shortcuts import redirect
 from django.contrib.auth import login
 from xplanung_light.models import AdministrativeOrganization, BPlanSpezExterneReferenz, BPlan, FPlan, FPlanSpezExterneReferenz
 from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung, BPlanBeteiligungBeitragAnhang, BPlanBeteiligungBeitrag
+from xplanung_light.models import RequestForOrganizationAdmin, AdminOrgaUser
 import uuid
 import xml.etree.ElementTree as ET
 from django.urls import reverse
 from xplanung_light.helper.xplanung import XPlanung
 from django.contrib import messages
-from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanImportArchivForm, FPlanImportForm, FPlanImportArchivForm
+from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanImportArchivForm, FPlanImportForm, FPlanImportArchivForm, RequestForOrganizationAdminRefuseForm, RequestForOrganizationAdminConfirmForm
 
 from xplanung_light.filter import BPlanIdFilter, FPlanIdFilter
 from django.http import HttpResponse
@@ -36,6 +37,9 @@ from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.forms import GastBeitragAuthenticateForm
 from django.db.models import Subquery, OuterRef, Q
 from django.db import connection
+from formset.views import FormView
+from django.urls import reverse_lazy
+from django.contrib import messages
 
 def get_bplan_attachment(request, pk):
     # Nur admins der Gebietskörperschaften oder superuser
@@ -1084,3 +1088,61 @@ def beitrag_detail(request, **kwargs):
     context['object'] = beitrag
     context['beitrag_generic_id'] = beitrag.generic_id
     return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
+
+
+class RequestForAdminConfirm(FormView):
+    form_class = RequestForOrganizationAdminConfirmForm
+    template_name = "xplanung_light/requestforadmin_form_confirm.html"
+    success_url = reverse_lazy("requestforadmin-admin-list")
+
+    def get_context_data(self, **kwargs):
+        pk = self.kwargs['pk']
+        context = super().get_context_data(**kwargs)
+        context['anfrage'] = RequestForOrganizationAdmin.objects.get(id=pk)
+        return context
+
+    def form_valid(self, form):
+        # Auslesen des pk zur Aktualisierung des Antragrecords
+        request = RequestForOrganizationAdmin.objects.get(id=self.kwargs['pk'])
+        # Administratorrollen anlegen
+        for organization in request.organizations.all():
+            print(organization)
+            # Füge Nutzer als Admin zur Organisation hinzu
+            new_admin = AdminOrgaUser()
+            new_admin.user = request.owned_by_user
+            new_admin.organization = organization
+            new_admin.is_admin = True
+            new_admin.save()
+        request.editing_note = form.cleaned_data['editing_note']
+        request.delete_reason = 'c'
+        request.save()
+        request.delete()
+        messages.add_message(self.request, messages.SUCCESS, "Antrag " + str(self.kwargs['pk']) + " wurde bestätigt!")
+        # Senden einer EMail mit Benachrichtung an Antragsteller
+        # TODO
+        return super().form_valid(form)
+
+
+class RequestForAdminRefuse(FormView):
+    form_class = RequestForOrganizationAdminRefuseForm
+    template_name = "xplanung_light/requestforadmin_form_refuse.html"
+    success_url = reverse_lazy("requestforadmin-admin-list")
+
+    def get_context_data(self, **kwargs):
+        pk = self.kwargs['pk']
+        context = super().get_context_data(**kwargs)
+        context['anfrage'] = RequestForOrganizationAdmin.objects.get(id=pk)
+        return context
+
+    def form_valid(self, form):
+        # Auslesen des pk zur Aktualisierung des Antragrecords
+        request = RequestForOrganizationAdmin.objects.get(id=self.kwargs['pk'])
+        request.editing_note = form.cleaned_data['editing_note']
+        request.delete_reason = 'r'
+        request.save()
+        request.delete()
+        messages.add_message(self.request, messages.SUCCESS, "Antrag " + str(self.kwargs['pk']) + " wurde zurückgewiesen!")
+        # Senden einer EMail mit Benachrichtung an Antragsteller
+        # TODO
+        return super().form_valid(form)
+    

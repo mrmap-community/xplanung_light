@@ -6,7 +6,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization, Uvp, FPlanUvp
 from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung
-from xplanung_light.models import ContactOrganization
+from xplanung_light.models import ContactOrganization, RequestForOrganizationAdmin
 from xplanung_light.models import BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang
 from xplanung_light.validators import fplan_upload_file_validator, geotiff_raster_validator, bplan_content_validator, fplan_content_validator, bplan_upload_file_validator
 from crispy_forms.helper import FormHelper
@@ -20,6 +20,7 @@ from captcha.fields import CaptchaField
 from formset.utils import FormMixin
 from django.core.exceptions import ValidationError
 from django_clamd.validators import validate_file_infection
+#from formset.utils import FormMixin
 
 class BPlanImportForm(forms.Form):
     confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
@@ -393,6 +394,7 @@ class FPlanUvpForm(forms.ModelForm):
 class RegistrationForm(UserCreationForm):
 
     email = forms.EmailField(required=True)
+    captcha = CaptchaField()
 
     class Meta:
         model = User
@@ -1403,4 +1405,64 @@ class BPlanBeteiligungCollection(FormCollection):
     beitrag = BPlanBeteiligungBeitragCollection()
     captcha = CaptchaForm()
 
-    
+
+class RequestForOrganizationAdminCreateForm(ModelForm):
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.fields['organizations'].widget = GemeindeSelect3()
+        
+        self.helper.layout = Layout(
+            Fieldset(
+                'Antrag auf Administrationsberechtigung für',
+                Row(
+                    Column(
+                        Field("organizations"),
+                    ),
+                ),
+            ), 
+            Submit("submit", "Antrag stellen")
+        )
+
+    class Meta:
+        model = RequestForOrganizationAdmin
+        fields = ["organizations"]
+
+
+class RequestForOrganizationAdminRefuseForm(ModelForm):
+    """
+    ModelForm für das Zurückweisen eines Antrags auf Organisationsadmin
+    """
+    default_renderer = FormRenderer(
+        field_css_classes={
+            'editing_note': 'mb-2 col-4',
+        },
+    )
+
+    class Meta:
+        model = RequestForOrganizationAdmin
+        fields = ["editing_note"]
+        widgets = {
+            'editing_note': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+        }
+
+
+class RequestForOrganizationAdminConfirmForm(ModelForm):
+    """
+    ModelForm für das Genehmigen eines Antrags auf Organisationsadmin
+    """
+    default_renderer = FormRenderer(
+        field_css_classes={
+            'editing_note': 'mb-2 col-4',
+        },
+    )
+
+    class Meta:
+        model = RequestForOrganizationAdmin
+        fields = ["editing_note"]
+        widgets = {
+            'editing_note': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+        }

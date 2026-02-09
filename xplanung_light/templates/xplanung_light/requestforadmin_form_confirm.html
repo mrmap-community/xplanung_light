@@ -1,0 +1,22 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% load render_form from formsetify %}
+{% load richtext %}
+{% bootstrap_css %}
+{% block title %}
+    Genehmigung eines Antrags auf Organisationsadmin
+{% endblock %}
+{% block content %}
+<p>Genehmigung eines Antrags auf Organisationsadmin</p>
+<p>Antragsteller: <b>{{ anfrage.owned_by_user.username }}</b></p>
+<p>EMail: <b>{{ anfrage.owned_by_user.email }}</b></p>
+<p>Telefon: <b>{{ anfrage.owned_by_user.phone }}</b></p>
+<p>Beantragte Organisationen: <b>{% for orga in anfrage.organizations.all %}{{ orga }}<br>{% endfor %}</b></p>
+<!-- Nutzer ... beantragt Admin-Berechtigung für ... -->
+<django-formset endpoint="{{ request.path }}" csrf-token="{{ csrf_token }}">
+  {% render_form  form %}
+  <div>
+    <button type="button" class="btn btn-primary" df-click="submit -> proceed">Antrag genehmigen</button>
+  </div>
+</django-formset> 
+{% endblock %}

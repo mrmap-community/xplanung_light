@@ -24,13 +24,13 @@ class ContactOrganizationCreateView(SuccessMessageMixin, CreateView):
         """
         form = super().get_form(self.form_class)
         if self.request.user.is_superuser:
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.only("pk", "name", "type")
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.only("pk", "name", "type", "name_part")
         else:
             """
             Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
             
             """
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).only("pk", "name", "type")
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).only("pk", "name", "type", "name_part")
         # Herausnehmen der Gemeinden, die schon eine Kontaktstelle zugewiesen bekommen haben
         form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(contacts__isnull = True)
         return form

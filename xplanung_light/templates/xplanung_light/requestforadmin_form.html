@@ -1,0 +1,15 @@
+{% extends "xplanung_light/layout.html" %}
+{% load crispy_forms_tags %}
+{% block title %}
+    Antrag auf Freischaltung als Organisationsadmin
+{% endblock %}
+{% block content %}
+<!-- https://simpleisbetterthancomplex.com/tutorial/2018/11/28/advanced-form-rendering-with-django-crispy-forms.html -->
+ <script
+      src="https://code.jquery.com/jquery-3.4.1.js"
+      integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
+      crossorigin="anonymous"
+></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.js"></script>
+{% crispy form %}
+{% endblock %}

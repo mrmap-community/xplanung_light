@@ -63,6 +63,21 @@
               <li class="nav-item">
                  <a class="nav-link" aria-current="page" href="{% url 'organization-publishing-list' %}">Liste / Übersicht</a>
               </li>
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Anträge
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
+                  {% if user.is_superuser %}
+                      <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'requestforadmin-admin-list' %}">Admin-Berechtigung</a></li>
+                  {% else %}
+                      <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'requestforadmin-list' %}">Admin-Berechtigung</a></li>
+                  {% endif %}
+                  <!-- <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'contact-list' %}">Meine Kontaktstellen</a></li>-->
+                  <!-- <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'organization-publishing-list' %}">Übersicht Schnittstellen</a></li> -->
+                  <!--<li><hr class="dropdown-divider"></li>-->
+                </ul>
+              </li>
               {% if user.is_superuser %}
               <li class="nav-item">
                   <a class="nav-link" aria-current="page" href="{% url 'aggregates' %}">Schnittstellen (Aggregate)</a>

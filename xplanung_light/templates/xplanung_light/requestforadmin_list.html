@@ -1,0 +1,14 @@
+{% extends "xplanung_light/layout.html" %}
+{% block title %}
+ Anträge für Organisationsadmins
+{% endblock %}
+{% load render_table from django_tables2 %}
+{% load django_bootstrap5 %}
+{% block content %}
+{% if user.is_superuser %}
+{% else %}
+<p><a href="{% url 'requestforadmin-create' %}">Neuen Antrag anlegen</a></p>
+{% endif %}
+Anträge für Administrationsberechtigungen
+{% render_table table %}
+{% endblock %}

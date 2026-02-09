@@ -4,6 +4,7 @@ from django.contrib.auth import views as auth_views
 from xplanung_light.views.bplan import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView, BPlanDetailView, BPlanListViewHtml
 from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDeleteView, FPlanListView, FPlanDetailView, FPlanListViewHtml
 from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView
+from xplanung_light.views.requestforadmin import RequestForOrganizationAdminCreateView, RequestForOrganizationAdminListView, RequestForOrganizationAdminDeleteView, RequestForOrganizationAdminAdminListView
 from xplanung_light.views.beteiligungbeitrag import BPlanBeteiligungBeitragCreateView, BPlanBeteiligungBeitragListView, BPlanBeteiligungBeitragDeleteView, BPlanBeteiligungBeitragDetailView, BPlanBeteiligungBeitragActivate
 from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
@@ -140,6 +141,16 @@ urlpatterns = [
     path("contact/", ContactOrganizationListView.as_view(), name="contact-list"),
     path("contact/<int:pk>/update/", ContactOrganizationUpdateView.as_view(), name="contact-update"),
     path("contact/<int:pk>/delete/", ContactOrganizationDeleteView.as_view(), name="contact-delete"),
+    # Anträge auf Admin-Berechtigung
+    path("requestforadmin/create/", RequestForOrganizationAdminCreateView.as_view(), name="requestforadmin-create"),
+    path("requestforadmin/", RequestForOrganizationAdminListView.as_view(), name="requestforadmin-list"),
+    # url für den Zentraladministrator - der darf Anträge bestätigen und zurückweisen
+    path("requestforadmin_admin/", RequestForOrganizationAdminAdminListView.as_view(), name="requestforadmin-admin-list"),
+    path("requestforadmin/<int:pk>/delete/", RequestForOrganizationAdminDeleteView.as_view(), name="requestforadmin-delete"),
+    #RequestForAdminConfirm
+    path("requestforadmin/<int:pk>/confirm/", views.RequestForAdminConfirm.as_view(), name="requestforadmin-confirm"),
+    #RequestForAdminRefuse
+    path("requestforadmin/<int:pk>/refuse/", views.RequestForAdminRefuse.as_view(), name="requestforadmin-refuse"),
     # Offenlagen / Beteiligungen
     # WMS 
     path("beteiligungen/map/", views.ows_beteiligungen, name="beteiligungen-map"),

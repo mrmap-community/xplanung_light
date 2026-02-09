@@ -804,3 +804,20 @@ class FPlanSpezExterneReferenz(XPlanSpezExterneReferenz):
 
     fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE, verbose_name="FPlan", help_text="FPlan", related_name="attachments")
     history = HistoricalRecords()
+
+
+class RequestForOrganizationAdmin(models.Model):
+
+    CONFIRMED = 'c'
+    REFUSED = 'r'
+    DELETE_REASON_CHOICES = [
+        (CONFIRMED,  "Bestätigt"),
+        (REFUSED, "Zurückgewiesen"),
+    ]
+
+    owned_by_user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
+    organizations = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gebietskörperschaft(en)", related_name='pending_admin_requests')
+    history = HistoricalRecords(m2m_fields=[organizations])
+    delete_reason = models.CharField(null=True, blank=True, max_length=1, choices=DELETE_REASON_CHOICES, verbose_name='Grund für die Löschung', help_text="Grund für die Löschung des Antrags")
+    editing_note = RichTextField(null=True, verbose_name="Begründung für die Ablehnung des Antrags")
+
