@@ -5,6 +5,8 @@ from typing import Any, Optional
 import csv
 from django.utils.dateparse import parse_date
 from django.contrib.gis.geos import GEOSGeometry
+from django.contrib.gis.gdal import DataSource
+#from osgeo import gdal
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from xplanung_light.models import AdministrativeOrganization, BPlan, BPlanSpezExterneReferenz, FPlan, FPlanSpezExterneReferenz
 
@@ -12,15 +14,22 @@ class Command(BaseCommand):
     requires_migrations_checks = True
 
     def add_arguments(self, parser: CommandParser) -> None:
-        parser.add_argument("file", type=Path, help="MS Excel file")
+        parser.add_argument("file", type=Path, help="Datei")
+        #parser.add_argument("file_type", type=Path, help="Dateityp")
         parser.add_argument("separator", type=str, help="Field separator")
         parser.add_argument("plan_typ", type=str, help="Typ des XPlans - default bplan - auch fplan möglich!")
+        parser.add_argument("file_type", type=Path, help="Dateityp")
+        parser.add_argument("crs", type=str, help="Koordinatenreferenzsystem (EPSG-Code)")
 
     def handle(self, *args: Any, **options: Any) -> Optional[str]:
-        self.import_plans(options["file"], options['separator'], options['plan_typ'])
+        self.import_plans(options["file"], options['separator'], options['plan_typ'], options['file_type'], options['crs'])
 
     def add_referenz(self, plan, file, referenz_name:str, typ:str, plan_typ:str):
         # Test ob Datei gefunden werden kann
+        print("add reference")
+        print("File: " + str(file))
+        print("Reference name: " + str(referenz_name))
+        print("Gesamter Pfad: " + os.path.dirname(file) + referenz_name)
         if Path(os.path.dirname(file) + referenz_name).is_file:
             print("* referenzierte Datei gefunden!")
             try:
@@ -57,10 +66,12 @@ class Command(BaseCommand):
             print("Angegebene Datei nicht gefunden!")
             return False
 
-    def import_plans(self, file: Path, separator: str=',', plan_typ: str='bplan'):
+    def import_plans(self, file: Path, separator: str=',', plan_typ: str='bplan', file_type: str='csv', crs: str='31466'):
         print("Funktion import_plans gestartet")
+        # Raster layer sind hier nicht supported!
         print(os.path.dirname(file))
         print(separator)
+        print(file_type)
         # Einlesen der csv-Datei
         # bebauungsplaene_202508060817.csv
         # https://stackoverflow.com/questions/2459979/how-to-import-csv-data-into-django-models
@@ -68,7 +79,9 @@ class Command(BaseCommand):
         with open(file, 'r') as csv_file:
             reader = csv.reader(csv_file, delimiter=separator, quotechar='"')
             header = next(reader)
+            lfd_nr = 0
             for row in reader:
+                lfd_nr = lfd_nr + 1
                 _object_dict = {key: value for key, value in zip(header, row)}
                 # Versuche vorhandene Organisation über Name und AGS/GKZ zu identifizieren
                 try:
@@ -122,6 +135,10 @@ class Command(BaseCommand):
                             'value': False,
                             'typ': '1020'
                         },
+                        'tifurl': {
+                            'value': False,
+                            'typ': '99999'
+                        },
                     }
                     # Marker
                     if plan_typ == 'bplan':
@@ -141,17 +158,25 @@ class Command(BaseCommand):
                     print("test1")
                     # Transformation der Pflichtfelder
                     if _object_dict['name']:
+                        print(str(_object_dict['name']))   
                         mandatory_fields_dict['name'] = _object_dict['name']
-                        if _object_dict['nameaenderung']:
+                        print("test1111")    
+                        if 'nameaenderung' in _object_dict.keys() and _object_dict['nameaenderung']:
+                            print(str(_object_dict['nameaenderung']))
                             mandatory_fields_dict['name'] = mandatory_fields_dict['name'] + " - " + _object_dict['nameaenderung']
+                        else:
+                            print("name aenderung not found")      
                     if _object_dict['the_geom']:
                         mandatory_fields_dict['geometry'] = GEOSGeometry.from_ewkt(_object_dict['the_geom'])
-                        mandatory_fields_dict['geometry'].srid = 31466
+                        mandatory_fields_dict['geometry'].srid = int(crs)
                         mandatory_fields_dict['geometry'].transform(4326)
-                    if _object_dict['nummer']:
+                    if 'nummer' in _object_dict.keys() and _object_dict['nummer']:
                         mandatory_fields_dict['nummer'] = _object_dict['nummer']
-                        if _object_dict['nummeraenderung']:
+                        if 'nummeraenderung' in _object_dict.keys() and _object_dict['nummeraenderung']:
                             mandatory_fields_dict['nummer'] = mandatory_fields_dict['nummer'] + "." +_object_dict['nummeraenderung']
+                    else:
+                        # Default - nimm laufende Nummer, falls Pläne nicht nummeriert sind
+                        mandatory_fields_dict['nummer'] = str(lfd_nr)
                     if _object_dict['planart']:
                         mandatory_fields_dict['planart'] = _object_dict['planart']
                     print("test2")    
@@ -162,21 +187,27 @@ class Command(BaseCommand):
                     print("test3")          
                     # Übernahme der Marker
                     if plan_typ == 'bplan':
-                        if _object_dict['staedtebaulichervertrag']:
+                        if 'staedtebaulichervertra' in _object_dict.keys() and _object_dict['staedtebaulichervertrag']:
                             marker_fields_dict['staedtebaulichervertrag'] = True
-                        if _object_dict['erschliessungsvertrag']:
+                        if 'erschliessungsvertrag' in _object_dict.keys() and _object_dict['erschliessungsvertrag']:
                             marker_fields_dict['erschliessungsvertrag'] = True
-                        if _object_dict['durchfuehrungsvertrag']:
+                        if 'durchfuehrungsvertrag' in _object_dict.keys() and _object_dict['durchfuehrungsvertrag']:
                             marker_fields_dict['durchfuehrungsvertrag'] = True
-                        if _object_dict['staedtebaulichesanierungsmassnahme']:
+                        if 'staedtebaulichesanierungsmassnahme' in _object_dict.keys() and _object_dict['staedtebaulichesanierungsmassnahme']:
                             marker_fields_dict['staedtebaulichesanierungsmassnahme'] = True    
                     #if _object_dict['']:
                     #    marker_fields_dict[''] = True    
                     print("test4") 
                     # Übernahme der Anlagen
                     for key in attachment_fields_dict:
-                        if _object_dict[key]:
+                        #print("Prüfen der Anlage: " + key)
+                        #print(_object_dict.keys())
+                        if key in _object_dict.keys():
+                            #print("key " + key + " in object vorhanden")
+                            #print(_object_dict[key])
                             attachment_fields_dict[key]['value'] = _object_dict[key]
+                        else:
+                            print("key " + key + " für Anlage nicht gefunden!")
                     print("test5") 
                     print("Mapping initialisiert - Prüfen der Pflichtfelder:")
                     if mandatory_fields_dict['name'] and mandatory_fields_dict['geometry'] and mandatory_fields_dict['nummer'] and mandatory_fields_dict['planart']:
@@ -221,21 +252,27 @@ class Command(BaseCommand):
                             print("Update wurde durchgeführt, Anlagen/Referenzen werden überprüft...")
                             # Füge Anlagen hinzu, falls sie noch nicht vorhanden sind ...
                             for key in attachment_fields_dict:
+                                #print(str(key))
                                 if attachment_fields_dict[key]['value']:
+                                    print("update reference")
+                                    #print(file)
                                     test = self.add_referenz(existing_plan, file, attachment_fields_dict[key]['value'], attachment_fields_dict[key]['typ'], plan_typ=plan_typ)
                                     if test:
                                         print("* Referenz vom Typ " + attachment_fields_dict[key]['typ'] + " angelegt!")
-                             # Suche nach Georeferenzierten Rasterpläne
+                                    else:
+                                        print("Fehler beim Anlagen/Update der Referenz!")
+                            # Suche nach Georeferenzierten Rasterpläne
                             #file_to_search = "/BPlan2/" + orga.ls + orga.ks + orga.gs + "_" + orga.name + "/raster2/BPlan." + orga.ls + orga.ks + orga.gs + "." + bplan.nummer + ".plan.tif"
-                            if plan_typ == 'bplan':
-                                file_to_search = "/BPlan2/" + orga.ls + orga.ks + orga.gs + "_" + orga.name  + "/raster2/BPlan." + orga.ls + orga.ks + orga.gs + "." + existing_plan.nummer + ".plan.tif"
-                            if plan_typ == 'fplan':
-                                file_to_search = "/FPlan2/" + existing_plan.nummer + "/raster2/FPlan." + "." + existing_plan.nummer + ".plan.tif"
-                            #if os.path.isfile(file_to_search):
-                            #print(file_to_search)
-                            test = self.add_referenz(existing_plan, file, file_to_search, '99999')
-                            if test:
-                                print("* Referenz vom Typ " + '99999' + " angelegt!")
+                            if 'tifurl' not in attachment_fields_dict.keys():
+                                if plan_typ == 'bplan':
+                                    file_to_search = "/BPlan2/" + orga.ls + orga.ks + orga.gs + "_" + orga.name  + "/raster2/BPlan." + orga.ls + orga.ks + orga.gs + "." + existing_plan.nummer + ".plan.tif"
+                                if plan_typ == 'fplan':
+                                    file_to_search = "/FPlan2/" + existing_plan.nummer + "/raster2/FPlan." + "." + existing_plan.nummer + ".plan.tif"
+                                #if os.path.isfile(file_to_search):
+                                #print(file_to_search)
+                                test = self.add_referenz(existing_plan, file, file_to_search, '99999')
+                                if test:
+                                    print("* Referenz vom Typ " + '99999' + " angelegt!")
                         if existing_plan_query.count() == 0:
                             print("Kein Plan mit dem gleichen Namen in der gleichen Kommune gefunden - Plan wird initial angelegt:") 
                             orgas = []
@@ -276,20 +313,23 @@ class Command(BaseCommand):
                             # Anlagen erstellen
                             # Füge Anlagen hinzu, falls sie noch nicht vorhanden sind ...
                             for key in attachment_fields_dict:
+                                #print(str(key))
                                 if attachment_fields_dict[key]['value']:
+                                    #print("insert reference")
                                     test = self.add_referenz(plan, file, attachment_fields_dict[key]['value'], attachment_fields_dict[key]['typ'], plan_typ=plan_typ)
                                     if test:
                                         print("* Referenz vom Typ " + attachment_fields_dict[key]['typ'] + " angelegt!")
-                            # Suche nach Georeferenzierten Rasterpläne
-                            if plan_typ == 'bplan': 
-                                file_to_search = "/BPlan2/" + orga.ls + orga.ks + orga.gs + "_" + orga.name + "/raster2/BPlan." + orga.ls + orga.ks + orga.gs + "." + plan.nummer + ".plan.tif"
-                            if plan_typ == 'fplan':
-                                file_to_search = "/FPlan2/" + plan.nummer + "/raster2/FPlan." + plan.nummer + ".plan.tif"
-                            #if os.path.isfile(file_to_search):
-                            print(file_to_search)
-                            test = self.add_referenz(plan, file, file_to_search, '99999', plan_typ)
-                            if test:
-                                print("* Referenz vom Typ " + '99999' + " angelegt!")
+                            if 'tifurl' not in attachment_fields_dict.keys():
+                                # Suche nach Georeferenzierten Rasterpläne
+                                if plan_typ == 'bplan': 
+                                    file_to_search = "/BPlan2/" + orga.ls + orga.ks + orga.gs + "_" + orga.name + "/raster2/BPlan." + orga.ls + orga.ks + orga.gs + "." + plan.nummer + ".plan.tif"
+                                if plan_typ == 'fplan':
+                                    file_to_search = "/FPlan2/" + plan.nummer + "/raster2/FPlan." + plan.nummer + ".plan.tif"
+                                #if os.path.isfile(file_to_search):
+                                print(file_to_search)
+                                test = self.add_referenz(plan, file, file_to_search, '99999', plan_typ)
+                                if test:
+                                    print("* Referenz vom Typ " + '99999' + " angelegt!")
                     else:
                         print("XPlan " + mandatory_fields_dict['name'] + " verfügt nicht über alle Pflichtfelder:")
                         print(_object_dict)
