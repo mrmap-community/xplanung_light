@@ -6,7 +6,7 @@ from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, FPlan, FPlanS
 #from xplanung_light.views.fplan import FPlanDetailXPlanLightView
 from django.urls import reverse_lazy
 from leaflet.forms.widgets import LeafletWidget
-from django_tables2 import SingleTableView
+from django_tables2 import SingleTableView, SingleTableMixin
 from xplanung_light.tables import BPlanTable
 from django.views.generic import DetailView, ListView
 from django.contrib.gis.db.models.functions import AsGML, Transform, Envelope
@@ -226,7 +226,8 @@ class XPlanDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
         return reverse_lazy(self.model_name_lower+ "-list")
 
 
-class XPlanListView(LoginRequiredMixin, FilterView, SingleTableView):
+#class XPlanListView(LoginRequiredMixin, FilterView, SingleTableView):
+class XPlanListView(LoginRequiredMixin, SingleTableMixin, FilterView):
     """
     Liste der Plan-Datensätze.
 
@@ -271,6 +272,7 @@ class XPlanListView(LoginRequiredMixin, FilterView, SingleTableView):
             #feature['geometry'] = json.loads(geosgeometry.json)
             featurecollection['features'].append(feature)
         context["markers"] = featurecollection
+        context['per_page_options'] = [10, 25, 50, 100, 200, 500]
         return context
     
     # https://www.geeksforgeeks.org/python/filter-objects-with-count-annotation-in-django/
@@ -370,6 +372,18 @@ class XPlanListView(LoginRequiredMixin, FilterView, SingleTableView):
                 )
         self.filter_set = self.filterset_class(self.request.GET, queryset=qs)
         return self.filter_set.qs
+
+    def get_table_pagination(self, table):
+        # Wert aus GET holen, Standard ist 10
+        per_page = self.request.GET.get("per_page", 10)
+        
+        # Sicherstellen, dass nur gültige Zahlen verwendet werden
+        try:
+            per_page = int(per_page)
+        except ValueError:
+            per_page = 10
+
+        return {"per_page": per_page}
 
 
 class XPlanListViewHtml(FilterView, ListView):

@@ -108,9 +108,26 @@ Filter
 <form method="get" action="">
     {{ filter.form.as_p }}
     <input type="submit" /><a href="{% url 'bplan-list' %}">Filter löschen</a>.</p>
+    {# Dropdown für Ergebnisse pro Seite #}
+    <label for="per_page">Pro Seite:</label>
+    <select name="per_page" onchange="this.form.submit()">
+        {% for val in per_page_options %}
+        <option value="{{ val }}" {% if request.GET.per_page == val|stringformat:"i" %}selected{% endif %}>
+            {{ val }}
+        </option>    
+        {% endfor %}
+    </select>
 </form>
 <p><a href="{% url 'bplan-create' %}">BPlan anlegen</a><a href="{% url 'bplan-import' %}">BPlan importieren</a><a href="{% url 'bplan-import-archiv' %}">BPlan Archiv importieren</a></p>
 <!-- https://stackoverflow.com/questions/44572682/dynamically-set-per-page-in-django-tables2 -->
+<div class="table-info">
+    <p>
+        <strong>Gesamt:</strong> {{ table.rows|length }} Einträge gefunden.
+        {% if table.page %}
+            (Seite {{ table.page.number }} von {{ table.page.paginator.num_pages }})
+        {% endif %}
+    </p>
+</div>
 {% render_table table %}
 <p>Anzahl: {{ object_list.count }}</p>
 {% endblock %}
