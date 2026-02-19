@@ -133,9 +133,9 @@ class MapfileGenerator():
                     raster_layer["group"] = "FPlan." + orga.ags
                     #raster_layer["group_title"] = "Flächennutzungspläne"
                     raster_metadata = raster_layer_from_template["metadata"].copy()
-                    raster_metadata["ows_title"] = fplan.name
+                    raster_metadata["ows_title"] = fplan.name.replace("'", '"')
                     raster_metadata["wms_group_title"] = "Flächennutzungspläne"
-                    raster_metadata["ows_abstract"] = "Flächennutzungsplan " + fplan.name + " von " + orga.name + " - Abstract"
+                    raster_metadata["ows_abstract"] = "Flächennutzungsplan " + fplan.name.replace("'", '"') + " von " + orga.name + " - Abstract"
                     # Angabe des Extents
                     raster_metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(fplan.geltungsbereich), srs=4326).transform(SpatialReference(25832), clone=True).extent])
                     raster_metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + str(fplan.pk) + "/").replace("/bplan/", "/fplan/")
@@ -153,9 +153,9 @@ class MapfileGenerator():
                     layer["name"] = "FPlan." + fplan_nummer
                 layer["group"] = "FPlan." + orga.ags
                 metadata = layer_from_template["metadata"].copy()
-                metadata["ows_title"] = fplan.name
+                metadata["ows_title"] = fplan.name.replace("'", '"')
                 metadata["wms_group_title"] = "Flächennutzungspläne"
-                metadata["ows_abstract"] = "Flächennutzungsplan " + fplan.name + " von " + orga.name + " - Abstract"
+                metadata["ows_abstract"] = "Flächennutzungsplan " + fplan.name.replace("'", '"') + " von " + orga.name + " - Abstract"
                 metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(fplan.geltungsbereich), srs=4326).extent])
                 metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + str(fplan.pk) + "/").replace("/bplan/", "/fplan/")
                 layer.pop('dump', None)
@@ -233,8 +233,8 @@ class MapfileGenerator():
                     # https://github.com/MapServer/MapServer/issues/7260
                     raster_layer["group"] = "BPlan." + orga.ags
                     raster_metadata = raster_layer_from_template["metadata"].copy()
-                    raster_metadata["ows_title"] = bplan.name
-                    raster_metadata["ows_abstract"] = "Bebauungsplan " + bplan.name + " von " + orga.name + " - Abstract"
+                    raster_metadata["ows_title"] = bplan.name.replace("'", '"')
+                    raster_metadata["ows_abstract"] = "Bebauungsplan " + bplan.name.replace("'", '"') + " von " + orga.name + " - Abstract"
                     # Angabe des Extents
                     raster_metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(bplan.geltungsbereich), srs=4326).transform(SpatialReference(25832), clone=True).extent])
                     raster_metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + str(bplan.pk) + "/")
@@ -252,8 +252,8 @@ class MapfileGenerator():
                     layer["name"] = "BPlan." + orga.ags + "." + bplan_nummer
                 layer["group"] = "BPlan." + orga.ags
                 metadata = layer_from_template["metadata"].copy()
-                metadata["ows_title"] = bplan.name
-                metadata["ows_abstract"] = "Bebauungsplan " + bplan.name + " von " + orga.name + " - Abstract"
+                metadata["ows_title"] = bplan.name.replace("'", '"')
+                metadata["ows_abstract"] = "Bebauungsplan " + bplan.name.replace("'", '"') + " von " + orga.name + " - Abstract"
                 metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(bplan.geltungsbereich), srs=4326).extent])
                 metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + str(bplan.pk) + "/")
                 layer.pop('dump', None)
@@ -301,4 +301,4 @@ class MapfileGenerator():
             umring_layer["classes"].append(layer_class)
             map["layers"].append(umring_layer)
             #print(mappyfile.dumps(map))
-            return mappyfile.dumps(map)
+            return mappyfile.dumps(map, quote="'")
