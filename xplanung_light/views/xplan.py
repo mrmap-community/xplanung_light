@@ -435,7 +435,7 @@ class XPlanPublicListView(SingleTableMixin, FilterView):
     
     # https://www.geeksforgeeks.org/python/filter-objects-with-count-annotation-in-django/
     def get_queryset(self):
-        qs = self.model.objects.prefetch_related('gemeinde').distinct().annotate(
+        qs = self.model.objects.prefetch_related('gemeinde').distinct().filter(public=True).annotate(
             last_changed=Subquery(
                 self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )
