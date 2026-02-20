@@ -25,7 +25,7 @@ def organizations(request):
 def bplan_organizations(request):
     if request is None:
         return AdministrativeOrganization.objects.filter(Exists(BPlan.objects.filter(gemeinde=OuterRef("pk")))).only("pk", "name", "name_part", "type")
-    if request.user.is_superuser:
+    if request.user.is_superuser or request.user.is_anonymous:
         return AdministrativeOrganization.objects.filter(Exists(BPlan.objects.filter(gemeinde=OuterRef("pk")))).only("pk", "name", "name_part", "type")
     else:
         return AdministrativeOrganization.objects.filter(users=request.user).filter(Exists(BPlan.objects.filter(gemeinde=OuterRef("pk")))).only("pk", "name", "name_part", "type")
@@ -33,7 +33,7 @@ def bplan_organizations(request):
 def fplan_organizations(request):
     if request is None:
         return AdministrativeOrganization.objects.filter(Exists(FPlan.objects.filter(gemeinde=OuterRef("pk")))).only("pk", "name", "name_part", "type")
-    if request.user.is_superuser:
+    if request.user.is_superuser or request.user.is_anonymous:
         return AdministrativeOrganization.objects.filter(Exists(FPlan.objects.filter(gemeinde=OuterRef("pk")))).only("pk", "name", "name_part", "type")
     else:
         return AdministrativeOrganization.objects.filter(users=request.user).filter(Exists(FPlan.objects.filter(gemeinde=OuterRef("pk")))).only("pk", "name", "name_part", "type")
@@ -72,6 +72,15 @@ class BPlanFilter(FilterSet):
     def bbox_filter(self, queryset, name, value):
         #print("name from DocumentFilter.bbox_filter: " + name)
         return bbox_filter(queryset, value)
+    
+
+class BPlanPublicFilter(BPlanFilter):
+
+    is_public = None
+
+    class Meta:
+        model = BPlan
+        fields = ["name", "gemeinde", "planart", "bbox"]
 
 
 class FPlanFilter(FilterSet):
@@ -106,7 +115,16 @@ class FPlanFilter(FilterSet):
     def bbox_filter(self, queryset, name, value):
         #print("name from DocumentFilter.bbox_filter: " + name)
         return bbox_filter(queryset, value)
+
+
+class FPlanPublicFilter(FPlanFilter):
     
+    is_public = None
+
+    class Meta:
+        model = FPlan
+        fields = ["name", "gemeinde", "planart", "bbox"]
+
 
 class NumberInFilter(BaseInFilter, NumberFilter):
     pass

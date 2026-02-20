@@ -1,9 +1,10 @@
 from xplanung_light.forms import  BPlanCreateForm, BPlanUpdateForm
 from xplanung_light.models import BPlan
 from xplanung_light.views.xplan import XPlanCreateView, XPlanUpdateView, XPlanDeleteView, XPlanDetailView, XPlanListView, XPlanListViewHtml, XPlanDetailXPlanLightView, XPlanDetailXPlanLightZipView
+from xplanung_light.views.xplan import XPlanPublicListView
 from django.urls import reverse_lazy
-from xplanung_light.tables import BPlanTable
-from xplanung_light.filter import BPlanFilter, BPlanFilterHtml
+from xplanung_light.tables import BPlanTable, BPlanPublicTable
+from xplanung_light.filter import BPlanFilter, BPlanFilterHtml, BPlanPublicFilter
 from django.urls import reverse_lazy
 
 
@@ -40,6 +41,20 @@ class BPlanListView(XPlanListView):
     template_name = 'xplanung_light/bplan_list.html'
     success_url = reverse_lazy("bplan-list") 
     filterset_class = BPlanFilter
+
+
+class BPlanPublicListView(XPlanPublicListView):
+    """
+    Öffentliche Liste der Bebauungsgplan-Datensätze.
+
+    Klasse für die Anzeige aller Bebauungspläne, auf die ein Nutzer Leseberechtigung hat. Ein Nutzer hat Leseberechtigung, wenn er
+    über die AdminOrgUser Klasse mit einer der AdministrativeOrganizations verknüpft ist, die an einem Plan hängen. 
+    """
+    model = BPlan
+    table_class = BPlanPublicTable
+    template_name = 'xplanung_light/bplan_public_list.html'
+    success_url = reverse_lazy("bplan-public-list") 
+    filterset_class = BPlanPublicFilter
 
 
 class BPlanListViewHtml(XPlanListViewHtml):

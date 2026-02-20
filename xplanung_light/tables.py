@@ -79,7 +79,7 @@ class FPlanSpezExterneReferenzTable(tables.Table):
 class BeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
     end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
-    xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.bplan.id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.bplan.id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
+    xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.bplan.id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
     plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
     gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
   <a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a><br />{% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
@@ -310,6 +310,34 @@ class BPlanTable(tables.Table):
         fields = ( "zoom", "last_changed", "public", "inkrafttretens_datum", "nummer", "name", "gemeinde", "planart", "count_attachments", "count_beteiligungen", "count_uvps", "detail", "xplangml", "edit", "delete")
 
 
+class BPlanPublicTable(tables.Table):
+    last_changed = tables.Column(verbose_name="Letzte Änderung")
+    planart = tables.Column(verbose_name="Planart")
+    zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
+    detail = tables.LinkColumn('bplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    # manytomany relations are handled automatically!
+    #gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
+    xplangml = tables.Column(verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
+
+    def render_xplangml(self, value, record):
+        if value:
+            return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
+        else:
+            return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
+        
+    def render_zoom(self, value):
+        ogr_geom = OGRGeometry(str(value), srs=4326)
+        extent = ogr_geom.extent
+        # lat/lon !
+        return format_html('<i class="fa fa-search-plus" aria-hidden="true" onclick="mapGlobal.fitBounds([[{}, {}], [{}, {}]]);"></i>', extent[1], extent[0], extent[3], extent[2])
+
+    class Meta:
+        model = BPlan
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ( "zoom", "last_changed", "inkrafttretens_datum", "name", "nummer", "gemeinde", "planart", "detail", "xplangml")
+
+
 class FPlanTable(tables.Table):
     public = tables.Column(verbose_name="Öffentlich")
     last_changed = tables.Column(verbose_name="Letzte Änderung")
@@ -364,20 +392,40 @@ class FPlanTable(tables.Table):
             return format_html('<a href="' + reverse('fplan-uvp-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
         else:
             return format_html('<a href="' + reverse('fplan-uvp-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
-        
     
-    """
-    geojson = Column(
-        accessor=A('geojson'),
-        orderable=False,
-        # ...
-    )
-    """
 
     class Meta:
         model = FPlan
         template_name = "django_tables2/bootstrap5.html"
         fields = ( "zoom", "last_changed", "public", "aufstellungsbeschluss_datum", "nummer", "name","gemeinde", "planart", "count_attachments", "count_beteiligungen", "count_uvps", "detail", "xplangml", "edit", "delete")
+
+
+class FPlanPublicTable(tables.Table):
+    last_changed = tables.Column(verbose_name="Letzte Änderung")
+    planart = tables.Column(verbose_name="Planart")
+    zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
+    detail = tables.LinkColumn('bplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    # manytomany relations are handled automatically!
+    #gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
+    xplangml = tables.Column(verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
+
+    def render_xplangml(self, value, record):
+        if value:
+            return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
+        else:
+            return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
+        
+    def render_zoom(self, value):
+        ogr_geom = OGRGeometry(str(value), srs=4326)
+        extent = ogr_geom.extent
+        # lat/lon !
+        return format_html('<i class="fa fa-search-plus" aria-hidden="true" onclick="mapGlobal.fitBounds([[{}, {}], [{}, {}]]);"></i>', extent[1], extent[0], extent[3], extent[2])
+
+    class Meta:
+        model = BPlan
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ( "zoom", "last_changed", "inkrafttretens_datum", "name", "nummer", "gemeinde", "planart", "detail", "xplangml")
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):

@@ -2,6 +2,8 @@ from django.urls import path, include
 from xplanung_light.views import views
 from django.contrib.auth import views as auth_views
 from xplanung_light.views.bplan import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView, BPlanDetailView, BPlanListViewHtml
+from xplanung_light.views.bplan import BPlanPublicListView
+from xplanung_light.views.fplan import FPlanPublicListView
 from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDeleteView, FPlanListView, FPlanDetailView, FPlanListViewHtml
 from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView
 from xplanung_light.views.requestforadmin import RequestForOrganizationAdminCreateView, RequestForOrganizationAdminListView, RequestForOrganizationAdminDeleteView, RequestForOrganizationAdminAdminListView
@@ -28,6 +30,7 @@ urlpatterns = [
     path("aggregates/", views.aggregates, name="aggregates"),
     # BPlan CRUD
     path("bplan/", BPlanListView.as_view(), name="bplan-list"),
+    path("bplan-public/", BPlanPublicListView.as_view(), name="bplan-public-list"),
     path("bplan/create/", BPlanCreateView.as_view(), name="bplan-create"),
     path("bplan/<int:pk>/update/", BPlanUpdateView.as_view(), name="bplan-update"),
     path("bplan/<int:pk>/delete/", BPlanDeleteView.as_view(), name="bplan-delete"),
@@ -78,6 +81,7 @@ urlpatterns = [
     # FPlan
     # BPlan CRUD
     path("fplan/", FPlanListView.as_view(), name="fplan-list"),
+    path("fplan-public/", FPlanPublicListView.as_view(), name="fplan-public-list"),
     path("fplan/create/", FPlanCreateView.as_view(), name="fplan-create"),
     path("fplan/<int:pk>/update/", FPlanUpdateView.as_view(), name="fplan-update"),
     path("fplan/<int:pk>/delete/", FPlanDeleteView.as_view(), name="fplan-delete"),

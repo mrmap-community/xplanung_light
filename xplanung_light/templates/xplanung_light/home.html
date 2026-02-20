@@ -27,11 +27,11 @@ Home
     <div class="card h-100">
       <img src="..." class="card-img-top" alt="...">
       <div class="card-body">
-        <h5 class="card-title">Bebauungspläne<br><a href="{%url 'bplan-list' %}?is_public=on">{{ bplan_info.public_objects }}</a></h5>
-        <p class="card-text">Zahl der über die Plattform publizierten Bebauungspläne.</p>
+        <h5 class="card-title">Meine Bebauungspläne<br><a href="{%url 'bplan-list' %}?is_public=on">{{ bplan_info.public_objects }}</a></h5>
+        <p class="card-text">Zahl meiner über die Plattform publizierten Bebauungspläne.</p>
       </div>
       <div class="card-footer">
-        <small class="text-muted">Registrierte Bebauungspläne: <a href="{%url 'bplan-list' %}">{{ bplan_info.all_objects }}</a></small>
+        <small class="text-muted">Meine registrierten Bebauungspläne: <a href="{%url 'bplan-list' %}">{{ bplan_info.all_objects }}</a></small>
       </div>
     </div>
   </div>
@@ -39,15 +39,31 @@ Home
     <div class="card h-100">
       <img src="..." class="card-img-top" alt="...">
       <div class="card-body">
-        <h5 class="card-title">Flächennutzungspläne<br><a href="{%url 'fplan-list' %}?is_public=on">{{ fplan_info.public_objects }}</a></h5>
-        <p class="card-text">Zahl der über die Plattform publizierten Flächennutzungspläne.</p>
+        <h5 class="card-title">Meine Flächennutzungspläne<br><a href="{%url 'fplan-list' %}?is_public=on">{{ fplan_info.public_objects }}</a></h5>
+        <p class="card-text">Zahl meiner über die Plattform publizierten Flächennutzungspläne.</p>
       </div>
       <div class="card-footer">
-        <small class="text-muted">Registrierte Flächennutzungspläne: <a href="{%url 'fplan-list' %}">{{ fplan_info.all_objects }}</a></small>
+        <small class="text-muted">Meine registrierten Flächennutzungspläne: <a href="{%url 'fplan-list' %}">{{ fplan_info.all_objects }}</a></small>
       </div>
     </div>
   </div>
   {% endif %}
+  <div class="col">
+    <div class="card h-100">
+      <img src="..." class="card-img-top" alt="...">
+      <div class="card-body">
+        <h5 class="card-title">Alle publizierten Bebauungspläne<br><a href="{%url 'bplan-public-list' %}">Liste</a></h5>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card h-100">
+      <img src="..." class="card-img-top" alt="...">
+      <div class="card-body">
+        <h5 class="card-title">Alle publizierten Flächennutzungspläne<br><a href="{%url 'fplan-public-list' %}">Liste</a></h5>
+      </div>
+    </div>
+  </div>
   <div class="col">
     <div class="card h-100">
       <img src="..." class="card-img-top" alt="...">

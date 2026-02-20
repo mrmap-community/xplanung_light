@@ -1,9 +1,10 @@
 from xplanung_light.forms import  FPlanCreateForm, FPlanUpdateForm
 from xplanung_light.models import FPlan
 from xplanung_light.views.xplan import XPlanCreateView, XPlanUpdateView, XPlanDeleteView, XPlanDetailView, XPlanListView, XPlanListViewHtml, XPlanDetailXPlanLightView, XPlanDetailXPlanLightZipView
+from xplanung_light.views.xplan import XPlanPublicListView
 from django.urls import reverse_lazy
-from xplanung_light.tables import FPlanTable
-from xplanung_light.filter import FPlanFilter, FPlanFilterHtml
+from xplanung_light.tables import FPlanTable, FPlanPublicTable
+from xplanung_light.filter import FPlanFilter, FPlanFilterHtml, FPlanPublicFilter
 from django.urls import reverse_lazy
 
 
@@ -41,6 +42,19 @@ class FPlanListView(XPlanListView):
     template_name = 'xplanung_light/fplan_list.html'
     success_url = reverse_lazy("fplan-list") 
     filterset_class = FPlanFilter
+
+
+class FPlanPublicListView(XPlanPublicListView):
+    """
+    Öffentliche Liste der Flächennutzungsgplan-Datensätze.
+
+    Klasse für die Anzeige aller Flächennutzungspläne. 
+    """
+    model = FPlan
+    table_class = FPlanPublicTable
+    template_name = 'xplanung_light/fplan_public_list.html'
+    success_url = reverse_lazy("fplan-public-list") 
+    filterset_class = FPlanPublicFilter
 
 
 class FPlanListViewHtml(XPlanListViewHtml):

@@ -7,7 +7,7 @@ from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, FPlan, FPlanS
 from django.urls import reverse_lazy
 from leaflet.forms.widgets import LeafletWidget
 from django_tables2 import SingleTableView, SingleTableMixin
-from xplanung_light.tables import BPlanTable
+from xplanung_light.tables import BPlanTable, BPlanPublicTable
 from django.views.generic import DetailView, ListView
 from django.contrib.gis.db.models.functions import AsGML, Transform, Envelope
 from django.contrib.gis.db.models import Collect, Union, Count
@@ -17,7 +17,7 @@ from django.contrib.gis.geos import Polygon
 import uuid
 from django.core.serializers import serialize
 import json
-from xplanung_light.filter import BPlanFilter, BPlanFilterHtml
+from xplanung_light.filter import BPlanFilter, BPlanFilterHtml, BPlanPublicFilter
 from django_filters.views import FilterView
 from django.urls import reverse_lazy, reverse
 from xplanung_light.helper.xplanung import XPlanung
@@ -383,6 +383,84 @@ class XPlanListView(LoginRequiredMixin, SingleTableMixin, FilterView):
         except ValueError:
             per_page = 10
 
+        return {"per_page": per_page}
+
+
+class XPlanPublicListView(SingleTableMixin, FilterView):
+    """
+    Liste aller Plan-Datensätze, die durch die Administratoren public gesetzt sind.
+
+    Klasse für die Anzeige aller Pläne. 
+    """
+    model = BPlan
+    model_name_lower = str(model._meta.model_name).lower()
+    table_class = BPlanPublicTable
+    template_name = 'xplanung_light/' + model_name_lower + '_list.html'
+    success_url = reverse_lazy(model_name_lower + "-list") 
+    filterset_class = BPlanPublicFilter
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # TODO: Anstatt object_list.data vlt. table.data? ... - dann haben wir mehr Einfluss auf die Darstellung im Leaflet Client
+        #context["markers"] = json.loads(
+        #    serialize("geojson", context['table'].page.object_list.data, fields=["id", "name", "pk", "planart"], geometry_field='geltungsbereich')
+        #)
+        # Alternativ alle features in eine Collection überführen und vereinfachen ...
+        featurecollection = {}
+        featurecollection['type'] = "FeatureCollection"
+        featurecollection['crs'] = {}
+        featurecollection['crs']['type'] = "name"
+        featurecollection['crs']['properties'] = {}
+        featurecollection['crs']['properties']['name'] = "EPSG:4326"
+        featurecollection['features'] = []
+        for plan in context['table'].page.object_list.data:
+            # feature = json.loads(ortsgemeinde.geojson)
+            feature = {}
+            feature['type'] = "Feature"
+            feature['id'] = plan.id
+            feature['properties'] = {}
+            feature['properties']['id'] = plan.id
+            feature['properties']['name'] = plan.name
+            feature['properties']['pk'] = plan.pk
+            feature['properties']['planart'] = plan.planart
+            # Alternativ - geometry über geos vereinfachen ;-)
+            geosgeometry = GEOSGeometry(plan.geltungsbereich)
+            # Simplify beschleunigt den View um fast 40% - je nach Komplexität der Geometrien
+            feature['geometry'] = json.loads(geosgeometry.simplify(0.0005).json)
+            #feature['geometry'] = json.loads(geosgeometry.json)
+            featurecollection['features'].append(feature)
+        context["markers"] = featurecollection
+        context['per_page_options'] = [10, 25, 50, 100, 200, 500]
+        return context
+    
+    # https://www.geeksforgeeks.org/python/filter-objects-with-count-annotation-in-django/
+    def get_queryset(self):
+        qs = self.model.objects.prefetch_related('gemeinde').distinct().annotate(
+            last_changed=Subquery(
+                self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+            )
+        ).order_by(
+            '-last_changed'
+        ).annotate(
+            bbox=Envelope("geltungsbereich")
+        ).annotate(
+            count_current_beteiligungen=Count(
+                'beteiligungen', distinct=True, filter=(
+                    Q(beteiligungen__end_datum__gte=timezone.now()) & Q(beteiligungen__start_datum__lte=timezone.now())
+                )
+            )
+        )
+        self.filter_set = self.filterset_class(self.request.GET, queryset=qs)
+        return self.filter_set.qs
+
+    def get_table_pagination(self, table):
+        # Wert aus GET holen, Standard ist 10
+        per_page = self.request.GET.get("per_page", 10)
+        # Sicherstellen, dass nur gültige Zahlen verwendet werden
+        try:
+            per_page = int(per_page)
+        except ValueError:
+            per_page = 10
         return {"per_page": per_page}
 
 
