@@ -311,20 +311,30 @@ class BPlanTable(tables.Table):
 
 
 class BPlanPublicTable(tables.Table):
-    last_changed = tables.Column(verbose_name="Letzte Änderung")
+    #last_changed = tables.Column(verbose_name="Letzte Änderung")
+
     planart = tables.Column(verbose_name="Planart")
+    name = tables.Column(verbose_name="Name")
+    nummer = tables.Column(verbose_name="Nummer")
     zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
-    detail = tables.LinkColumn('bplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
-                         orderable=False, empty_values=())
+    #detail = tables.LinkColumn('bplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
+    #                     orderable=False, empty_values=())
     # manytomany relations are handled automatically!
     #gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
-    xplangml = tables.Column(verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
-
+    xplangml = tables.Column(verbose_name="XPlanung Hochgeladen", accessor='xplan_gml', empty_values=())
+    
     def render_xplangml(self, value, record):
+        if value == None:
+            return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
         if value:
             return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
         else:
             return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
+    
+    def render_name(self, value, record):
+        if value:
+            return format_html('<a href="' + reverse('bplan-detail', kwargs={'pk': record.id}) + '" target="_blank">{}</a>', value)
+        pass
         
     def render_zoom(self, value):
         ogr_geom = OGRGeometry(str(value), srs=4326)
@@ -335,7 +345,7 @@ class BPlanPublicTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "inkrafttretens_datum", "name", "nummer", "gemeinde", "planart", "detail", "xplangml")
+        fields = ( "zoom", "inkrafttretens_datum", "name", "nummer", "gemeinde", "planart", "xplangml")
 
 
 class FPlanTable(tables.Table):
@@ -401,14 +411,16 @@ class FPlanTable(tables.Table):
 
 
 class FPlanPublicTable(tables.Table):
-    last_changed = tables.Column(verbose_name="Letzte Änderung")
+    name = tables.Column(verbose_name="Name")
+    nummer = tables.Column(verbose_name="Nummer")
     planart = tables.Column(verbose_name="Planart")
     zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
-    detail = tables.LinkColumn('fplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    # manytomany relations are handled automatically!
-    #gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
     xplangml = tables.Column(verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
+
+    def render_name(self, value, record):
+        if value:
+            return format_html('<a href="' + reverse('fplan-detail', kwargs={'pk': record.id}) + '" target="_blank">{}</a>', value)
+        pass
 
     def render_xplangml(self, value, record):
         if value:
@@ -425,7 +437,7 @@ class FPlanPublicTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "inkrafttretens_datum", "name", "nummer", "gemeinde", "planart", "detail", "xplangml")
+        fields = ( "zoom", "wirksamkeits_datum", "name", "nummer", "gemeinde", "planart", "xplangml")
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):
