@@ -29,7 +29,7 @@ Produktivbetrieb
 
 **nginx (Reverse Proxy)**
 
-`Nginx`_ läuft als Reverse Proxy und verteilt die Anfragen für die Statischen Inhalte und das aktive Framework. Installation als deb-Paket.
+`Nginx`_ läuft als Reverse Proxy und verteilt die Anfragen für die statischen Inhalte und das aktive Framework. Installation als deb-Paket.
 
 .. _Nginx: https://nginx.org/
 

@@ -50,23 +50,25 @@ Home
   {% endif %}
   <div class="col">
     <div class="card h-100">
-      <img src="..." class="card-img-top" alt="...">
+      <img width='200px' height='200px' src="/static/xplanung_light/beispiel_bplan.png" class="card-img-top" alt="...">
       <div class="card-body">
-        <h5 class="card-title">Alle publizierten Bebauungspläne<br><a href="{%url 'bplan-public-list' %}">Liste</a></h5>
+        <h5 class="card-title">Bebauungspläne<br><a href="{%url 'bplan-public-list' %}">{{ bplan_info.all_public_objects }}</a></h5>
+        <p class="card-text">Alle aktuell über die Plattform publizierten Bebauungsspläne.</p>
       </div>
     </div>
   </div>
   <div class="col">
     <div class="card h-100">
-      <img src="..." class="card-img-top" alt="...">
+      <img width='200px' height='200px' src="/static/xplanung_light/beispiel_fnp.png" class="card-img-top" alt="...">
       <div class="card-body">
-        <h5 class="card-title">Alle publizierten Flächennutzungspläne<br><a href="{%url 'fplan-public-list' %}">Liste</a></h5>
+        <h5 class="card-title">Flächennutzungspläne<br><a href="{%url 'fplan-public-list' %}">{{ fplan_info.all_public_objects }}</a></h5>
+        <p class="card-text">Alle aktuell über die Plattform publizierten Flächennutzungspläne.</p>
       </div>
     </div>
   </div>
   <div class="col">
     <div class="card h-100">
-      <img src="..." class="card-img-top" alt="...">
+      <img width='200px' height='200px' src="/static/xplanung_light/beispiel_offenlagen.png" class="card-img-top" alt="...">
       <div class="card-body">
         <h5 class="card-title">Laufende Beteiligungsverfahren<br><a href="{%url 'beteiligungen' %}">{{ beteiligungen_info.actual_public_objects }}</a></h5>
         <p class="card-text">Bekanntgegebene Beteiligungsverfahren zu Bebauungs- und Flächennutzungsplänen. Die Verfahren wurde noch nicht abgeschlossen.</p>

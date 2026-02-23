@@ -404,7 +404,7 @@ class FPlanPublicTable(tables.Table):
     last_changed = tables.Column(verbose_name="Letzte Änderung")
     planart = tables.Column(verbose_name="Planart")
     zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
-    detail = tables.LinkColumn('bplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
+    detail = tables.LinkColumn('fplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
                          orderable=False, empty_values=())
     # manytomany relations are handled automatically!
     #gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)

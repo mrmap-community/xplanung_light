@@ -780,6 +780,10 @@ def home(request):
     orga_qs = AdministrativeOrganization.objects.only('id')
     bplan_beteiligungen_qs = BPlanBeteiligung.objects.only('id')
     fplan_beteiligungen_qs = FPlanBeteiligung.objects.only('id')
+
+    bplan_info['all_public_objects'] = bplan_qs.filter(public=True).distinct().count()
+    fplan_info['all_public_objects']  = fplan_qs.filter(public=True).distinct().count()
+
     # Filtern der querysets auf nicht anonyme Nutzer die kein Administrator sind (my...)
     if not request.user.is_superuser and request.user.is_anonymous == False:
         orga_qs = orga_qs.filter(organization_users__user=request.user, organization_users__is_admin=True)

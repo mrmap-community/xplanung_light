@@ -401,6 +401,8 @@ class XPlanPublicListView(SingleTableMixin, FilterView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # Für die öffentlich zugänglichen Listen brauchen wir auch die Gesamtzahl aller 'public' Pläne
+        #context['number_plans'] = self.model.objects.filter(public=True).only('pk').count()
         # TODO: Anstatt object_list.data vlt. table.data? ... - dann haben wir mehr Einfluss auf die Darstellung im Leaflet Client
         #context["markers"] = json.loads(
         #    serialize("geojson", context['table'].page.object_list.data, fields=["id", "name", "pk", "planart"], geometry_field='geltungsbereich')
