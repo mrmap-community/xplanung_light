@@ -45,6 +45,12 @@ def get_bplan_attachment(request, pk):
     # Nur admins der Gebietskörperschaften oder superuser
     gemeinden = AdministrativeOrganization.objects.filter(bplan__attachments__in=[pk])
     access_allowed = False
+    # Prüfung, ob Plan public ist, auch dann wird der Zugriff auf die Anlagen freigegeben
+    try:
+        bplan = BPlan.objects.filter(id=pk, public=True)
+        access_allowed = True
+    except:
+        pass
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
             for user in gemeinde.organization_users.all():
@@ -53,6 +59,7 @@ def get_bplan_attachment(request, pk):
                     access_allowed = True
     else:
         access_allowed = True
+
     if not access_allowed:
         return HttpResponse("401 Unauthorized", status=401) 
     try:
@@ -116,6 +123,12 @@ def get_fplan_attachment(request, pk):
     # Nur admins der Gebietskörperschaften oder superuser
     gemeinden = AdministrativeOrganization.objects.filter(fplan__attachments__in=[pk])
     access_allowed = False
+    # Prüfung, ob Plan public ist, auch dann wird der Zugriff auf die Anlagen freigegeben
+    try:
+        bplan = FPlan.objects.filter(id=pk, public=True)
+        access_allowed = True
+    except:
+        pass
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
             for user in gemeinde.organization_users.all():
