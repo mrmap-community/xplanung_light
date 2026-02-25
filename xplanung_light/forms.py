@@ -1,6 +1,5 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.utils import timezone
-
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
@@ -8,6 +7,7 @@ from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteilig
 from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung
 from xplanung_light.models import ContactOrganization, RequestForOrganizationAdmin
 from xplanung_light.models import BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang
+from xplanung_light.models import ConsentOption
 from xplanung_light.validators import fplan_upload_file_validator, geotiff_raster_validator, bplan_content_validator, fplan_content_validator, bplan_upload_file_validator
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Row, Column, Field
@@ -16,10 +16,13 @@ from django.forms import ModelForm
 from django_select2.forms import Select2MultipleWidget
 from dal import autocomplete
 from formset.richtext.widgets import RichTextarea
+from formset.widgets import DateInput, DateTimeInput, DatePicker
 from captcha.fields import CaptchaField
 from formset.utils import FormMixin
 from django.core.exceptions import ValidationError
 from django_clamd.validators import validate_file_infection
+from django.utils.timezone import now
+import uuid
 #from formset.utils import FormMixin
 
 class BPlanImportForm(forms.Form):
@@ -1279,7 +1282,7 @@ class FPlanBeteiligungForm(ModelForm):
 
 
 class CaptchaForm(forms.Form):
-    consent = forms.BooleanField(required=True, label="Ich habe die Datenschutzbestimmungen gelesen und akzeptiere sie.")
+    consent = forms.BooleanField(required=True, label="Ich habe die Datenschutzbestimmungen der Gebietskörperschaft, sowie die Hinweise zum Datenschutz und den Nutzungsbedingungen der Plattform gelesen und akzeptiere sie.")
     captcha = CaptchaField()
 
 
@@ -1382,9 +1385,10 @@ class BeteiligungBeitragAnhangCollection(FormCollection):
 Collection für die über ein ForeignKey mit dem BPlanBeteiligung-Objekt verbundenen BPlanBeteiligungBeitrag-Objekte.
 """
 class BPlanBeteiligungBeitragCollection(FormCollection):
+    print("Instantierung BPlanBeteiligungBeitragCollection")
     legend = "Ihr Beitrag"
     add_label = "Beitrag hinzufügen"
-    related_field = 'bplan_beteiligung' # hier wird der releted_name des verbundenen Objketes genutzt!
+    related_field = 'bplan_beteiligung' # hier wird der related_name des verbundenen Objketes genutzt!
     beitrag = BPlanBeteiligungBeitragForm()
     attachments = BeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
     min_siblings = 1
@@ -1398,11 +1402,25 @@ class BPlanBeteiligungBeitragCollection(FormCollection):
                 #print("BPlanBeteiligungBeitrag nicht gefunden!")
                 return BPlanBeteiligungBeitrag(beschreibung=data.get('beschreibung'), bplan_beteiligung=self.instance)
 
+class BeteiligungEinwilligungsoptionenForm(forms.Form):
+    """
+    Falls man die Einwilligungsoptionen später alle getrennt im Formular auflisten will
+    """
+    # Hier noch die Pflichtfelder zuden Einwilligungsfragen mit aufnehmen
+    def __init__(self, *args, **kwargs):
+        today = datetime.now().date()
+        einwilligungsfragen = ConsentOption.objects.filter(obsolete=False, mandatory=True, valid_from__lte=today, valid_until__gte=today, type='commentator')
+        super().__init__(*args, **kwargs)
+
+        for instance in einwilligungsfragen:
+            self.fields[str(uuid.uuid4())] = forms.BooleanField(label=instance.title, required=True)
+
 
 class BPlanBeteiligungCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
     bplan_beteiligung = BPlanBeteiligungFormFormset()
     beitrag = BPlanBeteiligungBeitragCollection()
+    #test = BeteiligungEinwilligungsoptionenForm()
     captcha = CaptchaForm()
 
 
@@ -1466,3 +1484,37 @@ class RequestForOrganizationAdminConfirmForm(ModelForm):
         widgets = {
             'editing_note': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
         }
+
+
+class ConsentOptionForm(ModelForm):
+    """
+    Klasse für die Verwaltung von Zustimmungsoptionen - nutzt django-formset wegen Support für RichText-Field.
+    Problem bei Firefox unter debian: Richtext Formular Elemente bleiben nicht an fester Position ...
+
+    """
+    default_renderer = FormRenderer(
+        form_css_classes='row',
+        field_css_classes={
+            '*': 'mb-2 col-12',
+            
+            'valid_from': 'mb-2 col-4',
+            'valid_until': 'mb-2 col-8',
+            #'start_datum': 'mb-2 col-4',
+            #'end_datum': 'mb-2 col-4',
+            #'allow_online_beitrag': 'mb-2 col-4',
+            #'publikation_internet': 'mb-2 col-4',
+        },
+    )
+
+    class Meta:
+        model = ConsentOption
+        fields = ['type', 'title', 'description', 'mandatory', 'opt_out', 'valid_from', 'valid_until', 'validity_period']
+        widgets = {
+            'description': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+            'valid_from': DateInput(attrs={
+                'min': now().isoformat(),
+                #'max': (now() + timedelta(weeks=2)).isoformat(),
+            }),
+            'valid_until': DateInput(),
+        }
+

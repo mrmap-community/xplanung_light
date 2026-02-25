@@ -18,6 +18,7 @@ from xplanung_light.views.uvp import UvpCreateView, UvpUpdateView, UvpDeleteView
 from xplanung_light.views.fplanuvp import FPlanUvpCreateView, FPlanUvpUpdateView, FPlanUvpDeleteView, FPlanUvpListView
 from xplanung_light.views.administrativeorganization import AdministrativeOrganizationPublishingListView, AdministrativeOrganizationAutocomplete, AdministrativeOrganizationListView, AdministrativeOrganizationUpdateView
 from xplanung_light.views.contactorganization import ContactOrganizationCreateView, ContactOrganizationListView, ContactOrganizationUpdateView, ContactOrganizationDeleteView
+from xplanung_light.views.consentoption import ConsentOptionCreateView, ConsentOptionUpdateView, ConsentOptionListView, ConsentOptionDeleteView
 from django.urls import re_path as url
 
 urlpatterns = [
@@ -151,10 +152,15 @@ urlpatterns = [
     # url für den Zentraladministrator - der darf Anträge bestätigen und zurückweisen
     path("requestforadmin_admin/", RequestForOrganizationAdminAdminListView.as_view(), name="requestforadmin-admin-list"),
     path("requestforadmin/<int:pk>/delete/", RequestForOrganizationAdminDeleteView.as_view(), name="requestforadmin-delete"),
-    #RequestForAdminConfirm
+    # RequestForAdminConfirm
     path("requestforadmin/<int:pk>/confirm/", views.RequestForAdminConfirm.as_view(), name="requestforadmin-confirm"),
-    #RequestForAdminRefuse
+    # RequestForAdminRefuse
     path("requestforadmin/<int:pk>/refuse/", views.RequestForAdminRefuse.as_view(), name="requestforadmin-refuse"),
+    # Verwaltung von Zustimmungsoptionen - nur für superuser
+    path("consentoption/create/", ConsentOptionCreateView.as_view(extra_context={'create': True}), name="consentoption-create"),
+    path("consentoption/", ConsentOptionListView.as_view(), name="consentoption-list"),
+    path("consentoption/<int:pk>/update/", ConsentOptionUpdateView.as_view(extra_context={'update': True}), name="consentoption-update"),
+    path("consentoption/<int:pk>/delete/", ConsentOptionDeleteView.as_view(), name="consentoption-delete"),
     # Offenlagen / Beteiligungen
     # WMS 
     path("beteiligungen/map/", views.ows_beteiligungen, name="beteiligungen-map"),

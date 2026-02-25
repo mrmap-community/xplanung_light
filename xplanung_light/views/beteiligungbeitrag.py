@@ -1,4 +1,5 @@
 from xplanung_light.models import BPlan, BPlanBeteiligung, BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang, AdministrativeOrganization
+from xplanung_light.models import ConsentOption
 from xplanung_light.forms import BPlanBeteiligungBeitragForm
 from django.views.generic import CreateView, ListView, DeleteView, DetailView, UpdateView
 from formset.views import FormViewMixin, FormCollectionView, EditCollectionView #, CreateCollectionView
@@ -160,6 +161,13 @@ class BPlanBeteiligungBeitragCreateView(EditCollectionView):
         if 'orga_id' in self.kwargs.keys():
             orga = AdministrativeOrganization.objects.get(pk=self.kwargs['orga_id'])
             context["orga"] = orga
+        consent_options = None
+        try:
+            today = datetime.now().date()
+            consent_options = ConsentOption.objects.filter(obsolete=False, mandatory=True, valid_from__lte=today, valid_until__gte=today, type='commentator')
+        except:
+            pass
+        context["consent_options"] = consent_options
         return context
 
     def form_collection_invalid(self, form_collection):

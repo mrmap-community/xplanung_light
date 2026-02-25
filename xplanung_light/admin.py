@@ -1,7 +1,8 @@
 from django.contrib import admin
 from leaflet.admin import LeafletGeoAdmin
-from xplanung_light.models import BPlan, AdministrativeOrganization, License, ContactOrganization, Uvp
+from xplanung_light.models import BPlan, AdministrativeOrganization, License, ContactOrganization, Uvp, ConsentOption
 from simple_history.admin import SimpleHistoryAdmin
+#from formset.admin import ModelAdmin - erst in späteren Versionen verfügbar
 # https://django-organizations.readthedocs.io/en/latest/cookbook.html#extending-the-base-admin-classes
 """
 from organizations.base_admin import (
@@ -23,3 +24,4 @@ admin.site.register(Uvp, HistoryGeoAdmin)
 admin.site.register(ContactOrganization, HistoryGeoAdmin)
 admin.site.register(AdministrativeOrganization, HistoryGeoAdmin)
 admin.site.register(AdminOrgaUser)
+#admin.site.register(ConsentOption)

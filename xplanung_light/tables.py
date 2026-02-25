@@ -2,6 +2,7 @@ import django_tables2 as tables
 from django_tables2.utils import A
 from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp
 from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz, BPlanBeteiligungBeitrag, RequestForOrganizationAdmin
+from .models import ConsentOption
 from django.urls import reverse
 from django.utils.html import format_html
 from django.contrib.gis.gdal import OGRGeometry
@@ -521,3 +522,19 @@ class AdministrativeOrganizationPublishingTable(tables.Table):
         model = AdministrativeOrganization
         template_name = "django_tables2/bootstrap5.html"
         fields = ("name", "ags", "num_bplan", "num_bplan_public", "num_fplan", "num_fplan_public", "laufende_verfahren", "wms", "wfs", )
+
+
+class ConsentOptionTable(tables.Table):
+
+    edit = tables.LinkColumn('consentoption-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    delete = tables.LinkColumn('consentoption-delete', verbose_name='', text='Löschen', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    type = tables.Column(verbose_name="Rolle")
+    title = tables.Column(verbose_name="Titel")
+    
+    class Meta:
+        model = ConsentOption
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ( "id", "type", "title", "mandatory", "opt_out", "valid_from", "valid_until", "validity_period", "edit", "delete")
+    

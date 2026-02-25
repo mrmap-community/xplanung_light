@@ -821,3 +821,45 @@ class RequestForOrganizationAdmin(models.Model):
     delete_reason = models.CharField(null=True, blank=True, max_length=10, choices=DELETE_REASON_CHOICES, verbose_name='Grund für die Löschung', help_text="Grund für die Löschung des Antrags")
     editing_note = RichTextField(null=True, verbose_name="Begründung für die Ablehnung des Antrags")
 
+
+class ConsentOption(models.Model):
+    """
+    Klasse für das Management der Nutzungsbedingungen. Es können mehrere verschiedene Nutzungsbedingungen gleichzeitig gelten.
+    Jede Option hat einen eigenen Typ, der vom Programm verwendet wird, damit die Prüfung und Anzeige an der richtigen Stelle geprüft erfolgt.
+    Vorlage ist die Lösung in Sahana-Eden (https://github.com/sahana/eden)
+    """
+
+    COMMENTATOR = 'commentator'
+    MANAGER = 'manager'
+
+    CONSENT_OPTION_TYPES = [
+        (COMMENTATOR,  "Stellungnehmender"),
+        (MANAGER, "Planverwalter"),
+    ]
+
+    type = models.CharField(max_length=15, choices=CONSENT_OPTION_TYPES, verbose_name="Rolle", help_text="Rolle auf die die Einwilligungsoption anzuwenden ist.", db_index=True)
+    title = models.CharField(null=False, blank=False, max_length=300, verbose_name="Titel der Einwilligungsoption", help_text="Titel der Einwilligungsoption")
+    description = RichTextField(null=False, blank=False, verbose_name="Einwilligungsoption (Text)")
+    valid_from = models.DateField(null=True, blank=True, verbose_name="Gültig von", help_text="Beginn der Gültigkeit der Einwilligungsoption")
+    valid_until = models.DateField(null=True, blank=True, verbose_name="Gültig bis", help_text="Ende der Gültigkeit der Einwilligungsoption")
+    opt_out = models.BooleanField(null=False, blank=False, default=False, verbose_name="Vorausgewählt") #boolean preselected
+    mandatory = models.BooleanField(null=False, blank=False, default=False, verbose_name="Verpflichtend")
+    validity_period = models.IntegerField(null=True, blank=True, verbose_name="Gültigkeitsdauer in Tagen") # integer (days)
+    obsolete = models.BooleanField(null=False, blank=False, default=False, verbose_name="Hinfällig")
+    history = HistoricalRecords()
+
+
+class Consent(models.Model):
+    """
+    Klasse zum Verwalten der durch den Nutzer akzeptierten Nutzungsbedingungen.
+    Wird abgespeichert, wenn ein Admin-Nutzer sich anmeldet oder registriert.
+    """
+    
+    user = models.ForeignKey(User, null=True, on_delete=models.CASCADE, verbose_name="Nutzer")
+    option = HistoricForeignKey(ConsentOption, on_delete=models.CASCADE, null=True, verbose_name="Einwilligungsoption")
+    consenting = models.BooleanField(null=False, blank=False, default=False, verbose_name="Eingewilligt")
+    date = models.DateField(null=False, blank=False, verbose_name="Datum der Einwilligung")
+    expires_on =  models.DateField(null=False, blank=False, verbose_name="Ablauf der Einwilligung") # Wird ausgefüllt, wenn validity_period gesetzt war
+    #vsign - ip
+    #vhash - hash
+    
