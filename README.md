@@ -6,6 +6,12 @@ Die initiale Entwicklung des Systems ist in einem Tutorial dokumentiert, dass si
 
 [Geodjango Tutorial](https://mrmap-community.github.io/django-tutorial/)
 
+# Testphase
+
+In Rheinland-Pfalz befindet sich die Software gerade in einer Testphase. Einige Kommunen haben schon einen Administrativen Zugriff auf das System. Falls Interesse besteht, kann man sich registrieren und einen Online-Antrag auf Freischaltung für eine Gebietskörperschaft stellen :wink: .
+
+[Prototyp im GeoPortal.rlp](https://xplanung.geoportal.rlp.de/)
+
 # Installation unter Debian 11 und 12
 
 Als root
