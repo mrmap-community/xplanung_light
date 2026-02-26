@@ -7,7 +7,7 @@ from xplanung_light.views.fplan import FPlanPublicListView
 from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDeleteView, FPlanListView, FPlanDetailView, FPlanListViewHtml
 from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView
 from xplanung_light.views.requestforadmin import RequestForOrganizationAdminCreateView, RequestForOrganizationAdminListView, RequestForOrganizationAdminDeleteView, RequestForOrganizationAdminAdminListView
-from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragCreateView, BeteiligungBeitragListView, BeteiligungBeitragDeleteView, BeteiligungBeitragDetailView, BPlanBeteiligungBeitragDeleteView, BPlanBeteiligungBeitragDetailView, BPlanBeteiligungBeitragActivate
+from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragCreateView, BeteiligungBeitragListView, BeteiligungBeitragDeleteView, BeteiligungBeitragDetailView, BPlanBeteiligungBeitragDetailView, BPlanBeteiligungBeitragActivate
 from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views.bplanspezexternereferenz import BPlanSpezExterneReferenzCreateView, BPlanSpezExterneReferenzUpdateView, BPlanSpezExterneReferenzDeleteView, BPlanSpezExterneReferenzListView
@@ -28,6 +28,8 @@ urlpatterns = [
     # https://dev.to/donesrom/how-to-set-up-django-built-in-registration-in-2023-41hg
     path("register/", views.register, name = "register"),
     path("about/", views.about, name="about"),
+    path("datenschutz/", views.datenschutz, name="datenschutz"),
+    path("impressum/", views.impressum, name="impressum"),
     path("aggregates/", views.aggregates, name="aggregates"),
     # BPlan CRUD
     path("bplan/", BPlanListView.as_view(), name="bplan-list"),

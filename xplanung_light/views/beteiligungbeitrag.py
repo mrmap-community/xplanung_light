@@ -108,41 +108,6 @@ class BeteiligungBeitragListView(SingleTableView):
         return context
 
 
-class BPlanBeteiligungBeitragDeleteView(SuccessMessageMixin, DeleteView):
-    """
-    Löschen eines BeteiligungsBeitrag-Records.
-
-    """
-    model = BPlanBeteiligungBeitrag
-    reference_model = BPlan
-    model_name_lower = str(model._meta.model_name).lower()
-    success_message = "Beteiligungsbeitrag wurde gelöscht!"
-
-    def get_queryset(self, **kwargs):
-        """
-        Docstring for get_queryset
-        
-        :param self: Description
-        :param kwargs: Description
-        """
-        qs = super().get_queryset()
-        plan = self.reference_model.objects.get(pk=self.kwargs['planid'])
-        # check ob Nutzer admin einer der Gemeinden des BPlans ist
-        if self.request.user.is_superuser == False:
-            for gemeinde in plan.gemeinde.all():
-                for user in gemeinde.organization_users.all():
-                    if user.user == self.request.user and user.is_admin:   
-                        # Zugriff wird erteilt                     
-                        return qs.filter(bplan_beteiligung_id=self.kwargs['beteiligungid'])
-            raise PermissionDenied("Nutzer hat keine Berechtigungen auf die angeforderten Objekte!")
-        else:
-            return qs.filter(bplan_beteiligung_id=self.kwargs['beteiligungid'])
-
-    def form_valid(self, form):
-        self.success_url = reverse_lazy('bplanbeteiligungbeitrag-list', kwargs={'planid': self.kwargs['planid'], 'beteiligungid': self.kwargs['beteiligungid']})
-        return super().form_valid(form)
-    
-
 class BeteiligungBeitragDeleteView(SuccessMessageMixin, DeleteView):
     """
     Löschen eines BeteiligungsBeitrag-Records.

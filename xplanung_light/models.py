@@ -831,10 +831,12 @@ class ConsentOption(models.Model):
 
     COMMENTATOR = 'commentator'
     MANAGER = 'manager'
+    APPLICATION = 'application'
 
     CONSENT_OPTION_TYPES = [
         (COMMENTATOR,  "Stellungnehmender"),
         (MANAGER, "Planverwalter"),
+        (APPLICATION, "Gesamte Anwendung"),
     ]
 
     type = models.CharField(max_length=15, choices=CONSENT_OPTION_TYPES, verbose_name="Rolle", help_text="Rolle auf die die Einwilligungsoption anzuwenden ist.", db_index=True)

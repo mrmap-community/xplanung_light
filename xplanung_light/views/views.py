@@ -6,7 +6,7 @@ from django.shortcuts import redirect
 from django.contrib.auth import login
 from xplanung_light.models import AdministrativeOrganization, BPlanSpezExterneReferenz, BPlan, FPlan, FPlanSpezExterneReferenz
 from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung, BPlanBeteiligungBeitragAnhang, BPlanBeteiligungBeitrag
-from xplanung_light.models import RequestForOrganizationAdmin, AdminOrgaUser
+from xplanung_light.models import RequestForOrganizationAdmin, AdminOrgaUser, ConsentOption
 import uuid
 import xml.etree.ElementTree as ET
 from django.urls import reverse
@@ -779,7 +779,23 @@ def fplan_import_archiv(request):
     return render(request, "xplanung_light/fplan_import_archiv.html", {"form": form})
 
 def aggregates(request):
-     return render(request, "xplanung_light/aggregates.html")
+    return render(request, "xplanung_light/aggregates.html")
+
+def datenschutz(request):
+    # Lade die aktuellen Informationen bezüglich des Datenschutzes und der Nutzungsbedingungen 
+    today = datetime.datetime.now().date()
+    consent_options = ConsentOption.objects.filter(obsolete=False, mandatory=True, valid_from__lte=today, valid_until__gte=today, type='application')
+    return render(request, "xplanung_light/datenschutz.html", {'consent_options': consent_options})
+
+def impressum(request):
+    # Lade die aktuellen Informationen aus den Metadaten zu den Diensten - Provider Informationen aus den settings 
+    # Verantwortliche Organisation
+    responsible_organisation = {}
+    responsible_organisation['name'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['organization_name']
+    responsible_organisation['phone'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone']
+    responsible_organisation['email'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email']
+    return render(request, "xplanung_light/impressum.html", {'orga_info': responsible_organisation})
+    
 
 def home(request):
     # Lade alle Informationen zu den vorhandenen Daten für das Dashboard

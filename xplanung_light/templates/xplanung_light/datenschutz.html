@@ -1,0 +1,16 @@
+{% extends "xplanung_light/layout.html" %}
+{% load richtext %}
+{% block title %}
+XPlanung-light - Datenschutz
+{% endblock %}
+{% block content %}
+<h4>Datenschutzhinweise</h4>
+{% if consent_options %}
+{% for consent_option in consent_options %}
+<h5>{{ consent_option.title }}</h5>
+<p>{% render_richtext consent_option.description %}</p>
+{% endfor %}
+{% else %}
+<p>Es sind noch keinen allgemeinen Hinweise eingestellt - bitte im Backend als Zustimmungsoptionen der Kategorie <b>Gesamte Anwendung</b> erfassen!</p>
+{% endif %}
+{% endblock %}
