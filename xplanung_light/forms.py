@@ -1586,6 +1586,9 @@ class RequestForOrganizationAdminConfirmForm(ModelForm):
             'editing_note': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
         }
 
+from formset.richtext.controls import DialogControl
+from formset.richtext.dialogs import SimpleLinkDialogForm
+from formset.richtext import controls
 
 class ConsentOptionForm(ModelForm):
     """
@@ -1611,7 +1614,15 @@ class ConsentOptionForm(ModelForm):
         model = ConsentOption
         fields = ['type', 'title', 'description', 'mandatory', 'opt_out', 'valid_from', 'valid_until', 'validity_period']
         widgets = {
-            'description': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+            'description': RichTextarea(attrs={'cols': '80', 'rows': '3'}, control_elements=[
+                    controls.Heading(),
+                    controls.Underline(),
+                    controls.BulletList(),
+                    controls.OrderedList(),
+                    controls.Bold(),
+                    controls.Italic(),
+                    DialogControl(SimpleLinkDialogForm())
+                ]),
             'valid_from': DateInput(attrs={
                 'min': now().isoformat(),
                 #'max': (now() + timedelta(weeks=2)).isoformat(),
