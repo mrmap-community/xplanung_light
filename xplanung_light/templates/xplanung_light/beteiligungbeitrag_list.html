@@ -1,0 +1,19 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% load crispy_forms_tags %}
+{% load richtext %}
+{% load render_table from django_tables2 %}
+{% bootstrap_css %}
+{% block title %}
+    Beiträge im Beteiligungsverfahren zum Plan
+{% endblock %}
+{% block content %}
+<p>Beteiligungsbeiträge zum Plan <b>{{ plan.name }}</b> der Kommune(n):<br>
+    <ul>
+        {% for gemeinde in plan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
+    </ul>
+</p>
+ <p><a href="{% url 'beteiligungbeitrag-create' plantyp=plantyp planid=plan.id pk=beteiligung.id%}">Neuen Kommentar/Beitrag anlegen</a></p> 
+{% render_table table %}
+<p>Anzahl: {{ beteiligungbeitrag_list.count }}</p>
+{% endblock %}

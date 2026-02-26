@@ -4,7 +4,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization, Uvp, FPlanUvp
-from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung
+from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung, FPlanBeteiligungBeitrag, FPlanBeteiligungBeitragAnhang
 from xplanung_light.models import ContactOrganization, RequestForOrganizationAdmin
 from xplanung_light.models import BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang
 from xplanung_light.models import ConsentOption
@@ -1319,6 +1319,19 @@ class BPlanBeteiligungFormFormset(ModelForm):
         model = BPlanBeteiligung
         fields = ['id']
 
+"""
+Das Gleiche für FPläne
+"""
+class FPlanBeteiligungFormFormset(ModelForm):
+    id = IntegerField(
+        required=False,
+        widget=HiddenInput,
+    )
+
+    class Meta:
+        model = FPlanBeteiligung
+        fields = ['id']
+
 
 """
 Einfache ModelForm für das BPlanBeteiligungBeitragBeitrag-Objekt
@@ -1335,6 +1348,18 @@ class BPlanBeteiligungBeitragForm(ModelForm):
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
         }
 
+"""
+Die Gleiche Klasse für FPläne
+"""
+class FPlanBeteiligungBeitragForm(ModelForm):
+
+    class Meta:
+        model = FPlanBeteiligungBeitrag
+        fields = ['email', 'titel', 'beschreibung']
+        widgets = {
+            #'beschreibung': widgets.Textarea(attrs={'cols': '80', 'rows': '3'}),
+            'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+        }
 
 """
 Einfache ModelForm für das BPlanBeteiligungBeitragAnhang-Objekt
@@ -1362,6 +1387,31 @@ class BeteiligungBeitragAnhangForm(ModelForm):
 
 
 """
+Für FPläne
+"""
+class FPlanBeteiligungBeitragAnhangForm(ModelForm):
+
+    id = IntegerField(
+        required=False,
+        widget=HiddenInput,
+    )
+    
+    attachment = fields.FileField(
+        label="Anhang",
+        widget=UploadedFileInput(attrs={
+            'max-size': 1024 * 1024,
+        }),
+        help_text="Please do not upload files larger than 1MB",
+        required=True,
+        validators=[validate_file_infection],
+    )
+    
+    class Meta:
+        model = FPlanBeteiligungBeitragAnhang
+        fields = ['id', 'name', 'typ', 'attachment']
+
+
+"""
 Collection für die über ein ForeignKey mit dem BPlanBeteiligungBeitrag-Objekt verbundenen BPlanBeteiligungBeitragAnhang-Objekte.
 """
 class BeteiligungBeitragAnhangCollection(FormCollection):
@@ -1379,6 +1429,25 @@ class BeteiligungBeitragAnhangCollection(FormCollection):
                 return self.instance.attachment.get(id=data.get('id') or 0)
             except (AttributeError, BPlanBeteiligungBeitragAnhang.DoesNotExist, ValueError):
                 return BPlanBeteiligungBeitragAnhang(name=data.get('name'), attachment=data.get('attachment'), beitrag=self.instance)
+
+
+"""
+Für FPläne
+"""
+class FPlanBeteiligungBeitragAnhangCollection(FormCollection):
+    legend = "Anlagen"
+    add_label = "Anlage hinzufügen"
+    related_field = 'beitrag'
+    attachment = FPlanBeteiligungBeitragAnhangForm()
+    min_siblings = 0
+    max_siblings = 4
+
+    def retrieve_instance(self, data):
+        if data := data.get('attachment'):
+            try:
+                return self.instance.attachment.get(id=data.get('id') or 0)
+            except (AttributeError, FPlanBeteiligungBeitragAnhang.DoesNotExist, ValueError):
+                return FPlanBeteiligungBeitragAnhang(name=data.get('name'), attachment=data.get('attachment'), beitrag=self.instance)
 
 
 """
@@ -1402,6 +1471,29 @@ class BPlanBeteiligungBeitragCollection(FormCollection):
                 #print("BPlanBeteiligungBeitrag nicht gefunden!")
                 return BPlanBeteiligungBeitrag(beschreibung=data.get('beschreibung'), bplan_beteiligung=self.instance)
 
+
+"""
+Für FPläne
+"""
+class FPlanBeteiligungBeitragCollection(FormCollection):
+    print("Instantierung FPlanBeteiligungBeitragCollection")
+    legend = "Ihr Beitrag"
+    add_label = "Beitrag hinzufügen"
+    related_field = 'fplan_beteiligung' # hier wird der related_name des verbundenen Objketes genutzt!
+    beitrag = FPlanBeteiligungBeitragForm()
+    attachments = FPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+    min_siblings = 1
+    max_siblings = 1
+
+    def retrieve_instance(self, data):
+        if data := data.get('beitrag'):
+            try:
+                return self.instance.beitrag.get(id=data.get('id') or 0)
+            except (AttributeError, FPlanBeteiligungBeitrag.DoesNotExist, ValueError):
+                #print("BPlanBeteiligungBeitrag nicht gefunden!")
+                return FPlanBeteiligungBeitrag(beschreibung=data.get('beschreibung'), fplan_beteiligung=self.instance)
+
+
 class BeteiligungEinwilligungsoptionenForm(forms.Form):
     """
     Falls man die Einwilligungsoptionen später alle getrennt im Formular auflisten will
@@ -1420,7 +1512,16 @@ class BPlanBeteiligungCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
     bplan_beteiligung = BPlanBeteiligungFormFormset()
     beitrag = BPlanBeteiligungBeitragCollection()
-    #test = BeteiligungEinwilligungsoptionenForm()
+    captcha = CaptchaForm()
+
+
+"""
+Für FPläne
+"""
+class FPlanBeteiligungCollection(FormCollection):
+    default_renderer = FormRenderer(field_css_classes='mb-3')
+    bplan_beteiligung = FPlanBeteiligungFormFormset()
+    beitrag = FPlanBeteiligungBeitragCollection()
     captcha = CaptchaForm()
 
 

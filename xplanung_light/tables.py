@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import A
 from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp
-from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz, BPlanBeteiligungBeitrag, RequestForOrganizationAdmin
+from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz, BPlanBeteiligungBeitrag, FPlanBeteiligungBeitrag,  RequestForOrganizationAdmin
 from .models import ConsentOption
 from django.urls import reverse
 from django.utils.html import format_html
@@ -124,30 +124,38 @@ class BPlanBeteiligungTable(tables.Table):
     count_comments = tables.Column(verbose_name="Kommentare/Beträge", accessor='count_comments', orderable=False)
     typ = tables.Column(verbose_name="Art der Beteiligung")
 
+    def render_count_comments(self, value, record):
+        if value == 0:
+            return format_html('<a href="' + reverse('beteiligungbeitrag-create', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'pk': record.id}) + '">' +  str(value) + '</a>')
+        else:
+            return format_html('<a href="' + reverse('beteiligungbeitrag-list', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
+
     class Meta:
         model = BPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
         fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "count_comments", "edit", "delete")
 
-    def render_count_comments(self, value, record):
-        if value == 0:
-            return format_html('<a href="' + reverse('bplanbeteiligungbeitrag-create', kwargs={'planid': record.bplan.id, 'pk': record.id}) + '">' +  str(value) + '</a>')
-        else:
-            return format_html('<a href="' + reverse('bplanbeteiligungbeitrag-list', kwargs={'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
-
-
+   
 class FPlanBeteiligungTable(tables.Table):
 
     edit = tables.LinkColumn('fplanbeteiligung-update', verbose_name='', text='Bearbeiten', args=[A('fplan.id'), A('pk')], \
                          orderable=False, empty_values=())
     delete = tables.LinkColumn('fplanbeteiligung-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')], \
                          orderable=False, empty_values=())
+    count_comments = tables.Column(verbose_name="Kommentare/Beträge", accessor='count_comments', orderable=False)
+                      
     typ = tables.Column(verbose_name="Art der Beteiligung")
+
+    def render_count_comments(self, value, record):
+        if value == 0:
+            return format_html('<a href="' + reverse('beteiligungbeitrag-create', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'pk': record.id}) + '">' +  str(value) + '</a>')
+        else:
+            return format_html('<a href="' + reverse('beteiligungbeitrag-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
 
     class Meta:
         model = FPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "edit", "delete")
+        fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "count_comments", "end_datum", "edit", "delete")
 
 
 class BPlanBeteiligungBeitragTable(tables.Table):
@@ -160,11 +168,30 @@ class BPlanBeteiligungBeitragTable(tables.Table):
     )
     """
     attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("bplan-beteiligung-beitrag-attachment-download", {"pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
-    delete = tables.LinkColumn('bplanbeteiligungbeitrag-delete', verbose_name='', text='Löschen', args=[A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], \
+    delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], \
                          orderable=False, empty_values=())
     
     class Meta:
         model = BPlanBeteiligungBeitrag
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ("id", "last_changed", "titel", "email", "approved", "withdrawn", "attachments", "delete")
+
+
+class FPlanBeteiligungBeitragTable(tables.Table):
+
+    #id = tables.LinkColumn('fplanbeteiligungbeitrag-detail', args=[A('fplan_beteiligung__bplan__id'), A('fplan_beteiligung__id'), A('pk')])
+    last_changed = tables.Column(verbose_name='Letzte Änderung')
+    """
+    beschreibung = tables.TemplateColumn(
+        template_code='''{{ record.beschreibung |safe }}''',
+    )
+    """
+    attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("fplan-beteiligung-beitrag-attachment-download", {"pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
+    delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], \
+                         orderable=False, empty_values=())
+    
+    class Meta:
+        model = FPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
         fields = ("id", "last_changed", "titel", "email", "approved", "withdrawn", "attachments", "delete")
 

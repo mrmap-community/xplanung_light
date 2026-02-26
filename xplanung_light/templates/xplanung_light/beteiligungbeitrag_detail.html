@@ -1,0 +1,41 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% load richtext %}
+{% bootstrap_css %}
+{% block title %}
+Stellungnahme zum BPlan
+{% endblock %}
+{% block content %}
+{% if object.bplan_beteiligung %}
+<p>{{ object.bplan_beteiligung.get_typ_display }} zum Bebauungsplan <b>{{ object.bplan_beteiligung.bplan.name }}</b> der Kommune(n):<br>
+    <ul>
+        {% for gemeinde in object.bplan_beteiligung.bplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
+    </ul>
+</p>  
+<p>Beteiligung möglich bis zum <!--<i title="Datumsangabe" class="fa-regular fa-calendar"></i>-->{{ object.bplan_beteiligung.end_datum }}</p>
+{% endif %}
+<hr>
+<h3>Stellungnahme vom {{ object.last_changed }}</h3>
+<p>EMail Absender: {{ object.email }}</p> 
+{% if object.approved is False %}
+<a href="{% url 'bplanbeteiligungbeitrag-activate' planid=object.bplan_beteiligung.bplan.id beteiligungid=object.bplan_beteiligung.id generic_id=object.generic_id %}" class="btn btn-primary active" role="button" aria-pressed="true">Stellungnahme freigeben</a>
+{% else %}
+{% if user.is_anonymous %}
+<a href="{% url 'bplanbeteiligungbeitrag-delete' planid=object.bplan_beteiligung.bplan.id beteiligungid=object.bplan_beteiligung.id pk=object.id %}" class="btn btn-danger active" role="button" aria-pressed="true">Stellungnahme zurückziehen</a>
+{% else %}
+<a href="{% url 'bplanbeteiligungbeitrag-delete' planid=object.bplan_beteiligung.bplan.id beteiligungid=object.bplan_beteiligung.id pk=object.id %}" class="btn btn-danger active" role="button" aria-pressed="true">Stellungnahme löschen</a>
+{% endif %}
+{% endif %}
+<hr>
+<h4>{{ object.titel }}</h4>
+<p>{% render_richtext object.beschreibung %}</p>
+ 
+{% if object.attachments.count > 0 %}
+<h4>Anlagen</h4>
+<ul>
+{% for attachment in object.attachments.all %}
+<li><a href="{% url 'bplan-beteiligung-beitrag-attachment-download' pk=attachment.pk %}">{{ attachment.name }}</a></li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

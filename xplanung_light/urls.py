@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path, re_path, include
 from xplanung_light.views import views
 from django.contrib.auth import views as auth_views
 from xplanung_light.views.bplan import BPlanCreateView, BPlanUpdateView, BPlanDeleteView, BPlanListView, BPlanDetailView, BPlanListViewHtml
@@ -7,7 +7,7 @@ from xplanung_light.views.fplan import FPlanPublicListView
 from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDeleteView, FPlanListView, FPlanDetailView, FPlanListViewHtml
 from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView
 from xplanung_light.views.requestforadmin import RequestForOrganizationAdminCreateView, RequestForOrganizationAdminListView, RequestForOrganizationAdminDeleteView, RequestForOrganizationAdminAdminListView
-from xplanung_light.views.beteiligungbeitrag import BPlanBeteiligungBeitragCreateView, BPlanBeteiligungBeitragListView, BPlanBeteiligungBeitragDeleteView, BPlanBeteiligungBeitragDetailView, BPlanBeteiligungBeitragActivate
+from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragCreateView, BeteiligungBeitragListView, BeteiligungBeitragDeleteView, BeteiligungBeitragDetailView, BPlanBeteiligungBeitragDeleteView, BPlanBeteiligungBeitragDetailView, BPlanBeteiligungBeitragActivate
 from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views.bplanspezexternereferenz import BPlanSpezExterneReferenzCreateView, BPlanSpezExterneReferenzUpdateView, BPlanSpezExterneReferenzDeleteView, BPlanSpezExterneReferenzListView
@@ -57,11 +57,15 @@ urlpatterns = [
     # Test für django-formsets - sollte mit einem view möglich sein, klappt aber nicht
     path("bplan/<int:planid>/beteiligung/create/", BPlanBeteiligungCreateView.as_view(extra_context={'create': True}), name="bplanbeteiligung-create"),
     path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="bplanbeteiligung-update"),
-    # BPlan Beteiligung Beitrag
-    path("bplan/<int:planid>/beteiligung/<int:pk>/beitrag/create/", BPlanBeteiligungBeitragCreateView.as_view(), name="bplanbeteiligungbeitrag-create"),
-    path("bplan/<int:planid>/beteiligung/<int:pk>/beitrag/create/organization/<int:orga_id>/", BPlanBeteiligungBeitragCreateView.as_view(), name="bplanbeteiligungbeitrag-create-orga"),
-    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/", BPlanBeteiligungBeitragListView.as_view(), name="bplanbeteiligungbeitrag-list"),
-    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<int:pk>/delete/", BPlanBeteiligungBeitragDeleteView.as_view(), name="bplanbeteiligungbeitrag-delete"),
+    # 
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<pk>\d+)/beitrag/create/$', BeteiligungBeitragCreateView.as_view(), name="beteiligungbeitrag-create"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<pk>\d+)/beitrag/create/organization/(?P<orga_id>\d+)/$', BeteiligungBeitragCreateView.as_view(), name="beteiligungbeitrag-create-orga"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/$', BeteiligungBeitragListView.as_view(), name="beteiligungbeitrag-list"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/delete/$', BeteiligungBeitragDeleteView.as_view(), name="beteiligungbeitrag-delete"),
+    #TODO: Ggf. Beteiligung Beitrag Detail für alle Pläne einheitlich
+    #re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/$', BeteiligungBeitragDetailView.as_view(), name="beteiligungbeitrag-detail"),
+        
+    # Spezifische Routen für BPlan - function based views durch class based views ersetzen!
     # BPlan Beteiligung Beitrag Anhang - erst mal ganz einfach per id
     path("bplanbeteiligungbeitragattachment/<int:pk>/", views.get_bplan_beteiligung_beitrag_attachment, name="bplan-beteiligung-beitrag-attachment-download"),
     # BPlan Beteiligung Beitrag Detail
@@ -72,13 +76,15 @@ urlpatterns = [
     path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/reactivate/", views.beitrag_reactivate, name="bplanbeteiligungbeitrag-reactivate"),
     # Authentifizierung für guest
     path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/authenticate/", views.beitrag_authenticate, name="bplanbeteiligungbeitrag-authenticate"),
-    
     path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/detail/", views.beitrag_detail, name="gastbplanbeteiligungbeitrag-detail"),
+    # 
+    
     # BPlan UVP Info
     path("bplan/<int:planid>/uvp/create/", UvpCreateView.as_view(), name="uvp-create"),
     path("bplan/<int:planid>/uvp/", UvpListView.as_view(), name="uvp-list"),
     path("bplan/<int:planid>/uvp/<int:pk>/update/", UvpUpdateView.as_view(), name="uvp-update"),
     path("bplan/<int:planid>/uvp/<int:pk>/delete/", UvpDeleteView.as_view(), name="uvp-delete"),
+    
     # FPlan
     # BPlan CRUD
     path("fplan/", FPlanListView.as_view(), name="fplan-list"),
@@ -102,7 +108,6 @@ urlpatterns = [
     #path("fplan/<int:planid>/beteiligung/<int:pk>/update/", FPlanBeteiligungUpdateView.as_view(), name="fplanbeteiligung-update"),
     path("fplan/<int:planid>/beteiligung/create/", FPlanBeteiligungCreateView.as_view(extra_context={'create': True}), name="fplanbeteiligung-create"),
     path("fplan/<int:planid>/beteiligung/<int:pk>/update/", FPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="fplanbeteiligung-update"),
-
     path("fplan/<int:planid>/beteiligung/<int:pk>/delete/", FPlanBeteiligungDeleteView.as_view(), name="fplanbeteiligung-delete"),
      # FPlan Anlagen
     path("fplan/<int:planid>/attachment/create/", FPlanSpezExterneReferenzCreateView.as_view(), name="fplanattachment-create"),

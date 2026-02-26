@@ -177,10 +177,10 @@
                         {% if beteiligung.allow_online_beitrag %}
                           <!-- https://getbootstrap.com/docs/5.3/components/buttons/ -->
                           {% if beteiligung.plantyp == "BPlan" %}
-                          <a class="btn btn-success" href="{% url 'bplanbeteiligungbeitrag-create-orga' planid=beteiligung.xplan_id pk=beteiligung.id orga_id=orga.id%}" tabindex="-1" role="button">Abgeben<span class="badge text-bg-secondary">{{ beteiligung.confirmed_comments }}</span></a>
+                          <a class="btn btn-success" href="{% url 'beteiligungbeitrag-create-orga' plantyp='bplan' planid=beteiligung.xplan_id pk=beteiligung.id orga_id=orga.id%}" tabindex="-1" role="button">Abgeben<span class="badge text-bg-secondary">{{ beteiligung.confirmed_comments }}</span></a>
                           {% else %}
                           <!-- TODO: create fplanbeteiligung-beitrag ...-->
-                          <a class="btn btn-success" href="{% url 'bplanbeteiligungbeitrag-create-orga' planid=beteiligung.xplan_id pk=beteiligung.id orga_id=orga.id%}" tabindex="-1" role="button">Abgeben<span class="badge text-bg-secondary">0</span></a>
+                          <a class="btn btn-success" href="{% url 'beteiligungbeitrag-create-orga' plantyp='fplan' planid=beteiligung.xplan_id pk=beteiligung.id orga_id=orga.id%}" tabindex="-1" role="button">Abgeben<span class="badge text-bg-secondary">{{ beteiligung.confirmed_comments }}</span></a>
                           {% endif %}
                         {% else %}
                           <button type="button" class="btn btn-danger">Nicht möglich</button>

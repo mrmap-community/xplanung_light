@@ -609,7 +609,7 @@ class FPlanBeteiligungBeitrag(GenericMetadata):
 
     titel = models.CharField(null=False, blank=False, max_length=300, verbose_name="Titel des Beitrags", help_text="Geben Sie hier bitte einen aussagekräftigen Titel für Ihren Beitrag an.")
     beschreibung = RichTextField(null=False, blank=False, verbose_name="Beitrag / Kommentar (Textform)")
-    bplan_beteiligung = HistoricForeignKey(FPlanBeteiligung, on_delete=models.CASCADE, verbose_name="BPlanBeteiligung", help_text="BPlanBeteiligung", related_name="comments")
+    fplan_beteiligung = HistoricForeignKey(FPlanBeteiligung, null=True, on_delete=models.CASCADE, verbose_name="FPlanBeteiligung", help_text="FPlanBeteiligung", related_name="comments")
     approved = models.BooleanField(null=False, blank=False, default=False, verbose_name="Stellungnahme bestätigt")
     email = models.EmailField(null=False, blank=False, verbose_name='EMail', help_text='EMail-Adresse zur Bestätigung der Abgabe Ihrer Stellungnahme. Sie bekommen eine Aktivierungsmail geschickt.')
     withdrawn = models.BooleanField(null=False, blank=False, default=False, verbose_name="Stellungnahme zurückgezogen")

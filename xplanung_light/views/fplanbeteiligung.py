@@ -58,7 +58,7 @@ class FPlanBeteiligungListView(XPlanRelationsListView, SingleTableView):
     
         """
         qs = super().get_queryset()
-        #qs = qs.annotate(count_comments=Count('comments', distinct=True))
+        qs = qs.annotate(count_comments=Count('comments', distinct=True))
         return qs
     
 
