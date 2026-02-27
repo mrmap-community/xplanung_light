@@ -5,7 +5,8 @@ from django.contrib.gis.gdal import OGRGeometry
 from django.shortcuts import redirect
 from django.contrib.auth import login
 from xplanung_light.models import AdministrativeOrganization, BPlanSpezExterneReferenz, BPlan, FPlan, FPlanSpezExterneReferenz
-from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung, BPlanBeteiligungBeitragAnhang, BPlanBeteiligungBeitrag
+from xplanung_light.models import BPlanBeteiligung, BPlanBeteiligungBeitragAnhang, BPlanBeteiligungBeitrag
+from xplanung_light.models import FPlanBeteiligung, FPlanBeteiligungBeitragAnhang, FPlanBeteiligungBeitrag
 from xplanung_light.models import RequestForOrganizationAdmin, AdminOrgaUser, ConsentOption
 import uuid
 import xml.etree.ElementTree as ET
@@ -76,48 +77,6 @@ def get_bplan_attachment(request, pk):
            return HttpResponse("File not found", status=404) 
     else:
         return HttpResponse("Object not found", status=404)
-    
-def get_bplan_beteiligung_beitrag_attachment(request, pk):
-    """
-    Auslieferung der Anlagen aus den Stellungnahmen
-    
-    :param request: Description
-    :param pk: Description
-    """
-    beitrag = BPlanBeteiligungBeitrag.objects.get(attachments__in=[pk])
-    # Nur admins der Gebietskörperschaften oder superuser
-    gemeinden = AdministrativeOrganization.objects.filter(bplan__beteiligungen__comments__attachments__in=[pk])
-    access_allowed = False
-    if request.user.is_superuser == False:
-        for gemeinde in gemeinden:
-            for user in gemeinde.organization_users.all():
-                if user.user == request.user and user.is_admin:   
-                    # Zugriff wird erteilt                     
-                    access_allowed = True
-    else:
-        access_allowed = True
-    # Auch authentifizierten Gast-Nutzern ermöglichen ihre Uploads einzusehen
-    if request.user.is_anonymous:
-        if 'beitrag_generic_id' in request.session.keys():
-            if request.session['beitrag_generic_id'] == str(beitrag.generic_id):
-                print('beitrag id steht in session - activate ...!')
-                access_allowed = True
-            else:
-                return HttpResponse("401 Unauthorized", status=401) 
-    try:
-        #attachment = BPlanSpezExterneReferenz.objects.get(owned_by_user=request.user, pk=pk)
-        attachment = BPlanBeteiligungBeitragAnhang.objects.get(pk=pk)
-    except BPlanBeteiligungBeitragAnhang.DoesNotExist:
-        attachment = None
-    #print(str(attachment))
-    if attachment:
-        if os.path.exists(attachment.attachment.file.name):
-            response = FileResponse(attachment.attachment)
-            return response
-        else:
-           return HttpResponse("File not found", status=404) 
-    else:
-        return HttpResponse("Object not found", status=404)
 
 def get_fplan_attachment(request, pk):
     # Nur admins der Gebietskörperschaften oder superuser
@@ -144,6 +103,53 @@ def get_fplan_attachment(request, pk):
     except FPlanSpezExterneReferenz.DoesNotExist:
         attachment = None
     #print(str(attachment))
+    if attachment:
+        if os.path.exists(attachment.attachment.file.name):
+            response = FileResponse(attachment.attachment)
+            return response
+        else:
+           return HttpResponse("File not found", status=404) 
+    else:
+        return HttpResponse("Object not found", status=404)
+
+def get_beteiligung_beitrag_attachment(request, **kwargs):
+    """
+    Auslieferung der Anlagen aus den Stellungnahmen
+    
+    :param request: Description
+    :param pk: Description
+    """
+    gemeinden = None
+    if kwargs['plantyp'] == 'bplan':
+        beitrag = BPlanBeteiligungBeitrag.objects.get(attachments__in=[kwargs['pk']])
+        gemeinden = AdministrativeOrganization.objects.filter(bplan__beteiligungen__comments__attachments__in=[kwargs['pk']])
+        attachment_model = BPlanBeteiligungBeitragAnhang
+    if kwargs['plantyp'] == 'bplan':
+        beitrag = FPlanBeteiligungBeitrag.objects.get(attachments__in=[kwargs['pk']])
+        gemeinden = AdministrativeOrganization.objects.filter(fplan__beteiligungen__comments__attachments__in=[kwargs['pk']])
+        attachment_model = FPlanBeteiligungBeitragAnhang
+    # Nur admins der Gebietskörperschaften oder superuser
+    access_allowed = False
+    if request.user.is_superuser == False:
+        for gemeinde in gemeinden:
+            for user in gemeinde.organization_users.all():
+                if user.user == request.user and user.is_admin:   
+                    # Zugriff wird erteilt                     
+                    access_allowed = True
+    else:
+        access_allowed = True
+    # Auch authentifizierten Gast-Nutzern ermöglichen ihre Uploads einzusehen
+    if request.user.is_anonymous:
+        if 'beitrag_generic_id' in request.session.keys():
+            if request.session['beitrag_generic_id'] == str(beitrag.generic_id):
+                print('beitrag id steht in session - activate ...!')
+                access_allowed = True
+            else:
+                return HttpResponse("401 Unauthorized", status=401) 
+    try:
+        attachment = attachment_model.objects.get(pk=kwargs['pk'])
+    except attachment_model.DoesNotExist:
+        attachment = None
     if attachment:
         if os.path.exists(attachment.attachment.file.name):
             response = FileResponse(attachment.attachment)
@@ -921,9 +927,15 @@ def beitrag_activate(request, **kwargs):
     :param request: Description
     :param kwargs: Description
     """
-    
+    # Switch für den Plantyp
+    gemeinden = None
+    if kwargs['plantyp'] == 'bplan':
+        beitrag_model = BPlanBeteiligungBeitrag
+        gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
+    if kwargs['plantyp'] == 'fplan':
+        beitrag_model = FPlanBeteiligungBeitrag
+        gemeinden = AdministrativeOrganization.objects.filter(fplan__id__in=[kwargs['planid']])
     # Zunächst Nur admins der Gebietskörperschaften oder superuser
-    gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
@@ -942,20 +954,29 @@ def beitrag_activate(request, **kwargs):
                 access_allowed = True
     if not access_allowed:
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
-        return redirect("bplanbeteiligungbeitrag-authenticate", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
+        return redirect("beteiligungbeitrag-authenticate", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
     # Aktivieren des Beitrags
-    beitrag = BPlanBeteiligungBeitrag.objects.get(generic_id=kwargs['generic_id'])
+    beitrag = beitrag_model.objects.get(generic_id=kwargs['generic_id'])
     if beitrag.approved == False:
         beitrag.approved = True
         beitrag.save()
     # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
     if request.user.is_anonymous:
         context={}
-        context['object'] = beitrag
-        context['beitrag_generic_id'] = beitrag.generic_id
+        context['beitrag'] = beitrag
+        context['plantyp'] = kwargs['plantyp']
+        if kwargs['plantyp'] =='bplan':
+            context['beteiligung'] = beitrag.bplan_beteiligung
+            context['plan'] = beitrag.bplan_beteiligung.bplan
+        if kwargs['plantyp'] =='fplan':
+            context['beteiligung'] = beitrag.fplan_beteiligung
+            context['plan'] = beitrag.fplan_beteiligung.fplan
+        #context={}
+        #context['object'] = beitrag
+        #context['beitrag_generic_id'] = beitrag.generic_id
         return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
     else:
-        return redirect("bplanbeteiligungbeitrag-list", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
+        return redirect("beteiligungbeitrag-list", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
 
 def beitrag_withdraw(request, **kwargs):
     """
@@ -964,9 +985,15 @@ def beitrag_withdraw(request, **kwargs):
     :param request: Description
     :param kwargs: Description
     """
-    
+    # Switch für den Plantyp
+    gemeinden = None
+    if kwargs['plantyp'] == 'bplan':
+        beitrag_model = BPlanBeteiligungBeitrag
+        gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
+    if kwargs['plantyp'] == 'fplan':
+        beitrag_model = FPlanBeteiligungBeitrag
+        gemeinden = AdministrativeOrganization.objects.filter(fplan__id__in=[kwargs['planid']])
     # Zunächst Nur admins der Gebietskörperschaften oder superuser
-    gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
@@ -985,20 +1012,29 @@ def beitrag_withdraw(request, **kwargs):
                 access_allowed = True
     if not access_allowed:
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
-        return redirect("bplanbeteiligungbeitrag-authenticate", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
+        return redirect("beteiligungbeitrag-authenticate", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
     # Aktivieren des Beitrags
-    beitrag = BPlanBeteiligungBeitrag.objects.get(generic_id=kwargs['generic_id'])
+    beitrag = beitrag_model.objects.get(generic_id=kwargs['generic_id'])
     if beitrag.withdrawn == False:
         beitrag.withdrawn = True
         beitrag.save()
     # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
     if request.user.is_anonymous:
         context={}
-        context['object'] = beitrag
-        context['beitrag_generic_id'] = beitrag.generic_id
+        context['beitrag'] = beitrag
+        context['plantyp'] = kwargs['plantyp']
+        if kwargs['plantyp'] =='bplan':
+            context['beteiligung'] = beitrag.bplan_beteiligung
+            context['plan'] = beitrag.bplan_beteiligung.bplan
+        if kwargs['plantyp'] =='fplan':
+            context['beteiligung'] = beitrag.fplan_beteiligung
+            context['plan'] = beitrag.fplan_beteiligung.fplan
+        #context={}
+        #context['object'] = beitrag
+        #context['beitrag_generic_id'] = beitrag.generic_id
         return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
     else:
-        return redirect("bplanbeteiligungbeitrag-list", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
+        return redirect("beteiligungbeitrag-list", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
     
 def beitrag_reactivate(request, **kwargs):
     """
@@ -1007,9 +1043,15 @@ def beitrag_reactivate(request, **kwargs):
     :param request: Description
     :param kwargs: Description
     """
-    
+    # Switch für den Plantyp
+    gemeinden = None
+    if kwargs['plantyp'] == 'bplan':
+        beitrag_model = BPlanBeteiligungBeitrag
+        gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
+    if kwargs['plantyp'] == 'fplan':
+        beitrag_model = FPlanBeteiligungBeitrag
+        gemeinden = AdministrativeOrganization.objects.filter(fplan__id__in=[kwargs['planid']])
     # Zunächst Nur admins der Gebietskörperschaften oder superuser
-    gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
@@ -1028,20 +1070,28 @@ def beitrag_reactivate(request, **kwargs):
                 access_allowed = True
     if not access_allowed:
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
-        return redirect("bplanbeteiligungbeitrag-authenticate", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
+        return redirect("beteiligungbeitrag-authenticate", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
     # Aktivieren des Beitrags
-    beitrag = BPlanBeteiligungBeitrag.objects.get(generic_id=kwargs['generic_id'])
+    beitrag = beitrag_model.objects.get(generic_id=kwargs['generic_id'])
     if beitrag.withdrawn == True:
         beitrag.withdrawn = False
         beitrag.save()
     # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
     if request.user.is_anonymous:
         context={}
-        context['object'] = beitrag
-        context['beitrag_generic_id'] = beitrag.generic_id
+        context['beitrag'] = beitrag
+        context['plantyp'] = kwargs['plantyp']
+        if kwargs['plantyp'] =='bplan':
+            context['beteiligung'] = beitrag.bplan_beteiligung
+            context['plan'] = beitrag.bplan_beteiligung.bplan
+        if kwargs['plantyp'] =='fplan':
+            context['beteiligung'] = beitrag.fplan_beteiligung
+            context['plan'] = beitrag.fplan_beteiligung.fplan
+        #context['object'] = beitrag
+        #context['beitrag_generic_id'] = beitrag.generic_id
         return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
     else:
-        return redirect("bplanbeteiligungbeitrag-list", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
+        return redirect("beteiligungbeitrag-list", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
 
 def beitrag_authenticate(request, **kwargs):
     """
@@ -1052,8 +1102,12 @@ def beitrag_authenticate(request, **kwargs):
     :param request: Description
     :param kwargs: Description
     """
-
-    beitrag = BPlanBeteiligungBeitrag.objects.get(generic_id=kwargs['generic_id'])
+    # Switch für den Plantyp
+    if kwargs['plantyp'] == 'bplan':
+        beitrag_model = BPlanBeteiligungBeitrag
+    if kwargs['plantyp'] == 'fplan':
+        beitrag_model = FPlanBeteiligungBeitrag
+    beitrag = beitrag_model.objects.get(generic_id=kwargs['generic_id'])
     gast_beitrag_authenticate_form = GastBeitragAuthenticateForm(request.POST)
     if request.method =="POST":
         if gast_beitrag_authenticate_form.is_valid():
@@ -1061,7 +1115,7 @@ def beitrag_authenticate(request, **kwargs):
                 # Speichern der uuid in die Session
                 request.session['beitrag_generic_id'] = str(beitrag.generic_id)
                 # Weiterleitung zur Detailseite der Stellungnahme
-                return redirect("gastbplanbeteiligungbeitrag-detail", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=beitrag.generic_id)
+                return redirect("gastbeteiligungbeitrag-detail", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=beitrag.generic_id)
             else:
                 messages.error(request, 'Die angegebene E-Mail wurde nicht für das Anlegen der Stellungnahme genutzt!')
                 context = {}
@@ -1085,19 +1139,26 @@ def beitrag_detail(request, **kwargs):
     :param request: Description
     :param kwargs: Description
     """
+    # Switch für den Plantyp
+    gemeinden = None
+    if kwargs['plantyp'] == 'bplan':
+        beitrag_model = BPlanBeteiligungBeitrag
+        gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
+    if kwargs['plantyp'] == 'fplan':
+        beitrag_model = FPlanBeteiligungBeitrag
+        gemeinden = AdministrativeOrganization.objects.filter(fplan__id__in=[kwargs['planid']])
     # Wir brauchen auch das Datum des Beitrags - ziehen wir aus der History
-    beitrag = BPlanBeteiligungBeitrag.objects.annotate(
+    beitrag = beitrag_model.objects.annotate(
                     last_changed=Subquery(
-                        BPlanBeteiligungBeitrag.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                        beitrag_model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
                     )
                 ).annotate(
                     last_changed=Subquery(
-                        BPlanBeteiligungBeitrag.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                        beitrag_model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
                     )    
                 ).get(generic_id=kwargs['generic_id'])
     # Permissions prüfen
     # Nur admins der Gebietskörperschaften oder superuser
-    gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
@@ -1116,10 +1177,16 @@ def beitrag_detail(request, **kwargs):
                 access_allowed = True
     if not access_allowed:
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
-        return redirect("bplanbeteiligungbeitrag-authenticate", planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
+        return redirect("beteiligungbeitrag-authenticate", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
     context = {}
-    context['object'] = beitrag
-    context['beitrag_generic_id'] = beitrag.generic_id
+    context['beitrag'] = beitrag
+    context['plantyp'] = kwargs['plantyp']
+    if kwargs['plantyp'] =='bplan':
+        context['beteiligung'] = beitrag.bplan_beteiligung
+        context['plan'] = beitrag.bplan_beteiligung.bplan
+    if kwargs['plantyp'] =='fplan':
+        context['beteiligung'] = beitrag.fplan_beteiligung
+        context['plan'] = beitrag.fplan_beteiligung.fplan
     return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
 
 

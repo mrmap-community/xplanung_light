@@ -265,10 +265,7 @@ class BeteiligungBeitragCreateView(EditCollectionView):
             # Benachrichtigung des Nutzers mit Link zur Aktivierung
             # Die gespeicherte Instanz (object) beinhaltet alle beitragsobjekte - nicht nur den konkreten Beitrag 
             # Bauen des Aktivierungslinks
-            if self.plantyp == 'bplan':
-                activation_url = reverse("bplanbeteiligungbeitrag-activate", args=[planid, self.object.id, beitrag_generic_id])
-            if self.plantyp == 'fplan':
-                activation_url = None
+            activation_url = reverse("beteiligungbeitrag-activate", args=[self.plantyp, planid, self.object.id, beitrag_generic_id])
             # Build complete URLs
             #https://opensource.com/article/22/12/django-send-emails-smtp
             #
@@ -291,66 +288,6 @@ class BeteiligungBeitragCreateView(EditCollectionView):
             self.request.session["beitrag_generic_id"] = str(beitrag_generic_id)
         return result
     
-
-class BPlanBeteiligungBeitragDetailView(DetailView):
-    """
-    View für die Details zum Beteiligungsbeitrag. Soll nur für den Ersteller und die zuständigen Bearbeiter sichtbar sein!
-    Für die Ersteller brauchen wir eine spezielle function based view - damit wir den redirect handhaben können.
-
-    """
-    model = BPlanBeteiligungBeitrag
-    template_name = 'xplanung_light/bplanbeteiligungbeitrag_detail.html'
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        # Zunächst nur admins der Gebietskörperschaften oder superuser
-        gemeinden = AdministrativeOrganization.objects.filter(bplan__beteiligungen__comments__in=[self.kwargs['pk']])
-        access_allowed = False
-        if self.request.user.is_superuser == False:
-            for gemeinde in gemeinden:
-                for user in gemeinde.organization_users.all():
-                    if user.user == self.request.user and user.is_admin:   
-                        # Zugriff wird erteilt                     
-                        access_allowed = True
-        else:
-            access_allowed = True
-        # Außerdem kann ein Nutzer den Beitrag sehen, wenn er sich vorher authentifiziert hat - Test, ob beitrag_generic_id in session des users
-        # TODO - andere Views für edit und delete erstellen! - Per generic_id und vorheriger Authentifizierung
-        print(str(qs.get(pk=self.kwargs['pk']).generic_id))
-        if 'beitrag_generic_id' in self.request.session.keys():
-            print("session['beitrag_generic_id']: " + self.request.session['beitrag_generic_id'])
-        else:
-            print("session['beitrag_generic_id'] not defined!")
-        if self.request.user.is_anonymous:
-            if 'beitrag_generic_id' in self.request.session.keys():
-                if self.request.session['beitrag_generic_id'] == str(qs.get(pk=self.kwargs['pk']).generic_id):
-                    print('beitrag id steht in session!')
-                    access_allowed = True
-        if not access_allowed:
-            #return redirect("bplanbeteiligungbeitrag-authenticate", planid=self.kwargs['planid'], beteiligungid=self.kwargs['beteiligungid'], generic_id=str(qs.get(pk=self.kwargs['pk']).generic_id))
-            # Have to return an instance - nicht wie eine function based view!
-            # raise PermissionDenied("Nutzer hat keine Berechtigungen auf die angeforderten Objekte!")
-            qs = qs.filter(pk=0)
-        qs = qs.annotate(
-                    last_changed=Subquery(
-                        self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-                    )
-                )
-        return qs
-
-    def get_context_data(self, **kwargs):
-        """
-        get_context_data wird überschrieben, weil wir ggf. noch die Organisation aus der URL hinzunehmen müssen. 
-        Die ist nicht immer eindeutig - je nachdem über welchen Endpunkt der Nutzer eingestiegen ist.
-        
-        :param self: Description
-        :param kwargs: Description
-        """
-        context = super().get_context_data(**kwargs)
-        if 'orga_id' in self.kwargs.keys():
-            orga = AdministrativeOrganization.objects.get(pk=self.kwargs['orga_id'])
-            context["orga"] = orga
-        return context
     
 class BeteiligungBeitragDetailView(DetailView):
     """
@@ -359,21 +296,28 @@ class BeteiligungBeitragDetailView(DetailView):
 
     """
     model = BPlanBeteiligungBeitrag
-    template_name = 'xplanung_light/bplanbeteiligungbeitrag_detail.html'
+    template_name = 'xplanung_light/beteiligungbeitrag_detail.html'
 
     def dispatch(self, request, *args, **kwargs):
         # Hier sind die Parameter aus der re_path verfügbar:
         self.plantyp = kwargs.get('plantyp')
-        if self.kwargs.get('plantyp') == 'bplan':
-            self.model = BPlanBeteiligung
+        if self.plantyp == 'bplan':
+            self.model = BPlanBeteiligungBeitrag
             self.planmodel = BPlan
-            self.template_name = 'xplanung_light/bplanbeteiligungbeitrag_detail.html'
-            if "orga_id" in kwargs.keys():
-                self.orga_id = kwargs.get('orga_id')
+            #self.template_name = 'xplanung_light/bplanbeteiligungbeitrag_detail.html'
+        if self.plantyp == 'fplan':
+            self.model = FPlanBeteiligungBeitrag
+            self.planmodel = FPlan
+            #self.template_name = 'xplanung_light/beteiligungbeitrag_detail.html'
+        if "orga_id" in kwargs.keys():
+            self.orga_id = kwargs.get('orga_id')
+        else:
+            self.orga_id = None
         #TODO: Anpassen für FPlan
         self.planid = kwargs.get('planid')
         self.beteiligung_pk = kwargs.get('pk')
         # Debugausgabe
+        print("BeteiligungBeitragDetailView - dispatch")
         print(f"Typ: {self.plantyp}, ID: {self.planid}")
         return super().dispatch(request, *args, **kwargs)
 
@@ -383,8 +327,8 @@ class BeteiligungBeitragDetailView(DetailView):
         # Zunächst nur admins der Gebietskörperschaften oder superuser
         if self.plantyp == 'bplan':
             gemeinden = AdministrativeOrganization.objects.filter(bplan__beteiligungen__comments__in=[self.kwargs['pk']])
-        else:
-            gemeinden = None
+        if self.plantyp == 'fplan':
+            gemeinden = AdministrativeOrganization.objects.filter(fplan__beteiligungen__comments__in=[self.kwargs['pk']])
         access_allowed = False
         if self.request.user.is_superuser == False:
             for gemeinde in gemeinden:
@@ -396,7 +340,7 @@ class BeteiligungBeitragDetailView(DetailView):
             access_allowed = True
         # Außerdem kann ein Nutzer den Beitrag sehen, wenn er sich vorher authentifiziert hat - Test, ob beitrag_generic_id in session des users
         # TODO - andere Views für edit und delete erstellen! - Per generic_id und vorheriger Authentifizierung
-        print(str(qs.get(pk=self.kwargs['pk']).generic_id))
+        #print(str(qs.get(pk=self.kwargs['pk']).generic_id))
         if 'beitrag_generic_id' in self.request.session.keys():
             print("session['beitrag_generic_id']: " + self.request.session['beitrag_generic_id'])
         else:
@@ -427,12 +371,21 @@ class BeteiligungBeitragDetailView(DetailView):
         :param kwargs: Description
         """
         context = super().get_context_data(**kwargs)
+
         context['plantyp'] = self.plantyp
-        if 'orga_id' in self.kwargs.keys():
-            orga = AdministrativeOrganization.objects.get(pk=self.kwargs['orga_id'])
+        if self.orga_id:
+            orga = AdministrativeOrganization.objects.get(pk=self.orga_id)
             context["orga"] = orga
+        context['beitrag'] = self.object
+        context['plantyp'] = self.plantyp
+        if self.plantyp =='bplan':
+            context['beteiligung'] = self.object.bplan_beteiligung
+            context['plan'] = self.object.bplan_beteiligung.bplan
+        if self.plantyp =='fplan':
+            context['beteiligung'] = self.object.fplan_beteiligung
+            context['plan'] = self.object.fplan_beteiligung.fplan
         return context
-    
+
 
 class BPlanBeteiligungBeitragActivate(UpdateView):
     model = BPlanBeteiligungBeitrag

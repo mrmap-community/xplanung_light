@@ -160,14 +160,14 @@ class FPlanBeteiligungTable(tables.Table):
 
 class BPlanBeteiligungBeitragTable(tables.Table):
 
-    id = tables.LinkColumn('bplanbeteiligungbeitrag-detail', args=[A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')])
+    id = tables.LinkColumn('beteiligungbeitrag-detail', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')])
     last_changed = tables.Column(verbose_name='Letzte Änderung')
     """
     beschreibung = tables.TemplateColumn(
         template_code='''{{ record.beschreibung |safe }}''',
     )
     """
-    attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("bplan-beteiligung-beitrag-attachment-download", {"pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
+    attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "bplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
     delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], \
                          orderable=False, empty_values=())
     
@@ -179,14 +179,14 @@ class BPlanBeteiligungBeitragTable(tables.Table):
 
 class FPlanBeteiligungBeitragTable(tables.Table):
 
-    #id = tables.LinkColumn('fplanbeteiligungbeitrag-detail', args=[A('fplan_beteiligung__bplan__id'), A('fplan_beteiligung__id'), A('pk')])
+    id = tables.LinkColumn('beteiligungbeitrag-detail', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')])
     last_changed = tables.Column(verbose_name='Letzte Änderung')
     """
     beschreibung = tables.TemplateColumn(
         template_code='''{{ record.beschreibung |safe }}''',
     )
     """
-    attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("fplan-beteiligung-beitrag-attachment-download", {"pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
+    attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "bplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
     delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], \
                          orderable=False, empty_values=())
     

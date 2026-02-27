@@ -7,7 +7,7 @@ from xplanung_light.views.fplan import FPlanPublicListView
 from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDeleteView, FPlanListView, FPlanDetailView, FPlanListViewHtml
 from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView
 from xplanung_light.views.requestforadmin import RequestForOrganizationAdminCreateView, RequestForOrganizationAdminListView, RequestForOrganizationAdminDeleteView, RequestForOrganizationAdminAdminListView
-from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragCreateView, BeteiligungBeitragListView, BeteiligungBeitragDeleteView, BeteiligungBeitragDetailView, BPlanBeteiligungBeitragDetailView, BPlanBeteiligungBeitragActivate
+from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragCreateView, BeteiligungBeitragListView, BeteiligungBeitragDeleteView, BeteiligungBeitragDetailView
 from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views.bplanspezexternereferenz import BPlanSpezExterneReferenzCreateView, BPlanSpezExterneReferenzUpdateView, BPlanSpezExterneReferenzDeleteView, BPlanSpezExterneReferenzListView
@@ -59,34 +59,26 @@ urlpatterns = [
     # Test für django-formsets - sollte mit einem view möglich sein, klappt aber nicht
     path("bplan/<int:planid>/beteiligung/create/", BPlanBeteiligungCreateView.as_view(extra_context={'create': True}), name="bplanbeteiligung-create"),
     path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="bplanbeteiligung-update"),
-    # 
+    # Neue Struktur für Routen, die für alle Plantypen gelten!
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<pk>\d+)/beitrag/create/$', BeteiligungBeitragCreateView.as_view(), name="beteiligungbeitrag-create"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<pk>\d+)/beitrag/create/organization/(?P<orga_id>\d+)/$', BeteiligungBeitragCreateView.as_view(), name="beteiligungbeitrag-create-orga"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/$', BeteiligungBeitragListView.as_view(), name="beteiligungbeitrag-list"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/delete/$', BeteiligungBeitragDeleteView.as_view(), name="beteiligungbeitrag-delete"),
-    #TODO: Ggf. Beteiligung Beitrag Detail für alle Pläne einheitlich
-    #re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/$', BeteiligungBeitragDetailView.as_view(), name="beteiligungbeitrag-detail"),
-        
-    # Spezifische Routen für BPlan - function based views durch class based views ersetzen!
-    # BPlan Beteiligung Beitrag Anhang - erst mal ganz einfach per id
-    path("bplanbeteiligungbeitragattachment/<int:pk>/", views.get_bplan_beteiligung_beitrag_attachment, name="bplan-beteiligung-beitrag-attachment-download"),
-    # BPlan Beteiligung Beitrag Detail
-    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<int:pk>/", BPlanBeteiligungBeitragDetailView.as_view(), name="bplanbeteiligungbeitrag-detail"),
     # Aktivierungslink
-    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/activate/", views.beitrag_activate, name="bplanbeteiligungbeitrag-activate"),
-    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/withdraw/", views.beitrag_withdraw, name="bplanbeteiligungbeitrag-withdraw"),
-    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/reactivate/", views.beitrag_reactivate, name="bplanbeteiligungbeitrag-reactivate"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/activate$', views.beitrag_activate, name="beteiligungbeitrag-activate"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/withdraw$', views.beitrag_withdraw, name="beteiligungbeitrag-withdraw"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/reactivate$', views.beitrag_reactivate, name="beteiligungbeitrag-reactivate"),
     # Authentifizierung für guest
-    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/authenticate/", views.beitrag_authenticate, name="bplanbeteiligungbeitrag-authenticate"),
-    path("bplan/<int:planid>/beteiligung/<int:beteiligungid>/beitrag/<uuid:generic_id>/detail/", views.beitrag_detail, name="gastbplanbeteiligungbeitrag-detail"),
-    # 
-    
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/authenticate$', views.beitrag_authenticate, name="beteiligungbeitrag-authenticate"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/detail$', views.beitrag_detail, name="gastbeteiligungbeitrag-detail"),
+    # Anlagen zu den Beiträgen
+    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitragattachment/(?P<pk>\d+)/$', views.get_beteiligung_beitrag_attachment, name="beteiligung-beitrag-attachment-download"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/$', BeteiligungBeitragDetailView.as_view(), name="beteiligungbeitrag-detail"),
     # BPlan UVP Info
     path("bplan/<int:planid>/uvp/create/", UvpCreateView.as_view(), name="uvp-create"),
     path("bplan/<int:planid>/uvp/", UvpListView.as_view(), name="uvp-list"),
     path("bplan/<int:planid>/uvp/<int:pk>/update/", UvpUpdateView.as_view(), name="uvp-update"),
     path("bplan/<int:planid>/uvp/<int:pk>/delete/", UvpDeleteView.as_view(), name="uvp-delete"),
-    
     # FPlan
     # BPlan CRUD
     path("fplan/", FPlanListView.as_view(), name="fplan-list"),
@@ -133,7 +125,6 @@ urlpatterns = [
     path("organization/verbandsgemeinden/", views.vg_list, name="vg-list"),
     # Organisations XPlan-Liste für GetFeatureInfo - hier müssen alle Plantypen zurückgeliefert werden können
     path("organization/<int:pk>/xplan/html/", views.xplan_html, name="xplan-list-html"),
-
     # Liste der aktuell laufeden Beteiligungsverfahren in einer Gebietskörperschaft 
     path("organization/<int:pk>/beteiligungen/", BeteiligungenOrgaListView.as_view(), name="organization-beteiligungen-list"),
     # Einfache Liste aller Informationen zu Bauleitplänen einer Kommune
