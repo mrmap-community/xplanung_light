@@ -25,3 +25,4 @@ django-simple-captcha==0.6.3
 clamd==1.0.2
 django-clamd==1.0.0
 psycopg2==2.9.11
+reportlab==4.4.10

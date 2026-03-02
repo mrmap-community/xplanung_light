@@ -126,7 +126,7 @@ class BeteiligungBeitragDeleteView(SuccessMessageMixin, DeleteView):
             self.reference_model = BPlan
         if self.kwargs.get('plantyp') == 'fplan':
             self.model = FPlanBeteiligungBeitrag
-            self.reference_model = FPlanPlan
+            self.reference_model = FPlan
         self.planid = self.kwargs.get('planid') 
             #self.template_name = 'xplanung_light/beteiligungbeitrag_list.html'
         #TODO: Anpassen für FPlan
@@ -385,11 +385,3 @@ class BeteiligungBeitragDetailView(DetailView):
             context['beteiligung'] = self.object.fplan_beteiligung
             context['plan'] = self.object.fplan_beteiligung.fplan
         return context
-
-
-class BPlanBeteiligungBeitragActivate(UpdateView):
-    model = BPlanBeteiligungBeitrag
-    #template_name = 'xplanung_light/bplanbeteiligungbeitrag_activate.html'
-
-
-    pass

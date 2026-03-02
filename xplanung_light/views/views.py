@@ -124,7 +124,7 @@ def get_beteiligung_beitrag_attachment(request, **kwargs):
         beitrag = BPlanBeteiligungBeitrag.objects.get(attachments__in=[kwargs['pk']])
         gemeinden = AdministrativeOrganization.objects.filter(bplan__beteiligungen__comments__attachments__in=[kwargs['pk']])
         attachment_model = BPlanBeteiligungBeitragAnhang
-    if kwargs['plantyp'] == 'bplan':
+    if kwargs['plantyp'] == 'fplan':
         beitrag = FPlanBeteiligungBeitrag.objects.get(attachments__in=[kwargs['pk']])
         gemeinden = AdministrativeOrganization.objects.filter(fplan__beteiligungen__comments__attachments__in=[kwargs['pk']])
         attachment_model = FPlanBeteiligungBeitragAnhang
