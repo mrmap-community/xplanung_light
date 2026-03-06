@@ -1,3 +1,4 @@
+from __future__ import annotations
 from django.http import HttpResponseRedirect
 from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung, AdministrativeOrganization
 from xplanung_light.tables import BeteiligungenTable, BeteiligungenOrgaTable
@@ -162,60 +163,288 @@ class BeteiligungenOrgaListView(BeteiligungenListView):
         return context
     
 import copy, csv
-from reportlab.pdfgen import canvas
+#from reportlab.pdfgen import canvas
 from django.http import HttpResponse
 from django.http import FileResponse
 from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung, BPlanBeteiligungBeitrag, FPlanBeteiligungBeitrag, BPlan, FPlan
 from django.shortcuts import HttpResponse
 from django.contrib.auth.decorators import login_required
-from reportlab.platypus import BaseDocTemplate
+#from reportlab.platypus import BaseDocTemplate
 from io import BytesIO
 from django.views.generic import DetailView
 
-class PdfBeteiligungBeitraege(BaseDocTemplate):
-    """
-    Klasse für das reportlab-Template zum Exportieren der Beteiligungsbeiträge nach PDF 
-    """
-    # https://stackoverflow.com/questions/39266415/dynamic-framesize-in-python-reportlab
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import styles 
-    from reportlab.lib.units import cm, mm
-    from reportlab.lib import colors
-    from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, NextPageTemplate, Paragraph, PageBreak, Table, \
-        TableStyle
 
 
+# Imports für pydantic und reportlab-Konverter
+import uuid
+from typing import List, Optional, Any, Dict
+from pydantic import BaseModel, Field
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import (
+    SimpleDocTemplate, BaseDocTemplate, Paragraph, Spacer, HRFlowable, 
+    ListFlowable, ListItem, PageBreak
+)
+from reportlab.lib.units import cm, mm
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus.tableofcontents import TableOfContents
+from reportlab.lib import colors
+from reportlab.pdfgen import canvas
+from reportlab.platypus import Frame, PageTemplate, NextPageTemplate, Paragraph, Table, TableStyle
+
+# TipTap Logikmodell für pydantic
+class TipTapMark(BaseModel):
+    type: str
+    attrs: Optional[Dict[str, Any]] = None
+
+
+class TipTapNode(BaseModel):
+    type: str
+    attrs: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    content: Optional[List[TipTapNode]] = None
+    text: Optional[str] = None
+    marks: Optional[List[TipTapMark]] = None
+
+TipTapNode.model_rebuild()
+
+
+class TipTapToReportLab:
+    """
+    Klasse um ein TipTap json in ein Reportlab-Objekt zu überführen
+    """
+    def __init__(self):
+        self.styles = getSampleStyleSheet()
+
+    def convert_to_elements(self, doc_node: TipTapNode) -> List[Any]:
+        elements = []
+        if doc_node.content:
+            for child in doc_node.content:
+                res = self._process_node(child)
+                if res: elements.extend(res if isinstance(res, list) else [res])
+        return elements
+
+    def _process_node(self, node: TipTapNode):
+        handlers = {"paragraph": self._handle_paragraph, 
+                    "heading": self._handle_heading, 
+                    "bulletList": self._handle_list, 
+                    "horizontalRule": lambda n: [HRFlowable(width="100%"), Spacer(1, 0.4*cm)]}
+        handler = handlers.get(node.type)
+        return handler(node) if handler else None
+
+    def _get_styled_text(self, nodes: Optional[List[TipTapNode]]) -> str:
+        if not nodes: return ""
+        result = ""
+        for n in nodes:
+            if n.type == "text" and n.text:
+                t = n.text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                if n.marks:
+                    for m in n.marks:
+                        if m.type == "bold": t = f"<b>{t}</b>"
+                        elif m.type == "italic": t = f"<i>{t}</i>"
+                        elif m.type == "link":
+                            href = m.attrs.get("href", "#") if m.attrs else "#"
+                            t = f'<a href="{href}" color="blue"><u>{t}</u></a>'
+                result += t
+        return result
+
+    def _handle_heading_old(self, node: TipTapNode):
+        level = node.attrs.get("level", 1) if node.attrs else 1
+        raw_text = self._get_styled_text(node.content)
+        style = self.styles.get(f"Heading{level}", self.styles["Heading1"])
+        
+        # KEY-GENERIERUNG
+        bookmark_key = f"target_{uuid.uuid4().hex[:6]}"
+        
+        # DER TRICK: Wir betten einen Anker-Tag im Text ein
+        anchored_text = f'<a name="{bookmark_key}"/>{raw_text}'
+        p = Paragraph(anchored_text, style)
+        
+        # Metadaten für MyDocTemplate - TODO: wird aktuell nicht genutzt
+        p.bookmarkKey = bookmark_key
+        p.tocText = raw_text
+        p.tocLevel = level - 1
+        
+        return [p, Spacer(1, 0.3*cm)]
+
+    def _handle_heading(self, node: TipTapNode):
+        level = node.attrs.get("level", 1) if node.attrs else 1
+        raw_text = self._get_styled_text(node.content)
+        
+        # Fallback, falls Heading-Level nicht im Stylesheet existiert
+        style_name = f"Heading{level}"
+        if style_name not in self.styles:
+            style_name = "Heading2" # Fallback auf Heading 2
+        
+        style = self.styles[style_name]
+        # TODO: wird aktuell nicht genutzt
+        bookmark_key = f"target_{uuid.uuid4().hex[:6]}"
+        anchored_text = f'<a name="{bookmark_key}"/>{raw_text}'
+        p = Paragraph(anchored_text, style)
+        
+        p.bookmarkKey = bookmark_key
+        p.tocText = raw_text
+        p.tocLevel = level - 1
+        
+        return [p, Spacer(1, 0.3*cm)]
+
+    def _handle_paragraph(self, node: TipTapNode):
+        return [Paragraph(self._get_styled_text(node.content), self.styles["Normal"]), Spacer(1, 0.2*cm)]
+
+    def _handle_list(self, node: TipTapNode):
+        items = []
+        for li in (node.content or []):
+            # Alle Flowables eines ListItems sammeln (z.B. Paragraph + Spacer)
+            li_elements = []
+            if li.content:
+                for child in li.content:
+                    res = self._process_node(child)
+                    if res:
+                        # Sicherstellen, dass wir eine flache Liste von Flowables haben
+                        li_elements.extend(res if isinstance(res, list) else [res])
+            
+            # Ein ListItem mit den gesammelten Flowables erstellen
+            items.append(ListItem(li_elements))
+
+        # bulletType 'bullet' für BulletList, '1' für OrderedList
+        return [ListFlowable(items, bulletType='bullet', leftIndent=20), Spacer(1, 0.2*cm)]
+    
+    def _handle_list_old(self, node: TipTapNode):
+        items = [ListItem([self._process_node(c) for c in (li.content or [])]) for li in (node.content or [])]
+        return [ListFlowable(items, bulletType='bullet', leftIndent=20), Spacer(1, 0.2*cm)]
+
+
+class NumberedCanvas(canvas.Canvas):
+    def __init__(self, *args, **kwargs):
+        canvas.Canvas.__init__(self, *args, **kwargs)
+        self._saved_page_states = []
+
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        num_pages = len(self._saved_page_states)
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self.draw_page_number(num_pages)
+            canvas.Canvas.showPage(self)
+        canvas.Canvas.save(self)
+
+    def draw_page_number(self, page_count):
+        width, height = A4
+        line_y = 2.0 * cm  # Höhe der Linie
+        text_y = 1.5 * cm  # Höhe des Textes darunter
+        # 1. Die Linie oberhalb des Footers
+        self.setLineWidth(0.5)
+        self.line(2*cm, line_y, width - 2*cm, line_y)
+        self.setFont("Helvetica", 9)
+        self.drawCentredString(A4[0]/2, 1*cm, f"Seite {self._pageNumber} von {page_count}")
+
+
+class MyDocTemplate(SimpleDocTemplate):
+    pass
+"""    
+    def afterFlowable(self, flowable):
+        
+        if isinstance(flowable, Paragraph) and hasattr(flowable, 'bookmarkKey'):
+            # notify(level, text, page, key)
+            self.notify('TOCEntry', (flowable.tocLevel, flowable.tocText, self.page, flowable.bookmarkKey))
+            # Sidebar-Bookmark direkt im Canvas setzen
+            self.canv.addOutlineEntry(flowable.tocText, flowable.bookmarkKey, level=flowable.tocLevel)
+"""
+
+
+# TODO: Noch nicht benötigt - ggf. wenn wir das Navigationsmenu brauchen - scheint bei der reportlab Version von debian 11 etwas tricky zu sein
+TOC_REGISTRY = {}
+
+
+class FinalCanvas(canvas.Canvas):
+    """
+    Aktuell nicht verwendet
+    """
+    def __init__(self, *args, **kwargs):
+        canvas.Canvas.__init__(self, *args, **kwargs)
+
+    def showPage(self):
+        # Seitenzahl für Footer
+        self.setFont("Helvetica", 9)
+        self.drawCentredString(A4[0]/2, 1.5*cm, f"Seite {self._pageNumber}")
+        canvas.Canvas.showPage(self)
+
+
+class HeadingWithAnchor(Paragraph):
+    """
+    Aktuell nicht verwendet
+    """
+    def __init__(self, text, style, key):
+        super().__init__(f'<a name="{key}"/>{text}', style)
+        self.key = key
+        self.text_content = text
+
+    def draw(self):
+        # WICHTIG: Hier wird die ECHTE Seitenzahl während des Zeichnens erfasst
+        curr_page = self.canv.getPageNumber()
+        TOC_REGISTRY[self.key] = {
+            'page': curr_page,
+            'text': self.text_content
+        }
+        
+        # Den Punkt im PDF markieren
+        self.canv.bookmarkPage(self.key)
+        self.canv.addOutlineEntry(self.text_content, self.key, level=0)
+        super().draw()
+
+
+class PdfBeteiligungBeitraege(MyDocTemplate):
     def __init__(self, filename, beteiligung, plantyp, **kwargs):
-        super().__init__(filename, page_size=self.A4, _pageBreakQuick=0, **kwargs)
+        super().__init__(filename, **kwargs)
         self.beteiligung = beteiligung
         self.plantyp = plantyp
-        # overwrite margins
-        self.topMargin=45.0*self.mm
-        self.leftMargin=25*self.mm
-        self.rightMargin=20*self.mm
-        self.bottomMargin=25*self.mm
-        # https://stackoverflow.com/questions/637800/showing-page-count-with-reportlab
-        self.final_pages = 1
-        self.total_pages = 0
-        self.pageinfo = "pageinfo"
-        self.style = self.styles.getSampleStyleSheet()
+        # Dinge die wir für das Layout brauchen
+        styles = getSampleStyleSheet()
+        self.style = styles
+        story = []
 
-        # Setting up the frames, frames are use for dynamic content not fixed page elements
-        first_page_table_frame = self.Frame(self.leftMargin, self.bottomMargin + 10 * self.mm, 165 * self.mm, self.height - 10 * self.cm, id='small_table')
-        later_pages_table_frame = self.Frame(self.leftMargin, self.bottomMargin + 10 * self.mm, 165 * self.mm, 217 * self.mm, id='large_table')
-
-        # Creating the page templates
-        first_page = self.PageTemplate(id='FirstPage', frames=[first_page_table_frame], onPage=self.on_first_page)
-        later_pages = self.PageTemplate(id='LaterPages', frames=[later_pages_table_frame], onPage=self.add_default_info)
-        self.addPageTemplates([first_page, later_pages])
-
-        # Tell Reportlab to use the other template on the later pages,
-        # by the default the first template that was added is used for the first page.
-        story = [self.NextPageTemplate(['*', 'LaterPages'])]
-        
-        #table_grid = [["Pos.", "Beschreibung", "Menge", "Einheit", "EP(€)", "GP(€)"]]
+        # TOC STYLE (WICHTIG: linkToItem=1)
+        toc = TableOfContents()
+        ps = ParagraphStyle(name='TOC', fontSize=10, textColor=colors.blue, linkToItem=1)
+        toc.levelStyles = [ps, ps, ps]
+        # STORY BAUEN
+        # A. Rahmen / Header / Footer
+        # 1. Allgemeine Informationen zum Beteiligungsverfahren
+         # Dummy Content Seite 1
+        story.append(Paragraph("Informationen zum Beteiligungsverfahren - ...", styles['Heading1']))
+        # Informationen zum Projekt - hier Beteiligung, Plan , ...
+        content_info_frame = Frame(125*mm, 192*mm, 75*mm, 55*mm, showBoundary=0)   
+        if self.plantyp=='bplan':
+            content_info_content = "<font size=10><b>" + self.beteiligung.get_typ_display() + " zum Bebauungsplan</b><br/>"
+            content_info_content = content_info_content + "\"" + self.beteiligung.bplan.name + "\"<br/>"
+        if self.plantyp=='fplan':
+            content_info_content = "<font size=10><b>" + self.beteiligung.get_typ_display() + " zum Flächennutzungsplan</b><br/>"
+            content_info_content = content_info_content + "\"" + self.beteiligung.fplan.name + "\"<br/>" 
+        # typ
+        content_info_content = content_info_content + "<b>Bekanntmachung:</b> " + str(self.beteiligung.bekanntmachung_datum.strftime('%Y-%m-%d')) + "<br/>" 
+        content_info_content = content_info_content + "<b>Beginn Beteiligung:</b> " + str(self.beteiligung.start_datum.strftime('%Y-%m-%d')) + "<br/>"
+        content_info_content = content_info_content + "<b>Ende Beteiligung:</b> " + str(self.beteiligung.end_datum.strftime('%Y-%m-%d')) + "<br/></font>" 
+        #content_info_content = content_info_content + "<b>E-Mail:</b> " + self.invoice.my_party.party_contact_person_email + "<br/>" 
+        #content_info_content = content_info_content + "<b>Telefon:</b> " + self.invoice.my_party.party_contact_person_phone + "<br/><br/>"
+        #content_info_content = content_info_content + "<b>Projekt-ID:</b> " + self.invoice.project_reference_id + "<br/>" 
+        #content_info_content = content_info_content + "<b>Leitweg-ID:</b> " + self.invoice.buyer_reference + "<br/>" 
+        #content_info_content = content_info_content + "<b>Bestellreferenz:</b> " + self.invoice.order_reference + "<br/></font>" 
+        content_info_paragraph_style = self.style['Normal']
+        content_info_flowable = Paragraph(content_info_content, content_info_paragraph_style)
+        story.append(content_info_flowable)
+        story.append(HRFlowable(color='#ff0066', dash=(10, 5)))
+        doc_model = TipTapNode.model_validate(beteiligung.beschreibung)
+        elements = TipTapToReportLab().convert_to_elements(doc_model)
+        story.extend(elements)
+        story.append(PageBreak())
+        # 2. Liste mit den abgegebenen Online-Beteiligungen
+        story.append(Paragraph("Online-Beteiligungen - ...", styles['Heading1']))
+        # 3. Einzelne Beteiligungsbeiträge 
+        # 4. Anlagen ... ggf. in pdf einbetten oder in Form einer ZIP-Datei exportieren
+        # Tabelle mit den abgegebenen Online-Beteiligungen:
         table_grid = [["Lfd. Nr.", "Datum/Zeit", "Titel", "EMail", "# Anlagen"]]
-        # Add the objects
+        # Selektion der Objekte
         if plantyp=='bplan':
             beteiligung_beitraege = BPlanBeteiligungBeitrag.objects.filter(bplan_beteiligung=beteiligung).annotate(
                     last_changed=Subquery(
@@ -234,13 +463,13 @@ class PdfBeteiligungBeitraege(BaseDocTemplate):
         description_paragraph_style.alignment = 0
         description_paragraph_style.fontSize = 8
         for beteiligung_beitrag in beteiligung_beitraege:
-            table_grid.append([beteiligung_beitrag.id, beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), self.Paragraph(beteiligung_beitrag.titel, description_paragraph_style), beteiligung_beitrag.email, beteiligung_beitrag.count_attachments])
+            table_grid.append([beteiligung_beitrag.id, beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), Paragraph(beteiligung_beitrag.titel, description_paragraph_style), beteiligung_beitrag.email, beteiligung_beitrag.count_attachments])
         total_paragraph_style = copy.deepcopy(self.style['Normal'])
         total_paragraph_style.alignment = 2
         total_paragraph_style.fontSize = 8
-        story.append(self.Table(table_grid, repeatRows=1, colWidths=[0.10 * 165 * self.mm,  0.17 * 165 * self.mm, 0.20 * 165 * self.mm, 0.25 * 165 * self.mm, 0.10 * 165 * self.mm],#, 0.15 * 165 * self.mm],
-                           style=self.TableStyle([('GRID',(0,1),(-1,-1), 0.25, self.colors.gray),
-                                             ('BOX', (0,0), (-1,-1), 1.0, self.colors.black),
+        story.append(Table(table_grid, repeatRows=1, colWidths=[0.10 * 165 * mm,  0.17 * 165 * mm, 0.20 * 165 * mm, 0.25 * 165 * mm, 0.10 * 165 * mm],#, 0.15 * 165 * self.mm],
+                           style=TableStyle([('GRID',(0,1),(-1,-1), 0.25, colors.gray),
+                                             ('BOX', (0,0), (-1,-1), 1.0, colors.black),
                                              #('BOX', (0,0), (1,0), 1.0, self.colors.black),
                                              #('BOX', (0,0), (1,0), 1.0, self.colors.black),
                                              ('ALIGN', (0,0), (-1,0), 'CENTER'), # first row - header
@@ -254,149 +483,39 @@ class PdfBeteiligungBeitraege(BaseDocTemplate):
                                              #('ALIGN', (0,1), (-1,-1), 'RIGHT'), # first column, second row: all rows from second row
                                              ('FONTSIZE', (0,1), (-1,-1), 8),
                                              ])))
-        """
-        # Ggf. Statistiken unterhalb der Tabelle anzeigen lassen 
-        table_sum = []
-        table_sum.append(["", "", "",  "Summe:", "", "{:.2f}".format(sum_invoice) + " €"])
-        table_sum.append(["", "", "",  "Steuer:", "", "+ " + "{:.2f}".format(sum_tax) + " €"])
-        table_sum.append(["", "", "",  "Brutto:", "", "{:.2f}".format(sum_b) + " €"])
-        table_sum.append(["", "", "",  "abgerechnet:", "", "- " + "{:.2f}".format(invoice.prepaid_amount) + " €"])
-        table_sum.append(["", "", "",  "Rechnungsbetrag:" , "", self.Paragraph("<b>" + "{:.2f}".format(to_pay) + " €</b>", total_paragraph_style)])
-        story.append(self.Table(table_sum, repeatRows=0, colWidths=[0.10 * 165 * self.mm,  0.40 * 165 * self.mm, 0.10 * 165 * self.mm, 0.15 * 165 * self.mm, 0.10 * 165 * self.mm, 0.15 * 165 * self.mm],
-                           style=self.TableStyle([
-                                             ('ALIGN', (0,0), (0,-1), 'CENTER'), # first column from second row
-                                             ('ALIGN', (1,0), (1,-1), 'LEFT'), # second column from second row
-                                             ('ALIGN', (2,0), (2,-1), 'RIGHT'), 
-                                             ('ALIGN', (3,0), (3,-1), 'LEFT'), 
-                                             ('ALIGN', (4,0), (4,-1), 'RIGHT'), 
-                                             ('ALIGN', (5,0), (5,-1), 'RIGHT'),
-                                             ('FONTSIZE', (0,0), (-1,-1), 8),
-                                             ])))
-        # append sums
-        sum_paragraph_style = copy.deepcopy(self.style['Normal'])
-        sum_paragraph_style.fontSize = 10
-        sum_paragraph = self.Paragraph("<b>Zahlungsfrist:</b> " + str(invoice.due_date) + "<br/><b>Zahlungsbedingungen:</b> " + invoice.payment_terms, sum_paragraph_style)
-        sum_paragraph.hAlign = 'RIGHT'
-        story.append(sum_paragraph)
-        """
-        self.build(copy.deepcopy(story))
-        self.final_pages = self.total_pages
-        self.build(copy.deepcopy(story))
+        story.append(PageBreak())
+        self.multiBuild(story, canvasmaker=NumberedCanvas)
 
-    def on_first_page(self, canvas, doc):
-        canvas.saveState()
-        # Add the logo and other default stuff
-        self.add_default_info(canvas, doc)
-        #logo_frame = self.Frame(127*self.mm, 252*self.mm, 63*self.mm, 35*self.mm, showBoundary=1)
-        #if self.invoice.my_party.party_logo: 
-        #    canvas.drawImage(self.invoice.my_party.party_logo.path, 127*self.mm, 252*self.mm, width=63*self.mm, height=35*self.mm)
-            #print("Path of logo image: " + str(self.invoice.my_party.party_logo.path))
-
-        #logo_frame.drawBoundary(canvas)
-        # 5 lines small 8pt
-        # 6 lines big / normal
-        # Adressfeld einer DIN-Rechnung
+    def build_story(data_list, mode="final"):
         """
-        address_frame = self.Frame(25*self.mm, 207*self.mm, 85*self.mm, 45*self.mm, showBoundary=0)
-        address_content = "<font size=8>" + self.invoice.my_party.party_name + " | "
-        address_content = address_content + self.invoice.my_party.party_postal_address.street_name + " | "
-        address_content = address_content + "" + self.invoice.my_party.party_postal_address.postal_zone + " "
-        address_content = address_content + self.invoice.my_party.party_postal_address.city_name + "<br/>"
-        address_content = address_content + "Wenn unzustellbar, bitte mit neuer Anschrift zurück<br/>"
-        address_content = address_content + "<br/></font>"
-        address_content = address_content + self.invoice.customer_party.party_name + "<br/>" 
-        address_content = address_content + self.invoice.customer_party.party_postal_address.street_name + "<br/>"
-        address_content = address_content + "<b>" + self.invoice.customer_party.party_postal_address.postal_zone + "</b> " + self.invoice.customer_party.party_postal_address.city_name
-        address_paragraph_style = self.style['Normal']
-        address_flowable = self.Paragraph(address_content, address_paragraph_style)
-        address_story = []
-        address_story.append(address_flowable)
-        address_frame.addFromList(address_story, canvas)
+        Nur ein Test - aktuell nicht verwendet!
         """
-        # Informationen zum Projekt - hier Beteiligung, Plan , ...
-        content_info_frame = self.Frame(125*self.mm, 192*self.mm, 75*self.mm, 55*self.mm, showBoundary=0)   
-        if self.plantyp=='bplan':
-            content_info_content = "<font size=10><b>" + self.beteiligung.get_typ_display() + " zum Bebauungsplan</b><br/>"
-            content_info_content = content_info_content + "\"" + self.beteiligung.bplan.name + "\"<br/>"
-        if self.plantyp=='fplan':
-            content_info_content = "<font size=10><b>" + self.beteiligung.get_typ_display() + " zum Flächennutzungsplan</b><br/>"
-            content_info_content = content_info_content + "\"" + self.beteiligung.fplan.name + "\"<br/>" 
-        # typ
-        content_info_content = content_info_content + "<b>Bekanntmachung:</b> " + str(self.beteiligung.bekanntmachung_datum.strftime('%Y-%m-%d %H:%M')) + "<br/>" 
-        content_info_content = content_info_content + "<b>Beginn Beteiligung:</b> " + str(self.beteiligung.start_datum.strftime('%Y-%m-%d %H:%M')) + "<br/>"
-        content_info_content = content_info_content + "<b>Ende Beteiligung:</b> " + str(self.beteiligung.end_datum.strftime('%Y-%m-%d %H:%M')) + "<br/></font>" 
-        #content_info_content = content_info_content + "<b>E-Mail:</b> " + self.invoice.my_party.party_contact_person_email + "<br/>" 
-        #content_info_content = content_info_content + "<b>Telefon:</b> " + self.invoice.my_party.party_contact_person_phone + "<br/><br/>"
-        #content_info_content = content_info_content + "<b>Projekt-ID:</b> " + self.invoice.project_reference_id + "<br/>" 
-        #content_info_content = content_info_content + "<b>Leitweg-ID:</b> " + self.invoice.buyer_reference + "<br/>" 
-        #content_info_content = content_info_content + "<b>Bestellreferenz:</b> " + self.invoice.order_reference + "<br/></font>" 
-        content_info_paragraph_style = self.style['Normal']
-        content_info_flowable = self.Paragraph(content_info_content, content_info_paragraph_style)
-        content_info_story = []
-        content_info_story.append(content_info_flowable)
-        content_info_frame.addFromList(content_info_story, canvas)
-        """
-        content_info_frame = self.Frame(125*self.mm, 192*self.mm, 75*self.mm, 55*self.mm, showBoundary=0)   
-        content_info_content = "<font size=10><b>" + self.invoice.my_party.party_name + "</b><br/>"
-        content_info_content = content_info_content + "<b>Rechnungsnummer:</b> " + self.invoice.identifier + "<br/>" 
-        content_info_content = content_info_content + "<b>Rechnungsdatum:</b> " + str(self.invoice.issue_date) + "<br/><br/>"
-        content_info_content = content_info_content + "<b>Ansprechpartner:</b> " + self.invoice.my_party.party_contact_person_name + "<br/>" 
-        content_info_content = content_info_content + "<b>E-Mail:</b> " + self.invoice.my_party.party_contact_person_email + "<br/>" 
-        content_info_content = content_info_content + "<b>Telefon:</b> " + self.invoice.my_party.party_contact_person_phone + "<br/><br/>"
-        content_info_content = content_info_content + "<b>Projekt-ID:</b> " + self.invoice.project_reference_id + "<br/>" 
-        content_info_content = content_info_content + "<b>Leitweg-ID:</b> " + self.invoice.buyer_reference + "<br/>" 
-        content_info_content = content_info_content + "<b>Bestellreferenz:</b> " + self.invoice.order_reference + "<br/></font>" 
-        content_info_paragraph_style = self.style['Normal']
-        content_info_flowable = self.Paragraph(content_info_content, content_info_paragraph_style)
-        content_info_story = []
-        content_info_story.append(content_info_flowable)
-        content_info_frame.addFromList(content_info_story, canvas)
-        """
-        table_header_frame = self.Frame(self.leftMargin, self.height - 47 * self.mm, self.width - (self.leftMargin + self.rightMargin), 10*self.mm, showBoundary=0)  
-        table_header_paragraph_style = self.style['Normal']
-        table_header_flowable = self.Paragraph("<font size=14><b>Online-Beteiligungsbeiträge</b></font>", table_header_paragraph_style)
-        table_header_story = []
-        table_header_story.append(table_header_flowable)
-        table_header_frame.addFromList(table_header_story, canvas)
-
-        canvas.restoreState()
-
-    def afterPage(self):
-        self.total_pages += 1  # Increment page count after each page is built
-        super().afterPage()  # Call the superclass method
-
-    def add_default_info(self, canvas, doc):
-        canvas.saveState()
-
-        page_number_content = f'Seite {doc.page} von {self.final_pages}'
-        # draw pagenumbers as textobject
-        # https://www.blog.pythonlibrary.org/2018/02/06/reportlab-101-the-textobject/
-        # Create textobject
-        textobject = canvas.beginText()
-        # Set text location (x, y)
-        textobject.setTextOrigin(170*self.mm, 33*self.mm)
-        # Set font face and size
-        textobject.setFont('Helvetica', 9)
-        textobject.textLine(text=page_number_content)
-        # Write text to the canvas
-        canvas.drawText(textobject)
-        canvas.line(25*self.mm, 30*self.mm, 195*self.mm, 30*self.mm)
-        """
-        footer_frame = self.Frame(25*self.mm, 12*self.mm, 165*self.mm, 17*self.mm, showBoundary=0)
-        footer_content = "<font size=8><b>" + self.invoice.my_party.party_name + "</b> | "
-        footer_content = footer_content + self.invoice.my_party.party_postal_address.city_name + " | "
-        footer_content = footer_content + "<b>E-Mail:</b> " + self.invoice.my_party.party_contact_email + " | "
-        footer_content = footer_content + "<b>BIC:</b> " + self.invoice.my_party.party_payment_financial_institution_id + " | "
-        footer_content = footer_content + "<b>IBAN:</b> " + self.invoice.my_party.party_payment_financial_account_id + " | "
-        footer_content = footer_content + "<b>Kontoinhaber:</b> " + self.invoice.my_party.party_payment_financial_account_name + "</font>"
-        footer_paragraph_style = self.style['Normal']
-        footer_flowable = self.Paragraph(footer_content, footer_paragraph_style)
-        footer_story = []
-        footer_story.append(footer_flowable)
-        footer_frame.addFromList(footer_story, canvas)
-        """
-        canvas.restoreState()
-
+        styles = getSampleStyleSheet()
+        story = []
+        
+        # --- INHALTSVERZEICHNIS ---
+        story.append(Paragraph("Inhaltsverzeichnis", styles['Heading1']))
+        story.append(Spacer(1, 10))
+        
+        if mode == "discovery":
+            # Im ersten Lauf wissen wir die Seiten noch nicht -> Platzhalter
+            story.append(Spacer(1, 5*cm))
+        else:
+            # Im zweiten Lauf nutzen wir die gefüllte TOC_REGISTRY
+            for key in [item['id'] for item in data_list]:
+                if key in TOC_REGISTRY:
+                    entry = TOC_REGISTRY[key]
+                    link = f'<a href="#{key}" color="blue">{entry["text"]}</a>'
+                    # Rechtsbündige Seitenzahl via Tabulator-Simulation (oder Tabelle)
+                    story.append(Paragraph(f"{link} .......................... Seite {entry['page']}", styles['Normal']))
+        story.append(PageBreak())
+         # --- CONTENT ---
+        for item in data_list:
+            story.append(HeadingWithAnchor(item['title'], styles['Heading1'], item['id']))
+            story.append(Paragraph(item['content'], styles['Normal']))
+            story.append(PageBreak())
+        return story
+    
 
 class BeteiligungPdfView(DetailView):
     model = None
