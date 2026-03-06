@@ -1,0 +1,151 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="de" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Übersicht &mdash; XPlanung-light  Dokumentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=245627df"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../_static/translations.js?v=9bf55d28"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Stichwortverzeichnis" href="../genindex.html" />
+    <link rel="search" title="Suche" href="../search.html" />
+    <link rel="next" title="Bauleitplanung" href="bauleitplanung.html" />
+    <link rel="prev" title="Willkommen zur Dokumentation des XPlanung-light Projekts" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            XPlanung-light
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Dokumentation durchsuchen" aria-label="Dokumentation durchsuchen" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Einführung</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Übersicht</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bauleitplanung.html">Bauleitplanung</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xplanung.html">XPlanung</a></li>
+<li class="toctree-l1"><a class="reference internal" href="produktivbetrieb.html">Produktivbetrieb</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">XPlanung-light</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Übersicht</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/introduction/overview.rst.txt" rel="nofollow"> Quelltext anzeigen</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ubersicht">
+<h1>Übersicht<a class="headerlink" href="#ubersicht" title="Link to this heading"></a></h1>
+<p><strong>XPlanung-light</strong> ist eine freie Open Source Software, die Kommunen helfen soll ihre Bauleitpläne auf sehr einfache Art und Weise digital zu verwalten.
+Es handelt sich um eine Webanwendung auf Basis des weit verbreiteteten Python Frameworks <a class="reference external" href="https://www.djangoproject.com">Django</a>.</p>
+<p>Die Initiative zur Entwicklung der Software stammt aus Rheinland-Pfalz und basiert u.a. auf dem Bedarf der Ablösung der seit 2009 vom <a class="reference external" href="https://www.lvermgeo.rlp.de">LVermGeo</a> betriebenen Hostingplattform
+für Bauleitpläne.</p>
+<p>Rheinland-Pfalz hatte als erstes Bundesland die Art und Weise der Bereitstellung von kommunalen Plänen und Satzungen im Internet standardisiert (<a class="reference external" href="https://www.geoportal.rlp.de/metadata/Leitfaden_kommunale_Plaene_GDI_RP.pdf">Leitfaden Kommunale Pläne GDI-RP</a>). Im Rahmen des Aufbaus der Geodateninfrastruktur
+des Landes schloss das Innenministerium einen Rahmenvertrag mit den kommunalen Spitzenverbänden, der u.a. den Betrieb der o.g. Hostingplattform regelt.
+Die Plattform steht den Kommunen grundsätzlich kostenfrei zur Verfügung und wird insbesondere von kleineren Organisationen verwendet, um ihre Bauleitpläne im Internet zu publizieren.</p>
+<p>Die Bereitstellung der Pläne erfolgt dabei kompatibel zu den Anforderungen der <a class="reference external" href="https://eur-lex.europa.eu/DE/legal-content/summary/the-eu-s-infrastructure-for-spatial-information-inspire.html">EU INSPIRE-Richtlinie</a>. Es gibt sowohl Metadaten, als auch WMS-Schnittstellen.</p>
+<p>Das urspüngliche Datenmodell für die Verwaltung der Pläne basierte auf XPlanung 2.0 und wurde in enger Abstimmung mit den Kommunen sukzessive an die
+Anforderungen der Praxis angepasst. Die Vorgehensweise hat sich in den letzten 16 Jahren bewährt und zum Zeitpunkt des Projektstarts (2025) stehen alleine in Rheinland-Pfalz
+schon mehr als 14.000 Pläne online und interoperabel zur Verfügung (<a class="reference external" href="https://www.geoportal.rlp.de/spatial-objects/557/collections/gdi-rp:bplan_polygon">Aggregation der Metadaten standardisierter Bebauungspläne RLP</a>).</p>
+<p>Da sich sowohl die technischen, als auch die rechtlichen Rahmenbedinungen in den letzten Jahren geändert haben, war es Anfang 2025 an der Zeit, die Bereitstellungsarchitektur auf neue
+Beine zu stellen.</p>
+<p><strong>Grundsätzliche Prinzipien</strong></p>
+<ul class="simple">
+<li><p>Sicherstellung eines langfristigen Betriebs</p></li>
+<li><p>Verbesserung der Kompatibilität zu XPlanung</p></li>
+<li><p>Vereinfachung der Verwaltung durch die Kommunen</p></li>
+<li><p>Nutzung von Freier Open Source Software um kostenfreie Nachnutzbarkeit sicherzustellen</p></li>
+</ul>
+<p><strong>Was XPlanung-light kann und was es nicht kann</strong></p>
+<p>XPlanung-light soll Prozesse im Bereich der Bauleitplanung durch die Verwendung weit verbreiteter Standards vereinfachen. Es besteht <em>nicht</em> der Anspruch den Austauschstandard <a class="reference external" href="https://xleitstelle.de/xplanung">XPlanung</a>
+in seinem kompletten Umfang abzubilden. Es handelt sich also <em>nicht um ein Werkzeug um vollvektorielle XPlan-GML Dateien zu erzeugen</em>, diese können jedoch vom System
+verwaltet werden.</p>
+<p>Als Verwaltungs- und Publikationstool für Bauleitpläne ist <strong>XPlanung-light</strong> eher auf einer Meta-ebene angesiedelt.</p>
+<p><strong>Funktionsumfang</strong></p>
+<ul class="simple">
+<li><p>Import und Export von XPlan-GML Dateien</p></li>
+<li><p>Import und Export von XPlan-ZIP-Archiven</p></li>
+<li><p>Verwaltung eines an der Praxis orientierten und historisierten Plan-Datenmodells (kompatibel zu XPlanung 6.0+)</p></li>
+<li><p>Automatische Erstellung von Metadaten und OGC-Diensten für eine standardisierte Publikation der Daten</p></li>
+<li><p>…</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Bemerkung</p>
+<p>Das Projekt befindet sich aktuell noch in der Entwicklung. Um interessierten Entwicklern den Einstieg in die
+Materie zu erleichtern gibt es ein Tutorial: <a class="reference external" href="https://mrmap-community.github.io/django-tutorial/">Django-Tutorial</a>.</p>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="Willkommen zur Dokumentation des XPlanung-light Projekts" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Zurück</a>
+        <a href="bauleitplanung.html" class="btn btn-neutral float-right" title="Bauleitplanung" accesskey="n" rel="next">Weiter <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Armin Retterath.</p>
+  </div>
+
+  Erstellt mit <a href="https://www.sphinx-doc.org/">Sphinx</a> mit einem
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    bereitgestellt von <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
