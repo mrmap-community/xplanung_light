@@ -11,6 +11,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import serializers
 from django.db.models import JSONField, CharField, Func, Aggregate
 from datetime import datetime
+from django.urls import reverse
 import json
 #from django.db.models.aggregates import Aggregate
 
@@ -190,6 +191,9 @@ from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Frame, PageTemplate, NextPageTemplate, Paragraph, Table, TableStyle
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.barcode import qr
+from reportlab.platypus import Flowable
 
 # TipTap Logikmodell für pydantic
 class TipTapMark(BaseModel):
@@ -337,7 +341,12 @@ class NumberedCanvas(canvas.Canvas):
         self.setLineWidth(0.5)
         self.line(2*cm, line_y, width - 2*cm, line_y)
         self.setFont("Helvetica", 9)
-        self.drawCentredString(A4[0]/2, 1*cm, f"Seite {self._pageNumber} von {page_count}")
+        # Seitennummerierung
+        #self.drawCentredString(A4[0]/2, 1*cm, f"Seite {self._pageNumber} von {page_count}")
+        self.drawString(18.0 * cm, 1.2 * cm, f"Seite {self._pageNumber} von {page_count}")
+        # Datum 
+        now = datetime.now()
+        self.drawString(1.5 * cm, 1.2 * cm, "Erstellt am: " + now.strftime("%Y-%m-%d, %H:%M:%S"))
 
 
 class MyDocTemplate(SimpleDocTemplate):
@@ -394,8 +403,35 @@ class HeadingWithAnchor(Paragraph):
         super().draw()
 
 
+class QRCodeFlowable(Flowable):
+    def __init__(self, data="https://www.geoportal.rlp.de", size=3*cm):
+        super().__init__()
+        self.data = data
+        self.size = size
+
+    def draw(self):
+        # QR-Code generieren
+        qr_code = qr.QrCodeWidget(self.data)
+        
+        # Berechnung der Skalierung basierend auf der gewünschten Größe
+        bounds = qr_code.getBounds()
+        width = bounds[2] - bounds[0]
+        height = bounds[3] - bounds[1]
+        scale = self.size / width
+        
+        # Zeichnung erstellen
+        d = Drawing(self.size, self.size, transform=[scale, 0, 0, scale, 0, 0])
+        d.add(qr_code)
+        
+        # Auf dem Canvas rendern
+        d.drawOn(self.canv, 0, 0)
+
+    def wrap(self, availWidth, availHeight):
+        # Dem DocTemplate mitteilen, wie viel Platz wir brauchen
+        return self.size, self.size
+
 class PdfBeteiligungBeitraege(MyDocTemplate):
-    def __init__(self, filename, beteiligung, plantyp, **kwargs):
+    def __init__(self, filename, beteiligung, plantyp, absolute_url, **kwargs):
         super().__init__(filename, **kwargs)
         self.beteiligung = beteiligung
         self.plantyp = plantyp
@@ -403,7 +439,7 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         styles = getSampleStyleSheet()
         self.style = styles
         story = []
-
+        self.absolute_url = absolute_url
         # TOC STYLE (WICHTIG: linkToItem=1)
         toc = TableOfContents()
         ps = ParagraphStyle(name='TOC', fontSize=10, textColor=colors.blue, linkToItem=1)
@@ -413,6 +449,10 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         # 1. Allgemeine Informationen zum Beteiligungsverfahren
          # Dummy Content Seite 1
         story.append(Paragraph("Informationen zum Beteiligungsverfahren - ...", styles['Heading1']))
+        qr_link = self.absolute_url
+        print(qr_link)
+        story.append(QRCodeFlowable(qr_link, size=4*cm))
+        story.append(Spacer(1, 1*cm))
         # Informationen zum Projekt - hier Beteiligung, Plan , ...
         content_info_frame = Frame(125*mm, 192*mm, 75*mm, 55*mm, showBoundary=0)   
         if self.plantyp=='bplan':
@@ -523,6 +563,9 @@ class BeteiligungPdfView(DetailView):
     beteiligung = None
     plantyp = None
 
+    def get_absolute_url(self):
+        return reverse('beteiligungbeitrag-pdf', kwargs={'plantyp':self.plantyp, 'planid':self.plan.id, 'beteiligungid':self.beteiligung.id})
+
     def dispatch(self, request, *args, **kwargs):
         # Hier sind die Parameter aus der re_path verfügbar:
         self.plantyp = kwargs.get('plantyp')
@@ -542,7 +585,7 @@ class BeteiligungPdfView(DetailView):
         if self.beteiligung:
             pdf_buffer = BytesIO()
             # Starte Generierung
-            PdfBeteiligungBeitraege(pdf_buffer, beteiligung=self.beteiligung, plantyp=self.plantyp)
+            PdfBeteiligungBeitraege(pdf_buffer, beteiligung=self.beteiligung, plantyp=self.plantyp, absolute_url=self.get_absolute_url())
             pdf_buffer.seek(0)
             response = FileResponse(pdf_buffer, 
                             as_attachment=True, 
