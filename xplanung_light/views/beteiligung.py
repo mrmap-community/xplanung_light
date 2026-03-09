@@ -13,6 +13,8 @@ from django.db.models import JSONField, CharField, Func, Aggregate
 from datetime import datetime
 from django.urls import reverse
 import json
+from django.core.exceptions import PermissionDenied
+from django.conf import settings
 #from django.db.models.aggregates import Aggregate
 
 # https://stackoverflow.com/questions/74111981/django-aggregate-into-array
@@ -320,6 +322,7 @@ class NumberedCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
         canvas.Canvas.__init__(self, *args, **kwargs)
         self._saved_page_states = []
+        self._url = ''
 
     def showPage(self):
         self._saved_page_states.append(dict(self.__dict__))
@@ -330,16 +333,41 @@ class NumberedCanvas(canvas.Canvas):
         for state in self._saved_page_states:
             self.__dict__.update(state)
             self.draw_page_number(num_pages)
+            self.draw_qr_code()
             canvas.Canvas.showPage(self)
         canvas.Canvas.save(self)
 
+    def draw_qr_code(self):
+        size = 2 * cm
+        qr_code = qr.QrCodeWidget(self.url)
+        # Berechnung der Skalierung basierend auf der gewünschten Größe
+        bounds = qr_code.getBounds()
+        width = bounds[2] - bounds[0]
+        height = bounds[3] - bounds[1]
+        scale = size / width
+        # Zeichnung erstellen
+        d = Drawing(size, size, transform=[scale, 0, 0, scale, 0, 0])
+        d.add(qr_code)
+        # Auf dem Canvas rendern
+        d.drawOn(self, 18 * cm, 27.7 * cm)
+
     def draw_page_number(self, page_count):
         width, height = A4
-        line_y = 2.0 * cm  # Höhe der Linie
+        line_y_t = 27.7 * cm  # Höhe der Linie
+        line_y_b = 2.0 * cm  # Höhe der Linie
         text_y = 1.5 * cm  # Höhe des Textes darunter
-        # 1. Die Linie oberhalb des Footers
         self.setLineWidth(0.5)
-        self.line(2*cm, line_y, width - 2*cm, line_y)
+        self.setFont("Helvetica", 7)
+        # Die Linie unterhalb des Headers
+        self.line(2 * cm, line_y_t, width - 2 * cm, line_y_t)
+        # Header
+        if 'version' in settings.XPLANUNG_LIGHT_CONFIG.keys():
+            version = settings.XPLANUNG_LIGHT_CONFIG['version']
+        else:
+            version = 'unknown'
+        self.drawString(2.0 * cm, 28.0 * cm, 'XPlanung-light (V ' + version + ') - ' + self.url) 
+        # Die Linie oberhalb des Footers
+        self.line(2 * cm, line_y_b, width - 2 * cm, line_y_b)
         self.setFont("Helvetica", 9)
         # Seitennummerierung
         #self.drawCentredString(A4[0]/2, 1*cm, f"Seite {self._pageNumber} von {page_count}")
@@ -447,12 +475,13 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         # STORY BAUEN
         # A. Rahmen / Header / Footer
         # 1. Allgemeine Informationen zum Beteiligungsverfahren
-         # Dummy Content Seite 1
-        story.append(Paragraph("Informationen zum Beteiligungsverfahren - ...", styles['Heading1']))
+        # Dummy Content Seite 1
+        story.append(Paragraph("Informationen zum Online-Beteiligungsverfahren", styles['Heading2']))
+        story.append(Paragraph("Stammdaten", styles['Heading3']))
+        story.append(HRFlowable())
         qr_link = self.absolute_url
-        print(qr_link)
-        story.append(QRCodeFlowable(qr_link, size=4*cm))
-        story.append(Spacer(1, 1*cm))
+        #print(qr_link)
+        #story.append(QRCodeFlowable(qr_link, size=3*cm))
         # Informationen zum Projekt - hier Beteiligung, Plan , ...
         content_info_frame = Frame(125*mm, 192*mm, 75*mm, 55*mm, showBoundary=0)   
         if self.plantyp=='bplan':
@@ -473,13 +502,20 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         content_info_paragraph_style = self.style['Normal']
         content_info_flowable = Paragraph(content_info_content, content_info_paragraph_style)
         story.append(content_info_flowable)
-        story.append(HRFlowable(color='#ff0066', dash=(10, 5)))
+        story.append(HRFlowable())
+        #story.append(Spacer(1, 1*cm))
+        #story.append(HRFlowable())
+        story.append(Paragraph("Publizierter Beschreibungstext", styles['Heading3']))
+        story.append(HRFlowable())
+        #story.append(HRFlowable(color='#ff0066', dash=(10, 5)))
         doc_model = TipTapNode.model_validate(beteiligung.beschreibung)
         elements = TipTapToReportLab().convert_to_elements(doc_model)
         story.extend(elements)
+        story.append(HRFlowable())
         story.append(PageBreak())
         # 2. Liste mit den abgegebenen Online-Beteiligungen
-        story.append(Paragraph("Online-Beteiligungen - ...", styles['Heading1']))
+        story.append(Paragraph("Liste der Beiträge", styles['Heading3']))
+        #story.append(HRFlowable())
         # 3. Einzelne Beteiligungsbeiträge 
         # 4. Anlagen ... ggf. in pdf einbetten oder in Form einer ZIP-Datei exportieren
         # Tabelle mit den abgegebenen Online-Beteiligungen:
@@ -523,8 +559,15 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
                                              #('ALIGN', (0,1), (-1,-1), 'RIGHT'), # first column, second row: all rows from second row
                                              ('FONTSIZE', (0,1), (-1,-1), 8),
                                              ])))
+        #story.append(HRFlowable())
         story.append(PageBreak())
-        self.multiBuild(story, canvasmaker=NumberedCanvas)
+        # https://stackoverflow.com/questions/3448365/pdf-image-in-pdf-document-using-reportlab-python
+        # https://gis.stackexchange.com/questions/185289/arcpy-creating-multi-page-table-pdf-with-reportlab-pypdf2
+        # https://www.geeksforgeeks.org/python/creating-pdf-documents-with-python/
+
+        canvasmaker = NumberedCanvas
+        canvasmaker.url = qr_link
+        self.multiBuild(story, canvasmaker=canvasmaker)
 
     def build_story(data_list, mode="final"):
         """
@@ -563,8 +606,31 @@ class BeteiligungPdfView(DetailView):
     beteiligung = None
     plantyp = None
 
+    def get_queryset(self):
+        #print("get_queryset")
+        qs = super().get_queryset()
+        plan = self.planmodel.objects.get(pk=self.kwargs['planid'])
+        # check ob Nutzer admin einer der Gemeinden des BPlans ist
+        if self.request.user.is_superuser == False:
+            for gemeinde in plan.gemeinde.all():
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:   
+                        # Zugriff wird erteilt
+                        if self.plantyp == 'bplan':                    
+                            return qs.filter(bplan_beteiligung_id=self.kwargs['beteiligungid'])
+                        if self.plantyp == 'fplan':                    
+                            return qs.filter(fplan_beteiligung_id=self.kwargs['beteiligungid'])
+            raise PermissionDenied("Nutzer hat keine Berechtigungen auf die angeforderten Objekte!")
+        else:
+            if self.plantyp == 'bplan': 
+                return qs.filter(bplan_beteiligung_id=self.kwargs['beteiligungid'])
+            if self.plantyp == 'fplan': 
+                return qs.filter(fplan_beteiligung_id=self.kwargs['beteiligungid'])
+        return qs
+    
+
     def get_absolute_url(self):
-        return reverse('beteiligungbeitrag-pdf', kwargs={'plantyp':self.plantyp, 'planid':self.plan.id, 'beteiligungid':self.beteiligung.id})
+        return self.request.build_absolute_uri(reverse('beteiligungbeitrag-pdf', kwargs={'plantyp':self.plantyp, 'planid':self.plan.id, 'beteiligungid':self.beteiligung.id}))
 
     def dispatch(self, request, *args, **kwargs):
         # Hier sind die Parameter aus der re_path verfügbar:
@@ -582,6 +648,16 @@ class BeteiligungPdfView(DetailView):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        access_allowed = False
+        if self.request.user.is_superuser == False:
+            for gemeinde in self.plan.gemeinde.all():
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:   
+                        access_allowed = True
+        else:
+            access_allowed = True
+        if access_allowed == False:
+            return HttpResponse("403 Forbidden", status=403)   
         if self.beteiligung:
             pdf_buffer = BytesIO()
             # Starte Generierung

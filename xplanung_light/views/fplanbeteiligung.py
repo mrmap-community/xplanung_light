@@ -72,9 +72,9 @@ class FPlanBeteiligungUpdateView(FormViewMixin, XPlanRelationsUpdateView):
     model = FPlanBeteiligung
     reference_model = FPlan
     reference_model_name_lower = 'fplan'
-    template_name="xplanung_light/bplanbeteiligung_form.html"
+    template_name="xplanung_light/fplanbeteiligung_form.html"
     form_class = FPlanBeteiligungForm
-    list_url_name = 'bplanbeteiligung-list'
+    list_url_name = 'fplanbeteiligung-list'
     extra_context = None
 
     def get_context_data(self, **kwargs):
