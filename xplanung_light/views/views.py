@@ -464,13 +464,19 @@ def ows(request, pk:int):
     """
     Der Link auf die ISO-Metadaten pro Layer muss als absolute URL übergeben werden
     """
-    metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000}))
+    if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
+        metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000})).replace('http://', 'https://')
+    else:
+        metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000}))
     # Mapfile wird zunächst für x Sekunden gecached, da der Bau und das Parsen über mappyfile sehr langsam ist
     if cache.get("mapfile_" + orga.ags):
         cache.touch("mapfile_" + orga.ags, 10)
         mapfile = cache.get("mapfile_" + orga.ags)
     else:
-        mapfile = mapfile_generator.generate_mapfile(pk, request.build_absolute_uri(reverse('ows', kwargs={"pk": pk})), metadata_uri)
+        if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
+            mapfile = mapfile_generator.generate_mapfile(pk, request.build_absolute_uri(reverse('ows', kwargs={"pk": pk})), metadata_uri).replace('http://', 'https://')
+        else:
+            mapfile = mapfile_generator.generate_mapfile(pk, request.build_absolute_uri(reverse('ows', kwargs={"pk": pk})), metadata_uri)
         cache.set("mapfile_" + orga.ags, mapfile, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
     #print(mapfile)
     map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 

@@ -630,7 +630,10 @@ class BeteiligungPdfView(DetailView):
     
 
     def get_absolute_url(self):
-        return self.request.build_absolute_uri(reverse('beteiligungbeitrag-list-pdf', kwargs={'plantyp':self.plantyp, 'planid':self.plan.id, 'beteiligungid':self.beteiligung.id}))
+        if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
+            return self.request.build_absolute_uri(reverse('beteiligungbeitrag-list-pdf', kwargs={'plantyp':self.plantyp, 'planid':self.plan.id, 'beteiligungid':self.beteiligung.id})).replace('http://', 'https://')
+        else:
+            return self.request.build_absolute_uri(reverse('beteiligungbeitrag-list-pdf', kwargs={'plantyp':self.plantyp, 'planid':self.plan.id, 'beteiligungid':self.beteiligung.id}))
 
     def dispatch(self, request, *args, **kwargs):
         # Hier sind die Parameter aus der re_path verfügbar:
