@@ -630,7 +630,7 @@ class BeteiligungPdfView(DetailView):
     
 
     def get_absolute_url(self):
-        return self.request.build_absolute_uri(reverse('beteiligungbeitrag-pdf', kwargs={'plantyp':self.plantyp, 'planid':self.plan.id, 'beteiligungid':self.beteiligung.id}))
+        return self.request.build_absolute_uri(reverse('beteiligungbeitrag-list-pdf', kwargs={'plantyp':self.plantyp, 'planid':self.plan.id, 'beteiligungid':self.beteiligung.id}))
 
     def dispatch(self, request, *args, **kwargs):
         # Hier sind die Parameter aus der re_path verfügbar:
