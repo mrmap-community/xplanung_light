@@ -1,16 +1,22 @@
-Vielen Dank für Ihre Stellungnahme.\n
-Die Stellungnahme ist im System registriert, muss aber noch bestätigt werden:\n\n
-activation_link \n\n
-Sie können den Link auch bis zum Ende des Beteiligungsverfahrens am {{ end_datum }} nutzen,\n
-um ihre Stellungnahme zurückzuziehen.\n\n
-Rückfragen zum Verfahren:\n
+Vielen Dank für Ihre Stellungnahme.
+
+Die Stellungnahme ist im System registriert, muss aber noch bestätigt werden:
+
+{{ activation_link }}
+
+Sie können den Link auch bis zum Ende des Beteiligungsverfahrens am {{ end_datum }} nutzen,
+um ihre Stellungnahme zurückzuziehen.
+
+
+Rückfragen zum Verfahren:
 {% for contact in contacts %}
-{{ contact.name }}\n
-{{ contact.phone }}\n
-{{ contact.email }}\n
-{% endfor %}\n
-________________________\n
-Ihr XPlanung-light Team:\n
-{{ metadata_contact.organization_name }}\n
-{{ metadata_contact.phone }}\n
-{{ metadata_contact.email }}\n
+{{ contact.name }}
+{{ contact.phone }}
+{{ contact.email }}
+{% endfor %}
+
+________________________
+Ihr XPlanung-light Team:
+{{ metadata_contact.organization_name }}
+{{ metadata_contact.phone }}
+{{ metadata_contact.email }}
