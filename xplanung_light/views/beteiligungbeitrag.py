@@ -21,6 +21,8 @@ from django.core.mail import send_mail, EmailMessage
 from django.utils.timezone import datetime
 from django.conf import settings
 from django.template.loader import render_to_string
+from django.core.mail import EmailMultiAlternatives
+
 
 class XPlanBeteiligungBeitragCreateView(CreateView):
     """
@@ -281,8 +283,8 @@ class BeteiligungBeitragCreateView(EditCollectionView):
             contacts = ContactOrganization.objects.filter(gemeinde__id__in=plan.gemeinde.values_list('id', flat=True)).distinct()
             activation_link = f"{activation_url}"
             subject = str("Ihre Online-Stellungnahme vom " + datetime.today().strftime('%Y-%m-%d') + " zum Plan \"" + str(planname) + "\"")
-            body = render_to_string("xplanung_light/email/beteiligungsbeitrag_activate.html", context={"end_datum": self.object.end_datum.strftime('%Y-%m-%d'), "activation_link": activation_link, "contacts": contacts, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
-
+            html_content = render_to_string("xplanung_light/email/beteiligungsbeitrag_activate.html", context={"end_datum": self.object.end_datum.strftime('%Y-%m-%d'), "activation_link": activation_link, "contacts": contacts, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+            text_content = render_to_string("xplanung_light/email/beteiligungsbeitrag_activate.txt", context={"end_datum": self.object.end_datum.strftime('%Y-%m-%d'), "activation_link": activation_link, "contacts": contacts, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
             """
             body = str("Vielen Dank für Ihre Stellungnahme.<br>" \
                 "Die Stellungnahme ist im System registriert, muss aber noch bestätigt werden:<br><br><a href='" + activation_link + "'>"
@@ -301,15 +303,17 @@ class BeteiligungBeitragCreateView(EditCollectionView):
             body = body + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone'] + "<br>"
             body = body + "<a href='mailto:" + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'] + "'>" + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'] + "</a><br>"
             """
-            email = EmailMessage(
+            email = EmailMultiAlternatives(
                 subject=subject,
-                body=body,
+                body=text_content,
                 from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
                 to=[str(self.object.comments.last().email),],
                 #bcc=[str(farmshop.contact_email),],
                 reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
             )
             email.content_subtype = "html"
+            email.attach_alternative(html_content, "text/html")
+
             email.send(fail_silently=True)
             # TODO: Kontakstellen über eingegangene Beteiligung informieren
 
