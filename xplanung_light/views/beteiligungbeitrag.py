@@ -20,6 +20,7 @@ from django.shortcuts import redirect
 from django.core.mail import send_mail, EmailMessage
 from django.utils.timezone import datetime
 from django.conf import settings
+from django.template.loader import render_to_string
 
 class XPlanBeteiligungBeitragCreateView(CreateView):
     """
@@ -280,23 +281,26 @@ class BeteiligungBeitragCreateView(EditCollectionView):
             contacts = ContactOrganization.objects.filter(gemeinde__id__in=plan.gemeinde.values_list('id', flat=True)).distinct()
             activation_link = f"{activation_url}"
             subject = str("Ihre Online-Stellungnahme vom " + datetime.today().strftime('%Y-%m-%d') + " zum Plan \"" + str(planname) + "\"")
-            body = str("Vielen Dank für Ihre Stellungnahme.\n" \
-                "Die Stellungnahme ist im System registriert, muss aber noch bestätigt werden:\n\n"
-                + activation_link + "\n\n"
-                "Sie können den Link auch bis zum Ende des Beteiligungsverfahrens am " + self.object.end_datum.strftime('%Y-%m-%d') + " nutzen, um ihre Stellungnahme zurückzuziehen."
-                + "\n\n" 
-                + "Rückfragen zum Verfahren:\n")
-            for contact in contacts:
-                body = body + str(contact.name) + "\n"
-                body = body + str(contact.phone) + "\n"
-                body = body + str(contact.email) + "\n"
-                body = body + "\n"
-            body = body + "________________________\n"
-            body = body + "Ihr XPlanung-light Team:\n"
-            body = body + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['organization_name'] + "\n"
-            body = body + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone'] + "\n"
-            body = body + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'] + "\n"
+            body = render_to_string("xplanung_light/email/beteiligungsbeitrag_activate.html", context={"end_datum": self.object.end_datum.strftime('%Y-%m-%d'), "activation_link": activation_link, "contacts": contacts, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
 
+            """
+            body = str("Vielen Dank für Ihre Stellungnahme.<br>" \
+                "Die Stellungnahme ist im System registriert, muss aber noch bestätigt werden:<br><br><a href='" + activation_link + "'>"
+                + activation_link + "</a><br><br>"
+                "Sie können den Link auch bis zum Ende des Beteiligungsverfahrens am " + self.object.end_datum.strftime('%Y-%m-%d') + " nutzen, um ihre Stellungnahme zurückzuziehen."
+                + "<br><br>" 
+                + "Rückfragen zum Verfahren:<br>")
+            for contact in contacts:
+                body = body + str(contact.name) + "<br>"
+                body = body + str(contact.phone) + "<br>"
+                body = body + "<a href='mailto:" + str(contact.email) + "'>" + str(contact.email) + "</a><br>"
+                body = body + "<br>"
+            body = body + "________________________<br>"
+            body = body + "Ihr XPlanung-light Team:<br>"
+            body = body + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['organization_name'] + "<br>"
+            body = body + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone'] + "<br>"
+            body = body + "<a href='mailto:" + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'] + "'>" + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'] + "</a><br>"
+            """
             email = EmailMessage(
                 subject=subject,
                 body=body,
