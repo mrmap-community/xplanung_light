@@ -1,5 +1,5 @@
 from xplanung_light.models import BPlan, BPlanBeteiligung, BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang, AdministrativeOrganization
-from xplanung_light.models import FPlanBeteiligung, FPlan, FPlanBeteiligungBeitrag
+from xplanung_light.models import FPlanBeteiligung, FPlan, FPlanBeteiligungBeitrag, ContactOrganization
 from xplanung_light.models import ConsentOption
 from xplanung_light.forms import BPlanBeteiligungBeitragForm
 from django.views.generic import CreateView, ListView, DeleteView, DetailView, UpdateView
@@ -265,25 +265,50 @@ class BeteiligungBeitragCreateView(EditCollectionView):
             # Benachrichtigung des Nutzers mit Link zur Aktivierung
             # Die gespeicherte Instanz (object) beinhaltet alle beitragsobjekte - nicht nur den konkreten Beitrag 
             # Bauen des Aktivierungslinks
-            activation_url = reverse("beteiligungbeitrag-activate", args=[self.plantyp, planid, self.object.id, beitrag_generic_id])
+            if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
+                activation_url = self.request.build_absolute_uri(reverse("beteiligungbeitrag-activate", args=[self.plantyp, planid, self.object.id, beitrag_generic_id])).replace('http://', 'https://')
+            else:
+                activation_url = self.request.build_absolute_uri(reverse("beteiligungbeitrag-activate", args=[self.plantyp, planid, self.object.id, beitrag_generic_id]))
             # Build complete URLs
             #https://opensource.com/article/22/12/django-send-emails-smtp
             #
+            if self.plantyp == 'bplan':
+                plan = BPlan.objects.get(id=planid)
+            if self.plantyp == 'fplan':
+                plan = FPlan.objects.get(id=planid)
+            # Auslesen der Kontaktstellen Informationen
+            contacts = ContactOrganization.objects.filter(gemeinde__id__in=plan.gemeinde.values_list('id', flat=True)).distinct()
             activation_link = f"{activation_url}"
+            subject = str("Ihre Online-Stellungnahme vom " + datetime.today().strftime('%Y-%m-%d') + " zum Plan \"" + str(planname) + "\"")
+            body = str("Vielen Dank für Ihre Stellungnahme.\n" \
+                "Die Stellungnahme ist im System registriert, muss aber noch bestätigt werden:\n\n"
+                + activation_link + "\n\n"
+                "Sie können den Link auch bis zum Ende des Beteiligungsverfahrens am " + self.object.end_datum.strftime('%Y-%m-%d') + " nutzen, um ihre Stellungnahme zurückzuziehen."
+                + "\n\n" 
+                + "Rückfragen zum Verfahren:\n")
+            for contact in contacts:
+                body = body + str(contact.name) + "\n"
+                body = body + str(contact.phone) + "\n"
+                body = body + str(contact.email) + "\n"
+                body = body + "\n"
+            body = body + "________________________\n"
+            body = body + "Ihr XPlanung-light Team:\n"
+            body = body + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['organization_name'] + "\n"
+            body = body + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone'] + "\n"
+            body = body + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'] + "\n"
+
             email = EmailMessage(
-                subject=str("Ihre Stellungnahme von " + datetime.today().strftime('%Y-%m-%d') + " zum Plan " + str(planname)),
-                body=str("Vielen Dank für Ihre Stellungnahme.\n" \
-                "Sie müssen die Stellungnahme noch bestätigen:\n"
-                 + self.request.scheme + "://" + self.request.get_host() + activation_link + "\n"
-                # + "Dein Team vom " + str(farmshop.title) + "\n" 
-                 + "Für telefonische Rückfragen: " + str('test')),
-                from_email='test@example.com',
+                subject=subject,
+                body=body,
+                from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
                 to=[str(self.object.comments.last().email),],
                 #bcc=[str(farmshop.contact_email),],
-                reply_to=[str('user@example.com'),]
+                reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
             )
             email.content_subtype = "html"
             email.send(fail_silently=True)
+            # TODO: Kontakstellen über eingegangene Beteiligung informieren
+
             # save generic_id to session - where to get it from? - it is not in the database till now!
             self.request.session["beitrag_generic_id"] = str(beitrag_generic_id)
         return result
