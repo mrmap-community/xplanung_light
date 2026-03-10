@@ -9,7 +9,7 @@ Rückfragen zum Verfahren:\n
 {{ contact.phone }}\n
 {{ contact.email }}\n
 {% endfor %}\n
-________________________
+________________________\n
 Ihr XPlanung-light Team:\n
 {{ metadata_contact.organization_name }}\n
 {{ metadata_contact.phone }}\n

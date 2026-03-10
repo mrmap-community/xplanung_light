@@ -131,7 +131,7 @@ class BeteiligungBeitragDeleteView(SuccessMessageMixin, DeleteView):
             self.model = FPlanBeteiligungBeitrag
             self.reference_model = FPlan
         self.planid = self.kwargs.get('planid') 
-            #self.template_name = 'xplanung_light/beteiligungbeitrag_list.html'
+        self.template_name = 'xplanung_light/beteiligungbeitrag_confirm_delete.html'
         #TODO: Anpassen für FPlan
         self.beteiligungid = kwargs.get('beteiligungid')
         # Debugausgabe
