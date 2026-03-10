@@ -285,24 +285,6 @@ class BeteiligungBeitragCreateView(EditCollectionView):
             subject = str("Ihre Online-Stellungnahme vom " + datetime.today().strftime('%Y-%m-%d') + " zum Plan \"" + str(planname) + "\"")
             html_content = render_to_string("xplanung_light/email/beteiligungsbeitrag_activate.html", context={"end_datum": self.object.end_datum.strftime('%Y-%m-%d'), "activation_link": activation_link, "contacts": contacts, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
             text_content = render_to_string("xplanung_light/email/beteiligungsbeitrag_activate.txt", context={"end_datum": self.object.end_datum.strftime('%Y-%m-%d'), "activation_link": activation_link, "contacts": contacts, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
-            """
-            body = str("Vielen Dank für Ihre Stellungnahme.<br>" \
-                "Die Stellungnahme ist im System registriert, muss aber noch bestätigt werden:<br><br><a href='" + activation_link + "'>"
-                + activation_link + "</a><br><br>"
-                "Sie können den Link auch bis zum Ende des Beteiligungsverfahrens am " + self.object.end_datum.strftime('%Y-%m-%d') + " nutzen, um ihre Stellungnahme zurückzuziehen."
-                + "<br><br>" 
-                + "Rückfragen zum Verfahren:<br>")
-            for contact in contacts:
-                body = body + str(contact.name) + "<br>"
-                body = body + str(contact.phone) + "<br>"
-                body = body + "<a href='mailto:" + str(contact.email) + "'>" + str(contact.email) + "</a><br>"
-                body = body + "<br>"
-            body = body + "________________________<br>"
-            body = body + "Ihr XPlanung-light Team:<br>"
-            body = body + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['organization_name'] + "<br>"
-            body = body + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone'] + "<br>"
-            body = body + "<a href='mailto:" + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'] + "'>" + settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'] + "</a><br>"
-            """
             email = EmailMultiAlternatives(
                 subject=subject,
                 body=text_content,
@@ -311,7 +293,7 @@ class BeteiligungBeitragCreateView(EditCollectionView):
                 #bcc=[str(farmshop.contact_email),],
                 reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
             )
-            email.content_subtype = "html"
+            #email.content_subtype = "text"
             email.attach_alternative(html_content, "text/html")
 
             email.send(fail_silently=True)
