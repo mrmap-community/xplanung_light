@@ -13,8 +13,10 @@ from django.db.models import JSONField, CharField, Func, Aggregate
 from datetime import datetime
 from django.urls import reverse
 import json
+import os
 from django.core.exceptions import PermissionDenied
 from django.conf import settings
+from django.template.defaultfilters import filesizeformat
 #from django.db.models.aggregates import Aggregate
 
 # https://stackoverflow.com/questions/74111981/django-aggregate-into-array
@@ -459,10 +461,12 @@ class QRCodeFlowable(Flowable):
         return self.size, self.size
 
 class PdfBeteiligungBeitraege(MyDocTemplate):
-    def __init__(self, filename, beteiligung, plantyp, absolute_url, **kwargs):
+    def __init__(self, filename, beteiligung, plantyp, absolute_url, request, **kwargs):
         super().__init__(filename, **kwargs)
         self.beteiligung = beteiligung
         self.plantyp = plantyp
+        # Übernahme der request Informationen - damit wir die URLs für die Anlagen bauen können
+        self.request = request
         # Dinge die wir für das Layout brauchen
         styles = getSampleStyleSheet()
         self.style = styles
@@ -483,7 +487,7 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         #print(qr_link)
         #story.append(QRCodeFlowable(qr_link, size=3*cm))
         # Informationen zum Projekt - hier Beteiligung, Plan , ...
-        content_info_frame = Frame(125*mm, 192*mm, 75*mm, 55*mm, showBoundary=0)   
+        #content_info_frame = Frame(125*mm, 192*mm, 75*mm, 55*mm, showBoundary=0)   
         if self.plantyp=='bplan':
             content_info_content = "<font size=10><b>" + self.beteiligung.get_typ_display() + " zum Bebauungsplan</b><br/>"
             content_info_content = content_info_content + "\"" + self.beteiligung.bplan.name + "\"<br/>"
@@ -493,12 +497,7 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         # typ
         content_info_content = content_info_content + "<b>Bekanntmachung:</b> " + str(self.beteiligung.bekanntmachung_datum.strftime('%Y-%m-%d')) + "<br/>" 
         content_info_content = content_info_content + "<b>Beginn Beteiligung:</b> " + str(self.beteiligung.start_datum.strftime('%Y-%m-%d')) + "<br/>"
-        content_info_content = content_info_content + "<b>Ende Beteiligung:</b> " + str(self.beteiligung.end_datum.strftime('%Y-%m-%d')) + "<br/></font>" 
-        #content_info_content = content_info_content + "<b>E-Mail:</b> " + self.invoice.my_party.party_contact_person_email + "<br/>" 
-        #content_info_content = content_info_content + "<b>Telefon:</b> " + self.invoice.my_party.party_contact_person_phone + "<br/><br/>"
-        #content_info_content = content_info_content + "<b>Projekt-ID:</b> " + self.invoice.project_reference_id + "<br/>" 
-        #content_info_content = content_info_content + "<b>Leitweg-ID:</b> " + self.invoice.buyer_reference + "<br/>" 
-        #content_info_content = content_info_content + "<b>Bestellreferenz:</b> " + self.invoice.order_reference + "<br/></font>" 
+        content_info_content = content_info_content + "<b>Ende Beteiligung:</b> " + str(self.beteiligung.end_datum.strftime('%Y-%m-%d')) + "<br/></font>"  
         content_info_paragraph_style = self.style['Normal']
         content_info_flowable = Paragraph(content_info_content, content_info_paragraph_style)
         story.append(content_info_flowable)
@@ -526,12 +525,18 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
                     last_changed=Subquery(
                         BPlanBeteiligungBeitrag.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
                     ),
+                    created=Subquery(
+                        BPlanBeteiligungBeitrag.history.filter(id=OuterRef("pk")).order_by('history_date').values('history_date')[:1]
+                    ),
                     count_attachments=Count('attachments', distinct=True)
                 )
         if plantyp=='fplan':
             beteiligung_beitraege = FPlanBeteiligungBeitrag.objects.filter(fplan_beteiligung=beteiligung).annotate(
                     last_changed=Subquery(
                         FPlanBeteiligungBeitrag.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                    ),
+                    created=Subquery(
+                        FPlanBeteiligungBeitrag.history.filter(id=OuterRef("pk")).order_by('history_date').values('history_date')[:1]
                     ),
                     count_attachments=Count('attachments', distinct=True)
                 )
@@ -561,6 +566,45 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
                                              ])))
         #story.append(HRFlowable())
         story.append(PageBreak())
+        # Beiträge anfügen - eine Seite pro Beitrag - nochmal iterieren
+        for beteiligung_beitrag in beteiligung_beitraege:
+            story.append(Paragraph("Beitrag lfd Nr.: " + str(beteiligung_beitrag.id), styles['Heading3']))
+            story.append(HRFlowable())
+            # Titel, EMail, erstellt, letzte Änderung
+            metadaten = ""
+            metadaten = metadaten + "<b>Titel:</b> " + str(beteiligung_beitrag.titel) + "<br/>" 
+            metadaten = metadaten + "<b>EMail:</b> " + str(beteiligung_beitrag.email) + "<br/>"
+            metadaten = metadaten + "<b>Erstellt:</b> " + str(beteiligung_beitrag.created.strftime('%Y-%m-%d %H:%M')) + "<br/>"  
+            metadaten = metadaten + "<b>Letzte Änderung:</b> " + str(beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M')) + "<br/>"
+            metadaten_paragraph_style = self.style['Normal']
+            metadaten_flowable = Paragraph(metadaten, metadaten_paragraph_style)
+            story.append(metadaten_flowable)
+            story.append(HRFlowable())
+            story.append(Paragraph("Beschreibung: ", styles['Heading3']))
+            story.append(HRFlowable())
+            doc_model = TipTapNode.model_validate(beteiligung_beitrag.beschreibung)
+            elements = TipTapToReportLab().convert_to_elements(doc_model)
+            story.extend(elements)
+            story.append(HRFlowable())
+            story.append(Paragraph("Anlagen: ", styles['Heading3']))
+            story.append(HRFlowable())
+            if beteiligung_beitrag.count_attachments != 0:
+                content = []
+                for anlage in beteiligung_beitrag.attachments.all():
+                    anlage_url = self.request.build_absolute_uri(reverse('beteiligung-beitrag-attachment-download', kwargs={'plantyp':self.plantyp, 'pk':anlage.id}))
+                    if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
+                        anlage_url = anlage_url.replace('http://', 'https://')
+                    content.append(ListItem(Paragraph("<link href=\"" + anlage_url + "\" color=\"blue\">" + str(anlage.id) + " - " + anlage.name + " (" + anlage.get_typ_display() + ") - " + os.path.basename(anlage.attachment.file.name) + " (" + filesizeformat(anlage.attachment.file.size) + ")</link>")))
+                    #story.append(Paragraph(anlage.name))
+                    # beteiligung-beitrag-attachment-download plantyp/pk
+                list = ListFlowable(content, bulletType='bullet')
+                story.append(list)
+            else:
+                story.append(Paragraph("- keine -"))
+
+            # Beschreibung - RTF
+            # Anlagen - Name, link?
+            story.append(PageBreak())
         # https://stackoverflow.com/questions/3448365/pdf-image-in-pdf-document-using-reportlab-python
         # https://gis.stackexchange.com/questions/185289/arcpy-creating-multi-page-table-pdf-with-reportlab-pypdf2
         # https://www.geeksforgeeks.org/python/creating-pdf-documents-with-python/
@@ -664,7 +708,7 @@ class BeteiligungPdfView(DetailView):
         if self.beteiligung:
             pdf_buffer = BytesIO()
             # Starte Generierung
-            PdfBeteiligungBeitraege(pdf_buffer, beteiligung=self.beteiligung, plantyp=self.plantyp, absolute_url=self.get_absolute_url())
+            PdfBeteiligungBeitraege(pdf_buffer, beteiligung=self.beteiligung, plantyp=self.plantyp, absolute_url=self.get_absolute_url(), request=self.request)
             pdf_buffer.seek(0)
             response = FileResponse(pdf_buffer, 
                             as_attachment=True, 

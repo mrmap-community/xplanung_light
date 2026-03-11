@@ -150,14 +150,17 @@ def get_beteiligung_beitrag_attachment(request, **kwargs):
         attachment = attachment_model.objects.get(pk=kwargs['pk'])
     except attachment_model.DoesNotExist:
         attachment = None
-    if attachment:
-        if os.path.exists(attachment.attachment.file.name):
-            response = FileResponse(attachment.attachment)
-            return response
+    if access_allowed:
+        if attachment:
+            if os.path.exists(attachment.attachment.file.name):
+                response = FileResponse(attachment.attachment)
+                return response
+            else:
+                return HttpResponse("File not found", status=404) 
         else:
-           return HttpResponse("File not found", status=404) 
+            return HttpResponse("Object not found", status=404)
     else:
-        return HttpResponse("Object not found", status=404)
+        return HttpResponse("Forbidden", status=403)
 
 def xplan_html(request, pk:int):
     orga = AdministrativeOrganization.objects.get(pk=pk)
