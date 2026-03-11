@@ -12,7 +12,7 @@ from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPl
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views.bplanspezexternereferenz import BPlanSpezExterneReferenzCreateView, BPlanSpezExterneReferenzUpdateView, BPlanSpezExterneReferenzDeleteView, BPlanSpezExterneReferenzListView
 from xplanung_light.views.fplanspezexternereferenz import FPlanSpezExterneReferenzCreateView, FPlanSpezExterneReferenzUpdateView, FPlanSpezExterneReferenzDeleteView, FPlanSpezExterneReferenzListView
-from xplanung_light.views.bplanbeteiligung import BPlanBeteiligungCreateView, BPlanBeteiligungUpdateView, BPlanBeteiligungDeleteView, BPlanBeteiligungListView
+from xplanung_light.views.bplanbeteiligung import BPlanBeteiligungCreateView, BPlanBeteiligungUpdateView, BPlanBeteiligungDeleteView, BPlanBeteiligungListView, BPlanBeteiligungDeleteRecursiveHistoryView
 from xplanung_light.views.fplanbeteiligung import FPlanBeteiligungCreateView, FPlanBeteiligungUpdateView, FPlanBeteiligungDeleteView, FPlanBeteiligungListView
 from xplanung_light.views.uvp import UvpCreateView, UvpUpdateView, UvpDeleteView, UvpListView
 from xplanung_light.views.fplanuvp import FPlanUvpCreateView, FPlanUvpUpdateView, FPlanUvpDeleteView, FPlanUvpListView
@@ -56,6 +56,8 @@ urlpatterns = [
     # BPlan Beteiligungen
     path("bplan/<int:planid>/beteiligung/", BPlanBeteiligungListView.as_view(), name="bplanbeteiligung-list"),
     path("bplan/<int:planid>/beteiligung/<int:pk>/delete/", BPlanBeteiligungDeleteView.as_view(), name="bplanbeteiligung-delete"),
+    # Hinzufügen der Option nicht nur die Objekte, sondern auch deren Historie zu löschen
+    path("bplan/<int:planid>/beteiligung/<int:pk>/delete_recursive_history/", BPlanBeteiligungDeleteRecursiveHistoryView.as_view(), name="bplanbeteiligung-delete-recursive-history"),
     # Test für django-formsets - sollte mit einem view möglich sein, klappt aber nicht
     path("bplan/<int:planid>/beteiligung/create/", BPlanBeteiligungCreateView.as_view(extra_context={'create': True}), name="bplanbeteiligung-create"),
     path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="bplanbeteiligung-update"),

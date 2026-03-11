@@ -115,6 +115,8 @@ class BPlanBeteiligungTable(tables.Table):
                          orderable=False, empty_values=())
     delete = tables.LinkColumn('bplanbeteiligung-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')], \
                          orderable=False, empty_values=())
+    #delete_recursive_history = tables.LinkColumn('bplanbeteiligung-delete-recursive-history', verbose_name='', text='Vollständig löschen', args=[A('bplan.id'), A('pk')], \
+    #                     orderable=False, empty_values=())
     #attachment = tables.Column(verbose_name="Ablage", orderable=False)
     #download = tables.LinkColumn('bplanbeteiligung-download', text='Download', args=[A('pk')], \
     #                     orderable=False, empty_values=())
@@ -133,7 +135,7 @@ class BPlanBeteiligungTable(tables.Table):
     class Meta:
         model = BPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "count_comments", "edit", "delete")
+        fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "count_comments", "edit", "delete", )# "delete_recursive_history")
 
    
 class FPlanBeteiligungTable(tables.Table):

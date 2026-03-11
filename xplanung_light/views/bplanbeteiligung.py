@@ -6,6 +6,8 @@ from django_tables2 import SingleTableView
 from xplanung_light.tables import BPlanBeteiligungTable
 from django.db.models import Count
 from formset.views import FormViewMixin
+from django.db import transaction
+#from simple_history import skip_history # erst ab späterer Version von simple-history
 
 class BPlanBeteiligungCreateView(FormViewMixin, XPlanRelationsCreateView):
     """
@@ -98,9 +100,67 @@ class BPlanBeteiligungUpdateView(FormViewMixin, XPlanRelationsUpdateView):
 
 class BPlanBeteiligungDeleteView(XPlanRelationsDeleteView):
     """
-    CBGV zum löschn von BPlanBeteiligung
+    CBGV zum löschen von BPlanBeteiligung
     
     """
     model = BPlanBeteiligung
     reference_model = BPlan
     list_url_name = 'bplanbeteiligung-list'
+
+
+class BPlanBeteiligungDeleteRecursiveHistoryView(XPlanRelationsDeleteView):
+    """
+    CBGV zum löschen von BPlanBeteiligung inkl. der Historie, sowie der zugehörige Beiträge und deren Historie,
+    ist in 3.8.0 wohl noch sehr störrisch ... - vielleicht erstmal Anonymisieren statt Löschen!
+    
+    """
+    model = BPlanBeteiligung
+    reference_model = BPlan
+    list_url_name = 'bplanbeteiligung-list'
+
+    def delete(self, request, *args, **kwargs):
+        # 1. Das Objekt abrufen
+        self.object = self.get_object()
+        
+        # Wir nutzen eine Transaction, damit entweder alles oder nichts gelöscht wird
+        with transaction.atomic():
+            # 1. Historie der abhängigen Objekte (Beiträge) löschen
+            # Wir greifen über den Related Name auf die Beiträge zu
+            for beitrag in self.object.comments.all():
+                beitrag.history.all().delete()
+                # Falls die Aufgabe selbst auch gelöscht werden soll:
+                #with skip_history(beitrag):
+                beitrag.skip_history = True 
+                beitrag.delete() # werden dann nicht neue Löschrecords angelegt?
+
+            # 2. Historie des Hauptobjekts (BPlanBeteiligung) löschen
+            self.object.history.all().delete()
+            
+            # 3. Das eigentliche Objekt löschen (Standard-Verhalten)
+            #with skip_history(self):
+            self.skip_history = True
+            return super().delete(request, *args, **kwargs)
+        """
+        with transaction.atomic():
+            # 1. Bestehende Historie der Kinder restlos löschen
+            for aufgabe in self.object.aufgaben.all():
+                aufgabe.history.all().delete()
+            
+            # 2. Bestehende Historie des Hauptobjekts löschen
+            self.object.history.all().delete()
+
+            # 3. Signale für Parent UND Child Modelle trennen
+            # Wichtig: Der 'sender' muss die jeweilige Modell-Klasse sein
+            post_create_historical_record.disconnect(sender=Projekt)
+            post_create_historical_record.disconnect(sender=Aufgabe)
+
+            try:
+                # 4. Jetzt löschen (es wird KEIN Record erzeugt)
+                response = super().delete(request, *args, **kwargs)
+            finally:
+                # 5. Signale UNBEDINGT wieder verbinden (sonst fehlt Historie woanders)
+                post_create_historical_record.connect(sender=Projekt)
+                post_create_historical_record.connect(sender=Aufgabe)
+
+            return response
+        """

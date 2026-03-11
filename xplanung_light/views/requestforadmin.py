@@ -9,6 +9,10 @@ from django.urls import reverse_lazy, reverse
 from django.http import HttpResponseRedirect
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.core.mail import send_mail, EmailMessage
+from django.template.loader import render_to_string
+from django.core.mail import EmailMultiAlternatives
+from django.conf import settings
 
 class RequestForOrganizationAdminCreateView(LoginRequiredMixin, CreateView):
     """
@@ -46,6 +50,24 @@ class RequestForOrganizationAdminCreateView(LoginRequiredMixin, CreateView):
     
     def form_valid(self, form):
         form.instance.owned_by_user = self.request.user
+        # Versand einer EMail an den Zentraladmin Account - dann weiß er Bescheid, dass etwas zu tun ist
+        antragsliste_link = self.request.build_absolute_uri(reverse("requestforadmin-admin-list"))
+        if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
+            antragsliste_link = antragsliste_link.replace('http://', 'https://')
+        subject = str("XPlanung-light - Antrag auf Organisationsadminrolle eingegangen")
+        html_content = render_to_string("xplanung_light/email/admin_antrag_eingang.html", context={"antragsliste_link": antragsliste_link, },)
+        text_content = render_to_string("xplanung_light/email/admin_antrag_eingang.txt", context={"antragsliste_link": antragsliste_link, },)
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
+            to=[str(settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email']),],
+            #bcc=[str(farmshop.contact_email),],
+            reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
+        )
+        #email.content_subtype = "text"
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=True)
         return super().form_valid(form)
 
     def get_success_url(self):
