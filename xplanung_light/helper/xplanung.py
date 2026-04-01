@@ -156,6 +156,12 @@ class XPlanung():
                 all_administrativeorganizations_exists = False
                 raise forms.ValidationError("Fehler beim Abspeichern des neuen BPlan-Objekts - nicht alle angegebenen Gemeinden wurden in der Datenbank gefunden!")
                 return False
+        #TODO: Auslesen weiterer zu unterstützender Felder
+        # Datum? - maximal Aufstellungsbeschluss ... die anderen Datumswerte werden erst später nachgetragen
+        # Rechtsstand - wird berechnet
+        # Maßstab?
+        # ....
+        # 
         # DEBUG Ausgaben
         #print("Name des BPlans: " + name)
         #print("Gemeinde des BPlans: " + gemeinde_name)

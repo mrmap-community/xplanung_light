@@ -110,8 +110,10 @@ class BPlanBeteiligungDeleteView(XPlanRelationsDeleteView):
 
 class BPlanBeteiligungDeleteRecursiveHistoryView(XPlanRelationsDeleteView):
     """
-    CBGV zum löschen von BPlanBeteiligung inkl. der Historie, sowie der zugehörige Beiträge und deren Historie,
+    CBGV zum Löschen von BPlanBeteiligung inkl. der Historie, sowie der zugehörige Beiträge und deren Historie,
     ist in 3.8.0 wohl noch sehr störrisch ... - vielleicht erstmal Anonymisieren statt Löschen!
+    Felder, die überschrieben werden müssen: email, titel, beschreibung, file durch dummy ersetzen - hier auch durch die 
+    gesamte Historie gehen!
     
     """
     model = BPlanBeteiligung

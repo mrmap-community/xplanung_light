@@ -68,7 +68,7 @@ def get_bplan_attachment(request, pk):
         attachment = BPlanSpezExterneReferenz.objects.get(pk=pk)
     except BPlanSpezExterneReferenz.DoesNotExist:
         attachment = None
-    print(str(attachment))
+    #print(str(attachment))
     if attachment:
         if os.path.exists(attachment.attachment.file.name):
             response = FileResponse(attachment.attachment)
@@ -323,6 +323,7 @@ def ows_beteiligungen(request):
     http_response = HttpResponse(result)
     http_response.headers['Content-Type'] = content_type
     http_response.headers['Content-Length'] = str(len(result))
+    http_response.headers['Access-Control-Allow-Origin'] = "*"
     return http_response
 
 def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
@@ -536,6 +537,8 @@ def ows(request, pk:int):
     http_response = HttpResponse(result)
     http_response.headers['Content-Type'] = content_type
     http_response.headers['Content-Length'] = str(len(result))
+    # Setzen der CORS Header, um allen Web-Clients die Nutzung des Webservice zu erlauben
+    http_response.headers['Access-Control-Allow-Origin'] = "*"
     return http_response
 
 def vg_list(request):
@@ -1215,7 +1218,7 @@ class RequestForAdminConfirm(FormView):
         request = RequestForOrganizationAdmin.objects.get(id=self.kwargs['pk'])
         # Administratorrollen anlegen
         for organization in request.organizations.all():
-            print(organization)
+            #print(organization)
             # Füge Nutzer als Admin zur Organisation hinzu
             new_admin = AdminOrgaUser()
             new_admin.user = request.owned_by_user

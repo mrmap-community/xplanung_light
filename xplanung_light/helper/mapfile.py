@@ -267,7 +267,7 @@ class MapfileGenerator():
                     layer["connectiontype"] = "POSTGIS"
                     layer["connection"] = 'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
                     layer["data"] = "geltungsbereich from (select geltungsbereich, id from xplanung_light_bplan where public = true) as foo using unique id using srid=25832"
-                print(layer['data'])
+                #print(layer['data'])
                 layer["filter"] = "( '[id]' = '" + str(bplan.pk) + "' )"
                 layer["classes"] = []
                 # Layer nur hinzufügen, wenn auch ein Geltungsbereich existiert

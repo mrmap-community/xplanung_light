@@ -1454,7 +1454,7 @@ class FPlanBeteiligungBeitragAnhangCollection(FormCollection):
 Collection für die über ein ForeignKey mit dem BPlanBeteiligung-Objekt verbundenen BPlanBeteiligungBeitrag-Objekte.
 """
 class BPlanBeteiligungBeitragCollection(FormCollection):
-    print("Instantierung BPlanBeteiligungBeitragCollection")
+    #print("Instantierung BPlanBeteiligungBeitragCollection")
     legend = "Ihr Beitrag"
     add_label = "Beitrag hinzufügen"
     related_field = 'bplan_beteiligung' # hier wird der related_name des verbundenen Objketes genutzt!
@@ -1476,7 +1476,7 @@ class BPlanBeteiligungBeitragCollection(FormCollection):
 Für FPläne
 """
 class FPlanBeteiligungBeitragCollection(FormCollection):
-    print("Instantierung FPlanBeteiligungBeitragCollection")
+    #print("Instantierung FPlanBeteiligungBeitragCollection")
     legend = "Ihr Beitrag"
     add_label = "Beitrag hinzufügen"
     related_field = 'fplan_beteiligung' # hier wird der related_name des verbundenen Objketes genutzt!

@@ -38,9 +38,9 @@ class AdministrativeOrganizationPublishingListView(SingleTableView):
     def get_queryset(self):
         qs = super().get_queryset().only('id', 'name', 'ls', 'ks', 'gs')
         if self.request.user.is_superuser:
-            qs = qs.filter(bplan__isnull=False).distinct()
+            qs = qs.filter(Q(bplan__isnull=False) | Q(fplan__isnull=False)).distinct()
         else:
-            qs = qs.filter(bplan__isnull=False, users=self.request.user).distinct()
+            qs = qs.filter(Q(bplan__isnull=False) | Q(fplan__isnull=False), users=self.request.user).distinct()
         qs = qs.annotate(
                 num_bplan=Count('bplan', distinct=True),
                 num_bplan_public=Count('bplan', distinct=True, filter=Q(bplan__public=True)),

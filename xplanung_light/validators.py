@@ -438,3 +438,6 @@ def fplan_content_validator(xplan_file):
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#raising-multiple-errors
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
+    
+def bplan_datum_validator():
+    pass

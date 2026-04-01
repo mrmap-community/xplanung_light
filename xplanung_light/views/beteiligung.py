@@ -507,9 +507,10 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         story.append(Paragraph("Publizierter Beschreibungstext", styles['Heading3']))
         story.append(HRFlowable())
         #story.append(HRFlowable(color='#ff0066', dash=(10, 5)))
-        doc_model = TipTapNode.model_validate(beteiligung.beschreibung)
-        elements = TipTapToReportLab().convert_to_elements(doc_model)
-        story.extend(elements)
+        if beteiligung.beschreibung:
+            doc_model = TipTapNode.model_validate(beteiligung.beschreibung)
+            elements = TipTapToReportLab().convert_to_elements(doc_model)
+            story.extend(elements)
         story.append(HRFlowable())
         story.append(PageBreak())
         # 2. Liste mit den abgegebenen Online-Beteiligungen

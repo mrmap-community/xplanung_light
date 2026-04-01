@@ -1,4 +1,5 @@
 from django.db import models
+import datetime
 from django.contrib.auth.models import User
 import uuid, os
 from simple_history.models import HistoricalRecords, HistoricForeignKey
@@ -22,6 +23,7 @@ from organizations.base import (
     OrganizationInvitationBase,
 )
 from django_clamd.validators import validate_file_infection
+
 
 # generic meta model
 class GenericMetadata(models.Model):
@@ -171,9 +173,9 @@ class AdministrativeOrganization(GenericMetadata, OrganizationBase):
     published_data_license = HistoricForeignKey(License, null=True, blank=True, verbose_name='Standardisierte Lizenz', help_text='Auswahl einer standardisierten Lizenz', on_delete=models.SET_NULL)
 
     # published_data_license_source_note - if needed
-    published_data_license_source_note = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Quellenangabe', help_text='Art der Quellenangabe - falls Lizenz diese erfodert')
+    published_data_license_source_note = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Quellenangabe', help_text='Art der Quellenangabe - falls Lizenz diese erfordert')
     # published_data_accessrights
-    published_data_accessrights = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Zugriffsbeschränkungen', help_text='Angaben zu vorhandenen Zugriffsbeschränkungen (ist besipielsweise der Zugriff für jedermann möglich, oder nur für besonders berechtigte Personengruppen)')
+    published_data_accessrights = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Zugriffsbeschränkungen', help_text='Angaben zu vorhandenen Zugriffsbeschränkungen (ist beispielsweise der Zugriff für jedermann möglich, oder nur für besonders berechtigte Personengruppen)')
     # published_data_rights
     published_data_rights = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Sonstige rechtliche Hinweise', help_text='Sonstige rechtliche Hinweise, die nicht von den Angaben zu Lizenzen oder Zugriffsbeschränkungen abgedeckt sind')
 
@@ -342,6 +344,20 @@ class BPlan(XPlan):
         (SONSTIGES, "Sonstiges"),
     ]
 
+    AUFSTELLUNGSBESCHLUSS = "1000"
+    IMVERFAHREN = "2000"
+    SATZUNG = "3000"
+    INKRAFTGETRETEN = "4000"
+    UNTERGEGANGEN = "5000"
+
+    BPLAN_RECHTSSTAND_CHOICES = [
+        (AUFSTELLUNGSBESCHLUSS, "Austellungsbeschluss"),
+        (IMVERFAHREN, "ImVerfahren"),
+        (SATZUNG, "Satzung"),
+        (INKRAFTGETRETEN, "InKraftGetreten"),
+        (UNTERGEGANGEN, "Untergegangen"),
+    ]
+
     #gemeinde [1..*], XP_Gemeinde
     # Zur Vereinfachung zunächst nur Kardinalität 1 implementieren
     #gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
@@ -352,16 +368,21 @@ class BPlan(XPlan):
     #planArt [1..*], BP_PlanArt
     planart = models.CharField(null=False, blank=False, max_length=5, choices=BPLAN_TYPE_CHOICES, default='1000', verbose_name='Typ des vorliegenden Bebauungsplans.', db_index=True)
 	#sonstPlanArt [0..1], BP_SonstPlanArt
+    #rechtsstand = models.CharField(null=True, blank=True, max_length=5, choices=BPLAN_RECHTSSTAND_CHOICES, default='1000', verbose_name='Rechtsstand des Bebauungsplans', help_text='Rechtsstand des Bebauungsplans - wird automatisch aus den Datumsfeldern ermittelt!', db_index=True)
     #rechtsstand [0..1], BP_Rechtsstand
     #status [0..1], BP_Status
     #aenderungenBisDatum [0..1], Date
     #aufstellungsbeschlussDatum [0..1], Date
     aufstellungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Aufstellungsbeschlusses", help_text="Datum des Aufstellungsbeschlusses")
     #veraenderungssperre [0..1], BP_VeraenderungssperreDaten
+    """
+    Folgende 4 Attribute werden bei xplanung-light als Relation geführt 
+    """
     #auslegungsStartDatum [0..*], Date
     #auslegungsEndDatum [0..*], Date
     #traegerbeteiligungsStartDatum [0..*], Date
     #traegerbeteiligungsEndDatum [0..*], Date
+
     #satzungsbeschlussDatum [0..1], Date
     satzungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Satzungsbeschlusses", help_text="Datum des Satzungsbeschlusses, falls ein Bebauungsplan als Satzung beschlossen wird.")
     #rechtsverordnungsDatum [0..1], Date
@@ -378,10 +399,80 @@ class BPlan(XPlan):
     durchfuehrungs_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Durchführungsvertrag", help_text="Gibt an, ob für das Planungsgebiet einen Durchführungsvertrag (Kombination aus Städtebaulichen Vertrag und Erschließungsvertrag) gibt.")
     #gruenordnungsplan [0..1], Boolean
     gruenordnungsplan = models.BooleanField(null=False, blank=False, default=False, verbose_name="Grünordnungsplan", help_text="Gibt an, ob für den Plan ein zugehöriger Grünordnungsplan existiert.")
+    """
+    Die gesetzlichen Grundlagen sollten sich aus den Datumsangeben automatisch ergeben
+    """
     #versionBauNVO [0..1], XP_GesetzlicheGrundlage
     #versionBauGB [0..1], XP_GesetzlicheGrundlage
     #versionSonstRechtsgrundlage [0..*], XP_GesetzlicheGrundlage
     #bereich [0..*], BP_Bereich
+
+    def clean(self, *args, **kwargs):
+        """
+        Funktion um die saubere Reihenfolge der jeweiligen Datumsangeben sicherzustellen
+        """
+        dates = []
+        if self.aufstellungsbeschluss_datum:
+            dates.append(self.aufstellungsbeschluss_datum)
+        if self.satzungsbeschluss_datum:
+            dates.append(self.satzungsbeschluss_datum)
+        if self.rechtsverordnungs_datum:
+            dates.append(self.rechtsverordnungs_datum)
+        if self.ausfertigungs_datum:
+            dates.append(self.ausfertigungs_datum)    
+        if self.inkrafttretens_datum:
+            dates.append(self.inkrafttretens_datum)
+        if self.untergangs_datum:
+            dates.append(self.untergangs_datum)
+        is_sorted = dates == sorted(dates)
+        if is_sorted == False:
+            raise ValidationError(('Die Datumsangaben entsprechen nicht ihrer logischen zeitlichen Abfolge!'))
+    # https://stackoverflow.com/questions/17682567/how-to-add-a-calculated-field-to-a-django-model
+    """
+    Das Problem ist wieder, dass wir nicht sortieren und das Feld wie ein Standard-DB Feld managen können 
+    https://stackoverflow.com/questions/67862057/how-to-use-if-else-in-queryset-in-django
+    So wie im Link beschrieben immer dann nutzen, wenn wir Querysets für Tabellen verwenden - das property hier hilft da nicht so viel 
+    """
+    @property
+    def rechtsstand(self):
+        if self.untergangs_datum and self.untergangs_datum <= datetime.date.today():
+            return "5000"
+        if not self.untergangs_datum and self.inkrafttretens_datum and self.inkrafttretens_datum <= datetime.date.today():
+            return "4000"
+        if not self.untergangs_datum and not self.inkrafttretens_datum and self.satzungsbeschluss_datum and self.satzungsbeschluss_datum <= datetime.date.today():
+            return "3000" 
+        if not self.untergangs_datum and not self.inkrafttretens_datum and not self.satzungsbeschluss_datum and self.aufstellungsbeschluss_datum and self.aufstellungsbeschluss_datum <= datetime.date.today() and zahl_laufender_beteiligungen > 0:
+            return "2000"
+        if not self.untergangs_datum and not self.inkrafttretens_datum and not self.satzungsbeschluss_datum and self.aufstellungsbeschluss_datum and self.aufstellungsbeschluss_datum <= datetime.date.today() and zahl_laufender_beteiligungen == 0:
+            return "1000"
+        return None
+    
+    """
+    def save(self, *args, **kwargs):
+        
+        # bestimme Zahl der laufenden Beteiligungsverfahren - geht das on save?
+        # wir brauchen ein Signal wenn Beteiligungsverfahren angelegt werden ... Das Problem ist etwas dynamischer - ob ein Verfahren läuft, ist nur zum jeweiligen 
+        # Abfragezeitpunkt zu klären - doch besser dynamisch erzeugen? ... Bei Ausgabe! 
+        zahl_laufender_beteiligungen = 0
+        try:
+            zahl_laufender_beteiligungen = BPlanBeteiligung.objects.filter(bplan=self.id, start_datum__lte=datetime.date.today(), end_datum__gt=datetime.date.today()).count()
+            print("Gefundene laufende Beteiligungsverfahren:" + str(zahl_laufender_beteiligungen))
+        except:
+            print("Die Zahl der laufenden Beteiligungen konnte nicht ermittelt werden!")
+
+        if self.untergangs_datum and self.untergangs_datum <= datetime.date.today():
+            self.rechtsstand = "5000"
+        if not self.untergangs_datum and self.inkrafttretens_datum and self.inkrafttretens_datum <= datetime.date.today():
+            self.rechtsstand = "4000"
+        if not self.untergangs_datum and not self.inkrafttretens_datum and self.satzungsbeschluss_datum and self.satzungsbeschluss_datum <= datetime.date.today():
+            self.rechtsstand = "3000" 
+        if not self.untergangs_datum and not self.inkrafttretens_datum and not self.satzungsbeschluss_datum and self.aufstellungsbeschluss_datum and self.aufstellungsbeschluss_datum <= datetime.date.today() and zahl_laufender_beteiligungen > 0:
+            self.rechtsstand = "2000"
+        if not self.untergangs_datum and not self.inkrafttretens_datum and not self.satzungsbeschluss_datum and self.aufstellungsbeschluss_datum and self.aufstellungsbeschluss_datum <= datetime.date.today() and zahl_laufender_beteiligungen == 0:
+            self.rechtsstand = "1000"
+        
+        super().save(*args, **kwargs)
+    """
 
     def __str__(self):
         """Returns a string representation of a BPlan."""
@@ -412,7 +503,6 @@ class FPlan(XPlan):
     ]
 
     #gemeinde [1..*], XP_Gemeinde
-    # Zur Vereinfachung zunächst nur Kardinalität 1 implementieren
     #gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
     gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
     history = HistoricalRecords(m2m_fields=[gemeinde])
@@ -455,6 +545,42 @@ class XPlanUvp(GenericMetadata):
                 ('18_2_2', '18.2.2 (A): StPl >=50 < 200'), 
             ),
         ),
+        ( '18.3: Freizeitpark Außenbereich',
+            (
+                ('18_3_1', '18.3.1 (X):  F > 10ha'),
+                ('18_3_2', '18.3.2 (A): 4ha < F < 10ha'), 
+            ),
+        ),
+        ( '18.4: Parkplatz Außenbereich',
+            (
+                ('18_4_1', '18.4.1 (X): F > 1ha'),
+                ('18_4_2', '18.4.2 (A): 0,5ha < F < 1ha'), 
+            ),
+        ),
+        ( '18.5: Industriezone Außenbereich',
+            (
+                ('18_5_1', '18.5.1 (X): F > 100.000m^2'),
+                ('18_5_2', '18.5.2 (A): 20.000m^2 < F < 100.000m^2'), 
+            ),
+        ),
+        ( '18.6: Einkaufszentrums Außenbereich',
+            (
+                ('18_6_1', '18.6.1 (X): F > 5.000m^2'),
+                ('18_6_2', '18.6.2 (A): 1.200m^2 < F < 5.000m^2'), 
+            ),
+        ),
+        ( '18.7: BPlan Außenbereich',
+            (
+                ('18_7_1', '18.7.1 (X): F > 100.000m^2'),
+                ('18_7_2', '18.7.2 (A): 20.000m^2 < F < 100.000m^2'), 
+            ),
+        ),
+        ( 'Andere',
+            (
+                ('18_8', '18.8 (A): Vorhaben gem 18.1-18.7 - Nichtaußenbereich'),
+                ('18_9', '18.9: Vorgesehene UVP - Zulässigkeit gem. BPlan'), 
+            ),
+        ),
     ]
 
     uvp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP durchgeführt", help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP durchgeführt wurde.")
@@ -485,6 +611,42 @@ class Uvp(XPlanUvp):
             (
                 ('18_2_1', '18.2.1 (X): StPl 200+'),
                 ('18_2_2', '18.2.2 (A): StPl >=50 < 200'), 
+            ),
+        ),
+        ( '18.3: Freizeitpark Außenbereich',
+            (
+                ('18_3_1', '18.3.1 (X):  F > 10ha'),
+                ('18_3_2', '18.3.2 (A): 4ha < F < 10ha'), 
+            ),
+        ),
+        ( '18.4: Parkplatz Außenbereich',
+            (
+                ('18_4_1', '18.4.1 (X): F > 1ha'),
+                ('18_4_2', '18.4.2 (A): 0,5ha < F < 1ha'), 
+            ),
+        ),
+        ( '18.5: Industriezone Außenbereich',
+            (
+                ('18_5_1', '18.5.1 (X): F > 100.000m^2'),
+                ('18_5_2', '18.5.2 (A): 20.000m^2 < F < 100.000m^2'), 
+            ),
+        ),
+        ( '18.6: Einkaufszentrums Außenbereich',
+            (
+                ('18_6_1', '18.6.1 (X): F > 5.000m^2'),
+                ('18_6_2', '18.6.2 (A): 1.200m^2 < F < 5.000m^2'), 
+            ),
+        ),
+        ( '18.7: BPlan Außenbereich',
+            (
+                ('18_7_1', '18.7.1 (X): F > 100.000m^2'),
+                ('18_7_2', '18.7.2 (A): 20.000m^2 < F < 100.000m^2'), 
+            ),
+        ),
+        ( 'Andere',
+            (
+                ('18_8', '18.8 (A): Vorhaben gem 18.1-18.7 - Nichtaußenbereich'),
+                ('18_9', '18.9: Vorgesehene UVP - Zulässigkeit gem. BPlan'), 
             ),
         ),
     ]
@@ -819,7 +981,7 @@ class RequestForOrganizationAdmin(models.Model):
     organizations = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gebietskörperschaft(en)", related_name='pending_admin_requests')
     history = HistoricalRecords(m2m_fields=[organizations])
     delete_reason = models.CharField(null=True, blank=True, max_length=10, choices=DELETE_REASON_CHOICES, verbose_name='Grund für die Löschung', help_text="Grund für die Löschung des Antrags")
-    editing_note = RichTextField(null=True, verbose_name="Begründung für die Ablehnung des Antrags")
+    editing_note = RichTextField(null=True, verbose_name="Begründung für die Ablehnung des Antrags bzw. Hinweise zur Freigabe - wie wurde Antragsteller kontaktiert/geprüft. Bei Ablehnung bekommt der Antragsteller die Begründung als Mail zugestellt!")
 
 
 class ConsentOption(models.Model):
