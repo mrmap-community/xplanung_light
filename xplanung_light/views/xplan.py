@@ -267,8 +267,12 @@ class XPlanListView(LoginRequiredMixin, SingleTableMixin, FilterView):
             feature['properties']['planart'] = plan.planart
             # Alternativ - geometry über geos vereinfachen ;-)
             geosgeometry = GEOSGeometry(plan.geltungsbereich)
+            # Zähle die Stützpunkte der generalisierten Geometrie, wenn unter 5, dann sollte die Geometrie so ausgeliefert werden, wie sie ist
             # Simplify beschleunigt den View um fast 40% - je nach Komplexität der Geometrien
-            feature['geometry'] = json.loads(geosgeometry.simplify(0.0005).json)
+            if geosgeometry.simplify(0.0005).num_coords >= 5:
+                feature['geometry'] = json.loads(geosgeometry.simplify(0.0005).json)
+            else:
+                feature['geometry'] = json.loads(geosgeometry.json)
             #feature['geometry'] = json.loads(geosgeometry.json)
             featurecollection['features'].append(feature)
         context["markers"] = featurecollection
