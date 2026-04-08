@@ -43,7 +43,16 @@
     }
 
     </style>
-</head>
+    <!-- add bootstrap table extension - need jquery, bootstrap-table, bootstrap-icons, bootstrap-table-locale TODO: ggf. selbst ausliefern-->
+     <script
+			  src="https://code.jquery.com/jquery-4.0.0.min.js"
+			  integrity="sha256-OaVG6prZf4v69dPg6PhVattBXkcOWQB62pdZ3ORyrao="
+			  crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-table@1.27.1/dist/bootstrap-table.min.css" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-table@1.27.1/dist/bootstrap-table.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.24.2/bootstrap-table-locale-all.min.js" crossorigin="anonymous"></script>
+  </head>
 <body>
     <table>
         <tr>
@@ -208,7 +217,7 @@
     <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
       <div class="accordion-body">
         {% if bplaene %}
-          <table class="table">
+          <table class="table" data-toggle="table" data-locale="de-DE" data-show-search-clear-button="true" data-search="true">
             <thead>
               <tr>
                 <th scope="col">#</th>

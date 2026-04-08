@@ -431,9 +431,10 @@ class XPlanPublicListView(SingleTableMixin, FilterView):
             feature['properties']['planart'] = plan.planart
             # Alternativ - geometry über geos vereinfachen ;-)
             geosgeometry = GEOSGeometry(plan.geltungsbereich)
-            # Simplify beschleunigt den View um fast 40% - je nach Komplexität der Geometrien
-            feature['geometry'] = json.loads(geosgeometry.simplify(0.0005).json)
-            #feature['geometry'] = json.loads(geosgeometry.json)
+            if geosgeometry.simplify(0.0005).num_coords >= 5:
+                feature['geometry'] = json.loads(geosgeometry.simplify(0.0005).json)
+            else:
+                feature['geometry'] = json.loads(geosgeometry.json)
             featurecollection['features'].append(feature)
         context["markers"] = featurecollection
         context['per_page_options'] = [10, 25, 50, 100, 200, 500]
