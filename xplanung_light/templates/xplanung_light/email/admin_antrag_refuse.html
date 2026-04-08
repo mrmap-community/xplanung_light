@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title></title>
+</head>
+<body>
+{% load richtext %}
+Ihr Antrag wurde mit folgender Begründung zurückgewiesen:<br>
+{{ editing_note }}
+________________________<br>
+Ihr XPlanung-light Team:<br>
+{{ metadata_contact.organization_name }}<br>
+{{ metadata_contact.phone }}<br>
+<a href="mailto:{{ metadata_contact.email }}">{{ metadata_contact.email }}</a><br>
+</body>
+</html>

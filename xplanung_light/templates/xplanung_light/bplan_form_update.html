@@ -8,6 +8,12 @@
     window.addEventListener("map:init", function(e) {
             var detail = e.detail;
             var map = detail.map;
+            var wmsBaseLayer = L.tileLayer.wms('https://sgx.geodatenzentrum.de/wms_topplus_open?', {
+                layers: 'web',
+                format: 'image/png',
+                maxZoom: 20,
+                transparent: true,
+            }).addTo(map);
             /* Transparent overlay layers */
             var wmsLayer = L.tileLayer.wms('https://geo5.service24.rlp.de/wms/liegenschaften_rp.fcgi?', {
                 layers: 'Flurstueck',

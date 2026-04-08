@@ -1,0 +1,8 @@
+Ihr Antrag wurde mit folgender Begründung zurückgewiesen:
+
+"{{ editing_note }}"
+________________________
+Ihr XPlanung-light Team:
+{{ metadata_contact.organization_name }}
+{{ metadata_contact.phone }}
+{{ metadata_contact.email }}

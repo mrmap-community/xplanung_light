@@ -981,7 +981,7 @@ class RequestForOrganizationAdmin(models.Model):
     organizations = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gebietskörperschaft(en)", related_name='pending_admin_requests')
     history = HistoricalRecords(m2m_fields=[organizations])
     delete_reason = models.CharField(null=True, blank=True, max_length=10, choices=DELETE_REASON_CHOICES, verbose_name='Grund für die Löschung', help_text="Grund für die Löschung des Antrags")
-    editing_note = RichTextField(null=True, verbose_name="Begründung für die Ablehnung des Antrags bzw. Hinweise zur Freigabe - wie wurde Antragsteller kontaktiert/geprüft. Bei Ablehnung bekommt der Antragsteller die Begründung als Mail zugestellt!")
+    editing_note = models.TextField(null=True, verbose_name="Begründung", help_text="Begründung für die Ablehnung des Antrags bzw. Hinweise zur Freigabe - wie wurde Antragsteller kontaktiert/geprüft. Bei Ablehnung bekommt der Antragsteller die Begründung als Mail zugestellt!")
 
 
 class ConsentOption(models.Model):

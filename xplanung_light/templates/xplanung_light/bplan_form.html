@@ -7,6 +7,9 @@
     Bebauungsplan anlegen
 {% endblock %}
 {% block content %}
+
+<!-- https://raw.githubusercontent.com/alcalin/L.TileLayer.WMTS/refs/heads/main/dist/leaflet.tilelayer.wmts.min.js -->
+<!-- <script src="/static/xplanung_light/leaflet.tilelayer.wmts.min.js"></script> -->
 <script type="text/javascript">
     /*
     Funktion stammt aus Hinweis von chatgpt. Polygone nicht direkt editierbar, weil sie in einem L.GeoJson Container geliefert werde.
@@ -28,6 +31,39 @@
     window.addEventListener("map:init", function(e) {
             var detail = e.detail;
             var map = detail.map;
+            //Test für wmts layer - topplus
+            // GoogleMapsCompatible (WebMercator) example
+            //import { wmts } from "@alcalin/leaflet-tilelayer-wmts";
+            /*
+            const layer1 = LTileLayerWMTS.wmts(
+                "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/WMTS?",
+                {
+                    layer: "USGSTopo",
+                    style: "default",
+                    tileMatrixSet: "default028mm",
+                    format: "image/png",
+                    googleMapsCompatible: true
+                }
+            );
+            const layer2 = LTileLayerWMTS.wmts(
+                "https://sgx.geodatenzentrum.de/wmts_basemapde?",
+                {
+                    layer: "de_basemapde_web_raster_farbe",
+                    style: "default",
+                    tileMatrixSet: "GLOBAL_WEBMERCATOR",
+                    format: "image/png",
+                    googleMapsCompatible: true
+                }
+            );*/
+            /* Scheint nicht zu funktionieren - daher als WMS Overlay hinzufügen!*/
+            //layer2.addTo(map);
+            /* Transparent overlay layers */
+            var wmsBaseLayer = L.tileLayer.wms('https://sgx.geodatenzentrum.de/wms_topplus_open?', {
+                layers: 'web',
+                format: 'image/png',
+                maxZoom: 20,
+                transparent: true,
+            }).addTo(map);
             /* Transparent overlay layers */
             var wmsLayer = L.tileLayer.wms('https://geo5.service24.rlp.de/wms/liegenschaften_rp.fcgi?', {
                 layers: 'Flurstueck',
@@ -35,6 +71,7 @@
                 maxZoom: 20,
                 transparent: true,
             }).addTo(map);
+
             //L.Control.geocoder().addTo(detail.map);
             var control = new L.Control.FileLayerLoad({
                 // Allows you to use a customized version of L.geoJson.

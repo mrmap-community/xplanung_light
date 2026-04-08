@@ -30,6 +30,12 @@ function highlightObject(i) {
 
 function map_init_basic (map, options) {
     mapGlobal = map;
+    var wmsBaseLayer = L.tileLayer.wms('https://sgx.geodatenzentrum.de/wms_topplus_open?', {
+                layers: 'web',
+                format: 'image/png',
+                maxZoom: 20,
+                transparent: true,
+    }).addTo(mapGlobal);
     //https://stackoverflow.com/questions/43007019/leaflet-event-how-to-propagate-to-overlapping-layers
     const data = document.getElementById("markers-data");
     const markers = JSON.parse(data.textContent);

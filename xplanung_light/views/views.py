@@ -41,6 +41,9 @@ from django.db import connection
 from formset.views import FormView
 from django.urls import reverse_lazy
 from django.contrib import messages
+from django.template.loader import render_to_string
+from django.core.mail import EmailMultiAlternatives
+#from django.utils.timezone import datetime
 
 def get_bplan_attachment(request, pk):
     # Nur admins der Gebietskörperschaften oder superuser
@@ -1216,6 +1219,7 @@ class RequestForAdminConfirm(FormView):
     def form_valid(self, form):
         # Auslesen des pk zur Aktualisierung des Antragrecords
         request = RequestForOrganizationAdmin.objects.get(id=self.kwargs['pk'])
+        organizations = []
         # Administratorrollen anlegen
         for organization in request.organizations.all():
             #print(organization)
@@ -1225,12 +1229,28 @@ class RequestForAdminConfirm(FormView):
             new_admin.organization = organization
             new_admin.is_admin = True
             new_admin.save()
+            organizations.append(organization)
         request.editing_note = form.cleaned_data['editing_note']
         request.delete_reason = 'c'
         request.save()
         request.delete()
         messages.add_message(self.request, messages.SUCCESS, "Antrag " + str(self.kwargs['pk']) + " wurde bestätigt!")
         # Senden einer EMail mit Benachrichtung an Antragsteller
+        # Senden einer EMail mit Benachrichtung an Antragsteller
+        subject = str("XPlanung-light: Ihr Antrag auf Organisationsadmin vom " + datetime.date.today().strftime('%Y-%m-%d'))
+        html_content = render_to_string("xplanung_light/email/admin_antrag_confirm.html", context={"organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+        text_content = render_to_string("xplanung_light/email/admin_antrag_confirm.txt", context={"organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
+            to=[str(request.owned_by_user.email),],
+            #bcc=[str(farmshop.contact_email),],
+            reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
+        )
+        #email.content_subtype = "text"
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=True)
         # TODO
         return super().form_valid(form)
 
@@ -1255,6 +1275,20 @@ class RequestForAdminRefuse(FormView):
         request.delete()
         messages.add_message(self.request, messages.SUCCESS, "Antrag " + str(self.kwargs['pk']) + " wurde zurückgewiesen!")
         # Senden einer EMail mit Benachrichtung an Antragsteller
+        subject = str("XPlanung-light: Ihr Antrag auf Organisationsadmin vom " + datetime.date.today().strftime('%Y-%m-%d'))
+        html_content = render_to_string("xplanung_light/email/admin_antrag_refuse.html", context={"editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+        text_content = render_to_string("xplanung_light/email/admin_antrag_refuse.txt", context={"editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
+            to=[str(request.owned_by_user.email),],
+            #bcc=[str(farmshop.contact_email),],
+            reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
+        )
+        #email.content_subtype = "text"
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=True)
         # TODO
         return super().form_valid(form)
     

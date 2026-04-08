@@ -1564,9 +1564,11 @@ class RequestForOrganizationAdminRefuseForm(ModelForm):
     class Meta:
         model = RequestForOrganizationAdmin
         fields = ["editing_note"]
+        """
         widgets = {
-            'editing_note': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+            'editing_note': forms.CharField(widget=forms.Textarea),
         }
+        """
 
 
 class RequestForOrganizationAdminConfirmForm(ModelForm):
@@ -1582,9 +1584,11 @@ class RequestForOrganizationAdminConfirmForm(ModelForm):
     class Meta:
         model = RequestForOrganizationAdmin
         fields = ["editing_note"]
+        """
         widgets = {
-            'editing_note': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+            'editing_note': forms.CharField(widget=forms.Textarea),
         }
+        """
 
 from formset.richtext.controls import DialogControl
 from formset.richtext.dialogs import SimpleLinkDialogForm
