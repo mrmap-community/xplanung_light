@@ -30,12 +30,19 @@ function highlightObject(i) {
 
 function map_init_basic (map, options) {
     mapGlobal = map;
-    var wmsBaseLayer = L.tileLayer.wms('https://sgx.geodatenzentrum.de/wms_topplus_open?', {
-                layers: 'web',
+    {% if further_base_layers or overlay_layers %}
+    var layerControl = L.control.layers().addTo(map);
+    {% endif %}
+    {% for base_layer in further_base_layers %}
+    var {{ base_layer.name }} = L.tileLayer.wms('{{ base_layer.url }}', {
+                layers: '{{ base_layer.layer_name }}',
                 format: 'image/png',
                 maxZoom: 20,
                 transparent: true,
+                attribution: '{{ base_layer.attribution }}',
     }).addTo(mapGlobal);
+    layerControl.addBaseLayer({{ base_layer.name }}, "{{ base_layer.title }}");
+    {% endfor %}
     //https://stackoverflow.com/questions/43007019/leaflet-event-how-to-propagate-to-overlapping-layers
     const data = document.getElementById("markers-data");
     const markers = JSON.parse(data.textContent);
