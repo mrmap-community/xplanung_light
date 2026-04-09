@@ -8,19 +8,31 @@
     window.addEventListener("map:init", function(e) {
             var detail = e.detail;
             var map = detail.map;
-            var wmsBaseLayer = L.tileLayer.wms('https://sgx.geodatenzentrum.de/wms_topplus_open?', {
-                layers: 'web',
-                format: 'image/png',
-                maxZoom: 20,
-                transparent: true,
+            {% if further_base_layers %}
+            var layerControl = L.control.layers().addTo(map);
+            {% endif %}
+            {% for base_layer in further_base_layers %}
+            var {{ base_layer.name }} = L.tileLayer.wms('{{ base_layer.url }}?', {
+                        layers: '{{ base_layer.layer_name }}',
+                        format: 'image/png',
+                        maxZoom: 20,
+                        transparent: true,
+                        attribution: '{{ base_layer.attribution }}',
             }).addTo(map);
-            /* Transparent overlay layers */
-            var wmsLayer = L.tileLayer.wms('https://geo5.service24.rlp.de/wms/liegenschaften_rp.fcgi?', {
-                layers: 'Flurstueck',
-                format: 'image/png',
-                maxZoom: 20,
-                transparent: true,
+            layerControl.addBaseLayer({{ base_layer.name }}, "{{ base_layer.title }}");
+            {% endfor %}
+            {% if overlay_layers %}
+            {% for layer in overlay_layers %}
+            var {{ layer.name }} = L.tileLayer.wms('{{ layer.url }}', {
+                        layers: '{{ layer.layer_name }}',
+                        format: 'image/png',
+                        maxZoom: 20,
+                        transparent: true,
+                        attribution: '{{ layer.attribution }}',
             }).addTo(map);
+            layerControl.addOverlay({{ layer.name }}, "{{ layer.title }}");
+            {% endfor %}
+            {% endif %}
             // and many more
         }, false
     ); //end of window.addEventListener

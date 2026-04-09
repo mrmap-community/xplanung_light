@@ -86,6 +86,10 @@ class XPlanCreateView(LoginRequiredMixin, CreateView):
         # check ob user ein admin einer AdministrativeOrganization ist - sonst nicht zulässig
         # TODO
         # raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        if 'further_base_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
+            context['further_base_layers'] = settings.XPLANUNG_LIGHT_CONFIG['further_base_layers']
+        if 'overlay_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
+            context['overlay_layers'] = settings.XPLANUNG_LIGHT_CONFIG['overlay_layers']   
         return context
 
     def get_form(self, form_class=None):
@@ -156,6 +160,15 @@ class XPlanUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
         form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
         return form
     
+    def get_context_data(self, **kwargs):
+        # Get the current context from the parent's get_context_data method
+        context = super().get_context_data(**kwargs)
+        if 'further_base_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
+            context['further_base_layers'] = settings.XPLANUNG_LIGHT_CONFIG['further_base_layers']
+        if 'overlay_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
+            context['overlay_layers'] = settings.XPLANUNG_LIGHT_CONFIG['overlay_layers'] 
+        return context
+
     def form_valid(self, form):
         if self.request.user.is_superuser == False:
             # Überprüfen, ob der jeweilige Nutzer auch als Administrator eine der Gemeinden eingetragen ist
@@ -277,6 +290,8 @@ class XPlanListView(LoginRequiredMixin, SingleTableMixin, FilterView):
             featurecollection['features'].append(feature)
         context["markers"] = featurecollection
         context['per_page_options'] = [10, 25, 50, 100, 200, 500]
+        if 'further_base_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
+            context['further_base_layers'] = settings.XPLANUNG_LIGHT_CONFIG['further_base_layers']
         return context
     
     # https://www.geeksforgeeks.org/python/filter-objects-with-count-annotation-in-django/
@@ -438,6 +453,8 @@ class XPlanPublicListView(SingleTableMixin, FilterView):
             featurecollection['features'].append(feature)
         context["markers"] = featurecollection
         context['per_page_options'] = [10, 25, 50, 100, 200, 500]
+        if 'further_base_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
+            context['further_base_layers'] = settings.XPLANUNG_LIGHT_CONFIG['further_base_layers']
         return context
     
     # https://www.geeksforgeeks.org/python/filter-objects-with-count-annotation-in-django/

@@ -1,15 +1,4 @@
-{# Load the tag library #}
-{% load django_bootstrap5 %}
 
-{# Load CSS and JavaScript #}
-{% bootstrap_css %}
-{% bootstrap_javascript %}
-{# load leaflet specific parts #}
-{% load leaflet_tags %}
-{% leaflet_css plugins="ALL" %}
-{% leaflet_js plugins="ALL" %}
-{# Display django.contrib.messages as Bootstrap alerts #}
-{% bootstrap_messages %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -18,6 +7,18 @@
     <meta name="description" content="Author: Armin Retterath, XPlanung, Django, Formular, Easy, kostenfrei, Open Source"/>
     <title>{% block title %}{% endblock %}</title>
     {% load static %}
+    {# Load the tag library #}
+    {% load django_bootstrap5 %}
+
+    {# Load CSS and JavaScript #}
+    {% bootstrap_css %}
+    {% bootstrap_javascript %}
+    {# load leaflet specific parts #}
+    {% load leaflet_tags %}
+    {% leaflet_css plugins="ALL" %}
+    {% leaflet_js plugins="ALL" %}
+    {# Display django.contrib.messages as Bootstrap alerts #}
+    {% bootstrap_messages %}
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
     <link rel="stylesheet" type="text/css" href="{% static 'xplanung_light/site.css' %}"/>
     <!-- django-formset -->
