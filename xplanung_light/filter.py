@@ -37,7 +37,7 @@ def fplan_organizations(request):
         return AdministrativeOrganization.objects.filter(Exists(FPlan.objects.filter(gemeinde=OuterRef("pk")))).only("pk", "name", "name_part", "type")
     if request.user.is_superuser:
         return AdministrativeOrganization.objects.filter(Exists(FPlan.objects.filter(gemeinde=OuterRef("pk")))).only("pk", "name", "name_part", "type")
-    if request.user.user.is_anonymous:
+    if request.user.is_anonymous:
         return AdministrativeOrganization.objects.filter(Exists(FPlan.objects.filter(gemeinde=OuterRef("pk"), public=True))).only("pk", "name", "name_part", "type")
     else:
         return AdministrativeOrganization.objects.filter(users=request.user).filter(Exists(FPlan.objects.filter(gemeinde=OuterRef("pk")))).only("pk", "name", "name_part", "type")
