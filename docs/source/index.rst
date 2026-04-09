@@ -18,6 +18,32 @@ documentation for details.
    introduction/overview
    introduction/bauleitplanung
    introduction/xplanung
-   introduction/produktivbetrieb
 
+.. toctree::
+   :maxdepth: 3
+   :caption: Dokumentation 
+
+   documentation/nutzermanagement
+   documentation/organisationsmanagement
+   documentation/planmanagement
+   documentation/beteiligungen
+   documentation/schnittstellen
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Entwicklung
+
+   development/entwicklung
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Installation
+
+   installation/installation
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Betrieb
+
+   operation/produktivbetrieb
 

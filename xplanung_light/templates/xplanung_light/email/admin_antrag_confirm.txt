@@ -1,7 +1,7 @@
 Ihr Antrag auf Administrationsadmin für folgende Gebietskörperschaften wurde bestätigt:
 
 {% for organization in organizations %}
-* {{ organization.name }} ({{ organization.ls }}{{ organization.ks }} {{ organization.gs }})
+* {{ organization.name }} ({{ organization.ls }}{{ organization.ks }}{{ organization.gs }})
 {% endfor %}
 ________________________
 Ihr XPlanung-light Team:

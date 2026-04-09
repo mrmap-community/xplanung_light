@@ -5,11 +5,15 @@
     <title></title>
 </head>
 <body>
-{% load richtext %}
-Ihr Antrag wurde mit folgender Begründung zurückgewiesen:<br>
-{{ editing_note }}
-________________________<br>
-Ihr XPlanung-light Team:<br>
+<p>
+    Ihr Antrag wurde mit folgender Begründung zurückgewiesen:
+</p>
+<hr />
+<p><b>{{ editing_note }}<br></p>
+<hr />
+<p>
+    Ihr XPlanung-light Team:
+</p>
 {{ metadata_contact.organization_name }}<br>
 {{ metadata_contact.phone }}<br>
 <a href="mailto:{{ metadata_contact.email }}">{{ metadata_contact.email }}</a><br>

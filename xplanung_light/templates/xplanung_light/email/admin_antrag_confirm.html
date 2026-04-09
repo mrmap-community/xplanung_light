@@ -5,14 +5,21 @@
     <title></title>
 </head>
 <body>
-Ihr Antrag auf Administrationsadmin für folgende Gebietskörperschaften wurde bestätigt:<br>
-<ul>
-{% for organization in organizations %}
-<li>{{ organization.name }} ({{ organization.ls }}{{ organization.ks }} {{ organization.gs }})</li>
-{% endfor %}
-</ul>
-_______________________
-Ihr XPlanung-light Team:<br>
+    <p>
+        Ihr Antrag auf Administrationsadmin für folgende Gebietskörperschaften wurde bestätigt:
+    </p>
+    <p>
+        <ul>
+            {% for organization in organizations %}
+            <li>{{ organization.name }} ({{ organization.ls }}{{ organization.ks }}{{ organization.gs }})</li>
+            {% endfor %}
+        </ul>
+    </p>
+    <p>
+
+    </p>
+<hr />
+<p>Ihr XPlanung-light Team:</p>
 {{ metadata_contact.organization_name }}<br>
 {{ metadata_contact.phone }}<br>
 <a href="mailto:{{ metadata_contact.email }}">{{ metadata_contact.email }}</a><br>
