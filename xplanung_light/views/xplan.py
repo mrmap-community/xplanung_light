@@ -286,7 +286,6 @@ class XPlanListView(LoginRequiredMixin, SingleTableMixin, FilterView):
                 feature['geometry'] = json.loads(geosgeometry.simplify(0.0005).json)
             else:
                 feature['geometry'] = json.loads(geosgeometry.json)
-            #feature['geometry'] = json.loads(geosgeometry.json)
             featurecollection['features'].append(feature)
         context["markers"] = featurecollection
         context['per_page_options'] = [10, 25, 50, 100, 200, 500]
