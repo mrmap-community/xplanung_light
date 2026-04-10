@@ -28,6 +28,7 @@ documentation for details.
    documentation/planmanagement
    documentation/beteiligungen
    documentation/schnittstellen
+   documentation/admin
 
 .. toctree::
    :maxdepth: 2

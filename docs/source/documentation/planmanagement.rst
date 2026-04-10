@@ -36,6 +36,13 @@ Die optionalen Felder sind im unteren Bereich des Formulars aufgeführt.
 Nach Absenden des Formulars wird man zur Liste zurückgeleitet. Dort wird der neu erfasste Record angezeigt. Die Umringsgeometrie ist im 
 Kartenviewer zu sehen und der Plan lässt sich hierüber auch selektieren. Es stehen diverse Filter zur Verfügung.
 
+Besonderheiten
+==============
+
+* Es können mehrere Gebietskörperschaften zugewiesen werden
+* Der Geometrieeditor erlaubt auch das Hochladen von KML/GPX und GeoJSON (vorhandene Geometrien werden ersetzt)
+* Die Validierung der Datumsfelder (zeitliche Abfolge) erfolgt durch das Überschreiben der clean Funktion im BPlan-Model
+
 Liste der eigenen Bebauungspläne
 ********************************
 
@@ -158,3 +165,45 @@ Die Referenzen im XPlan-GML werden automatisch gesetzt.
 
 
 .. image:: ../media/plan_archiv_gml_anlage_referenz.png
+
+************
+XPlan Export
+************
+
+Beim Export der XPlan Informationen muss unterschieden werden, ob das Objekt im System erstellt oder über die XPlan-GML Schnittstelle importiert wurde.
+Ein mit XPlanung-light erstellter Plan enthält nur die Informationen, die das XPlanung-light Informationsmodell verwaltet.
+Wird jedoch ein vollvektorieller Plan im GML-Format importiert, dann wird dieses GML auch über die Schnittstellen nach Außen abgegeben.
+Die Attribute, die über XPlanung-light geändert wurden, werden dann automatisch vor dem Export im GML ausgetauscht.
+
+Folgende Elemente werden dabei überschrieben (`helper/xplanung.py`_)
+
+BPlan:
+
+* ``xplan:name``
+* ``xplan:nummer``
+* ``xplan:beschreibung``
+* ``xplan:untergangsDatum``
+* ``xplan:erstellungsMassstab``
+* ``xplan:planArt``
+* ``xplan:aufstellungsbeschlussDatum``
+* ``xplan:satzungsbeschlussDatum``
+* ``xplan:inkrafttretensDatum``
+* ``xplan:ausfertigungsDatum``
+* ``xplan:staedtebaulicherVertrag``
+* ``xplan:erschliessungsVertrag``
+* ``xplan:durchfuehrungsVertrag``
+* ``xplan:gruenordnungsplan``
+
+FPlan:
+
+* ``xplan:name``
+* ``xplan:nummer``
+* ``xplan:beschreibung``
+* ``xplan:untergangsDatum``
+* ``xplan:erstellungsMassstab``
+* ``xplan:planArt``
+* ``xplan:aufstellungsbeschlussDatum``
+* ``xplan:planbeschlussDatum``
+* ``xplan:wirksamkeitsDatum``
+
+   .. _helper/xplanung.py: https://github.com/mrmap-community/xplanung_light/blob/master/xplanung_light/helper/xplanung.py
