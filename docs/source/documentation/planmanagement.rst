@@ -23,12 +23,12 @@ Formular mit Pflichtfeldern (markiert durch roten ``*`` )
 
 XPlanung selbst sieht **nur vier Pflichtfelder** vor:
 
-* Name
-* Gemeinde(n)
-* Geltungsbereich (Multipolygon)
-* Typ des Plans
+* Name - ``xplan:name``
+* Gemeinde(n) - ``xplan:gemeinde`` - ``xplan:XP_Gemeinde``
+* Geltungsbereich (Multipolygon) - ``xplan:raeumlicherGeltungsbereich``
+* Typ des Plans - ``xplan:planArt``
 
-Für XPlanung-light haben wir **Nummer** als zusätzliches Pflichtfeld deklariert. 
+Für XPlanung-light haben wir **Nummer** - ``xplan:nummer`` als zusätzliches Pflichtfeld deklariert. 
 Die optionalen Felder sind im unteren Bereich des Formulars aufgeführt.
 
 .. image:: ../media/bplan_formular_neu.png
