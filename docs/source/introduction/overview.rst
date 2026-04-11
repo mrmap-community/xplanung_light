@@ -60,8 +60,12 @@ Als Verwaltungs- und Publikationstool für Bauleitpläne ist **XPlanung-light** 
    Das Projekt befindet sich aktuell noch in der Entwicklung. Um interessierten Entwicklern den Einstieg in die 
    Materie zu erleichtern gibt es ein Tutorial: `Django-Tutorial`_.
 
-   Für die Phase bis zur Einführung im Sommer 2026 gibt es eine Testinstanz: `XPlanung-light-RLP`_.
+   Die Software wird auf aktuell auf Github entwickelt: `Github Repo`_
+
+   Für die Phase bis zur Einführung im Sommer 2026 gibt es in Rheinland-Pfalz eine Testinstanz: `XPlanung-light`_.
 
    .. _Django-Tutorial: https://mrmap-community.github.io/django-tutorial/  
 
-   .. _XPlanung-light-RLP: https://xplanung.geoportal.rlp.de/ 
+   .. _XPlanung-light: https://xplanung.geoportal.rlp.de/ 
+   
+   .. _Github Repo: https://github.com/mrmap-community/xplanung_light/

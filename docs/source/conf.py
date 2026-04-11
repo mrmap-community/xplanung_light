@@ -7,8 +7,8 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'XPlanung-light'
-copyright = '2025, Armin Retterath'
-author = 'Armin Retterath'
+copyright = '2026, GDI-RP'
+author = 'GDI-RP'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
