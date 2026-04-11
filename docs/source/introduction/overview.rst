@@ -55,6 +55,12 @@ Als Verwaltungs- und Publikationstool für Bauleitpläne ist **XPlanung-light** 
 * Automatische Erstellung von Metadaten und OGC-Diensten für eine standardisierte Publikation der Daten
 * ...
 
+**Publikationen**
+
+* FOSSGIS 2026 - `XPlanung-light Übertragung des "keep it simple and stupid"-Prinzips auf XPlanung`_
+
+.. _XPlanung-light Übertragung des "keep it simple and stupid"-Prinzips auf XPlanung: https://media.ccc.de/v/fossgis2026-84232-xplanung-light-ubertragung-des-keep-it-simple-and-stupid-prinzips-auf-xplanung
+
 .. note::
 
    Das Projekt befindet sich aktuell noch in der Entwicklung. Um interessierten Entwicklern den Einstieg in die 
