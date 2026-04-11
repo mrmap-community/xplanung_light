@@ -1,0 +1,320 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="de" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planverwaltung &mdash; XPlanung-light  Dokumentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=245627df"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../_static/translations.js?v=9bf55d28"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Stichwortverzeichnis" href="../genindex.html" />
+    <link rel="search" title="Suche" href="../search.html" />
+    <link rel="next" title="Beteiligungen" href="beteiligungen.html" />
+    <link rel="prev" title="Organisationsdaten" href="organisationsmanagement.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            XPlanung-light
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Dokumentation durchsuchen" aria-label="Dokumentation durchsuchen" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Einführung</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/overview.html">Übersicht</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/bauleitplanung.html">Bauleitplanung</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/xplanung.html">XPlanung</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Dokumentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="nutzermanagement.html">Nutzerverwaltung</a></li>
+<li class="toctree-l1"><a class="reference internal" href="organisationsmanagement.html">Organisationsdaten</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Planverwaltung</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#plane-anlegen">Pläne anlegen</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#uber-formular">Über Formular</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#formular-mit-pflichtfeldern-markiert-durch-roten">Formular mit Pflichtfeldern (markiert durch roten <code class="docutils literal notranslate"><span class="pre">*</span></code> )</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#liste-der-eigenen-bebauungsplane">Liste der eigenen Bebauungspläne</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#detailanzeige">Detailanzeige</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#upload-xplan-gml">Upload XPlan-GML</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#beispiel">Beispiel</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#upload-xplan-archiv">Upload XPlan-Archiv</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#anlagen-verwalten">Anlagen verwalten</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#anlagen-in-detailanzeige">Anlagen in Detailanzeige</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#anlagen-in-xplan-archiv">Anlagen in XPlan-Archiv</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#xplan-export">XPlan Export</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="beteiligungen.html">Beteiligungen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="schnittstellen.html">Schnittstellen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="admin.html">Administration</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Entwicklung</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../development/entwicklung.html">Entwicklung</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Installation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation/installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Betrieb</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operation/produktivbetrieb.html">Produktivbetrieb</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">XPlanung-light</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Planverwaltung</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/documentation/planmanagement.rst.txt" rel="nofollow"> Quelltext anzeigen</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="planverwaltung">
+<h1>Planverwaltung<a class="headerlink" href="#planverwaltung" title="Link to this heading"></a></h1>
+<section id="plane-anlegen">
+<h2>Pläne anlegen<a class="headerlink" href="#plane-anlegen" title="Link to this heading"></a></h2>
+<p>Die Informationen zu den Bauleitplänen lassen sich auf verschiedene Arten in das System überführen. Sollten die Pläne in maschinenlesbaren Formaten vorliegen,
+ist ein programmatischer Import die beste Lösung. Ein Beispielscript befindet sich im management Ordner.</p>
+<section id="uber-formular">
+<h3>Über Formular<a class="headerlink" href="#uber-formular" title="Link to this heading"></a></h3>
+<p>Aufruf des Formulars über den Menupunkt <strong>Pläne und Satzungen -&gt;  Bebauungspläne</strong>. Link <strong>BPlan_anlegen</strong>.</p>
+<img alt="../_images/bplan_liste_formular_start.png" src="../_images/bplan_liste_formular_start.png" />
+<section id="formular-mit-pflichtfeldern-markiert-durch-roten">
+<h4>Formular mit Pflichtfeldern (markiert durch roten <code class="docutils literal notranslate"><span class="pre">*</span></code> )<a class="headerlink" href="#formular-mit-pflichtfeldern-markiert-durch-roten" title="Link to this heading"></a></h4>
+<p>XPlanung selbst sieht <strong>nur vier Pflichtfelder</strong> vor:</p>
+<ul class="simple">
+<li><p>Name - <code class="docutils literal notranslate"><span class="pre">xplan:name</span></code></p></li>
+<li><p>Gemeinde(n) - <code class="docutils literal notranslate"><span class="pre">xplan:gemeinde</span></code> - <code class="docutils literal notranslate"><span class="pre">xplan:XP_Gemeinde</span></code></p></li>
+<li><p>Geltungsbereich (Multipolygon) - <code class="docutils literal notranslate"><span class="pre">xplan:raeumlicherGeltungsbereich</span></code></p></li>
+<li><p>Typ des Plans - <code class="docutils literal notranslate"><span class="pre">xplan:planArt</span></code></p></li>
+</ul>
+<p>Für XPlanung-light haben wir <strong>Nummer</strong> - <code class="docutils literal notranslate"><span class="pre">xplan:nummer</span></code> als zusätzliches Pflichtfeld deklariert.
+Die optionalen Felder sind im unteren Bereich des Formulars aufgeführt.</p>
+<img alt="../_images/bplan_formular_neu.png" src="../_images/bplan_formular_neu.png" />
+<p>Nach Absenden des Formulars wird man zur Liste zurückgeleitet. Dort wird der neu erfasste Record angezeigt. Die Umringsgeometrie ist im
+Kartenviewer zu sehen und der Plan lässt sich hierüber auch selektieren. Es stehen diverse Filter zur Verfügung.</p>
+<section id="besonderheiten">
+<h5>Besonderheiten<a class="headerlink" href="#besonderheiten" title="Link to this heading"></a></h5>
+<ul class="simple">
+<li><p>Es können mehrere Gebietskörperschaften zugewiesen werden</p></li>
+<li><p>Der Geometrieeditor erlaubt auch das Hochladen von KML/GPX und GeoJSON (vorhandene Geometrien werden ersetzt)</p></li>
+<li><p>Die Validierung der Datumsfelder (zeitliche Abfolge) erfolgt durch das Überschreiben der clean Funktion im BPlan-Model</p></li>
+</ul>
+</section>
+</section>
+<section id="liste-der-eigenen-bebauungsplane">
+<h4>Liste der eigenen Bebauungspläne<a class="headerlink" href="#liste-der-eigenen-bebauungsplane" title="Link to this heading"></a></h4>
+<img alt="../_images/bplan_liste_erster_eintrag.png" src="../_images/bplan_liste_erster_eintrag.png" />
+</section>
+<section id="detailanzeige">
+<h4>Detailanzeige<a class="headerlink" href="#detailanzeige" title="Link to this heading"></a></h4>
+<p>In der Detailanzeige erhält man eine Übersicht über den kompletten Datensatz. Wichtig ist hier, dass viele Informationen
+dynamisch erstellt werden. Die Informationen zu den Kontaktstellen und den verantwortlichen Organisationen werden direkt
+genutzt und müssen nicht doppelt gepflegt werden.</p>
+<p>Es werden auch Links auf verschiedene Schnittstellen angeboten:</p>
+<ul class="simple">
+<li><p>Export des XPlan-GML</p></li>
+<li><p>Export des XPlan-Archiv (ZIP)</p></li>
+<li><p>Dynamisch generierte ISO19139 Metadaten</p></li>
+</ul>
+<img alt="../_images/bplan_detail_1.png" src="../_images/bplan_detail_1.png" />
+</section>
+</section>
+<section id="upload-xplan-gml">
+<h3>Upload XPlan-GML<a class="headerlink" href="#upload-xplan-gml" title="Link to this heading"></a></h3>
+<p>Aufruf des Formulars über den Menupunkt <strong>Pläne und Satzungen -&gt;  Bebauungspläne</strong>. Link <strong>BPlan_importieren</strong>.</p>
+<img alt="../_images/bplan_gml_importieren.png" src="../_images/bplan_gml_importieren.png" />
+<p>Folgende Prüfungen werden durchgeführt:</p>
+<ul class="simple">
+<li><p>Unterstützte XPlan Versionen: 5.1, 5.4, 6.0</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:XP_Gemeinde</span></code> muss <strong>ags</strong> und <strong>gemeindeName</strong> beinhalten</p></li>
+<li><p>In der Organisationsregistry <strong>muss</strong> eine Organisation mit dem gleichen <strong>ags</strong> und <strong>gemeindeName</strong> existieren</p></li>
+<li><p>Der Nutzer muss die Berechtigung besitzen, die Pläne für diese Organisation zu verwalten</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Bemerkung</p>
+<p>Die Identität der Pläne wird durch eine Kombination von <strong>XP_Gemeinde</strong> und dem Namen des Plans gewährleistet. Der Name des Plans (<strong>xplan:name</strong>) muss also innerhalb einer
+Gemeinde <strong>eindeutig</strong> sein.</p>
+<p>Ist der Plan schon vorhanden, so muss explizit ausgewählt werden, dass dieser überschrieben werden soll.</p>
+<p>Wurde eine XPlan-GML Datei von einem Planungsbüro geliefert, kann diese mit einem Editor geöffnet werden und man kann das <strong>XP_Gemeinde</strong>
+Objekt mit der Hand abändern. Am besten gibt man aber den Büros die Werte für <strong>ags</strong> und <strong>gemeindeName</strong> vor.</p>
+</div>
+<section id="beispiel">
+<h4>Beispiel<a class="headerlink" href="#beispiel" title="Link to this heading"></a></h4>
+<p>Export eines Plans in XPlan-GML und anschliessender Import.</p>
+<img alt="../_images/bplan_gml_exportiert.png" src="../_images/bplan_gml_exportiert.png" />
+<img alt="../_images/bplan_gml_exportiert_import.png" src="../_images/bplan_gml_exportiert_import.png" />
+</section>
+</section>
+<section id="upload-xplan-archiv">
+<h3>Upload XPlan-Archiv<a class="headerlink" href="#upload-xplan-archiv" title="Link to this heading"></a></h3>
+<p>Aufruf des Formulars über den Menupunkt <strong>Pläne und Satzungen -&gt;  Bebauungspläne</strong>. Link <strong>BPlan_Archiv_importieren</strong>.</p>
+<img alt="../_images/bplan_archiv_importieren.png" src="../_images/bplan_archiv_importieren.png" />
+<p>Nach dem erfolgreichen Import wird im Record dokumentiert, dass der Plan aus einem XPlan-GML stammt.</p>
+<img alt="../_images/bplan_archiv_exportiert_import.png" src="../_images/bplan_archiv_exportiert_import.png" />
+<p>Die Anlagen werden ebenfalls importiert.</p>
+<div class="admonition note">
+<p class="admonition-title">Bemerkung</p>
+<p>Da hier keine Identitätsprüfung auf Dateibasis erfolgt, werden vorhandene Anlagen mit gleichem <strong>Namen</strong> immer überschrieben. Gleichnamige vorhandene Dateien erhalten einen neuen Dateinamen.</p>
+</div>
+<img alt="../_images/bplan_archiv_exportiert_import_anlagen.png" src="../_images/bplan_archiv_exportiert_import_anlagen.png" />
+</section>
+</section>
+<section id="anlagen-verwalten">
+<h2>Anlagen verwalten<a class="headerlink" href="#anlagen-verwalten" title="Link to this heading"></a></h2>
+<p>Mit XPlanung-light können lassen sich bliebig viele Anlagen verwalten. XPlanung gibt eine Liste von Dokumententypen vor: <code class="docutils literal notranslate"><span class="pre">XP_ExterneReferenzTyp</span></code>.
+Diese ist leider nicht ausreichend und muss für die Praxis ergänzt werden. Zur Anlagenverwaltung kommt man über <strong>Pläne und Satzungen -&gt;  Bebauungspläne</strong>. Link in der Spalte <strong>Anlagen</strong>.</p>
+<p>Liste der Anlagen</p>
+<img alt="../_images/bplan_anlagen_liste.png" src="../_images/bplan_anlagen_liste.png" />
+<p>Zulässige Dateitypen:</p>
+<ul class="simple">
+<li><p>TBD</p></li>
+</ul>
+<p>Maximale Dateigröße: TBD MB</p>
+<p>Vor dem Upload wird die Datei auf Viren überprüft!</p>
+<div class="admonition note">
+<p class="admonition-title">Bemerkung</p>
+<p>Will man eine Anlage vom Typ <strong>Karte</strong> hochladen, wird diese speziell validiert. Diese Anlage wird später genutzt, um das
+das Bild über die WebMapService-Schnittstelle an der richtigen Stelle darstellen zu können.</p>
+<p>Folgende Eigenschaften werden gefordert:</p>
+<ul class="simple">
+<li><p>Format: geotiff</p></li>
+<li><p>CRS: EPSG:25832</p></li>
+<li><p>Overviews vorhanden</p></li>
+<li><p>LZW Komprimierung</p></li>
+</ul>
+</div>
+<section id="anlagen-in-detailanzeige">
+<h3>Anlagen in Detailanzeige<a class="headerlink" href="#anlagen-in-detailanzeige" title="Link to this heading"></a></h3>
+<img alt="../_images/plan_detail_anlage.png" src="../_images/plan_detail_anlage.png" />
+</section>
+<section id="anlagen-in-xplan-archiv">
+<h3>Anlagen in XPlan-Archiv<a class="headerlink" href="#anlagen-in-xplan-archiv" title="Link to this heading"></a></h3>
+<p>Alle Anlagen werden beim Export des XPlan-Archivs mit in die ZIP-Datei geschrieben.</p>
+<img alt="../_images/plan_archiv_inhalt_1.png" src="../_images/plan_archiv_inhalt_1.png" />
+<p>Die Referenzen im XPlan-GML werden automatisch gesetzt.</p>
+<img alt="../_images/plan_archiv_gml_anlage_referenz.png" src="../_images/plan_archiv_gml_anlage_referenz.png" />
+</section>
+</section>
+<section id="xplan-export">
+<h2>XPlan Export<a class="headerlink" href="#xplan-export" title="Link to this heading"></a></h2>
+<p>Beim Export der XPlan Informationen muss unterschieden werden, ob das Objekt im System erstellt oder über die XPlan-GML Schnittstelle importiert wurde.
+Ein mit XPlanung-light erstellter Plan enthält nur die Informationen, die das XPlanung-light Informationsmodell verwaltet.
+Wird jedoch ein vollvektorieller Plan im GML-Format importiert, dann wird dieses GML auch über die Schnittstellen nach Außen abgegeben.
+Die Attribute, die über XPlanung-light geändert wurden, werden dann automatisch vor dem Export im GML ausgetauscht.</p>
+<p>Folgende Elemente werden dabei überschrieben (<a class="reference external" href="https://github.com/mrmap-community/xplanung_light/blob/master/xplanung_light/helper/xplanung.py">helper/xplanung.py</a>)</p>
+<p>BPlan:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:name</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:nummer</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:beschreibung</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:untergangsDatum</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:erstellungsMassstab</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:planArt</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:aufstellungsbeschlussDatum</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:satzungsbeschlussDatum</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:inkrafttretensDatum</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:ausfertigungsDatum</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:staedtebaulicherVertrag</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:erschliessungsVertrag</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:durchfuehrungsVertrag</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:gruenordnungsplan</span></code></p></li>
+</ul>
+<p>FPlan:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:name</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:nummer</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:beschreibung</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:untergangsDatum</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:erstellungsMassstab</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:planArt</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:aufstellungsbeschlussDatum</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:planbeschlussDatum</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xplan:wirksamkeitsDatum</span></code></p>
+<blockquote>
+<div></div></blockquote>
+</li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="organisationsmanagement.html" class="btn btn-neutral float-left" title="Organisationsdaten" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Zurück</a>
+        <a href="beteiligungen.html" class="btn btn-neutral float-right" title="Beteiligungen" accesskey="n" rel="next">Weiter <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, GDI-RP.</p>
+  </div>
+
+  Erstellt mit <a href="https://www.sphinx-doc.org/">Sphinx</a> mit einem
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    bereitgestellt von <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
