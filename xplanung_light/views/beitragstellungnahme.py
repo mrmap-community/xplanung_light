@@ -90,9 +90,9 @@ class BeitragStellungnahmeListView(SingleTableView):
                     if user.user == self.request.user and user.is_admin:   
                         # Zugriff wird erteilt
                         if self.plantyp == 'bplan':                    
-                            return qs.filter(bplan_beteiligung_beitrag_id=self.kwargs['beitragid']).order_by('-last_changed')
+                            return qs.filter(beitrag_id=self.kwargs['beitragid']).order_by('-last_changed')
                         if self.plantyp == 'fplan':                    
-                            return qs.filter(fplan_beteiligung_beitrag_id=self.kwargs['beitragid']).order_by('-last_changed')
+                            return qs.filter(beitrag_id=self.kwargs['beitragid']).order_by('-last_changed')
             raise PermissionDenied("Nutzer hat keine Berechtigungen auf die angeforderten Objekte!")
         else:
             if self.plantyp == 'bplan': 

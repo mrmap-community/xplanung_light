@@ -632,7 +632,7 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         # Überschrift für Abwägungstabelle
         story.append(Paragraph("Abwägungstabelle", styles['Heading3']))
         # Tabelle mit den jeweiligen Stellungnahmen - die sind nach Beitrag sortiert!
-        table_grid = [[Paragraph("Lfd. Nr.", description_paragraph_style), Paragraph("Name", description_paragraph_style), Paragraph("Zeitstempel", description_paragraph_style), Paragraph("Inhalt der Anregungen", description_paragraph_style), Paragraph("Stellungnahme der Verwaltung (Abwägungsprozess)", description_paragraph_style), Paragraph("Berücksichtigung in der Planung (Abwägungsergebnis)", description_paragraph_style)]]
+        table_grid = [[Paragraph("Lfd. Nr. Beitrag - Stellungnahme", description_paragraph_style), Paragraph("Name", description_paragraph_style), Paragraph("Zeitstempel", description_paragraph_style), Paragraph("Inhalt der Anregungen", description_paragraph_style), Paragraph("Stellungnahme der Verwaltung (Abwägungsprozess)", description_paragraph_style), Paragraph("Berücksichtigung in der Planung (Abwägungsergebnis)", description_paragraph_style)]]
         # Nur die Beiträge, die bestätigt sind und nicht zurückgezogen wurden
         for beteiligung_beitrag in beteiligung_beitraege:
             #table_grid.append([beteiligung_beitrag.id, beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), Paragraph(beteiligung_beitrag.titel, description_paragraph_style), beteiligung_beitrag.email, beteiligung_beitrag.count_attachments])
@@ -644,7 +644,7 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
                 bezug_beitrag_mixed = TipTapToReportLab().convert_to_elements(TipTapNode.model_validate(stellungnahme.bezug_beitrag))
                 stellungnahme_mixed = TipTapToReportLab().convert_to_elements(TipTapNode.model_validate(stellungnahme.stellungnahme))
                 #table_grid.append([beteiligung_beitrag.id, beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), Paragraph(beteiligung_beitrag.email, description_paragraph_style), bezug_beitrag_mixed, stellungnahme_mixed, Paragraph(stellungnahme.beruecksichtigung, description_paragraph_style)])
-                table_grid.append([Paragraph(str(beteiligung_beitrag.id), description_paragraph_style), Paragraph(beteiligung_beitrag.email, description_paragraph_style), Paragraph(beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), description_paragraph_style), bezug_beitrag_mixed, stellungnahme_mixed, Paragraph(str(stellungnahme.beruecksichtigung).replace('[', '').replace(']', '').replace("'", ""), description_paragraph_style)])
+                table_grid.append([Paragraph(str(beteiligung_beitrag.id) + " - " + str(stellungnahme.id), description_paragraph_style), Paragraph(beteiligung_beitrag.email, description_paragraph_style), Paragraph(beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), description_paragraph_style), bezug_beitrag_mixed, stellungnahme_mixed, Paragraph(str(stellungnahme.beruecksichtigung).replace('[', '').replace(']', '').replace("'", ""), description_paragraph_style)])
         # Wechsel zu Querformat!
         story.append(Table(table_grid, repeatRows=1, colWidths=[20 * mm,  35 * mm, 20 * mm, 80 * mm, 100 * mm, 22 * mm],
                            style=TableStyle([('GRID',(0,0),(-1,-1), 0.25, colors.black),
