@@ -25,7 +25,7 @@
           <!--<xplan:art>Dokument</xplan:art>-->
           <xplan:referenzName>{{ attachment.name }}</xplan:referenzName>
           <xplan:referenzURL>{{ attachment.file_name }}</xplan:referenzURL>
-          <xplan:typ>{{ attachment.typ }}</xplan:typ>
+          <xplan:typ>{% if attachment.typ == '99999' %}9999{% else %}{{ attachment.typ }}{% endif %}</xplan:typ>
         </xplan:XP_SpezExterneReferenz>
       </xplan:externeReferenz>{% endfor %}
       {% for single_gemeinde in bplan.gemeinde.all %}<xplan:gemeinde>
@@ -45,7 +45,21 @@
       <xplan:erschliessungsVertrag> {{ bplan.erschliessungs_vertrag|lower }}</xplan:erschliessungsVertrag>
       <xplan:durchfuehrungsVertrag>{{ bplan.durchfuehrungs_vertrag|lower }}</xplan:durchfuehrungsVertrag>
       <xplan:gruenordnungsplan>{{ bplan.gruenordnungsplan|lower }}</xplan:gruenordnungsplan>
+      {% if ref_scan %}<xplan:bereich xlink:href="#{{ bereich_0_uuid }}"/>{% endif %}
     </xplan:BP_Plan>
   </gml:featureMember>
+  {% if ref_scan %}<gml:featureMember>
+    <xplan:BP_Bereich gml:id="{{ bereich_0_uuid }}">
+      <xplan:nummer>0</xplan:nummer>
+      <xplan:refScan>
+        <xplan:XP_ExterneReferenz>
+          <xplan:referenzName>{{ ref_scan.name }}</xplan:referenzName>
+          <xplan:referenzURL>{{ ref_scan.file_name }}</xplan:referenzURL>
+        </xplan:XP_ExterneReferenz>
+      </xplan:refScan>
+      <!--<xplan:verfahren>1000</xplan:verfahren>-->
+      <xplan:gehoertZuPlan xlink:href="#{{ bplan_uuid }}"/>
+    </xplan:BP_Bereich>
+  </gml:featureMember>{% endif %}
 </xplan:XPlanAuszug>
 {% endif %}

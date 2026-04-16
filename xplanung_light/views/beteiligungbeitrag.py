@@ -12,6 +12,7 @@ from xplanung_light.forms import BPlanBeteiligungCollection, FPlanBeteiligungCol
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
+from django.db.models import Count
 import json
 from django.core.exceptions import PermissionDenied
 from django.db.models import Subquery, OuterRef, Q
@@ -75,7 +76,11 @@ class BeteiligungBeitragListView(SingleTableView):
                     last_changed=Subquery(
                         self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
                     )
-                )
+                ).annotate(
+                    count_stellungnahmen=Count(
+                        'stellungnahmen', distinct=True
+                    )
+        )
         plan = self.reference_model.objects.get(pk=self.kwargs['planid'])
         # check ob Nutzer admin einer der Gemeinden des BPlans ist
         if self.request.user.is_superuser == False:

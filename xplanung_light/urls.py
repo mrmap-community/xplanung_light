@@ -8,6 +8,7 @@ from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDe
 from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView, BeteiligungPdfView
 from xplanung_light.views.requestforadmin import RequestForOrganizationAdminCreateView, RequestForOrganizationAdminListView, RequestForOrganizationAdminDeleteView, RequestForOrganizationAdminAdminListView
 from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragCreateView, BeteiligungBeitragListView, BeteiligungBeitragDeleteView, BeteiligungBeitragDetailView
+from xplanung_light.views.beitragstellungnahme import XPlanBeitragStellungnahmeCreateView, XPlanBeitragStellungnahmeUpdateView, BeitragStellungnahmeListView, XPlanBeitragStellungnahmeDeleteView
 from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
 from xplanung_light.views.bplanspezexternereferenz import BPlanSpezExterneReferenzCreateView, BPlanSpezExterneReferenzUpdateView, BPlanSpezExterneReferenzDeleteView, BPlanSpezExterneReferenzListView
@@ -78,6 +79,11 @@ urlpatterns = [
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/$', BeteiligungBeitragDetailView.as_view(), name="beteiligungbeitrag-detail"),
     # PDF Dokument mit einer Liste der Beiträge
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/pdf/$', BeteiligungPdfView.as_view(), name="beteiligungbeitrag-list-pdf"),
+    # URLs für die Stellungnahmen der Gebietskörperschaften zu den Beiträgen
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/create/$', XPlanBeitragStellungnahmeCreateView.as_view(extra_context={'create': True}), name="beitragstellungnahme-create"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/(?P<pk>\d+)/update/$', XPlanBeitragStellungnahmeUpdateView.as_view(extra_context={'update': True}), name="beitragstellungnahme-update"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/$', BeitragStellungnahmeListView.as_view(), name="beitragstellungnahme-list"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/(?P<pk>\d+)/delete/$', XPlanBeitragStellungnahmeDeleteView.as_view(), name="beitragstellungnahme-delete"),
     # BPlan UVP Info
     path("bplan/<int:planid>/uvp/create/", UvpCreateView.as_view(), name="uvp-create"),
     path("bplan/<int:planid>/uvp/", UvpListView.as_view(), name="uvp-list"),

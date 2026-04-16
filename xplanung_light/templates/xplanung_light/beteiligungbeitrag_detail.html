@@ -15,21 +15,21 @@ Stellungnahme zum Plan
 <p>Beteiligung möglich bis zum <!--<i title="Datumsangabe" class="fa-regular fa-calendar"></i>-->{{ beteiligung.end_datum }}</p>
 {% endif %}
 <hr>
-<h3>{% if user.is_anonymous %}Ihre{% endif %} Stellungnahme vom {{ beitrag.last_changed }}</h3>
+<h3>{% if user.is_anonymous %}Ihre{% endif %} Beitrag vom {{ beitrag.last_changed }}</h3>
 <p>EMail Absender: {{ beitrag.email }}</p> 
 {% if beitrag.approved is False %}
-    <a href="{% url 'beteiligungbeitrag-activate' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id generic_id=beitrag.generic_id|stringformat:"s" %}" class="btn btn-primary active" role="button" aria-pressed="true">Stellungnahme freigeben</a>
+    <a href="{% url 'beteiligungbeitrag-activate' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id generic_id=beitrag.generic_id|stringformat:"s" %}" class="btn btn-primary active" role="button" aria-pressed="true">Beitrag freigeben</a>
 {% else %}
     {% if user.is_anonymous %}
         {% if beitrag.withdrawn is False %}
-            <a href="{% url 'beteiligungbeitrag-withdraw' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id generic_id=beitrag.generic_id|stringformat:"s" %}" class="btn btn-danger active" role="button" aria-pressed="true">Stellungnahme zurückziehen</a>
+            <a href="{% url 'beteiligungbeitrag-withdraw' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id generic_id=beitrag.generic_id|stringformat:"s" %}" class="btn btn-danger active" role="button" aria-pressed="true">Beitrag zurückziehen</a>
         {% endif %}
     {% else %}
-        <a href="{% url 'beteiligungbeitrag-delete' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id pk=beitrag.id %}" class="btn btn-danger active" role="button" aria-pressed="true">Stellungnahme löschen</a>
+        <a href="{% url 'beteiligungbeitrag-delete' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id pk=beitrag.id %}" class="btn btn-danger active" role="button" aria-pressed="true">Beitrag löschen</a>
     {% endif %}
 {% endif %}
 {% if beitrag.withdrawn is True %}
-    <a href="{% url 'beteiligungbeitrag-reactivate' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id generic_id=beitrag.generic_id|stringformat:"s" %}" class="btn btn-primary active" role="button" aria-pressed="true">Stellungnahme reaktivieren</a>
+    <a href="{% url 'beteiligungbeitrag-reactivate' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id generic_id=beitrag.generic_id|stringformat:"s" %}" class="btn btn-primary active" role="button" aria-pressed="true">Beitrag reaktivieren</a>
 {% endif %}
 <hr>
 <h4>{{ beitrag.titel }}</h4>

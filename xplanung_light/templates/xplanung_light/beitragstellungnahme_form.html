@@ -1,0 +1,23 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% load render_form from formsetify %}
+{% load richtext %}
+{% bootstrap_css %}
+{% block title %}
+Titel für Abgabe einer Stellungnahme zu einem Beteiligungsbeitrag
+{% endblock %}
+{% block content %}
+<!-- Formset Formular -->
+ <django-formset endpoint="{{ request.path }}" csrf-token="{{ csrf_token }}">
+  <!--https://django-formset.fly.dev/form-renderer/ - Problem noch bei Richtextfield - TODO testen ob Layout nicht in Form Klasse definiert werden kann -->
+  {% render_form form "bootstrap" field_classes="mb-2" form_classes="rounded-xl"%}
+  <div>
+    {% if extra_context.create %}
+    <button type="button" class="btn btn-primary" df-click="submit -> proceed">Erstellen</button>
+    {% endif %}
+    {% if extra_context.update %}
+    <button type="button" class="btn btn-primary" df-click="submit -> proceed">Aktualisieren</button>
+    {% endif %}
+  </div>
+</django-formset>
+{% endblock %}

@@ -2,6 +2,7 @@ import django_tables2 as tables
 from django_tables2.utils import A
 from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp
 from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz, BPlanBeteiligungBeitrag, FPlanBeteiligungBeitrag,  RequestForOrganizationAdmin
+from .models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme 
 from .models import ConsentOption
 from django.urls import reverse
 from django.utils.html import format_html
@@ -169,6 +170,7 @@ class BPlanBeteiligungBeitragTable(tables.Table):
         template_code='''{{ record.beschreibung |safe }}''',
     )
     """
+    count_stellungnahmen = tables.LinkColumn('beitragstellungnahme-list', verbose_name='Stellungnahmen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], empty_values=())
     attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "bplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
     delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], \
                          orderable=False, empty_values=())
@@ -176,7 +178,7 @@ class BPlanBeteiligungBeitragTable(tables.Table):
     class Meta:
         model = BPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("id", "last_changed", "titel", "email", "approved", "withdrawn", "attachments", "delete")
+        fields = ("id", "last_changed", "titel", "email", "approved", "withdrawn", "attachments", "count_stellungnahmen", "delete")
 
 
 class FPlanBeteiligungBeitragTable(tables.Table):
@@ -188,14 +190,49 @@ class FPlanBeteiligungBeitragTable(tables.Table):
         template_code='''{{ record.beschreibung |safe }}''',
     )
     """
-    attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "bplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
+    count_stellungnahmen = tables.LinkColumn('beitragstellungnahme-list', verbose_name='Stellungnahmen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], empty_values=())
+    attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "fplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
     delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], \
                          orderable=False, empty_values=())
     
     class Meta:
         model = FPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("id", "last_changed", "titel", "email", "approved", "withdrawn", "attachments", "delete")
+        fields = ("id", "last_changed", "titel", "email", "approved", "withdrawn", "attachments", "count_stellungnahmen", "delete")
+
+
+class BPlanBeitragStellungnahmeTable(tables.Table):
+
+    last_changed = tables.Column(verbose_name='Letzte Änderung')
+    bezug_beitrag = tables.TemplateColumn(
+        template_code='''{% load richtext %}{% render_richtext record.bezug_beitrag %}''',
+    )
+    beruecksichtigung = tables.TemplateColumn(
+        template_code='''{% for tag in record.beruecksichtigung %}({{ tag }}){% endfor %}''',
+    )
+    stellungnahme = tables.TemplateColumn(
+        template_code='''{% load richtext %}{% render_richtext record.stellungnahme %}''',
+    )
+    edit = tables.LinkColumn('beitragstellungnahme-update', verbose_name='', text='Bearbeiten', kwargs={'plantyp': 'bplan', 'planid': A('beitrag__bplan_beteiligung__bplan__id'), 'beteiligungid': A('beitrag__bplan_beteiligung__id'), 'beitragid': A('beitrag__id'), 'pk': A('pk')}, orderable=False, empty_values=())
+    delete = tables.LinkColumn('beitragstellungnahme-delete', verbose_name='', text='Löschen', kwargs={'plantyp': 'bplan', 'planid': A('beitrag__bplan_beteiligung__bplan__id'), 'beteiligungid': A('beitrag__bplan_beteiligung__id'), 'beitragid': A('beitrag__id'), 'pk': A('pk')}, orderable=False, empty_values=())
+
+
+    class Meta:
+        model = BPlanBeitragStellungnahme
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ("id", "last_changed", "bezug_beitrag", "stellungnahme", "beruecksichtigung", "edit", "delete")
+
+
+class FPlanBeitragStellungnahmeTable(BPlanBeitragStellungnahmeTable):
+
+    edit = tables.LinkColumn('beitragstellungnahme-update', verbose_name='', text='Bearbeiten', kwargs={'plantyp': 'fplan', 'planid': A('beitrag__fplan_beteiligung__fplan__id'), 'beteiligungid': A('beitrag__fplan_beteiligung__id'), 'beitragid': A('beitrag__id'), 'pk': A('pk')}, orderable=False, empty_values=())
+    delete = tables.LinkColumn('beitragstellungnahme-delete', verbose_name='', text='Löschen', kwargs={'plantyp': 'fplan', 'planid': A('beitrag__fplan_beteiligung__fplan__id'), 'beteiligungid': A('beitrag__fplan_beteiligung__id'), 'beitragid': A('beitrag__id'), 'pk': A('pk')}, orderable=False, empty_values=())
+
+
+    class Meta:
+        model = FPlanBeitragStellungnahme
+        #template_name = "django_tables2/bootstrap5.html"
+        fields = ("id", "last_changed", "bezug_beitrag", "stellungnahme", "beruecksichtigung", "edit", "delete")
 
 
 class RequestForOrganizationAdminTable(tables.Table):

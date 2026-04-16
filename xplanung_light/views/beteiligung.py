@@ -1,6 +1,7 @@
 from __future__ import annotations
 from django.http import HttpResponseRedirect
 from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung, AdministrativeOrganization
+from xplanung_light.models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme
 from xplanung_light.tables import BeteiligungenTable, BeteiligungenOrgaTable
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.utils import timezone
@@ -152,14 +153,10 @@ class BeteiligungenOrgaListView(BeteiligungenListView):
 
         # https://pythonguides.com/union-operation-on-models-django/
         beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
-
+        """
         for beteiligung in beteiligungen_plaene:
             print(beteiligung.plantyp + " - " + str(beteiligung.bekanntmachung_datum))
-            #print(str(beteiligung.bekanntmachung_datum) + " - " + beteiligung.typ)
-            #if beteiligung.plantyp == 'BPlan':
-            #    print(beteiligung.bplan.gemeinde.all)
-            #if beteiligung.plantyp == 'FPlan':
-            #    print(beteiligung.fplan.gemeinde.all)    
+        """
         return beteiligungen_plaene  
     
     def get_context_data(self, **kwargs):
@@ -190,7 +187,7 @@ from reportlab.platypus import (
     ListFlowable, ListItem, PageBreak
 )
 from reportlab.lib.units import cm, mm
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
@@ -221,6 +218,7 @@ class TipTapToReportLab:
     """
     def __init__(self):
         self.styles = getSampleStyleSheet()
+        # TODO - overwrite with smaller version
 
     def convert_to_elements(self, doc_node: TipTapNode) -> List[Any]:
         elements = []
@@ -340,6 +338,7 @@ class NumberedCanvas(canvas.Canvas):
         canvas.Canvas.save(self)
 
     def draw_qr_code(self):
+        widthPage, heightPage = self._pagesize # Aktuelle Maße der Seite
         size = 2 * cm
         qr_code = qr.QrCodeWidget(self.url)
         # Berechnung der Skalierung basierend auf der gewünschten Größe
@@ -351,36 +350,69 @@ class NumberedCanvas(canvas.Canvas):
         d = Drawing(size, size, transform=[scale, 0, 0, scale, 0, 0])
         d.add(qr_code)
         # Auf dem Canvas rendern
-        d.drawOn(self, 18 * cm, 27.7 * cm)
+        d.drawOn(self, widthPage - 3 * cm, heightPage - 2 * cm)
 
     def draw_page_number(self, page_count):
-        width, height = A4
-        line_y_t = 27.7 * cm  # Höhe der Linie
-        line_y_b = 2.0 * cm  # Höhe der Linie
-        text_y = 1.5 * cm  # Höhe des Textes darunter
+        width, height = self._pagesize # Aktuelle Maße der Seite
+        line_y_b = 2.0 * cm  # Höhe der unteren Linie
         self.setLineWidth(0.5)
         self.setFont("Helvetica", 7)
         # Die Linie unterhalb des Headers
-        self.line(2 * cm, line_y_t, width - 2 * cm, line_y_t)
+        self.line(2 * cm, height - 2 * cm, width - 2 * cm, height - 2 * cm)
         # Header
         if 'version' in settings.XPLANUNG_LIGHT_CONFIG.keys():
             version = settings.XPLANUNG_LIGHT_CONFIG['version']
         else:
             version = 'unknown'
-        self.drawString(2.0 * cm, 28.0 * cm, 'XPlanung-light (V ' + version + ') - ' + self.url) 
+        self.drawString(2.0 * cm, height - 1.7 * cm, 'XPlanung-light (V ' + version + ') - ' + self.url) 
         # Die Linie oberhalb des Footers
         self.line(2 * cm, line_y_b, width - 2 * cm, line_y_b)
         self.setFont("Helvetica", 9)
         # Seitennummerierung
-        #self.drawCentredString(A4[0]/2, 1*cm, f"Seite {self._pageNumber} von {page_count}")
-        self.drawString(18.0 * cm, 1.2 * cm, f"Seite {self._pageNumber} von {page_count}")
+        self.drawString(width - 3 * cm, 1.2 * cm, f"Seite {self._pageNumber} von {page_count}")
         # Datum 
         now = datetime.now()
         self.drawString(1.5 * cm, 1.2 * cm, "Erstellt am: " + now.strftime("%Y-%m-%d, %H:%M:%S"))
 
 
-class MyDocTemplate(SimpleDocTemplate):
-    pass
+class MyDocTemplate(BaseDocTemplate):
+    """
+    Basis Template - ggf. BaseDocTemplate - dann kann man zwischen Hoch- und Querformat wechseln.
+    Gemini hilft ;-)
+    """
+    def __init__(self, filename, **kw):
+        # Initialisierung der Basisklasse
+        super().__init__(filename, **kw)
+        # 1. Gemeinsame Einstellungen
+        padding = 2 * cm
+        # 2. Frames definieren
+        # Hochformat Frame
+        self.frame_portrait = Frame(
+            padding, padding, 
+            self.pagesize[0] - 2*padding, self.pagesize[1] - 2*padding, 
+            id='frame_p'
+        )
+        # Querformat Frame
+        ls_width, ls_height = landscape(self.pagesize)
+        self.frame_landscape = Frame(
+            padding, padding, 
+            ls_width - 2*padding, ls_height - 2*padding, 
+            id='frame_l'
+        )
+        # 3. PageTemplates erstellen
+        template_p = PageTemplate(
+            id='Portrait', 
+            frames=self.frame_portrait, 
+            pagesize=self.pagesize
+        )
+        template_l = PageTemplate(
+            id='Landscape', 
+            frames=self.frame_landscape, 
+            pagesize=landscape(self.pagesize)
+        )
+        # 4. Templates beim Dokument registrieren
+        self.addPageTemplates([template_p, template_l])
+    
 """    
     def afterFlowable(self, flowable):
         
@@ -485,9 +517,7 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         story.append(HRFlowable())
         qr_link = self.absolute_url
         #print(qr_link)
-        #story.append(QRCodeFlowable(qr_link, size=3*cm))
-        # Informationen zum Projekt - hier Beteiligung, Plan , ...
-        #content_info_frame = Frame(125*mm, 192*mm, 75*mm, 55*mm, showBoundary=0)   
+        # Informationen zum Projekt - hier Beteiligung, Plan , ... 
         if self.plantyp=='bplan':
             content_info_content = "<font size=10><b>" + self.beteiligung.get_typ_display() + " zum Bebauungsplan</b><br/>"
             content_info_content = content_info_content + "\"" + self.beteiligung.bplan.name + "\"<br/>"
@@ -503,7 +533,6 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         story.append(content_info_flowable)
         story.append(HRFlowable())
         #story.append(Spacer(1, 1*cm))
-        #story.append(HRFlowable())
         story.append(Paragraph("Publizierter Beschreibungstext", styles['Heading3']))
         story.append(HRFlowable())
         #story.append(HRFlowable(color='#ff0066', dash=(10, 5)))
@@ -515,9 +544,6 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         story.append(PageBreak())
         # 2. Liste mit den abgegebenen Online-Beteiligungen
         story.append(Paragraph("Liste der Beiträge", styles['Heading3']))
-        #story.append(HRFlowable())
-        # 3. Einzelne Beteiligungsbeiträge 
-        # 4. Anlagen ... ggf. in pdf einbetten oder in Form einer ZIP-Datei exportieren
         # Tabelle mit den abgegebenen Online-Beteiligungen:
         table_grid = [["Lfd. Nr.", "Datum/Zeit", "Titel", "EMail", "# Anlagen"]]
         # Selektion der Objekte
@@ -552,23 +578,20 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         story.append(Table(table_grid, repeatRows=1, colWidths=[0.10 * 165 * mm,  0.17 * 165 * mm, 0.20 * 165 * mm, 0.25 * 165 * mm, 0.10 * 165 * mm],#, 0.15 * 165 * self.mm],
                            style=TableStyle([('GRID',(0,1),(-1,-1), 0.25, colors.gray),
                                              ('BOX', (0,0), (-1,-1), 1.0, colors.black),
-                                             #('BOX', (0,0), (1,0), 1.0, self.colors.black),
-                                             #('BOX', (0,0), (1,0), 1.0, self.colors.black),
-                                             ('ALIGN', (0,0), (-1,0), 'CENTER'), # first row - header
-                                             ('ALIGN', (0,1), (0,-1), 'CENTER'), # first column from second row
-                                             ('ALIGN', (1,1), (1,-1), 'LEFT'), # second column from second row
+                                             ('ALIGN', (0,0), (-1,0), 'CENTER'), 
+                                             ('ALIGN', (0,1), (0,-1), 'CENTER'), 
+                                             ('ALIGN', (1,1), (1,-1), 'LEFT'), 
                                              ('ALIGN', (2,1), (2,-1), 'RIGHT'), 
                                              ('ALIGN', (3,1), (3,-1), 'CENTER'), 
                                              ('ALIGN', (4,1), (4,-1), 'RIGHT'), 
-                                             #('ALIGN', (5,1), (5,-1), 'RIGHT'),
-                                             #('LINEBELOW', (-1,-1), (-1,-1), 1, self.colors.black),
-                                             #('ALIGN', (0,1), (-1,-1), 'RIGHT'), # first column, second row: all rows from second row
                                              ('FONTSIZE', (0,1), (-1,-1), 8),
                                              ])))
-        #story.append(HRFlowable())
         story.append(PageBreak())
         # Beiträge anfügen - eine Seite pro Beitrag - nochmal iterieren
+        i = 0
+        count_beitraege = len(beteiligung_beitraege)
         for beteiligung_beitrag in beteiligung_beitraege:
+            i = i + 1 
             story.append(Paragraph("Beitrag lfd Nr.: " + str(beteiligung_beitrag.id), styles['Heading3']))
             story.append(HRFlowable())
             # Titel, EMail, erstellt, letzte Änderung
@@ -596,20 +619,47 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
                     if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
                         anlage_url = anlage_url.replace('http://', 'https://')
                     content.append(ListItem(Paragraph("<link href=\"" + anlage_url + "\" color=\"blue\">" + str(anlage.id) + " - " + anlage.name + " (" + anlage.get_typ_display() + ") - " + os.path.basename(anlage.attachment.file.name) + " (" + filesizeformat(anlage.attachment.file.size) + ")</link>")))
-                    #story.append(Paragraph(anlage.name))
-                    # beteiligung-beitrag-attachment-download plantyp/pk
                 list = ListFlowable(content, bulletType='bullet')
                 story.append(list)
             else:
                 story.append(Paragraph("- keine -"))
-
             # Beschreibung - RTF
-            # Anlagen - Name, link?
+            # Anlagen - Name, link? - bevor der letzte Beitrag ausgegeben wird, muss der Wechsel auf landscape angekündigt werden - sonst gibt es eine Leerseite zuviel!
+            if i == count_beitraege:
+                # Wechsel ankündigen: Das nächste Template soll 'Landscape' sein
+                story.append(NextPageTemplate('Landscape'))
             story.append(PageBreak())
+        # Überschrift für Abwägungstabelle
+        story.append(Paragraph("Abwägungstabelle", styles['Heading3']))
+        # Tabelle mit den jeweiligen Stellungnahmen - die sind nach Beitrag sortiert!
+        table_grid = [[Paragraph("Lfd. Nr.", description_paragraph_style), Paragraph("Name", description_paragraph_style), Paragraph("Zeitstempel", description_paragraph_style), Paragraph("Inhalt der Anregungen", description_paragraph_style), Paragraph("Stellungnahme der Verwaltung (Abwägungsprozess)", description_paragraph_style), Paragraph("Berücksichtigung in der Planung (Abwägungsergebnis)", description_paragraph_style)]]
+        # Nur die Beiträge, die bestätigt sind und nicht zurückgezogen wurden
+        for beteiligung_beitrag in beteiligung_beitraege:
+            #table_grid.append([beteiligung_beitrag.id, beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), Paragraph(beteiligung_beitrag.titel, description_paragraph_style), beteiligung_beitrag.email, beteiligung_beitrag.count_attachments])
+            if plantyp=='bplan':
+                stellungnahmen = BPlanBeitragStellungnahme.objects.filter(beitrag=beteiligung_beitrag.id)
+            if plantyp=='fplan':
+                stellungnahmen = FPlanBeitragStellungnahme.objects.filter(beitrag=beteiligung_beitrag.id)
+            for stellungnahme in stellungnahmen:
+                bezug_beitrag_mixed = TipTapToReportLab().convert_to_elements(TipTapNode.model_validate(stellungnahme.bezug_beitrag))
+                stellungnahme_mixed = TipTapToReportLab().convert_to_elements(TipTapNode.model_validate(stellungnahme.stellungnahme))
+                #table_grid.append([beteiligung_beitrag.id, beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), Paragraph(beteiligung_beitrag.email, description_paragraph_style), bezug_beitrag_mixed, stellungnahme_mixed, Paragraph(stellungnahme.beruecksichtigung, description_paragraph_style)])
+                table_grid.append([Paragraph(str(beteiligung_beitrag.id), description_paragraph_style), Paragraph(beteiligung_beitrag.email, description_paragraph_style), Paragraph(beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), description_paragraph_style), bezug_beitrag_mixed, stellungnahme_mixed, Paragraph(str(stellungnahme.beruecksichtigung).replace('[', '').replace(']', '').replace("'", ""), description_paragraph_style)])
+        # Wechsel zu Querformat!
+        story.append(Table(table_grid, repeatRows=1, colWidths=[20 * mm,  35 * mm, 20 * mm, 80 * mm, 100 * mm, 22 * mm],
+                           style=TableStyle([('GRID',(0,0),(-1,-1), 0.25, colors.black),
+                                             ('BACKGROUND',(0,0),(-1,0), colors.lightgrey),
+                                             ('BOX', (0,0), (-1,-1), 1.0, colors.black),
+                                             ('ALIGN', (0,0), (-1,0), 'CENTER'), # first row - header
+                                             ('VALIGN', (0,0), (-1,0), 'TOP'), # first row - header
+                                             ('ALIGN', (0,1), (-1,-1), 'LEFT'), # whole table
+                                             ('VALIGN', (0,1), (-1,-1), 'TOP'), # whole table 
+                                             ('FONTSIZE', (0,1), (-1,-1), 8),
+                                             ])))           
+        story.append(PageBreak())
         # https://stackoverflow.com/questions/3448365/pdf-image-in-pdf-document-using-reportlab-python
         # https://gis.stackexchange.com/questions/185289/arcpy-creating-multi-page-table-pdf-with-reportlab-pypdf2
         # https://www.geeksforgeeks.org/python/creating-pdf-documents-with-python/
-
         canvasmaker = NumberedCanvas
         canvasmaker.url = qr_link
         self.multiBuild(story, canvasmaker=canvasmaker)
@@ -683,7 +733,7 @@ class BeteiligungPdfView(DetailView):
     def dispatch(self, request, *args, **kwargs):
         # Hier sind die Parameter aus der re_path verfügbar:
         self.plantyp = kwargs.get('plantyp')
-        print(str(self.plantyp))
+        #print(str(self.plantyp))
         if self.plantyp == 'bplan':
             self.model = BPlanBeteiligung
             self.planmodel = BPlan
@@ -692,7 +742,7 @@ class BeteiligungPdfView(DetailView):
             self.planmodel = FPlan
         self.beteiligung = self.model.objects.get(pk=kwargs['beteiligungid'])
         self.plan = self.planmodel.objects.get(pk=kwargs['planid'])
-        print(self.beteiligung)
+        #print(self.beteiligung)
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):

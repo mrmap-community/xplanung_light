@@ -7,6 +7,7 @@ from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteilig
 from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung, FPlanBeteiligungBeitrag, FPlanBeteiligungBeitragAnhang
 from xplanung_light.models import ContactOrganization, RequestForOrganizationAdmin
 from xplanung_light.models import BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang
+from xplanung_light.models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme
 from xplanung_light.models import ConsentOption
 from xplanung_light.validators import fplan_upload_file_validator, geotiff_raster_validator, bplan_content_validator, fplan_content_validator, bplan_upload_file_validator
 from crispy_forms.helper import FormHelper
@@ -1280,6 +1281,62 @@ class FPlanBeteiligungForm(ModelForm):
             'end_datum': DateInput(),
         }
 
+from formset.widgets import DualSelector
+class BPlanBeitragStellungnahmeForm(ModelForm):
+    """
+    Klasse für das Anlegen und Update von Stellungnahmen.
+    Problem bei Firefox unter debian: Richtext Formular Elemente bleiben nicht an fester Position ...
+
+    """
+    # Temporäres Feld für die Auswahl
+    beruecksichtigung = forms.MultipleChoiceField(
+        choices=BPlanBeitragStellungnahme.TAGS,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Berücksichtigung",
+    )
+   
+    class Meta:
+        model = BPlanBeitragStellungnahme
+        fields = ["bezug_beitrag", "stellungnahme", "beruecksichtigung", "beitrag"]
+        widgets = {
+            'beitrag': HiddenInput(),
+        }
+        """
+        
+        widgets = {
+            'beschreibung': RichTextarea(),
+            'bekanntmachung_datum': DateInput(),
+            'start_datum': DateInput(),
+            'end_datum': DateInput(),
+        }
+        """
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Initial-Wert aus JSONField setzen
+        if self.instance and self.instance.pk:
+            self.fields['beruecksichtigung'].initial = self.instance.beruecksichtigung
+
+
+class FPlanBeitragStellungnahmeForm(BPlanBeitragStellungnahmeForm):
+    """
+    """
+    # Temporäres Feld für die Auswahl
+    beruecksichtigung = forms.MultipleChoiceField(
+        choices=FPlanBeitragStellungnahme.TAGS,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Berücksichtigung",
+    )
+   
+    class Meta:
+        model = FPlanBeitragStellungnahme
+        fields = ["bezug_beitrag", "stellungnahme", "beruecksichtigung", "beitrag"]
+        widgets = {
+            'beitrag': HiddenInput(),
+        }
+   
 
 class CaptchaForm(forms.Form):
     consent = forms.BooleanField(required=True, label="Ich habe die Datenschutzbestimmungen der Gebietskörperschaft, sowie die Hinweise zum Datenschutz und den Nutzungsbedingungen der Plattform gelesen und akzeptiere sie.")

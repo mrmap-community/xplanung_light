@@ -1,0 +1,51 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% load crispy_forms_tags %}
+{% load richtext %}
+{% load render_table from django_tables2 %}
+{% bootstrap_css %}
+{% block title %}
+    Stellungnahmen zum Beteiligungsbeitrag
+{% endblock %}
+{% block content %}
+<p>{% if plantyp == "bplan" %} Bebauungsplan {% endif %}{% if plantyp == "fplan" %} Flächennutzungsplan {% endif %} <b>{{ plan.name }}</b> der Kommune(n):</p>
+    <ul>
+        {% for gemeinde in plan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
+    </ul>
+</p>
+<p>
+    Beteiligungsverfahren: {{ beteiligung.get_typ_display }} vom {{ beteiligung.start_datum}} bis {{ beteiligung.end_datum }}
+</p>
+<div class="container border border-dark">
+{% if plantyp == "bplan" %}
+<p>Stellungnahmen zum Beitrag <a href="{% url 'beteiligungbeitrag-detail' plantyp='bplan' planid=plan.id beteiligungid=beteiligung.id pk=beitrag.id  %}">{{ beitrag.id }}</a>
+{% endif %}
+{% if plantyp == "fplan" %}
+<p>Stellungnahmen zum Beitrag <a href="{% url 'beteiligungbeitrag-detail' plantyp='fplan' planid=plan.id beteiligungid=beteiligung.id pk=beitrag.id  %}">{{ beitrag.id }}</a>
+{% endif %}
+<p><b>Beitragstitel:</b> {{ beitrag.titel }}</p>
+<p><b>Beitragstext:</b> {% render_richtext  beitrag.beschreibung %}</p>
+<p><b>Email:</b> {{ beitrag.email }}</p>
+{% if beitrag.attachments.count > 0 %}
+<h4>Anlagen</h4>
+<ul>
+{% for attachment in beitrag.attachments.all %}
+<li><a href="{% url 'beteiligung-beitrag-attachment-download' plantyp=plantyp pk=attachment.pk %}">{{ attachment.name }}</a></li>
+{% endfor %}
+</ul>
+{% endif %}
+</div>
+<p><a href="{% url 'beitragstellungnahme-create' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id beitragid=beitrag.id %}">Neue Stellungnahme anlegen</a></p>
+{# <p><a href="{% url 'beteiligungbeitrag-list-pdf' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id%}">PDF-Export</a></p> #}
+{% render_table table %}
+{% if plantyp == 'bplan' %}
+<p>Anzahl: {{ bplanbeitragstellungnahme_list.count }}</p>
+{% endif %}
+{% if plantyp == 'fplan' %}
+<p>Anzahl: {{ fplanbeitragstellungnahme_list.count }}</p>
+{% endif %}
+<p>Erläuterung Spalte <i>Berücksichtigung</i></p>
+{% for key, value in tags_dict.items %}
+({{ key }}) - {{ value }}<br>
+{% endfor %}
+{% endblock %}

@@ -736,9 +736,9 @@ class BPlanBeteiligungBeitrag(GenericMetadata):
     titel = models.CharField(null=False, blank=False, max_length=300, verbose_name="Titel des Beitrags", help_text="Geben Sie hier bitte einen aussagekräftigen Titel für Ihren Beitrag an.")
     beschreibung = RichTextField(null=False, blank=False, verbose_name="Beitrag / Kommentar (Textform)")
     bplan_beteiligung = HistoricForeignKey(BPlanBeteiligung, on_delete=models.CASCADE, verbose_name="BPlanBeteiligung", help_text="BPlanBeteiligung", related_name="comments")
-    approved = models.BooleanField(null=False, blank=False, default=False, verbose_name="Stellungnahme bestätigt")
+    approved = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag bestätigt")
     email = models.EmailField(null=False, blank=False, verbose_name='EMail', help_text='EMail-Adresse zur Bestätigung der Abgabe Ihrer Stellungnahme. Sie bekommen eine Aktivierungsmail geschickt.')
-    withdrawn = models.BooleanField(null=False, blank=False, default=False, verbose_name="Stellungnahme zurückgezogen")
+    withdrawn = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag zurückgezogen")
     history = HistoricalRecords()
 
 
@@ -772,9 +772,9 @@ class FPlanBeteiligungBeitrag(GenericMetadata):
     titel = models.CharField(null=False, blank=False, max_length=300, verbose_name="Titel des Beitrags", help_text="Geben Sie hier bitte einen aussagekräftigen Titel für Ihren Beitrag an.")
     beschreibung = RichTextField(null=False, blank=False, verbose_name="Beitrag / Kommentar (Textform)")
     fplan_beteiligung = HistoricForeignKey(FPlanBeteiligung, null=True, on_delete=models.CASCADE, verbose_name="FPlanBeteiligung", help_text="FPlanBeteiligung", related_name="comments")
-    approved = models.BooleanField(null=False, blank=False, default=False, verbose_name="Stellungnahme bestätigt")
+    approved = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag bestätigt")
     email = models.EmailField(null=False, blank=False, verbose_name='EMail', help_text='EMail-Adresse zur Bestätigung der Abgabe Ihrer Stellungnahme. Sie bekommen eine Aktivierungsmail geschickt.')
-    withdrawn = models.BooleanField(null=False, blank=False, default=False, verbose_name="Stellungnahme zurückgezogen")
+    withdrawn = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag zurückgezogen")
     history = HistoricalRecords()
 
 
@@ -796,6 +796,105 @@ class FPlanBeteiligungBeitragAnhang(GenericMetadata):
     attachment = models.FileField(null = True, blank = True, max_length=1024, upload_to='uploads', verbose_name="Dokument")
     history = HistoricalRecords()
 
+"""
+Abwägungstabelle Beispiel: https://sessionnet-oparl.krz.de/Oparl/bodies/5374/downloadfiles/a/00229040.pdf
+
+Wir sollten ein Tagging einfügen - multiple choices: 
+
+B = Begründung ergänzen / ändern
+U = Umweltbericht (als Teil der Begründung) ergänzen / ändern
+H = Handlungsbedarf außerhalb des Planwerks
+K = Keine Abwägung erforderlich
+N = Nicht übernehmen, da andere Belange überwiegen
+P = Änderung der Planzeichnung mit Legende
+T = Textliche Festsetzung / Hinweise ändern
+V = Vorschlag wurde bereits berücksichtigt
+Z = Zurückweisung der Argumentation
+"""
+class XPlanBeitragStellungnahme(GenericMetadata):
+    """
+    BEGRUENDUNG_AAE = "B"
+    UMWELTBERICHT_AAE = "U"
+    HANDLUNGSBEDARF_AP = "H"
+    KEINEABWAEGUNG = "K"
+    NICHTUEBERNEHMEN = "N"
+    AENDERUNGZEICHNUNGLEGENDE = "P"
+    AENDERUNGTEXTHINWEISE = "T"
+    VORSCHLAGBERUECKSICHTIGT = "V"
+    ZURUECKWEISUNG = "Z"
+    COMMENT_ATTACHMENT_TYPE_CHOICES = [
+        (BEGRUENDUNG_AAE,  "Begründung ergänzen / ändern"),
+        (UMWELTBERICHT_AAE, "Umweltbericht (als Teil der Begründung) ergänzen / ändern"),
+        (HANDLUNGSBEDARF_AP, "Handlungsbedarf außerhalb des Planwerks"),
+        (KEINEABWAEGUNG,  "Keine Abwägung erforderlich"),
+        (NICHTUEBERNEHMEN, "Nicht übernehmen, da andere Belange überwiegen"),
+        (AENDERUNGZEICHNUNGLEGENDE, "Änderung der Planzeichnung mit Legende"),
+        (AENDERUNGTEXTHINWEISE,  "Textliche Festsetzung / Hinweise ändern"),
+        (VORSCHLAGBERUECKSICHTIGT, "Vorschlag wurde bereits berücksichtigt"),
+        (ZURUECKWEISUNG, "Zurückweisung der Argumentation"),
+    ]
+    """
+    TAGS = [
+        ('B', 'Begründung ergänzen / ändern'),
+        ('U', 'Umweltbericht (als Teil der Begründung) ergänzen / ändern'),
+        ('H', 'Handlungsbedarf außerhalb des Planwerks'),
+        ('K', 'Keine Abwägung erforderlich'),
+        ('N', 'Nicht übernehmen, da andere Belange überwiegen'),
+        ('P', 'Änderung der Planzeichnung mit Legende'),
+        ('T', 'Textliche Festsetzung / Hinweise ändern'),
+        ('V', 'Vorschlag wurde bereits berücksichtigt'),
+        ('Z', 'Zurückweisung der Argumentation'),
+    ]
+    
+    # Dict für schnelleren Lookup
+    TAGS_DICT = dict(TAGS)
+    
+    bezug_beitrag = RichTextField(null=True, blank=True, verbose_name="Bezug", help_text="Auszug/Zitat/Referenz aus Beitrag auf den sich die Stellungnahme bezieht")
+    stellungnahme = RichTextField(null=True, blank=True, verbose_name="Stellungnahme", help_text="Textliche Stellungnahme der Verwaltung")
+    beruecksichtigung = models.JSONField(blank=True, default=list, verbose_name="Berücksichtigung", help_text="Berücksichtigung in der Planung")
+    #history = HistoricalRecords()
+    """
+    Nach Hinweis von Claude
+    """
+    def clean(self):
+        super().clean()
+        valid_tags = [tag[0] for tag in self.TAGS]
+        if not isinstance(self.beruecksichtigung, list):
+            raise ValidationError({'beruecksichtigung': 'Berücksichtigung muss eine Liste sein'})
+        #Test ob ein Eintrag ausgewählt wurde, der nur einzeln stehen kann
+        einzelne_eintraege = ['K', 'V', 'N', 'Z']
+        if len(self.beruecksichtigung) > 1:
+            for value in einzelne_eintraege:
+                if value in self.beruecksichtigung:
+                    raise ValidationError({'beruecksichtigung': 'Der Wert ' + value + ' kann nicht mit anderen Gründen kombiniert werden!'})
+        
+        invalid_tags = [tag for tag in self.beruecksichtigung if tag not in valid_tags]
+        if invalid_tags:
+            raise ValidationError({
+                'beruecksichtigung': f'Ungültige Tags: {", ".join(invalid_tags)}'
+            })
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    @property
+    def beruecksichtigung_labels(self):
+        """Gibt die lesbaren Tag-Namen zurück"""
+        return [self.TAGS_DICT.get(tag, tag) for tag in self.beruecksichtigung]
+
+
+    class Meta:
+        abstract = True
+
+
+class BPlanBeitragStellungnahme(XPlanBeitragStellungnahme):
+    beitrag = HistoricForeignKey(BPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Stellungnahme", help_text="Stellungnahme der Verwaltung", related_name='stellungnahmen')
+    history = HistoricalRecords()
+
+class FPlanBeitragStellungnahme(XPlanBeitragStellungnahme):
+    beitrag = HistoricForeignKey(FPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Stellungnahme", help_text="Stellungnahme der Verwaltung", related_name='stellungnahmen')
+    history = HistoricalRecords()
 
 class XPlanSpezExterneReferenz(GenericMetadata):
     """

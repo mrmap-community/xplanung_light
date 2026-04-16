@@ -612,6 +612,13 @@ class XPlanDetailXPlanLightView(XPlanDetailView):
         if self.model_name_lower == 'fplan':
             # TODO adopt
             context['attachments'] = FPlanSpezExterneReferenz.objects.filter(fplan=self.kwargs['pk'])   
+        # Test ob ein Geotiff als Anlage vorhanden ist falls ja, wird das zusätzlich als spezielles refScan Objekt nach dem Geltungsbereich eingefügt
+        for attachment in context['attachments']:
+            if attachment.typ == '99999':
+                context['ref_scan'] = attachment
+                context['bereich_0_uuid'] = "GML_" + str(uuid.uuid4())
+            else:
+                context['ref_scan'] = None
         # TODO: Überschreiben des xplan gml mit neuen Inhalten - Anlagen, Datumswerten, ...
         if context[self.model_name_lower].xplan_gml:
             print("Ausgabe des gespeicherten/hochgeladenen GML - danach Überschreiben mit Inhalten aus der Datenbank")
