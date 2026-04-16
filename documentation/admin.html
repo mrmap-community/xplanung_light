@@ -1,0 +1,201 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="de" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administration &mdash; XPlanung-light  Dokumentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=245627df"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../_static/translations.js?v=9bf55d28"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Stichwortverzeichnis" href="../genindex.html" />
+    <link rel="search" title="Suche" href="../search.html" />
+    <link rel="next" title="Entwicklung" href="../development/entwicklung.html" />
+    <link rel="prev" title="Schnittstellen" href="schnittstellen.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            XPlanung-light
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Dokumentation durchsuchen" aria-label="Dokumentation durchsuchen" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Einführung</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/overview.html">Übersicht</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/bauleitplanung.html">Bauleitplanung</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/xplanung.html">XPlanung</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Dokumentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="nutzermanagement.html">Nutzerverwaltung</a></li>
+<li class="toctree-l1"><a class="reference internal" href="organisationsmanagement.html">Organisationsdaten</a></li>
+<li class="toctree-l1"><a class="reference internal" href="planmanagement.html">Planverwaltung</a></li>
+<li class="toctree-l1"><a class="reference internal" href="beteiligungen.html">Beteiligungen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="schnittstellen.html">Schnittstellen</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Administration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#verwaltung-der-zustimmungsoptionen">Verwaltung der Zustimmungsoptionen</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#freigabe-von-administrationsanfragen">Freigabe von Administrationsanfragen</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#django-admin-oberflache">Django Admin Oberfläche</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#verwaltung-standardisierter-lizenzen">Verwaltung standardisierter Lizenzen</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#konfiguration-in-den-settings">Konfiguration in den Settings</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Entwicklung</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../development/entwicklung.html">Entwicklung</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Installation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation/installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Betrieb</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operation/produktivbetrieb.html">Produktivbetrieb</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">XPlanung-light</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Administration</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/documentation/admin.rst.txt" rel="nofollow"> Quelltext anzeigen</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="administration">
+<h1>Administration<a class="headerlink" href="#administration" title="Link to this heading"></a></h1>
+<section id="verwaltung-der-zustimmungsoptionen">
+<h2>Verwaltung der Zustimmungsoptionen<a class="headerlink" href="#verwaltung-der-zustimmungsoptionen" title="Link to this heading"></a></h2>
+<p>Im System lassen sich Zustimmungsoptionen (consent options) deklarieren. Sie beziehen sich auf eine Rolle und werden
+im Programm an verschiedenen Stellen abgefragt.</p>
+<p>Anwendungsfälle</p>
+<ul class="simple">
+<li><p>Registrierung - TBD</p></li>
+<li><p>Formular für Stellungnahme</p></li>
+<li><p>Nutzungsbedingungen des Systems</p></li>
+</ul>
+<img alt="../_images/xplanung_light_admin_consentoptions.png" src="../_images/xplanung_light_admin_consentoptions.png" />
+</section>
+<section id="freigabe-von-administrationsanfragen">
+<h2>Freigabe von Administrationsanfragen<a class="headerlink" href="#freigabe-von-administrationsanfragen" title="Link to this heading"></a></h2>
+<img alt="../_images/xplanung_light_admin_request_admin_list.png" src="../_images/xplanung_light_admin_request_admin_list.png" />
+<img alt="../_images/xplanung_light_admin_request_admin_confirm.png" src="../_images/xplanung_light_admin_request_admin_confirm.png" />
+</section>
+<section id="django-admin-oberflache">
+<h2>Django Admin Oberfläche<a class="headerlink" href="#django-admin-oberflache" title="Link to this heading"></a></h2>
+<img alt="../_images/xplanung_light_admin_admin.png" src="../_images/xplanung_light_admin_admin.png" />
+<section id="verwaltung-standardisierter-lizenzen">
+<h3>Verwaltung standardisierter Lizenzen<a class="headerlink" href="#verwaltung-standardisierter-lizenzen" title="Link to this heading"></a></h3>
+<img alt="../_images/xplanung_light_admin_licenses.png" src="../_images/xplanung_light_admin_licenses.png" />
+</section>
+</section>
+<section id="konfiguration-in-den-settings">
+<h2>Konfiguration in den Settings<a class="headerlink" href="#konfiguration-in-den-settings" title="Link to this heading"></a></h2>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">Auszug aus den <a class="reference external" href="https://github.com/mrmap-community/xplanung_light/blob/master/komserv/settings.py">settings.py</a></span><a class="headerlink" href="#id1" title="Link to this code"></a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span> <span class="n">XPLANUNG_LIGHT_CONFIG</span> <span class="o">=</span> <span class="p">{</span>
+<span class="linenos"> 2</span>     <span class="s1">&#39;metadata_contact&#39;</span><span class="p">:</span> <span class="p">{</span>
+<span class="linenos"> 3</span>         <span class="s1">&#39;organization_name&#39;</span><span class="p">:</span> <span class="s1">&#39;Musterorganisation Metadaten / Dienste&#39;</span><span class="p">,</span>
+<span class="linenos"> 4</span>         <span class="s1">&#39;person_name&#39;</span><span class="p">:</span> <span class="s1">&#39;Max Mustermann&#39;</span><span class="p">,</span>
+<span class="linenos"> 5</span>         <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="s1">&#39;maximilian.mustermann@example.com&#39;</span><span class="p">,</span>
+<span class="linenos"> 6</span>         <span class="s1">&#39;phone&#39;</span><span class="p">:</span> <span class="s1">&#39;01111/11111&#39;</span><span class="p">,</span>
+<span class="linenos"> 7</span>         <span class="s1">&#39;facsimile&#39;</span><span class="p">:</span> <span class="s1">&#39;01111/11111-0&#39;</span><span class="p">,</span>
+<span class="linenos"> 8</span>         <span class="s1">&#39;homepage&#39;</span><span class="p">:</span> <span class="s1">&#39;https://www.example.com&#39;</span><span class="p">,</span>
+<span class="linenos"> 9</span>         <span class="s1">&#39;address&#39;</span><span class="p">:</span> <span class="s1">&#39;Musterstraße 10&#39;</span><span class="p">,</span>
+<span class="linenos">10</span>         <span class="s1">&#39;city&#39;</span><span class="p">:</span> <span class="s1">&#39;Musterstadt&#39;</span><span class="p">,</span>
+<span class="linenos">11</span>         <span class="s1">&#39;postcode&#39;</span><span class="p">:</span> <span class="s1">&#39;11111&#39;</span><span class="p">,</span>
+<span class="linenos">12</span>     <span class="p">},</span>
+<span class="linenos">13</span>     <span class="s1">&#39;version&#39;</span><span class="p">:</span> <span class="s1">&#39;0.0.1&#39;</span><span class="p">,</span>
+<span class="linenos">14</span>     <span class="s1">&#39;metadata_keywords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;bebauungsplan&#39;</span><span class="p">,</span> <span class="s1">&#39;kommunal&#39;</span><span class="p">,</span> <span class="p">],</span>
+<span class="linenos">15</span>     <span class="s1">&#39;mapfile_cache_duration_seconds&#39;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+<span class="linenos">16</span>     <span class="s2">&quot;mapfile_force_online_resource_https&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+<span class="linenos">17</span>     <span class="s2">&quot;further_base_layers&quot;</span><span class="p">:</span> <span class="p">[</span>
+<span class="linenos">18</span>         <span class="c1">#{&quot;name&quot;: &quot;dop20rp&quot;, &quot;title&quot;: &quot;DOP20 RP&quot;, &quot;url&quot;: &quot;https://geo4.service24.rlp.de/wms/rp_dop20.fcgi?&quot;, &quot;attribution&quot;: &quot;Lizenz ...&quot;, &quot;layer_name&quot;: &quot;rp_dop20&quot;},</span>
+<span class="linenos">19</span>         <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;topplusfarbe&quot;</span><span class="p">,</span> <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;TopPlus Farbe&quot;</span><span class="p">,</span> <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;https://sgx.geodatenzentrum.de/wms_topplus_open?&quot;</span><span class="p">,</span> <span class="s2">&quot;attribution&quot;</span><span class="p">:</span> <span class="s2">&quot;Lizenz ...&quot;</span><span class="p">,</span> <span class="s2">&quot;layer_name&quot;</span><span class="p">:</span> <span class="s2">&quot;web&quot;</span><span class="p">},</span>
+<span class="linenos">20</span>         <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;topplusfarbegrau&quot;</span><span class="p">,</span> <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;TopPlus Grau&quot;</span><span class="p">,</span> <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;https://sgx.geodatenzentrum.de/wms_topplus_open?&quot;</span><span class="p">,</span> <span class="s2">&quot;attribution&quot;</span><span class="p">:</span> <span class="s2">&quot;Lizenz ...&quot;</span><span class="p">,</span> <span class="s2">&quot;layer_name&quot;</span><span class="p">:</span> <span class="s2">&quot;web_grau&quot;</span><span class="p">},</span>
+<span class="linenos">21</span>     <span class="p">],</span>
+<span class="linenos">22</span>     <span class="s2">&quot;overlay_layers&quot;</span><span class="p">:</span> <span class="p">[</span>
+<span class="linenos">23</span>         <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;likarp&quot;</span><span class="p">,</span> <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Liegenschaftskarte RP&quot;</span><span class="p">,</span> <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;https://geo5.service24.rlp.de/wms/liegenschaften_rp.fcgi?&quot;</span><span class="p">,</span> <span class="s2">&quot;attribution&quot;</span><span class="p">:</span> <span class="s2">&quot;Lizenz ...&quot;</span><span class="p">,</span> <span class="s2">&quot;layer_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Flurstueck&quot;</span><span class="p">},</span>
+<span class="linenos">24</span>         <span class="c1">#{&quot;name&quot;: &quot;topplusfarbegrau&quot;, &quot;title&quot;: &quot;TopPlus Grau&quot;, &quot;url&quot;: &quot;https://sgx.geodatenzentrum.de/wms_topplus_open?&quot;, &quot;attribution&quot;: &quot;Lizenz ...&quot;, &quot;layer_name&quot;: &quot;web_grau&quot;},</span>
+<span class="linenos">25</span>     <span class="p">],</span>
+<span class="linenos">26</span> <span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="schnittstellen.html" class="btn btn-neutral float-left" title="Schnittstellen" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Zurück</a>
+        <a href="../development/entwicklung.html" class="btn btn-neutral float-right" title="Entwicklung" accesskey="n" rel="next">Weiter <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, GDI-RP.</p>
+  </div>
+
+  Erstellt mit <a href="https://www.sphinx-doc.org/">Sphinx</a> mit einem
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    bereitgestellt von <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
