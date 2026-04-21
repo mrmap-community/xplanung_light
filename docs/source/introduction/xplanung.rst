@@ -35,11 +35,11 @@ Weitere Informationen
 * `Forum`_ (Wuppertal)
 
 
-.. _`Forum`: https://forum-xplanung.de
+.. _Forum: https://forum-xplanung.de
 
-.. _`FOSSGIS`: https://gitlab.fossgis.de/ag-xplanung-mit-foss/workspace-xplanung/-/blob/main/README.md
+.. _FOSSGIS: https://gitlab.fossgis.de/ag-xplanung-mit-foss/workspace-xplanung/
 
-.. _`XPlanung`: https://xleitstelle.de/xplanung
+.. _XPlanung: https://xleitstelle.de/xplanung
 
 .. _Baden-Württemberg: https://www.geoportal-bw.de/documents/d/guest/leitfaden_bauleitplan_v3-1
 

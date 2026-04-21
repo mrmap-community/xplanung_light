@@ -731,69 +731,80 @@ die sich in der Offenlage befindlichen Pläne zu kommentieren, sowohl durch den 
 Die Frage ist aber, ob es für diese Zwecke nicht schon speziell entwickelte Software gibt, die schon länger eingesetzt wird.
 """
 
-class BPlanBeteiligungBeitrag(GenericMetadata):
+class BeteiligungBeitrag(GenericMetadata):
+
+    ONLINE = "1000"
+    MAIL = "2000"
+    SCHRIFTLICH = "3000"
+    NIEDERSCHRIFT = "4000"
+
+    COMMENT_TYPE_CHOICES = [
+        (ONLINE,  "Online"),
+        (MAIL, "E-Mail"),
+        (SCHRIFTLICH, "Schriftlich"),
+        (NIEDERSCHRIFT, "Niederschrift"),
+    ]
 
     titel = models.CharField(null=False, blank=False, max_length=300, verbose_name="Titel des Beitrags", help_text="Geben Sie hier bitte einen aussagekräftigen Titel für Ihren Beitrag an.")
     beschreibung = RichTextField(null=False, blank=False, verbose_name="Beitrag / Kommentar (Textform)")
+    approved = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag bestätigt")
+    typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_TYPE_CHOICES, default='1000', verbose_name='Einreichung', help_text="Art der Einreichung des Beitrags / Kommentars", db_index=True)
+    name = models.CharField(null=True, blank=True, max_length=300, verbose_name="Name", help_text="Name der Person oder Institution die den Beitrag einreicht")
+    email = models.EmailField(null=True, blank=True, verbose_name='EMail', help_text='EMail-Adresse zur Bestätigung der Abgabe Ihrer Stellungnahme. Sie bekommen eine Aktivierungsmail geschickt.')
+    withdrawn = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag zurückgezogen")
+
+    def clean(self):
+        super().clean()
+        if self.typ in ['1000', '2000']:
+            if self.email == '' or self.email == None:
+                raise ValidationError({
+                    'email': 'Bei einer Einreichung über das Online-Formular oder per E-Mail, muss die E-Mail Adresse angegeben werden!',
+                })
+            
+    class Meta:
+        abstract = True
+
+
+class BeteiligungBeitragAnhang(GenericMetadata):   
+
+    BESCHREIBUNG = "1000"
+    FOTO = "2000"
+    KARTE = "3000"
+
+    COMMENT_ATTACHMENT_TYPE_CHOICES = [
+        (BESCHREIBUNG,  "Beschreibung"),
+        (FOTO, "Foto"),
+        (KARTE, "Karte/Skizze"),
+    ]
+
+    name = models.CharField(null=False, blank=False, max_length=256)
+    typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_ATTACHMENT_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des Anhangs', help_text="Typ / Inhalt des Anhangs zum Kommentar", db_index=True)
+    attachment = models.FileField(null = True, blank = True, max_length=1024, upload_to='uploads', verbose_name="Dokument")
+
+    class Meta:
+        abstract = True
+
+
+class BPlanBeteiligungBeitrag(BeteiligungBeitrag):
+
     bplan_beteiligung = HistoricForeignKey(BPlanBeteiligung, on_delete=models.CASCADE, verbose_name="BPlanBeteiligung", help_text="BPlanBeteiligung", related_name="comments")
-    approved = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag bestätigt")
-    email = models.EmailField(null=False, blank=False, verbose_name='EMail', help_text='EMail-Adresse zur Bestätigung der Abgabe Ihrer Stellungnahme. Sie bekommen eine Aktivierungsmail geschickt.')
-    withdrawn = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag zurückgezogen")
     history = HistoricalRecords()
 
+class BPlanBeteiligungBeitragAnhang(BeteiligungBeitragAnhang):   
 
-class BPlanBeteiligungBeitragAnhang(GenericMetadata):   
-
-    BESCHREIBUNG = "1000"
-    FOTO = "2000"
-    KARTE = "3000"
-
-    COMMENT_ATTACHMENT_TYPE_CHOICES = [
-        (BESCHREIBUNG,  "Beschreibung"),
-        (FOTO, "Foto"),
-        (KARTE, "Karte/Skizze"),
-    ]
-
-    name = models.CharField(null=False, blank=False, max_length=256)
     beitrag = HistoricForeignKey(BPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zum Beitrag / Kommentar", help_text="Dateianhänge zum Beitrag / Kommentar", related_name="attachments")
-    typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_ATTACHMENT_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des Anhangs', help_text="Typ / Inhalt des Anhngs zum Kommentar", db_index=True)
-    attachment = models.FileField(null = True, blank = True, max_length=1024, upload_to='uploads', verbose_name="Dokument")
     history = HistoricalRecords()
 
 
-"""
-class BPlanBeteiligungBeitragAntwort():
-    pass
-"""
+class FPlanBeteiligungBeitrag(BeteiligungBeitrag):
 
-
-class FPlanBeteiligungBeitrag(GenericMetadata):
-
-    titel = models.CharField(null=False, blank=False, max_length=300, verbose_name="Titel des Beitrags", help_text="Geben Sie hier bitte einen aussagekräftigen Titel für Ihren Beitrag an.")
-    beschreibung = RichTextField(null=False, blank=False, verbose_name="Beitrag / Kommentar (Textform)")
     fplan_beteiligung = HistoricForeignKey(FPlanBeteiligung, null=True, on_delete=models.CASCADE, verbose_name="FPlanBeteiligung", help_text="FPlanBeteiligung", related_name="comments")
-    approved = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag bestätigt")
-    email = models.EmailField(null=False, blank=False, verbose_name='EMail', help_text='EMail-Adresse zur Bestätigung der Abgabe Ihrer Stellungnahme. Sie bekommen eine Aktivierungsmail geschickt.')
-    withdrawn = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag zurückgezogen")
     history = HistoricalRecords()
 
 
-class FPlanBeteiligungBeitragAnhang(GenericMetadata):   
+class FPlanBeteiligungBeitragAnhang(BeteiligungBeitragAnhang):   
 
-    BESCHREIBUNG = "1000"
-    FOTO = "2000"
-    KARTE = "3000"
-
-    COMMENT_ATTACHMENT_TYPE_CHOICES = [
-        (BESCHREIBUNG,  "Beschreibung"),
-        (FOTO, "Foto"),
-        (KARTE, "Karte/Skizze"),
-    ]
-
-    name = models.CharField(null=False, blank=False, max_length=256)
     beitrag = HistoricForeignKey(FPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zum Beitrag / Kommentar", help_text="Dateianhänge zum Beitrag / Kommentar", related_name="attachments")
-    typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_ATTACHMENT_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des Anhangs', help_text="Typ / Inhalt des Anhngs zum Kommentar", db_index=True)
-    attachment = models.FileField(null = True, blank = True, max_length=1024, upload_to='uploads', verbose_name="Dokument")
     history = HistoricalRecords()
 
 """

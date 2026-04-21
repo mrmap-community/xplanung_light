@@ -1397,12 +1397,18 @@ Und das über ein RichtText-widget - mal sehen, ob das so ok ist - ggf. muessen 
 """
 class BPlanBeteiligungBeitragForm(ModelForm):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        #self.fields['name'].required = True
+        self.fields['typ'].initial = 1000
+        self.fields['email'].required = True
+
     class Meta:
         model = BPlanBeteiligungBeitrag
-        fields = ['email', 'titel', 'beschreibung']
+        fields = ['name', 'email', 'titel', 'beschreibung', 'typ']
         widgets = {
-            #'beschreibung': widgets.Textarea(attrs={'cols': '80', 'rows': '3'}),
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+            'typ': HiddenInput(),
         }
 
 """
@@ -1410,12 +1416,18 @@ Die Gleiche Klasse für FPläne
 """
 class FPlanBeteiligungBeitragForm(ModelForm):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        #self.fields['name'].required = True
+        self.fields['typ'].initial = 1000
+        self.fields['email'].required = True
+
     class Meta:
         model = FPlanBeteiligungBeitrag
-        fields = ['email', 'titel', 'beschreibung']
+        fields = ['name', 'email', 'titel', 'beschreibung', 'typ']
         widgets = {
-            #'beschreibung': widgets.Textarea(attrs={'cols': '80', 'rows': '3'}),
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+            'typ': HiddenInput(),
         }
 
 """
