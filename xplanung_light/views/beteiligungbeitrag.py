@@ -1,9 +1,12 @@
 from xplanung_light.models import BPlan, BPlanBeteiligung, BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang, AdministrativeOrganization
 from xplanung_light.models import FPlanBeteiligung, FPlan, FPlanBeteiligungBeitrag, ContactOrganization
+from xplanung_light.views.xplanrelations import XPlanRelationsCreateView, XPlanRelationsUpdateView, XPlanRelationsDeleteView
 from xplanung_light.models import ConsentOption
 from xplanung_light.forms import BPlanBeteiligungBeitragForm
+from xplanung_light.forms import BPlanBeteiligungGenericCollection, FPlanBeteiligungGenericCollection
+from xplanung_light.forms import BPlanBeteiligungBeitragGenericCollection, FPlanBeteiligungBeitragGenericCollection
 from django.views.generic import CreateView, ListView, DeleteView, DetailView, UpdateView
-from formset.views import FormViewMixin, FormCollectionView, EditCollectionView #, CreateCollectionView
+from formset.views import FormViewMixin, FormCollectionView, EditCollectionView
 from django_tables2 import SingleTableView
 from xplanung_light.tables import BPlanBeteiligungBeitragTable, FPlanBeteiligungBeitragTable
 from django.urls import reverse_lazy, reverse
@@ -23,6 +26,7 @@ from django.utils.timezone import datetime
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
+from django.db import transaction
 
 
 class XPlanBeteiligungBeitragCreateView(CreateView):
@@ -62,7 +66,7 @@ class BeteiligungBeitragListView(SingleTableView):
         #TODO: Anpassen für FPlan
         self.beteiligungid = kwargs.get('beteiligungid')
         # Debugausgabe
-        print(f"Typ: {self.plantyp}")
+        #print(f"Typ: {self.plantyp}")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self, **kwargs):
@@ -203,8 +207,6 @@ class BeteiligungBeitragCreateView(EditCollectionView):
         #TODO: Anpassen für FPlan
         self.planid = kwargs.get('planid')
         self.beteiligung_pk = kwargs.get('pk')
-        # Debugausgabe
-        print(f"Typ: {self.plantyp}, ID: {self.planid}")
         return super().dispatch(request, *args, **kwargs)
 
     def get_initial(self):
@@ -308,7 +310,240 @@ class BeteiligungBeitragCreateView(EditCollectionView):
             self.request.session["beitrag_generic_id"] = str(beitrag_generic_id)
         return result
     
+
+class BeteiligungBeitragGenericCreateView(FormCollectionView):
+    """
+    Der generische CreateView ist für die Sachbearbeiter gedacht und dient zur Erfassung der Beiträge die
+    nicht über das Online-Formular erfasst wurden. 
+    In django-formset 1.7.8 gibt es noch keine CreateCollectionView, man muss das Speichern selbst implementieren.
+    """
+    # Initialisierung der Attribute - werden in dispatch Funktion überschrieben!
+    plantyp = None
+    # Modell der zu erstellenden Instanz
+    model = BPlanBeteiligungBeitrag
+    # Modell des Beteiligungsverfahrens zu der der Beitrag eingereicht wird
+    model_parent = BPlanBeteiligung
+    # django-formset CollectionClass für das dynamsiche Formular
+    collection_class = BPlanBeteiligungCollection
+    planmodel = None
+    reference_model_name_lower = None
+    beteiligung_pk = None
+    template_name = 'xplanung_light/beteiligungbeitrag_generic_form.html'
+    extra_context = None
+
+    def get_initial(self):
+        """
+        :param self: Description
+        """
+        # 'beitrag' ist der Name der Form in Ihrer Collection
+        # 'beteiligung' ist das Feld des Foreign Keys
+        initial = super().get_initial()
+        #print(initial)
+        initial.update({
+            'beitrag': {
+                self.kwargs['plantyp'] + "_" + 'beteiligung': str(self.kwargs['beteiligungid'])
+            }
+        })
+        # Url zu der nach dem Erstellen der Instanz weitergeleitet wird
+        self.success_url = reverse('beteiligungbeitrag-list', kwargs={'plantyp': self.kwargs['plantyp'], 'planid': self.kwargs['planid'], 'beteiligungid': self.kwargs['beteiligungid']})
+        return initial
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Hier sind die Parameter aus der re_path verfügbar. Die Klasse wird je nach Plantyp abgeändert.
+        """
+        self.beteiligung_pk = kwargs.get('beteiligungid')
+        self.plantyp = kwargs.get('plantyp')
+        if self.kwargs.get('plantyp') == 'bplan':
+            self.model = BPlanBeteiligungBeitrag
+            self.model_parent = BPlanBeteiligung
+            self.planmodel = BPlan
+            self.reference_model_name_lower = 'bplan'
+            self.collection_class = BPlanBeteiligungBeitragGenericCollection
+        if self.kwargs.get('plantyp') == 'fplan':
+            self.model = FPlanBeteiligungBeitrag
+            self.model_parent = FPlanBeteiligung
+            self.planmodel = FPlan
+            self.reference_model_name_lower = 'fplan'
+            self.collection_class = FPlanBeteiligungBeitragGenericCollection
+        self.planid = kwargs.get('planid')
+        return super().dispatch(request, *args, **kwargs)
     
+    def get_context_data(self, **kwargs):
+        """
+        get_context_data wird überschrieben, um weitere Informationen (Plan/Beteiligung) in das Formular zu übernehmen und 
+        um auf den Plantyp reagieren zu können.
+        
+        :param self: Description
+        :param kwargs: Description
+        """
+        context = super().get_context_data(**kwargs)
+        context["plantyp"] = self.kwargs['plantyp']
+        plan = self.planmodel.objects.get(pk=self.kwargs['planid'])
+        context["plan"] = plan
+        #debug
+        #print("get_context_data: plan name: " + plan.name)
+        beteiligung = None
+        try:
+            beteiligung = self.model_parent.objects.get(pk=self.kwargs['beteiligungid'])
+        except:
+            pass
+        context["beteiligung"] = beteiligung
+        # Extra Context - hier wird definiert, ob create oder update aufgerufen wurde
+        context['extra_context'] = self.extra_context
+        # Berechtigungsprüfung
+        # check ob Nutzer admin einer der Gemeinden des BPlans ist
+        if self.request.user.is_superuser == False:
+            for gemeinde in plan.gemeinde.all():
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:                        
+                         context[self.reference_model_name_lower] = plan
+                         return context
+            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        # Übergabe des Planobjekts - warum unter bplan/fplan - kann ggf. raus
+        context[self.reference_model_name_lower] = plan
+        return context
+    
+    # Zum testen, was als json übetragen wird
+    #def post(self, request, *args, **kwargs):
+        # Die Daten liegen im Body des Requests
+        #raw_data = json.loads(request.body)
+        #print(raw_data)  # JSON-Objekt
+        #return super().post(request, *args, **kwargs)
+
+    def form_collection_valid(self, form_collection):
+        """
+        In der älteren Version von django-formset - 1.7.8 muss man das Objekt noch 
+        eigenständig abspeichern.
+        """
+        parent_pk = self.kwargs.get('beteiligungid')
+        holders = form_collection.valid_holders
+        # 1. Hauptobjekt speichern
+        # Ersetze 'beitrag_form' durch den Namen in deiner Haupt-Collection
+        beitrag_form = holders.get('beitrag')
+        beitrag_instance = None
+        if beitrag_form:
+            if beitrag_form.instance.pk:
+                # Der Beitrag wird immer neu angelegt
+                beitrag_form.instance.pk = None
+                beitrag_form.instance._state.adding = True
+            beitrag_instance = beitrag_form.save(commit=False)
+            # Überschrieben der beteiligungsid (zur Sicherheit - hier braucht man eine instanz, keine id!):
+            #setattr(beitrag_instance, self.plantyp + '_beteiligung', parent_pk)
+            # beitrag_instance.parent_id = parent_pk 
+            beitrag_instance.save()
+            beitrag_form.save_m2m()
+            #print(f"Beitrag gespeichert: ID {beitrag_instance.pk}")
+             # 2. Anhänge speichern
+            anhang_collection_holder = holders.get('attachments') # Name in deiner Haupt-Collection
+            # Wenn es keine Liste ist, hat es ein eigenes valid_holders Attribut
+            if hasattr(anhang_collection_holder, 'valid_holders'):
+                # Bei Collections mit siblings ist valid_holders oft eine Liste von Dicts
+                siblings = anhang_collection_holder.valid_holders
+                # Jetzt prüfen, ob diese 'valid_holders' die Liste sind
+                if isinstance(siblings, list):
+                    for sib_dict in siblings:
+                        # 'attachment' ist der Name in BeteiligungBeitragAnhangCollection
+                        form = sib_dict.get('attachment')
+                        if form:
+                            instance = form.save(commit=False)
+                            instance.beitrag = beitrag_instance
+                            instance.save()
+                else:
+                    # Falls es doch eine einfache Collection ohne Siblings ist
+                    form = siblings.get('attachment')
+                    if form:
+                        instance = form.save(commit=False)
+                        instance.beitrag = beitrag_instance
+                        instance.save()
+            return super().form_collection_valid(form_collection)
+
+
+class BeteiligungBeitragGenericUpdateView(EditCollectionView):
+    """
+    Der generische CreateView ist für die Sachbearbeiter gedacht und dient zur Erfassung der Beiträge die
+    nicht über das Online-Formular erfasst wurden. pk ist in Url vorhanden.
+    """
+    # Initialisierung der Attribute - werden in dispatch Funktion überschrieben!
+    plantyp = None
+    model = BPlanBeteiligungBeitrag
+    beteiligung_model = BPlanBeteiligung
+    collection_class = BPlanBeteiligungGenericCollection
+    reference_model_name_lower = 'bplan'
+    planmodel = None
+    beteiligung_pk = None
+    template_name = 'xplanung_light/beteiligungbeitrag_generic_form.html'
+    extra_context = None
+
+    def get_initial(self):
+        """
+        :param self: Description
+        """
+        self.success_url = reverse('beteiligungbeitrag-list', kwargs={'plantyp': self.kwargs['plantyp'], 'planid': self.kwargs['planid'], 'beteiligungid': self.kwargs['beteiligungid']})
+        return super().get_initial()
+
+    def dispatch(self, request, *args, **kwargs):
+        # Hier sind die Parameter aus der re_path verfügbar:
+        self.plantyp = kwargs.get('plantyp')
+        if self.kwargs.get('plantyp') == 'bplan':
+            self.model = BPlanBeteiligungBeitrag
+            self.beteiligung_model = BPlanBeteiligung
+            self.planmodel = BPlan
+            self.reference_model_name_lower = 'bplan'
+            self.collection_class = BPlanBeteiligungBeitragGenericCollection
+        if self.kwargs.get('plantyp') == 'fplan':
+            self.model = FPlanBeteiligungBeitrag
+            self.beteiligung_model = FPlanBeteiligung
+            self.planmodel = FPlan
+            self.reference_model_name_lower = 'fplan'
+            self.collection_class = FPlanBeteiligungBeitragGenericCollection
+        #TODO: Anpassen für FPlan
+        self.planid = kwargs.get('planid')
+        self.beteiligung_pk = kwargs.get('beteiligungid')
+        self.pk = kwargs.get('pk')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        """
+        get_context_data wird überschrieben, weil wir die Stellungnahmen nur für Pläne ermöglichen, für die
+        der Anbieter das zugelassen hat.
+        
+        :param self: Description
+        :param kwargs: Description
+        """
+        context = super().get_context_data(**kwargs)
+        context["plantyp"] = self.kwargs['plantyp']
+        plan = self.planmodel.objects.get(pk=self.kwargs['planid'])
+        context["plan"] = plan
+        beteiligung = None
+        try:
+            beteiligung = self.beteiligung_model.objects.get(pk=self.kwargs['beteiligungid'])
+        except:
+            pass
+        context["beteiligung"] = beteiligung
+        #context["beitrag"] = self.get_object()
+        context['extra_context'] = self.extra_context
+        # check ob Nutzer admin einer der Gemeinden des BPlans ist
+        if self.request.user.is_superuser == False:
+            for gemeinde in plan.gemeinde.all():
+                for user in gemeinde.organization_users.all():
+                    if user.user == self.request.user and user.is_admin:                        
+                         context[self.reference_model_name_lower] = plan
+                         return context
+            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        context[self.reference_model_name_lower] = plan
+        return context
+    
+    # Zum testen, was als json übetragen wird
+    """
+    def post(self, request, *args, **kwargs):
+        # Die Daten liegen im Body des Requests
+        raw_data = json.loads(request.body)
+        print(raw_data)  # JSON-Objekt
+        return super().post(request, *args, **kwargs)
+    """
+
+
 class BeteiligungBeitragDetailView(DetailView):
     """
     View für die Details zum Beteiligungsbeitrag. Soll nur für den Ersteller und die zuständigen Bearbeiter sichtbar sein!

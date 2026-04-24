@@ -176,7 +176,7 @@ class XPlanBeitragStellungnahmeCreateView(FormViewMixin, XPlanRelationsCreateVie
 
     def get_success_url(self):
         """
-        Wenn das Anlagen des Beteiligungsobjektes erfolgreich war, wird auf die Liste der Beteiligungen zum BPlan
+        Wenn das Anlagen des Stellungnahmeobjektes erfolgreich war, wird auf die Liste der Stellungnahmen zum BPlan
         weitergleitet.
         
         """

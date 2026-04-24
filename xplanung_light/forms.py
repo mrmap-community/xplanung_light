@@ -1354,7 +1354,7 @@ class GastBeitragAuthenticateForm(ModelForm):
 Klasse für das Formular zum Hochladen der Anhänge eines Beteiligungsbeitrags
 https://django-formset.fly.dev/model-collections/
 Das Model wird nur für das schon vorgegebene id Feld genutzt.
-Die url lautet in dem Fall: /plan/<int:planid/beteiligung/<int;pk>/beitrag/create/
+Die url lautet in dem Fall: /plan/<int:planid/beteiligung/<int:pk>/beitrag/create/
 """
 class BPlanBeteiligungFormFormset(ModelForm):
     id = IntegerField(
@@ -1412,7 +1412,7 @@ class BPlanBeteiligungBeitragForm(ModelForm):
         }
 
 """
-Die Gleiche Klasse für FPläne
+Die gleiche Klasse für FPläne
 """
 class FPlanBeteiligungBeitragForm(ModelForm):
 
@@ -1430,16 +1430,16 @@ class FPlanBeteiligungBeitragForm(ModelForm):
             'typ': HiddenInput(),
         }
 
+
 """
 Einfache ModelForm für das BPlanBeteiligungBeitragAnhang-Objekt
 """
-class BeteiligungBeitragAnhangForm(ModelForm):
+class BPlanBeteiligungBeitragAnhangForm(ModelForm):
 
     id = IntegerField(
         required=False,
         widget=HiddenInput,
     )
-    
     attachment = fields.FileField(
         label="Anhang",
         widget=UploadedFileInput(attrs={
@@ -1449,11 +1449,24 @@ class BeteiligungBeitragAnhangForm(ModelForm):
         required=True,
         validators=[validate_file_infection],
     )
-    
+    """
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Falls kein neues File hochgeladen wurde (attachment ist im cleaned_data leer 
+        # oder nur ein String-Pfad), behalte das alte File bei.
+        if not self.cleaned_data.get('attachment'):
+            # Wir holen den Wert direkt vom ursprünglichen Objekt
+            instance.attachment = self.instance.attachment
+        
+        if commit:
+            instance.save()
+        return instance
+    """
+
     class Meta:
         model = BPlanBeteiligungBeitragAnhang
-        fields = ['id', 'name', 'typ', 'attachment']
-
+        fields = ['id', 'name', 'typ', 'attachment']#,'beitrag']
+    
 
 """
 Für FPläne
@@ -1483,21 +1496,23 @@ class FPlanBeteiligungBeitragAnhangForm(ModelForm):
 """
 Collection für die über ein ForeignKey mit dem BPlanBeteiligungBeitrag-Objekt verbundenen BPlanBeteiligungBeitragAnhang-Objekte.
 """
-class BeteiligungBeitragAnhangCollection(FormCollection):
+class BPlanBeteiligungBeitragAnhangCollection(FormCollection):
     legend = "Anlagen"
     add_label = "Anlage hinzufügen"
     related_field = 'beitrag'
-    attachment = BeteiligungBeitragAnhangForm()
+    attachment = BPlanBeteiligungBeitragAnhangForm()
     #beitrag = BPlanBeteiligungBeitragCollection()
     min_siblings = 0
     max_siblings = 4
 
     def retrieve_instance(self, data):
+        #print(f"DEBUG: retrieve_instance aufgerufen mit ID: {data.get('id')}")
+        #print(f"DEBUG: Aktuelle Instanz der Collection (Beitrag): {self.instance}")
         if data := data.get('attachment'):
             try:
-                return self.instance.attachment.get(id=data.get('id') or 0)
+                return self.instance.attachments.get(id=data.get('id') or 0)
             except (AttributeError, BPlanBeteiligungBeitragAnhang.DoesNotExist, ValueError):
-                return BPlanBeteiligungBeitragAnhang(name=data.get('name'), attachment=data.get('attachment'), beitrag=self.instance)
+                return BPlanBeteiligungBeitragAnhang(beitrag=self.instance)
 
 
 """
@@ -1514,9 +1529,9 @@ class FPlanBeteiligungBeitragAnhangCollection(FormCollection):
     def retrieve_instance(self, data):
         if data := data.get('attachment'):
             try:
-                return self.instance.attachment.get(id=data.get('id') or 0)
+                return self.instance.attachments.get(id=data.get('id') or 0)
             except (AttributeError, FPlanBeteiligungBeitragAnhang.DoesNotExist, ValueError):
-                return FPlanBeteiligungBeitragAnhang(name=data.get('name'), attachment=data.get('attachment'), beitrag=self.instance)
+                return FPlanBeteiligungBeitragAnhang(beitrag=self.instance)
 
 
 """
@@ -1528,7 +1543,7 @@ class BPlanBeteiligungBeitragCollection(FormCollection):
     add_label = "Beitrag hinzufügen"
     related_field = 'bplan_beteiligung' # hier wird der related_name des verbundenen Objketes genutzt!
     beitrag = BPlanBeteiligungBeitragForm()
-    attachments = BeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+    attachments = BPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
     min_siblings = 1
     max_siblings = 1
 
@@ -1538,7 +1553,7 @@ class BPlanBeteiligungBeitragCollection(FormCollection):
                 return self.instance.beitrag.get(id=data.get('id') or 0)
             except (AttributeError, BPlanBeteiligungBeitrag.DoesNotExist, ValueError):
                 #print("BPlanBeteiligungBeitrag nicht gefunden!")
-                return BPlanBeteiligungBeitrag(beschreibung=data.get('beschreibung'), bplan_beteiligung=self.instance)
+                return BPlanBeteiligungBeitrag(bplan_beteiligung=self.instance)
 
 
 """
@@ -1560,7 +1575,7 @@ class FPlanBeteiligungBeitragCollection(FormCollection):
                 return self.instance.beitrag.get(id=data.get('id') or 0)
             except (AttributeError, FPlanBeteiligungBeitrag.DoesNotExist, ValueError):
                 #print("BPlanBeteiligungBeitrag nicht gefunden!")
-                return FPlanBeteiligungBeitrag(beschreibung=data.get('beschreibung'), fplan_beteiligung=self.instance)
+                return FPlanBeteiligungBeitrag(fplan_beteiligung=self.instance)
 
 
 class BeteiligungEinwilligungsoptionenForm(forms.Form):
@@ -1593,6 +1608,118 @@ class FPlanBeteiligungCollection(FormCollection):
     beitrag = FPlanBeteiligungBeitragCollection()
     captcha = CaptchaForm()
 
+
+"""
+Klassen für die Verwaltung aller Einträge - auch der analogen.
+Zunächst die Standard ModelForms für die Beitrag Objekte
+"""
+
+class BPlanBeteiligungBeitragGenericForm(ModelForm):
+
+    id = IntegerField(
+        required=False,
+        widget=HiddenInput,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['name'].required = True
+        self.fields['email'].required = False
+        # Bestehende Choices abrufen und filtern
+        original_choices = self.fields['typ'].choices
+        # Beispiel: Nur '2000', '3000' und '4000' behalten
+        filtered_choices = [c for c in original_choices if c[0] in ['2000', '3000', '4000']]
+        self.fields['typ'].choices = filtered_choices
+
+    # in der save Funktion kann man die Instanz einfach anpassen - hidden fields sind nicht sinnvoll
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        #print("save ausgeführt - jetzt überschreiben ...")
+        instance.approved = True
+        if commit:
+            instance.save()
+        return instance
+
+    class Meta:
+        model = BPlanBeteiligungBeitrag
+        fields = ['id', 'typ', 'name', 'email', 'titel', 'beschreibung', 'bplan_beteiligung']
+        widgets = {
+            'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+            'bplan_beteiligung': HiddenInput(),
+        }
+
+
+class FPlanBeteiligungBeitragGenericForm(ModelForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['name'].required = True
+        self.fields['email'].required = False
+        # Bestehende Choices abrufen und filtern
+        original_choices = self.fields['typ'].choices
+        # Beispiel: Nur '2000', '3000' und '4000' behalten
+        filtered_choices = [c for c in original_choices if c[0] in ['2000', '3000', '4000']]
+        self.fields['typ'].choices = filtered_choices
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.approved = True
+        if commit:
+            instance.save()
+        return instance
+
+    class Meta:
+        model = FPlanBeteiligungBeitrag
+        fields = ['typ', 'name', 'email', 'titel', 'beschreibung', 'approved']
+        widgets = {
+            'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+            #'approved': HiddenInput(),
+        }
+
+
+"""
+Formular Collections für den generischen Fall - Sicht des Sachbearbeiters - er hat alle Freiheiten verschiedene 
+Typen von Beiträgen zu erfassen - hier schliessen wir die Online-Varianten aus- da diese ja nicht vom Sachbearbeiter
+abgeändert werden dürfen.
+Wichtig ist hier zu klären, wie die Formulare aus einer Instanz befüllt werden können.
+
+"""
+
+class BPlanBeteiligungBeitragGenericCollection(FormCollection):
+    default_renderer = FormRenderer(field_css_classes='mb-3')
+    legend = "Beitrag"
+    beitrag = BPlanBeteiligungBeitragGenericForm()
+    attachments = BPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+
+"""
+Für FPläne
+"""
+class FPlanBeteiligungBeitragGenericCollection(FormCollection):
+    default_renderer = FormRenderer(field_css_classes='mb-3')
+    legend = "Beitrag"
+    add_label = "Beitrag hinzufügen"
+    beitrag = FPlanBeteiligungBeitragGenericForm()
+    attachments = FPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+
+
+"""
+Generisches Formulare
+Für BPläne
+"""
+class BPlanBeteiligungGenericCollection(FormCollection):
+    default_renderer = FormRenderer(field_css_classes='mb-3')
+    bplan_beteiligung = BPlanBeteiligungFormFormset()
+    beitrag = BPlanBeteiligungBeitragGenericCollection()
+    #captcha = CaptchaForm()
+
+"""
+Für FPläne
+"""
+class FPlanBeteiligungGenericCollection(FormCollection):
+    default_renderer = FormRenderer(field_css_classes='mb-3')
+    bplan_beteiligung = FPlanBeteiligungFormFormset()
+    beitrag = FPlanBeteiligungBeitragGenericCollection()
+    #captcha = CaptchaForm()
 
 class RequestForOrganizationAdminCreateForm(ModelForm):
     """

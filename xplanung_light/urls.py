@@ -8,6 +8,7 @@ from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDe
 from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView, BeteiligungPdfView
 from xplanung_light.views.requestforadmin import RequestForOrganizationAdminCreateView, RequestForOrganizationAdminListView, RequestForOrganizationAdminDeleteView, RequestForOrganizationAdminAdminListView
 from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragCreateView, BeteiligungBeitragListView, BeteiligungBeitragDeleteView, BeteiligungBeitragDetailView
+from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragGenericCreateView, BeteiligungBeitragGenericUpdateView
 from xplanung_light.views.beitragstellungnahme import XPlanBeitragStellungnahmeCreateView, XPlanBeitragStellungnahmeUpdateView, BeitragStellungnahmeListView, XPlanBeitragStellungnahmeDeleteView
 from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
@@ -67,6 +68,10 @@ urlpatterns = [
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<pk>\d+)/beitrag/create/organization/(?P<orga_id>\d+)/$', BeteiligungBeitragCreateView.as_view(), name="beteiligungbeitrag-create-orga"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/$', BeteiligungBeitragListView.as_view(), name="beteiligungbeitrag-list"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/delete/$', BeteiligungBeitragDeleteView.as_view(), name="beteiligungbeitrag-delete"),
+    # Formular für die Sachbearbeiter
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-generic/create/$', BeteiligungBeitragGenericCreateView.as_view(extra_context={'create': True}), name="beteiligungbeitrag-generic-create"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-generic/(?P<pk>\d+)/update/$', BeteiligungBeitragGenericUpdateView.as_view(extra_context={'update': True}), name="beteiligungbeitrag-generic-update"),
+
     # Aktivierungslink
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/activate$', views.beitrag_activate, name="beteiligungbeitrag-activate"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/withdraw$', views.beitrag_withdraw, name="beteiligungbeitrag-withdraw"),
