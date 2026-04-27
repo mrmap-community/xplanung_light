@@ -165,11 +165,12 @@ class BPlanBeteiligungBeitragTable(tables.Table):
 
     id = tables.LinkColumn('beteiligungbeitrag-detail', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')])
     last_changed = tables.Column(verbose_name='Letzte Änderung')
-    """
-    beschreibung = tables.TemplateColumn(
-        template_code='''{{ record.beschreibung |safe }}''',
+    
+    edit = tables.TemplateColumn(
+        verbose_name="",
+        template_code='''{% if record.typ == '1000' %}{% else %}<a href="{% url 'beteiligungbeitrag-generic-update' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id pk=record.id %}">Bearbeiten</a>{% endif %}''',
     )
-    """
+    
     count_stellungnahmen = tables.LinkColumn('beitragstellungnahme-list', verbose_name='Stellungnahmen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], empty_values=())
     attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "bplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
     delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], \
@@ -178,7 +179,7 @@ class BPlanBeteiligungBeitragTable(tables.Table):
     class Meta:
         model = BPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("id", "last_changed", "titel", "typ", "name", "email", "approved", "withdrawn", "attachments", "count_stellungnahmen", "delete")
+        fields = ("id", "last_changed", "titel", "typ", "name", "email", "approved", "withdrawn", "attachments", "count_stellungnahmen", "edit", "delete")
 
 
 class FPlanBeteiligungBeitragTable(tables.Table):
@@ -190,6 +191,10 @@ class FPlanBeteiligungBeitragTable(tables.Table):
         template_code='''{{ record.beschreibung |safe }}''',
     )
     """
+    edit = tables.TemplateColumn(
+        verbose_name="",
+        template_code='''{% if record.typ == '1000' %}{% else %}<a href="{% url 'beteiligungbeitrag-generic-update' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id pk=record.id %}">Bearbeiten</a>{% endif %}''',
+    )
     count_stellungnahmen = tables.LinkColumn('beitragstellungnahme-list', verbose_name='Stellungnahmen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], empty_values=())
     attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "fplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
     delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], \

@@ -13,7 +13,7 @@
         {% for gemeinde in plan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
     </ul>
 </p>
-<p><a href="{% url 'beteiligungbeitrag-create' plantyp=plantyp planid=plan.id pk=beteiligung.id%}">Neuen Kommentar/Beitrag anlegen</a></p> 
+<p><a href="{% url 'beteiligungbeitrag-generic-create' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id%}">Neuen Kommentar/Beitrag anlegen</a></p> 
 <p><a href="{% url 'beteiligungbeitrag-list-pdf' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id%}">PDF-Export</a></p> 
 {% render_table table %}
 <p>Anzahl: {{ beteiligungbeitrag_list.count }}</p>
