@@ -6,7 +6,8 @@ XPlanung
 XLeitstelle
 ***********
 
-`XPlanung`_
+* `XPlanung`_
+* `Validator`_
 
 ********
 Software
@@ -34,6 +35,7 @@ Weitere Informationen
 
 * `Forum`_ (Wuppertal)
 
+.. _Validator: https://xleitstelle.de/validator
 
 .. _Forum: https://forum-xplanung.de
 
