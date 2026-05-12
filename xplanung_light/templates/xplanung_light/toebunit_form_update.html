@@ -1,0 +1,209 @@
+{% extends "xplanung_light/layout.html" %}
+{% load crispy_forms_tags %}
+{% block title %}
+    TOEB Einheit aktualisieren
+{% endblock %}
+{% block content %}
+<script type="text/javascript">
+    /*
+    Funktion stammt aus Hinweis von chatgpt. Polygone nicht direkt editierbar, weil sie in einem L.GeoJson Container geliefert werde.
+    Multipolygone müssen vorher auch in Polygone überführt werden.
+    */
+    function multipolygonToPolygons(layer) {
+        const coords = layer.feature.geometry.coordinates;
+
+        return coords.map(polygonCoords =>
+            L.polygon(
+            polygonCoords.map(ring =>
+                ring.map(([lng, lat]) => [lat, lng])
+            ),
+            layer.options
+            )
+        );
+    }
+
+    window.addEventListener("map:init", function(e) {
+            var detail = e.detail;
+            var map = detail.map;
+            //Test für wmts layer - topplus
+            // GoogleMapsCompatible (WebMercator) example
+            //import { wmts } from "@alcalin/leaflet-tilelayer-wmts";
+            /*
+            const layer1 = LTileLayerWMTS.wmts(
+                "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/WMTS?",
+                {
+                    layer: "USGSTopo",
+                    style: "default",
+                    tileMatrixSet: "default028mm",
+                    format: "image/png",
+                    googleMapsCompatible: true
+                }
+            );
+            const layer2 = LTileLayerWMTS.wmts(
+                "https://sgx.geodatenzentrum.de/wmts_basemapde?",
+                {
+                    layer: "de_basemapde_web_raster_farbe",
+                    style: "default",
+                    tileMatrixSet: "GLOBAL_WEBMERCATOR",
+                    format: "image/png",
+                    googleMapsCompatible: true
+                }
+            );*/
+            /* Scheint nicht zu funktionieren - daher als WMS Overlay hinzufügen!*/
+            {% if further_base_layers %}
+            var layerControl = L.control.layers().addTo(map);
+            {% endif %}
+            {% for base_layer in further_base_layers %}
+            var {{ base_layer.name }} = L.tileLayer.wms('{{ base_layer.url }}?', {
+                        layers: '{{ base_layer.layer_name }}',
+                        format: 'image/png',
+                        maxZoom: 20,
+                        transparent: true,
+                        attribution: '{{ base_layer.attribution }}',
+            }).addTo(map);
+            layerControl.addBaseLayer({{ base_layer.name }}, "{{ base_layer.title }}");
+            {% endfor %}
+            {% if overlay_layers %}
+            {% for layer in overlay_layers %}
+            var {{ layer.name }} = L.tileLayer.wms('{{ layer.url }}', {
+                        layers: '{{ layer.layer_name }}',
+                        format: 'image/png',
+                        maxZoom: 20,
+                        transparent: true,
+                        attribution: '{{ layer.attribution }}',
+            }).addTo(map);
+            layerControl.addOverlay({{ layer.name }}, "{{ layer.title }}");
+            {% endfor %}
+            {% endif %}
+            //L.Control.geocoder().addTo(detail.map);
+            var control = new L.Control.FileLayerLoad({
+                // Allows you to use a customized version of L.geoJson.
+                // For example if you are using the Proj4Leaflet leaflet plugin,
+                // you can pass L.Proj.geoJson and load the files into the
+                // L.Proj.GeoJson instead of the L.geoJson.
+                layer: L.geoJson,
+                // See http://leafletjs.com/reference.html#geojson-options
+                layerOptions: {style: {color:'red'}},
+                // Add to map after loading (default: true) ?
+                addToMap: true,
+                // File size limit in kb (default: 1024) ?
+                fileSizeLimit: 2048,
+                // Restrict accepted file formats (default: .geojson, .json, .kml, and .gpx) ?
+                formats: [
+                    '.geojson',
+                    '.kml',
+                    '.gpx',
+                ]
+            }).addTo(map);
+            // hard to find - but it work as expected ;-) : https://github.com/makinacorpus/Leaflet.FileLayer/issues/22
+            var drawnItems;
+            var store;
+            map.on('map:loadfield', function (e) {
+                drawnItems = e.field.drawnItems;
+                store = e.field.store;
+                //_drawControl = e.field._drawControl;
+                //console.log(e.field);
+            });
+            control.loader.on('data:loaded', function (event) {
+                //help: https://gis.stackexchange.com/questions/203540/how-to-edit-an-existing-layer-using-leaflet
+                drawnItems.eachLayer(function(l) {
+                    map.removeLayer(l);
+                })
+                drawnItems.clearLayers();
+                // 
+                // folgende Logik kam von chatgpt (siehe Funktion multipolygonToPolygons): 
+                event.layer.eachLayer(function (layer) {
+
+                    const geomType = layer.feature?.geometry?.type;
+
+                    if (geomType === "MultiPolygon") {
+
+                        const polygons = multipolygonToPolygons(layer);
+
+                        polygons.forEach(polygon => {
+                            drawnItems.addLayer(polygon); // editierbar
+                        });
+
+                    } else if (geomType === "Polygon") {
+
+                        drawnItems.addLayer(layer); // editierbar
+
+                    }
+                });
+                // Add the polygon to the map, not sure why this is required but django-leaflet does this
+                // map.addLayer(layer);
+                // get saved to the form
+                store.save(drawnItems);
+                // weitere hilfreiche Informationen
+                // howto tweak draw control to set actual layer editable?
+                // https://gis.stackexchange.com/questions/213247/how-put-leaflet-filelayer-data-into-editable-layer-so-i-can-edit-after-upload
+                // https://github.com/makinacorpus/Leaflet.FileLayer/issues/22
+            });
+            control.loader.on('data:error', function (error) {
+                // Do something usefull with the error!
+                console.error(error);
+            });
+            //console.log('upload module initialized');
+        }, false
+    );
+    // function for zooming to some extent - https://django-leaflet.readthedocs.io/en/latest/widget.html#programmatically-appended-maps
+    function zoomToExtent(select) {
+        var selectedOption = select.options[select.selectedIndex];
+        var bbox = selectedOption.getAttribute('bbox');
+        bbox = bbox.replace("(", "").replace(")", "").split(",");
+        console.log(bbox)
+        window['leafletmapid_geometry-map'].fitBounds([[ bbox[1], bbox[0] ], [bbox[3], bbox[2]]]);
+    }
+    function zoomToSelectedOptionsExtent(that) {
+        //if array not empty!
+        //initialBbox = selectedOptions[0].bbox.replace("(", "").replace(")", "").split(",");
+        let selectedOptions = Array.from(that.selectedOptions)
+        let bbox = [0.0, 0.0, 0.0, 0.0];
+        Array.prototype.map.call(selectedOptions, tag => {
+            let single_bbox = tag.getAttribute('bbox').replace("(", "").replace(")", "").split(",");
+            let single_bbox_float = single_bbox.map((str) => parseFloat(str));
+            //transform to float
+            if (bbox[0] == 0.0) {
+                bbox[0] = single_bbox_float[0]
+            } else {
+                if (single_bbox_float[0] < bbox[0]) {
+                    bbox[0] = single_bbox_float[0]
+                }
+            }
+            if (bbox[1] == 0.0) {
+                bbox[1] = single_bbox_float[1]
+            } else {
+                if (single_bbox_float[1] < bbox[1]) {
+                    bbox[1] = single_bbox_float[1]
+                }
+            }
+            if (bbox[2] == 0.0) {
+                bbox[2] = single_bbox_float[2]
+            } else {
+                if (single_bbox_float[2] > bbox[2]) {
+                    bbox[2] = single_bbox_float[2]
+                }
+            }
+            if (bbox[3] == 0.0) {
+                bbox[3] = single_bbox_float[3]
+            } else {
+                if (single_bbox_float[3] > bbox[3]) {
+                    bbox[3] = single_bbox_float[3]
+                }
+            }
+            //console.log(tag.getAttribute('bbox'));
+        });
+        if (bbox[0] != 0) {
+            window['leafletmapid_geometry-map'].fitBounds([[ bbox[1], bbox[0] ], [bbox[3], bbox[2]]]);
+        }
+    }
+</script>
+<!-- https://simpleisbetterthancomplex.com/tutorial/2018/11/28/advanced-form-rendering-with-django-crispy-forms.html -->
+ <script
+      src="https://code.jquery.com/jquery-3.4.1.js"
+      integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
+      crossorigin="anonymous"
+></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.js"></script>
+{% crispy form %}
+{% endblock %}

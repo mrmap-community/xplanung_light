@@ -89,6 +89,8 @@ Die Klasse kann nur einmal pro app erstellt werden: https://django-organizations
 
 class AdminOrgaUser(OrganizationUserBase):
     is_admin = models.BooleanField(blank=False, null=False, verbose_name='Nutzer ist Administrator für Organisation', default=False)
+    is_toeb_reporter = models.BooleanField(blank=False, null=False, verbose_name='Nutzer kann Stellungnahmen für TOEB-Einheiten dieser Organisation abgeben.', default=False)
+
     #give_statements = models.BooleanField(blank=False, null=False, verbose_name='Nutzer darf Stellungnahmen für Organisation abgeben', default=False)
     # Einfache Rollen
     """
@@ -123,6 +125,11 @@ class AdministrativeOrganization(GenericMetadata, OrganizationBase):
     COM_ASS = "VG"
     COM_ASS_FREE_COM = "VFG"
     COM = "GE"
+    LB = "LB"
+    BB = "BB"
+    NGO = "NGO"
+    EV = "EV"
+    UNT = "UNT"
     UNKNOWN = "UK"
 
     ADMIN_CLASS_CHOICES = [
@@ -131,6 +138,11 @@ class AdministrativeOrganization(GenericMetadata, OrganizationBase):
         (COM_ASS, "Verbandsgemeinde"),
         (COM_ASS_FREE_COM, "Verbandsfreie Gemeinde"),
         (COM, "Gemeinde/Stadt"),
+        (LB, "Landesbehörde"),
+        (BB, "Bundesbehörde"),
+        (NGO, "Nichtregierungsorganisation"),
+        (EV, "Eingetragener Verein"),
+        (UNT, "Unternehmen"),
         (UNKNOWN, "unbekannt"),
     ]
 
@@ -141,10 +153,11 @@ class AdministrativeOrganization(GenericMetadata, OrganizationBase):
     # ts = ... - Ortsbezirks(-teil)schlüssel ...
     ts = models.CharField(blank=True, null=True, max_length=4, verbose_name='Ortsteilschlüssel', help_text='Eindeutiger, maximal vierstelliger Schlüssel einen Teil einer Gebietskörperschaft - von Bundesland zu Bundesland unterschiedlich geregelt!')
     
-    name = models.CharField(max_length=1024, verbose_name='Name der Gebietskörperschaft', help_text='Offizieller Name der Gebietskörperschaft - z.B. Rhein-Lahn-Kreis')
-    type = models.CharField(max_length=3, choices=ADMIN_CLASS_CHOICES, default='UK', verbose_name='Typ der Gebietskörperschaft', db_index=True)
+    name = models.CharField(max_length=1024, verbose_name='Name der Gebietskörperschaft/Organisation', help_text='Offizieller Name der Gebietskörperschaft/Organisation - z.B. Rhein-Lahn-Kreis')
+    type = models.CharField(max_length=3, choices=ADMIN_CLASS_CHOICES, default='UK', verbose_name='Typ der Gebietskörperschaft/Organisation', db_index=True)
     name_part = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name des Teils der Gebietskörperschaft', help_text='Offizieller Namen eines Teils der Gebietskörperschaft - z.B. Arzheim - als Ortsbezirk 2 der Stadt Koblenz')
     
+
     #is_toeb = ... 
 
     address_street = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Straße mit Hausnummer', help_text='Straße und Hausnummer')
@@ -245,6 +258,120 @@ class ContactOrganization(GenericMetadata):
     def __str__(self):
         # Returns a string representation of a contact organization.
         return f"{self.name} ({self.unit})"
+
+"""
+Klasse um TOEB-Stellen zu verwalten. Sie hängen über eine Relation an den Organisationen. Damit kann ein Organisationsadmin 
+die Informationen zu seinen eigenen/internen Stellen eigenständig verwalten. 
+"""
+
+class ToebUnit(GenericMetadata):
+
+    # Themen - grob aus Anlage zum TöB-Erlass von Hessen
+    AB = "AB"
+    AG_ST = "AG_ST"
+    AM = "AM"
+    BA = "BA"
+    BGB = "BGB"
+    BSAL = "BSAL"
+    BS = "BS"
+    DSP = "DSP"
+    F = "F"
+    FB = "FB"
+    FW = "FW"
+    GS = "GS"
+    GHHI = "GHHI"
+    GDSS = "GDSS"
+    GBOEH = "GBOEH"
+    HS = "HS"
+    IS = "IS"
+    JW = "JW"
+    KV = "KV"
+    KS = "KS"
+    KJH = "KJH"
+    KLA = "KLA"
+    KLS = "KLS"
+    LW = "LW"
+    NSLP = "NSLP"
+    OESO = "OESO"
+    PW = "PW"
+    RO = "RO"
+    SW = "SW"
+    SP = "SP"
+    STS = "STS"
+    TK = "TK"
+    TOU = "TOU"
+    UNVB = "UNVB"
+    UNVE = "UNVE"
+    VE = "VE"
+    VK = "VK"
+    VT = "VT"
+    VW = "VW"
+    WW = "WW"
+    WE = "WE"
+    OTH = "OTH"
+
+    THEME_CLASS_CHOICES = [
+        (AB,  "Abfallentsorgung"),
+        (AG_ST, "Agrarstruktur"),
+        (AM, "Arbeitsmarkt"),
+        (BA, "Bauaufsicht"),
+        (BGB, "Bergbau, Geologie und Bodenschätze"),
+        (BSAL, "Bodenschutz, Altlasten"),
+        (BS, "Brandschutz"),
+        (DSP, "Denkmalschutz, Denkmalpflege"),
+        (F, "Fischerei"),
+        (FB, "Flurbereinigung"),
+        (FW, "Forst- und Waldwesen"),
+        (GS, "Gesundheitspflege und Sozialwesen"),
+        (GHHI, "Gewerbe, Handel, Handwerk und Industrie"),
+        (GDSS, "Gottesdienst und Seelsorge"),
+        (GBOEH, "Grundbesitz der öffentlichen Hand"),
+        (HS, "Hochschulen"),
+        (IS, "Immissionsschutz"),
+        (JW, "Jagdwesen"),
+        (KV, "Kataster- und Vermessungswesen"),
+        (KS, "Katastrophenschutz"),
+        (KJH, "Kinder- und Jugendhilfen"),
+        (KLA, "Klimaanpassung"),
+        (KLS, "Klimaschutz"),
+        (LW, "Landwirtschaft"),
+        (NSLP, "Naturschutz und Landschaftspflege"),
+        (OESO, "Öffentliche Sicherheit und Ordnung"),
+        (PW, "Postwesen"),
+        (RO, "Raumordnung"),
+        (SW, "Schulwesen"),
+        (SP, "Sport"),
+        (STS, "Strahlenschutz"),
+        (TK, "Telekommunikation"),
+        (TOU, "Tourismus"),
+        (UNVB, "Umwelt und Naturschutzverbände"),
+        (UNVE, "Umwelt- und Naturschutzvereinigungen"),
+        (VE, "Ver- und Entsorgung (keine TK)"), 
+        (VK, "Verkehr"),
+        (VT, "Verteidigung"),
+        (VW, "Veterinärwesen"),
+        (WE, "Welterbe"),
+        (OTH, "Sonstige"),
+    ]
+
+    name = models.CharField(blank=False, null=False, max_length=2048, verbose_name='Name der Institution / Regionalstelle', help_text='Offizieller Name der Institution / Regionalstelle - z.B. Regionalstelle Wasserwirtschaft, Abfallwirtschaft, Bodenschutz')
+    description = models.TextField(blank=True, null=True, verbose_name='Beschreibung des Aufgabenbereichs', help_text='Erläuterung des Aufgabenbereichs - z.B. Erlaubnisse/Bewilligungen nach § 8, 9 WHG, ... ')
+    theme = models.CharField(max_length=5, choices=THEME_CLASS_CHOICES, default='OTH', verbose_name='Thematische Zuordnung', db_index=True)
+    email = models.EmailField(blank=False, null=False, max_length=512, verbose_name='Offizielle EMail-Adresse')
+    public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Öffentlich verfügbar", help_text="Gibt an, ob Informationen über die frei verfügbaren Schnittstellen publiziert werden.")
+    internal = models.BooleanField(null=False, blank=False, default=False, verbose_name="Intern", help_text="Kontakt wird nur intern verwendet.")
+    address_street = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Straße mit Hausnummer / Postfach', help_text='Straße und Hausnummer / Postfach')
+    address_postcode = models.CharField(blank=True, null=True, max_length=5, verbose_name='Postleitzahl', help_text='Postleitzahl')
+    address_city = models.CharField(max_length=256, blank=True, null=True, verbose_name='Stadt')
+    address_phone = models.CharField(max_length=256, blank=True, null=True, verbose_name='Telefon')
+    geometry = models.GeometryField(blank=True, null=True, verbose_name='Zuständigkeitsbereich')
+    organization = HistoricForeignKey(AdministrativeOrganization, blank=False, verbose_name="Übergeordnete Organisation", related_name="toebs", on_delete=models.CASCADE)
+    editors = models.ManyToManyField(AdminOrgaUser, verbose_name='Sachbearbeiter', help_text='Sachbearbeiter', related_name="toeb_units")
+    history = HistoricalRecords(m2m_fields=[editors])
+
+    def __str__(self):
+        # Returns a string representation of a toeb unit.
+        return f"{self.name} ({self.description})"
 
 
 """

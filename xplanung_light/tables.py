@@ -1,6 +1,6 @@
 import django_tables2 as tables
 from django_tables2.utils import A
-from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp
+from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp, ToebUnit
 from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz, BPlanBeteiligungBeitrag, FPlanBeteiligungBeitrag,  RequestForOrganizationAdmin
 from .models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme 
 from .models import ConsentOption
@@ -43,6 +43,16 @@ class ContactOrganizationTable(tables.Table):
         template_name = "django_tables2/bootstrap5.html"
         fields = ['id', 'name', 'gemeinde', 'edit', 'delete']
 
+
+class ToebUnitTable(tables.Table):
+    edit = tables.LinkColumn('toebunit-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    delete = tables.LinkColumn('toebunit-delete', verbose_name='', text='Löschen', args=[A('pk')], \
+                         orderable=False, empty_values=())
+    class Meta:
+        model = ToebUnit
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ['id', 'last_changed', 'organization', 'name', 'theme', 'edit', 'delete']
 
 class BPlanSpezExterneReferenzTable(tables.Table):
     edit = tables.LinkColumn('bplanattachment-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \

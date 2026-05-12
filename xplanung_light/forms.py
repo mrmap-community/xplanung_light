@@ -5,7 +5,8 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization, Uvp, FPlanUvp
 from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung, FPlanBeteiligungBeitrag, FPlanBeteiligungBeitragAnhang
-from xplanung_light.models import ContactOrganization, RequestForOrganizationAdmin
+from xplanung_light.models import ContactOrganization, RequestForOrganizationAdmin, ToebUnit
+
 from xplanung_light.models import BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang
 from xplanung_light.models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme
 from xplanung_light.models import ConsentOption
@@ -14,7 +15,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Row, Column, Field
 from crispy_forms.bootstrap import TabHolder, Tab, AccordionGroup, Accordion
 from django.forms import ModelForm
-from django_select2.forms import Select2MultipleWidget
+from django_select2.forms import Select2MultipleWidget, Select2Widget
 from dal import autocomplete
 from formset.richtext.widgets import RichTextarea
 from formset.widgets import DateInput, DateTimeInput, DatePicker
@@ -454,6 +455,45 @@ class GemeindeSelect3(autocomplete.ModelSelect2Multiple):
             name, value, label, selected, index, subindex, attrs
         )
         return option
+
+
+class OrganizationSelect3Single(autocomplete.ModelSelect2):
+    """
+    Klasse für den Zugriff auf die Gemeinden ohne die Verwendung der Geometrien - macht das alles etwas schneller
+    """
+    def _init_(self):
+        self.url = 'administrativeorganization-autocomplete'
+
+
+    def create_option(
+        self, name, value, label, selected, index, subindex=None, attrs=None
+    ):
+        option = super().create_option(
+            name, value, label, selected, index, subindex, attrs
+        )
+        return option
+
+
+"""
+Neue Klasse zur Verbesserung des Formulars der Zuordnung mehrerer Gebietskörperschaften zu einem 
+XPlan. Ist abhängig von django-autocomplete-light und select2
+"""
+class OrganizationSelect2Single(autocomplete.ModelSelect2):
+
+    def _init_(self):
+        self.url = 'administrativeorganization-autocomplete'
+
+
+    def create_option(
+        self, name, value, label, selected, index, subindex=None, attrs=None
+    ):
+        option = super().create_option(
+            name, value, label, selected, index, subindex, attrs
+        )
+        if value:
+            option["attrs"]["bbox"] = value.instance.bbox
+        return option
+    
 
 
 class BPlanCreateForm(ModelForm):
@@ -1166,6 +1206,94 @@ class ContactOrganizationUpdateForm(ModelForm):
         model = ContactOrganization
 
         fields = ["gemeinde", "name", "unit", "person", "email", "phone", "facsimile", "homepage", "datenschutz_link" ]
+
+
+class ToebUnitCreateForm(ModelForm):
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.fields['organization'].widget = OrganizationSelect2Single(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
+        self.helper.layout = Layout(
+            Fieldset(
+                "Informationen zur TOEB-Stelle",
+                Row(
+                    Column(
+                        "organization",
+                    ),
+                    Column(
+                        "name",
+                    ),
+                    Column(
+                        "theme",
+                    ),
+                    ),
+                Row(
+                    Column(
+                       Row('description'),
+                    ),
+                    Column(
+                        "geometry",
+                    ),
+                ),
+                Row(
+                    Column(
+                        "public",
+                    ),
+                ),
+            ),
+            Submit("submit", "Erstellen"),
+        )
+
+    class Meta:
+        model = ToebUnit
+        fields = ["organization", "name", "description", "theme", "public", "geometry" ]
+
+
+class ToebUnitUpdateForm(ModelForm):
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.fields['organization'].widget = OrganizationSelect2Single(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
+        self.helper.layout = Layout(
+            Fieldset(
+                "Informationen zur TOEB-Stelle",
+                Row(
+                    Column(
+                        "organization",
+                    ),
+                    Column(
+                        "name",
+                    ),
+                    Column(
+                        "theme",
+                    ),
+                    ),
+                Row(
+                    Column(
+                       Row('description'),
+                    ),
+                    Column(
+                        "geometry",
+                    ),
+                ),
+                Row(
+                    Column(
+                        "public",
+                    ),
+                ),
+            ),
+            Submit("submit", "Aktualisieren"),
+        )
+
+    class Meta:
+        model = ToebUnit
+        fields = ["organization", "name", "description", "theme", "public", "geometry" ]
 
 
 class AdministrativeOrganizationUpdateForm(ModelForm):

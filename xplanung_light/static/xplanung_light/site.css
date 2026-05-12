@@ -44,3 +44,7 @@
 .asteriskField {
     color: red;
 }
+
+.select2-container .select2-selection--single {
+    height: 38px !important; /* Single Select */
+}

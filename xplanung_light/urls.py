@@ -20,6 +20,9 @@ from xplanung_light.views.uvp import UvpCreateView, UvpUpdateView, UvpDeleteView
 from xplanung_light.views.fplanuvp import FPlanUvpCreateView, FPlanUvpUpdateView, FPlanUvpDeleteView, FPlanUvpListView
 from xplanung_light.views.administrativeorganization import AdministrativeOrganizationPublishingListView, AdministrativeOrganizationAutocomplete, AdministrativeOrganizationListView, AdministrativeOrganizationUpdateView
 from xplanung_light.views.contactorganization import ContactOrganizationCreateView, ContactOrganizationListView, ContactOrganizationUpdateView, ContactOrganizationDeleteView
+from xplanung_light.views.toebunit import ToebUnitCreateView, ToebUnitListView, ToebUnitUpdateView, ToebUnitDeleteView
+
+
 from xplanung_light.views.consentoption import ConsentOptionCreateView, ConsentOptionUpdateView, ConsentOptionListView, ConsentOptionDeleteView
 from django.urls import re_path as url
 
@@ -159,6 +162,11 @@ urlpatterns = [
     path("contact/", ContactOrganizationListView.as_view(), name="contact-list"),
     path("contact/<int:pk>/update/", ContactOrganizationUpdateView.as_view(), name="contact-update"),
     path("contact/<int:pk>/delete/", ContactOrganizationDeleteView.as_view(), name="contact-delete"),
+    # TOEB Units
+    path("toebunit/create/", ToebUnitCreateView.as_view(), name="toebunit-create"),
+    path("toebunit/", ToebUnitListView.as_view(), name="toebunit-list"),
+    path("toebunit/<int:pk>/update/", ToebUnitUpdateView.as_view(), name="toebunit-update"),
+    path("toebunit/<int:pk>/delete/", ToebUnitDeleteView.as_view(), name="toebunit-delete"),
     # Anträge auf Admin-Berechtigung
     path("requestforadmin/create/", RequestForOrganizationAdminCreateView.as_view(), name="requestforadmin-create"),
     path("requestforadmin/", RequestForOrganizationAdminListView.as_view(), name="requestforadmin-list"),
