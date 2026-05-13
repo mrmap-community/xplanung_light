@@ -1212,6 +1212,30 @@ class ToebUnitCreateForm(ModelForm):
     """
     for crispy-forms
     """
+
+    def clean(self):
+        cleaned_data = super().clean()
+        organization = cleaned_data.get("organization")
+        editors = cleaned_data.get("editors")
+        if organization and editors:
+            invalid_editors = editors.exclude(
+                organization=organization
+            )
+            if invalid_editors.exists():
+                raise ValidationError(
+                    "Alle Sachbearbeiter müssen zur "
+                    "gleichen Organisation gehören."
+                )
+            invalid_reporters = editors.exclude(
+                is_toeb_reporter=True
+            )
+            if invalid_reporters.exists():
+                raise ValidationError(
+                    "Alle Sachbearbeiter müssen "
+                    "TOEB-Reporter sein."
+                )
+        return cleaned_data
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
@@ -1228,6 +1252,9 @@ class ToebUnitCreateForm(ModelForm):
                     ),
                     Column(
                         "theme",
+                    ),
+                    Column(
+                        "editors",
                     ),
                     ),
                 Row(
@@ -1249,13 +1276,37 @@ class ToebUnitCreateForm(ModelForm):
 
     class Meta:
         model = ToebUnit
-        fields = ["organization", "name", "description", "theme", "public", "geometry" ]
+        fields = ["organization", "name", "description", "theme", "public", "geometry", "editors" ]
 
 
 class ToebUnitUpdateForm(ModelForm):
     """
     for crispy-forms
     """
+
+    def clean(self):
+        cleaned_data = super().clean()
+        organization = cleaned_data.get("organization")
+        editors = cleaned_data.get("editors")
+        if organization and editors:
+            invalid_editors = editors.exclude(
+                organization=organization
+            )
+            if invalid_editors.exists():
+                raise ValidationError(
+                    "Alle Sachbearbeiter müssen zur "
+                    "gleichen Organisation gehören."
+                )
+            invalid_reporters = editors.exclude(
+                is_toeb_reporter=True
+            )
+            if invalid_reporters.exists():
+                raise ValidationError(
+                    "Alle Sachbearbeiter müssen "
+                    "TOEB-Reporter sein."
+                )
+        return cleaned_data
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
@@ -1272,6 +1323,9 @@ class ToebUnitUpdateForm(ModelForm):
                     ),
                     Column(
                         "theme",
+                    ),
+                    Column(
+                        "editors",
                     ),
                     ),
                 Row(
@@ -1293,7 +1347,7 @@ class ToebUnitUpdateForm(ModelForm):
 
     class Meta:
         model = ToebUnit
-        fields = ["organization", "name", "description", "theme", "public", "geometry" ]
+        fields = ["organization", "name", "description", "theme", "public", "geometry", "editors" ]
 
 
 class AdministrativeOrganizationUpdateForm(ModelForm):
@@ -1344,12 +1398,12 @@ from django.forms.models import ModelForm
 #from formset.widgets import DateInput, Selectize, UploadedFileInput
 #from formset.widgets.richtext import RichTextarea
 #from formset.richtext.widgets import RichTextarea
-from django.forms import widgets, fields
+from django.forms import widgets, fields, BooleanField
 from xplanung_light.models import BPlanBeteiligungBeitrag
 from formset.fields import Activator
 from formset.renderers import ButtonVariant
 from formset.widgets import Button
-from formset.widgets import UploadedFileInput, DateInput
+from formset.widgets import UploadedFileInput, DateInput, TextInput
 
 from formset.collection import FormCollection
 from formset.renderers.bootstrap import FormRenderer
@@ -1357,8 +1411,11 @@ from formset.renderers.bootstrap import FormRenderer
 from django.forms.fields import IntegerField
 from django.forms.fields import ChoiceField
 from django.forms.widgets import HiddenInput
+from formset.widgets import DualSelector
+from formset.widgets import DualSortableSelector
 
-class BPlanBeteiligungForm(ModelForm):
+
+class BPlanBeteiligungForm(FormMixin, ModelForm):
     """
     Neue Klasse für das Anlegen und Update von Informationen zum BPlanBeteiligungsverfahren - diesmal mit django-formset
     Überlegung  mehrseitiges Formular: https://django-formset.fly.dev/bootstrap/checkout
@@ -1367,26 +1424,30 @@ class BPlanBeteiligungForm(ModelForm):
 
     """
     default_renderer = FormRenderer(
-        
+        form_css_classes = 'row',
         field_css_classes={
-            'typ': 'mb-2 col-12',
-            
+            '*': 'mb-2 col-12',
+            #'typ': 'mb-2 col-12',
             'bekanntmachung_datum': 'mb-2 col-4',
             'start_datum': 'mb-2 col-4',
             'end_datum': 'mb-2 col-4',
-            'allow_online_beitrag': 'mb-2 col-4',
-            'publikation_internet': 'mb-2 col-4',
+            'allow_online_beitrag': 'mb-2 col-12',
+            #'publikation_internet': 'mb-2 col-12',
+            #'assigned_toebs': 'mb-2 col-12',
         },
     )
 
     class Meta:
         model = BPlanBeteiligung
-        fields = ['typ', 'beschreibung', 'bekanntmachung_datum', 'start_datum', 'end_datum' , "allow_online_beitrag", "publikation_internet"]
+        fields = ['typ', 'beschreibung', 'bekanntmachung_datum', 'start_datum', 'end_datum' , "allow_online_beitrag", "publikation_internet", "assigned_toebs"]
         widgets = {
             'beschreibung': RichTextarea(),
             'bekanntmachung_datum': DateInput(),
             'start_datum': DateInput(),
             'end_datum': DateInput(),
+            #'allow_online_beitrag': widgets.CheckboxInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),
+            'publikation_internet': TextInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),                         
+            'assigned_toebs': DualSortableSelector(search_lookup='label__icontains', group_field_name='theme_display', attrs={'df-show': ".typ=='2000' || .typ=='20001'"}),
         }
 
 
@@ -1398,18 +1459,35 @@ class FPlanBeteiligungForm(ModelForm):
     Problem bei Firefox unter debian: Richtext Formular Elemente bleiben nicht an fester Position ...
 
     """
+
+    default_renderer = FormRenderer(
+        form_css_classes = 'row',
+        field_css_classes={
+            '*': 'mb-2 col-12',
+            #'typ': 'mb-2 col-12',
+            'bekanntmachung_datum': 'mb-2 col-4',
+            'start_datum': 'mb-2 col-4',
+            'end_datum': 'mb-2 col-4',
+            'allow_online_beitrag': 'mb-2 col-12',
+            #'publikation_internet': 'mb-2 col-12',
+            #'assigned_toebs': 'mb-2 col-12',
+        },
+    )
    
     class Meta:
         model = FPlanBeteiligung
-        fields = ['typ', 'beschreibung', 'bekanntmachung_datum', 'start_datum', 'end_datum' , "allow_online_beitrag", "publikation_internet"]
+        fields = ['typ', 'beschreibung', 'bekanntmachung_datum', 'start_datum', 'end_datum' , "allow_online_beitrag", "publikation_internet", "assigned_toebs"]
         widgets = {
             'beschreibung': RichTextarea(),
             'bekanntmachung_datum': DateInput(),
             'start_datum': DateInput(),
             'end_datum': DateInput(),
+            #'allow_online_beitrag': widgets.CheckboxInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),
+            'publikation_internet': TextInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}), 
+            'assigned_toebs': DualSortableSelector(search_lookup='label__icontains', group_field_name='theme_display', attrs={'df-show': ".typ=='2000'"}),
         }
 
-from formset.widgets import DualSelector
+
 class BPlanBeitragStellungnahmeForm(ModelForm):
     """
     Klasse für das Anlegen und Update von Stellungnahmen.

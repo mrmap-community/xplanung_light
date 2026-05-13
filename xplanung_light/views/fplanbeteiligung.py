@@ -1,11 +1,12 @@
 from xplanung_light.forms import FPlanBeteiligungForm
 from xplanung_light.views.xplanrelations import XPlanRelationsCreateView, XPlanRelationsListView, XPlanRelationsUpdateView, XPlanRelationsDeleteView
-from xplanung_light.models import FPlan, FPlanBeteiligung
+from xplanung_light.models import FPlan, FPlanBeteiligung, ToebUnit
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableView
 from xplanung_light.tables import FPlanBeteiligungTable
 from django.db.models import Count
 from formset.views import FormViewMixin
+from django.db.models import Case, When, Value, CharField
 
 class FPlanBeteiligungCreateView(FormViewMixin, XPlanRelationsCreateView):
     """
@@ -20,6 +21,20 @@ class FPlanBeteiligungCreateView(FormViewMixin, XPlanRelationsCreateView):
     form_class = FPlanBeteiligungForm
     list_url_name = 'fplanbeteiligung-list'
     extra_context = None
+
+    def get_form(self, form_class=None):
+
+        form = super().get_form(form_class)
+        form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
+            theme_display=Case(
+                *[
+                    When(theme=value, then=Value(label))
+                    for value, label in ToebUnit.THEME_CLASS_CHOICES
+                ],
+                output_field=CharField(),
+            )
+        )
+        return form
 
     def get_context_data(self, **kwargs):
         """
@@ -76,6 +91,20 @@ class FPlanBeteiligungUpdateView(FormViewMixin, XPlanRelationsUpdateView):
     form_class = FPlanBeteiligungForm
     list_url_name = 'fplanbeteiligung-list'
     extra_context = None
+
+    def get_form(self, form_class=None):
+
+        form = super().get_form(form_class)
+        form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
+            theme_display=Case(
+                *[
+                    When(theme=value, then=Value(label))
+                    for value, label in ToebUnit.THEME_CLASS_CHOICES
+                ],
+                output_field=CharField(),
+            )
+        )
+        return form
 
     def get_context_data(self, **kwargs):
         """

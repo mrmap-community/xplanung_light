@@ -11,11 +11,29 @@ from django.db.models import Subquery, OuterRef
 from django.contrib.gis.db.models import Extent
 from django.core.exceptions import PermissionDenied
 from leaflet.forms.widgets import LeafletWidget
+from django.db import transaction
+from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
+from django.db.models import Case, When, Value, CharField
 
 class ToebUnitCreateView(SuccessMessageMixin, CreateView):
     model = ToebUnit
     form_class = ToebUnitCreateForm
-    
+
+    """
+    def get_queryset(self):
+        qs = super(self).get_queryset()
+        qs = qs.annotate(
+            theme_display=Case(
+                *[
+                    When(theme=value, then=Value(label))
+                    for value, label in ToebUnit.THEME_CLASS_CHOICES
+                ],
+                output_field=CharField(),
+            )
+        )
+        return qs
+    """
+
     def get_form(self, form_class=None):
         """
         Liefert das Formular für den ToebUnitCreateView. Beim Select Field für die Organisationen, werden nur die angezeigt, für die der Nutzer
@@ -24,18 +42,31 @@ class ToebUnitCreateView(SuccessMessageMixin, CreateView):
         form = super().get_form(self.form_class)
         if self.request.user.is_superuser:
             form.fields['organization'].queryset = form.fields['organization'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type", "name_part")
+            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True)
         else:
             """
             Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
             
             """
             form.fields['organization'].queryset = form.fields['organization'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type", "name_part")
+            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True, organization_users__user=self.request.user)
         # Geometriefeld hinzufügen
         form.fields['geometry'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
         # Herausnehmen der organizationn, die schon eine Kontaktstelle zugewiesen bekommen haben
         #form.fields['organization'].queryset = form.fields['organization'].queryset.filter(contacts__isnull = True)
         return form
     
+    @transaction.atomic
+    def form_valid(self, form):
+        # 1. Objekt instanziieren, aber noch nicht in die DB schreiben
+        self.object = form.save(commit=False)
+        # 2. Hauptobjekt speichern (erzeugt die ID)
+        self.object.save()
+        # 3. M2M-Beziehungen explizit sichern (schlägt dies fehl, gibt es einen Rollback zu Schritt 2)
+        form.save_m2m()
+        # 4. Standard-Weiterleitung ausführen
+        return super().form_valid(form)
+
     def get_success_url(self):
         return reverse_lazy("toebunit-list")
 
@@ -44,11 +75,21 @@ class ToebUnitUpdateView(SuccessMessageMixin, UpdateView):
     model = ToebUnit
     form_class = ToebUnitUpdateForm
     template_name = "xplanung_light/toebunit_form_update.html"
-
-    #def get_queryset(self):
-    #    qs = super(self).get_queryset()
-    #    return qs.only()
-
+    
+    """
+    def get_queryset(self):
+        qs = super(self).get_queryset()
+        qs = qs.annotate(
+            theme_display=Case(
+                *[
+                    When(theme=value, then=Value(label))
+                    for value, label in ToebUnit.THEME_CLASS_CHOICES
+                ],
+                output_field=CharField(),
+            )
+        )
+        return qs
+    """
 
     def get_form(self, form_class=None):
         #success_url = self.get_success_url()
@@ -56,8 +97,10 @@ class ToebUnitUpdateView(SuccessMessageMixin, UpdateView):
         #object = self.get_object()
         if self.request.user.is_superuser:
             form.fields['organization'].queryset = form.fields['organization'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type", "name_part")
+            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True)
         else:
             form.fields['organization'].queryset = form.fields['organization'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type", "name_part")
+            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True, organization_users__user=self.request.user)
         # Erweitern der organizationn, die noch keinem Kontakt zugewiesen wurden, mit denen, die schon am Record vorhanden sind 
         # https://studygyaan.com/django/combining-multiple-querysets-in-django-with-examples
         #form.fields['organization'].queryset = form.fields['organization'].queryset.filter(contacts__isnull = True).only("pk", "name", "type") | object.organization.get_queryset().only("pk", "name", "type")
@@ -79,6 +122,29 @@ class ToebUnitUpdateView(SuccessMessageMixin, UpdateView):
         self.success_message = "TOEB-Stelle *" + form.cleaned_data['name'] + "* aktualisiert!" 
         return super().form_valid(form)
     
+    def clean(self):
+        cleaned_data = super().clean()
+        organization = cleaned_data.get("organization")
+        editors = cleaned_data.get("editors")
+        if organization and editors:
+            invalid_editors = editors.exclude(
+                organization=organization
+            )
+            if invalid_editors.exists():
+                raise ValidationError(
+                    "Alle Sachbearbeiter müssen zur "
+                    "gleichen Organisation gehören."
+                )
+            invalid_reporters = editors.exclude(
+                is_toeb_reporter=True
+            )
+            if invalid_reporters.exists():
+                raise ValidationError(
+                    "Alle Sachbearbeiter müssen "
+                    "TOEB-Reporter sein."
+                )
+        return cleaned_data
+
     def get_queryset(self):
         return (
             super()

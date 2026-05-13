@@ -13,7 +13,7 @@
 </p>  
 <django-formset endpoint="{{ request.path }}" csrf-token="{{ csrf_token }}">
   <!--https://django-formset.fly.dev/form-renderer/ - Problem noch bei Richtextfield - TODO testen ob Layout nicht in Form Klasse definiert werden kann -->
-  {% render_form form "bootstrap" field_classes="mb-2" form_classes="rounded-xl"%}
+  {{ form }}
   <div>
     {% if extra_context.create %}
     <button type="button" class="btn btn-primary" df-click="submit -> proceed">Erstellen</button>

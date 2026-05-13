@@ -52,7 +52,8 @@ class ToebUnitTable(tables.Table):
     class Meta:
         model = ToebUnit
         template_name = "django_tables2/bootstrap5.html"
-        fields = ['id', 'last_changed', 'organization', 'name', 'theme', 'edit', 'delete']
+        fields = ['id', 'last_changed', 'organization', 'name', 'theme', 'editors', 'edit', 'delete']
+
 
 class BPlanSpezExterneReferenzTable(tables.Table):
     edit = tables.LinkColumn('bplanattachment-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
@@ -92,6 +93,7 @@ class BeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
     end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
     xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.bplan.id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
+    typ = tables.Column(verbose_name='Typ des Verfahrens')
     plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
     gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
   <a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a><br />{% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')

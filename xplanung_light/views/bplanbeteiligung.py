@@ -1,12 +1,13 @@
 from xplanung_light.forms import BPlanBeteiligungForm
 from xplanung_light.views.xplanrelations import XPlanRelationsCreateView, XPlanRelationsListView, XPlanRelationsUpdateView, XPlanRelationsDeleteView
-from xplanung_light.models import BPlan, BPlanBeteiligung
+from xplanung_light.models import BPlan, BPlanBeteiligung, ToebUnit
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableView
 from xplanung_light.tables import BPlanBeteiligungTable
 from django.db.models import Count
 from formset.views import FormViewMixin
 from django.db import transaction
+from django.db.models import Case, When, Value, CharField
 #from simple_history import skip_history # erst ab späterer Version von simple-history
 
 class BPlanBeteiligungCreateView(FormViewMixin, XPlanRelationsCreateView):
@@ -22,6 +23,26 @@ class BPlanBeteiligungCreateView(FormViewMixin, XPlanRelationsCreateView):
     form_class = BPlanBeteiligungForm
     list_url_name = 'bplanbeteiligung-list'
     extra_context = None
+
+    #def get_queryset(self):
+    #    qs = super().get_queryset()
+    #
+    #    qs = qs.annotate('theme_display': get_theme_display())
+    #    return qs
+
+    def get_form(self, form_class=None):
+
+        form = super().get_form(form_class)
+        form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
+            theme_display=Case(
+                *[
+                    When(theme=value, then=Value(label))
+                    for value, label in ToebUnit.THEME_CLASS_CHOICES
+                ],
+                output_field=CharField(),
+            )
+        )
+        return form
 
     def get_context_data(self, **kwargs):
         """
@@ -79,6 +100,20 @@ class BPlanBeteiligungUpdateView(FormViewMixin, XPlanRelationsUpdateView):
     form_class = BPlanBeteiligungForm
     list_url_name = 'bplanbeteiligung-list'
     extra_context = None
+
+    def get_form(self, form_class=None):
+
+        form = super().get_form(form_class)
+        form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
+            theme_display=Case(
+                *[
+                    When(theme=value, then=Value(label))
+                    for value, label in ToebUnit.THEME_CLASS_CHOICES
+                ],
+                output_field=CharField(),
+            )
+        )
+        return form
 
     def get_context_data(self, **kwargs):
         """

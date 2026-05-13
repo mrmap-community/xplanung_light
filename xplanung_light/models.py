@@ -369,9 +369,49 @@ class ToebUnit(GenericMetadata):
     editors = models.ManyToManyField(AdminOrgaUser, verbose_name='Sachbearbeiter', help_text='Sachbearbeiter', related_name="toeb_units")
     history = HistoricalRecords(m2m_fields=[editors])
 
+    """
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                # Prüft ob alle zugewiesenen Nutzer die richtige Rolle haben
+                check=models.Q(editors__is_toeb_reporter=True),
+                #Ab django 6.0:
+                #condition=models.Q(editors__is_toeb_reporter=True),
+                name="nur_nutzer_mit_toeb_reporter_rolle_erlaubt",
+                violation_error_message="Es können nur Nutzer zugewiesen werden, die auch die TOEB-Reporter Rolle für die übergeordnete Organisation besitzen."
+            ),
+            # Foolgendes klappt nicht bei Postgres - da gibt es keine rein constraint basierte Lösung für m2m fields - daher clean zur Sicherheit
+            #models.CheckConstraint(
+                #condition=models.Q(editors__organization=organization),
+                #name="nur_nutzer_mit_toeb_reporter_rolle_erlaubt",
+                #violation_error_message="Es können nur Nutzer zugewiesen werden, die auch die TOEB-Reporter Rolle für die übergeordnete Organisation besitzen."
+            #),
+        ]
+    """
+    # Nach Hinweis von Chatgpt - leider bei m2m auch nicht möglich, da die Funktion beim anlegen der Instanz durchgeführt wird und dann
+    # hat man noch keine Einträge in editors! Muss in clean Funktion der ModelForm geregelt werden!
+    """
+    def clean(self):
+        super().clean()
+        invalid_editors = self.editors.exclude(
+            organization=self.organization
+        )
+        if invalid_editors.exists():
+            raise ValidationError({
+                "editors": (
+                    "Alle Sachbearbeiter müssen zur gleichen "
+                    "Organisation gehören wie die TOEB-Stelle."
+                )
+            })
+    """
+    # not supported by django-formset!
+    @property
+    def theme_name(self):
+        return self.get_theme_display()
+
     def __str__(self):
         # Returns a string representation of a toeb unit.
-        return f"{self.name} ({self.description})"
+        return f"{self.organization} - {self.name}"
 
 
 """
@@ -828,7 +868,7 @@ class XPlanBeteiligung(GenericMetadata):
     #from formset.modelfields import RichTextField
     beschreibung = RichTextField(null=True, blank=True, verbose_name="Erläuternde Beschreibung des Beteiligungsverfahrens")
     allow_online_beitrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Online-Stellungnahme zulassen", help_text="Gibt an, ob das Online-Verfahren für den Beteiligungsprozess zugelassen wird.")
-
+    
     def __str__(self):
             """Returns a string representation of Beteiligung."""
             return f"{self.get_typ_display()} - vom {self.bekanntmachung_datum}"
@@ -840,17 +880,17 @@ class XPlanBeteiligung(GenericMetadata):
 class BPlanBeteiligung(XPlanBeteiligung):
 
     bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="beteiligungen")
-    #allowed_toeb = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Kontakt für Gemeinde(n)", related_name="toeb_comments")
-    #history = HistoricalRecords(m2m_fields=[allowed_toeb])
-    history = HistoricalRecords()
+    # Nur benötigt bei Trägerbeteiligung
+    assigned_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Zugewiesene TOEBs", help_text="Zugewiesene TOEBs")
+    history = HistoricalRecords(m2m_fields=[assigned_toebs])
 
 
 class FPlanBeteiligung(XPlanBeteiligung):
 
     fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE, verbose_name="FPlan", help_text="FPlan", related_name="beteiligungen")
-    #allowed_toeb = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Kontakt für Gemeinde(n)", related_name="toeb_comments")
-    #history = HistoricalRecords(m2m_fields=[allowed_toeb])
-    history = HistoricalRecords()
+    # Nur benötigt bei Trägerbeteiligung
+    assigned_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Zugewiesene TOEBs", help_text="Zugewiesene TOEBs")
+    history = HistoricalRecords(m2m_fields=[assigned_toebs])
 
 """
 Die folgenden Klassen dienen der Abbildung eines Beteiligungsprozesses - zumindest soll die Möglichkeit geschaffen werden,
