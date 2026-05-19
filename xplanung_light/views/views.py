@@ -804,11 +804,11 @@ def fplan_import_archiv(request):
     )
 
 def aggregates(request):
-    context = {
-        "user_is_admin": request.user_is_admin,
-        "user_is_toeb_reporter": request.is_toeb_reporter,
-    }
-    return render(request, "xplanung_light/aggregates.html", context)
+    #context = {
+    #    "user_is_admin": request.user_is_admin,
+    #    "user_is_toeb_reporter": request.is_toeb_reporter,
+    #}
+    return render(request, "xplanung_light/aggregates.html")
 
 def datenschutz(request):
     # Lade die aktuellen Informationen bezüglich des Datenschutzes und der Nutzungsbedingungen 
