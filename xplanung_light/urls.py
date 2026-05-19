@@ -8,7 +8,7 @@ from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDe
 from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView, BeteiligungPdfView, ToebUnitBeteiligungenListView
 from xplanung_light.views.requestforadmin import RequestForOrganizationAdminCreateView, RequestForOrganizationAdminListView, RequestForOrganizationAdminDeleteView, RequestForOrganizationAdminAdminListView
 from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragCreateView, BeteiligungBeitragListView, BeteiligungBeitragDeleteView, BeteiligungBeitragDetailView
-from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragGenericCreateView, BeteiligungBeitragGenericUpdateView, BeteiligungBeitragToebCreateView, BeteiligungBeitragToebUpdateView
+from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragGenericCreateView, BeteiligungBeitragGenericUpdateView, BeteiligungBeitragToebCreateView, BeteiligungBeitragToebUpdateView, BeteiligungBeitragToebDeleteView
 from xplanung_light.views.beitragstellungnahme import XPlanBeitragStellungnahmeCreateView, XPlanBeitragStellungnahmeUpdateView, BeitragStellungnahmeListView, XPlanBeitragStellungnahmeDeleteView
 from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
@@ -77,7 +77,8 @@ urlpatterns = [
     # Formular für TOEB Reporter
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/create/toeb/(?P<toeb_id>\d+)/$', BeteiligungBeitragToebCreateView.as_view(extra_context={'create': True}), name="beteiligungbeitrag-toeb-create"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/(?P<pk>\d+)/update/$', BeteiligungBeitragToebUpdateView.as_view(extra_context={'update': True}), name="beteiligungbeitrag-toeb-update"),
-    
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/(?P<pk>\d+)/delete/$', BeteiligungBeitragToebDeleteView.as_view(), name="beteiligungbeitrag-toeb-delete"),
+
     # Aktivierungslink
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/activate$', views.beitrag_activate, name="beteiligungbeitrag-activate"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/withdraw$', views.beitrag_withdraw, name="beteiligungbeitrag-withdraw"),

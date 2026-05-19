@@ -109,19 +109,22 @@ class BeteiligungenTable(tables.Table):
 class ToebUnitBeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
     end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
-    plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
-    xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
-    beteiligung_typ = tables.Column(verbose_name='Typ des Verfahrens')
+    #plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
+    xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }} ({{ record.plantyp }})</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }} ({{ record.plantyp }})</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
+    beteiligung_typ = tables.columns.TemplateColumn(verbose_name='Typ des Verfahrens', template_code=u"""{% if record.beteiligung_typ == '2000' %}Träger öffentlicher Belange{% endif %}
+                                                                                                         {% if record.beteiligung_typ == '20001' %}Frühzeitige Trägerbeteiligung{% endif %}""")
     gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
                                               <a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a><br />
                                               {% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
-    toeb_unit_name = tables.Column(verbose_name='TOEB')
-    toeb_unit_id = tables.Column(verbose_name='TOEB ID')
+    toeb_unit_name = tables.columns.TemplateColumn(verbose_name='TOEB', template_code=u"""{{ record.toeb_unit_name }} ({{ record.toeb_unit_id }})""")
+    #toeb_unit_id = tables.Column(verbose_name='TOEB ID')
+    count_beitrag_attachments = tables.TemplateColumn(verbose_name='Anlagen', template_code=u"""{{ record.count_beitrag_attachments }}""")
     count_beitrag = tables.TemplateColumn(verbose_name='Beitrag', template_code=u"""{% if record.count_beitrag == 0 %}
                                           <a href="{% url 'beteiligungbeitrag-toeb-create' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id toeb_id=record.toeb_unit_id %}" class="btn btn-success" role="button">Kommentar abgeben</a>
                                           {% else %}
                                           {% if record.count_beitrag == 1 %}
                                           <a href="{% url 'beteiligungbeitrag-toeb-update' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids %}" class="btn btn-primary" role="button">Kommentar bearbeiten</a>
+                                          <a href="{% url 'beteiligungbeitrag-toeb-delete' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids %}" class="btn btn-danger" role="button">Kommentar löschen</a>
                                           {% else %}
                                           {{ record.count_beitrag }}
                                           {% endif %}

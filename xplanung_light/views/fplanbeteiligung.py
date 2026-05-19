@@ -7,6 +7,7 @@ from xplanung_light.tables import FPlanBeteiligungTable
 from django.db.models import Count
 from formset.views import FormViewMixin
 from django.db.models import Case, When, Value, CharField
+from formset.views import EditCollectionView, IncompleteSelectResponseMixin
 
 class FPlanBeteiligungCreateView(FormViewMixin, XPlanRelationsCreateView):
     """
@@ -79,7 +80,7 @@ class FPlanBeteiligungListView(XPlanRelationsListView, SingleTableView):
 
 # In django-formset wird nur ein update view für create, detail und update benötigt
 # scheint aber nicht zu funktionieren ...
-class FPlanBeteiligungUpdateView(FormViewMixin, XPlanRelationsUpdateView):
+class FPlanBeteiligungUpdateView(IncompleteSelectResponseMixin, FormViewMixin, XPlanRelationsUpdateView):
     """
     Update View auf Basis von django-formset.
 

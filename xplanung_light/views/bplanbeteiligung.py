@@ -8,6 +8,8 @@ from django.db.models import Count
 from formset.views import FormViewMixin
 from django.db import transaction
 from django.db.models import Case, When, Value, CharField
+from formset.views import EditCollectionView, IncompleteSelectResponseMixin
+
 #from simple_history import skip_history # erst ab späterer Version von simple-history
 
 class BPlanBeteiligungCreateView(FormViewMixin, XPlanRelationsCreateView):
@@ -23,12 +25,6 @@ class BPlanBeteiligungCreateView(FormViewMixin, XPlanRelationsCreateView):
     form_class = BPlanBeteiligungForm
     list_url_name = 'bplanbeteiligung-list'
     extra_context = None
-
-    #def get_queryset(self):
-    #    qs = super().get_queryset()
-    #
-    #    qs = qs.annotate('theme_display': get_theme_display())
-    #    return qs
 
     def get_form(self, form_class=None):
 
@@ -88,7 +84,7 @@ class BPlanBeteiligungListView(XPlanRelationsListView, SingleTableView):
 
 # In django-formset wird nur ein update view für create, detail und update benötigt
 # scheint aber nicht zu funktionieren ...
-class BPlanBeteiligungUpdateView(FormViewMixin, XPlanRelationsUpdateView):
+class BPlanBeteiligungUpdateView(IncompleteSelectResponseMixin, FormViewMixin, XPlanRelationsUpdateView):
     """
     Update View auf Basis von django-formset.
 
@@ -114,7 +110,7 @@ class BPlanBeteiligungUpdateView(FormViewMixin, XPlanRelationsUpdateView):
             )
         )
         return form
-
+     
     def get_context_data(self, **kwargs):
         """
         get_context_data wird überschrieben um über einen extra_context die Möglichkeit zu bekommen,

@@ -214,6 +214,7 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 toeb_unit_id=F('toebunit__id'),
                 end_datum=F('bplanbeteiligung__end_datum'), 
                 count_beitrag=Count("bplanbeteiligung__comments", filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))),
+                count_beitrag_attachments=Count("bplanbeteiligung__comments__attachments", filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))),
                 # id eines vorhandenen beitrags
                 beitrag_ids=F('bplanbeteiligung__comments__id'),
                 gemeinden=organization_json_aggregation(beteiligung=True)
@@ -232,6 +233,7 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 toeb_unit_id=F('toebunit__id'),
                 end_datum=F('fplanbeteiligung__end_datum'), 
                 count_beitrag=Count("fplanbeteiligung__comments", filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))),
+                count_beitrag_attachments=Count("fplanbeteiligung__comments__attachments", filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))),
                 # id eines vorhandenen beitrags
                 beitrag_ids=F('fplanbeteiligung__comments__id'),
                 gemeinden=organization_json_aggregation(plantyp='fplan', beteiligung=True)

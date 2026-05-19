@@ -25,6 +25,7 @@ from django.core.exceptions import ValidationError
 from django_clamd.validators import validate_file_infection
 from django.utils.timezone import now
 import uuid
+from django.db.models import Case, When, Value, CharField
 #from formset.utils import FormMixin
 
 class BPlanImportForm(forms.Form):
@@ -1447,11 +1448,13 @@ class BPlanBeteiligungForm(FormMixin, ModelForm):
             'end_datum': DateInput(),
             #'allow_online_beitrag': widgets.CheckboxInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),
             'publikation_internet': TextInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),                         
-            'assigned_toebs': DualSortableSelector(search_lookup='label__icontains', group_field_name='theme_display', attrs={'df-show': ".typ=='2000' || .typ=='20001'"}),
+            'assigned_toebs': DualSortableSelector(search_lookup='label__icontains',
+                                                   group_field_name='theme_display',
+                                                   attrs={'df-show': ".typ=='2000' || .typ=='20001'"}),
         }
 
 
-class FPlanBeteiligungForm(ModelForm):
+class FPlanBeteiligungForm(FormMixin, ModelForm):
     """
     Neue Klasse für das Anlegen und Update von Informationen zum FPlanBeteiligungsverfahren - diesmal mit django-formset
     Überlegung  mehrseitiges Formular: https://django-formset.fly.dev/bootstrap/checkout
@@ -1473,7 +1476,7 @@ class FPlanBeteiligungForm(ModelForm):
             #'assigned_toebs': 'mb-2 col-12',
         },
     )
-   
+
     class Meta:
         model = FPlanBeteiligung
         fields = ['typ', 'beschreibung', 'bekanntmachung_datum', 'start_datum', 'end_datum' , "allow_online_beitrag", "publikation_internet", "assigned_toebs"]
@@ -1484,7 +1487,9 @@ class FPlanBeteiligungForm(ModelForm):
             'end_datum': DateInput(),
             #'allow_online_beitrag': widgets.CheckboxInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),
             'publikation_internet': TextInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}), 
-            'assigned_toebs': DualSortableSelector(search_lookup='label__icontains', group_field_name='theme_display', attrs={'df-show': ".typ=='2000'"}),
+            'assigned_toebs': DualSortableSelector(search_lookup='label__icontains',
+                                                   group_field_name='theme_display',
+                                                   attrs={'df-show': ".typ=='2000' || .typ=='20001'"}),
         }
 
 

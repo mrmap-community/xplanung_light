@@ -29,6 +29,7 @@ from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from xplanung_light.views.user import ExtentUserOrgaInfo
+from django.contrib.auth.mixins import UserPassesTestMixin
 
 class XPlanBeteiligungBeitragCreateView(ExtentUserOrgaInfo, CreateView):
     """
@@ -793,6 +794,64 @@ class BeteiligungBeitragToebUpdateView(ExtentUserOrgaInfo, EditCollectionView):
         #return JsonResponse({'success_url': self.get_success_url()})
         return super().form_collection_valid(form_collection)
     """
+
+class BeteiligungBeitragToebDeleteView(ExtentUserOrgaInfo, UserPassesTestMixin, SuccessMessageMixin, DeleteView):
+    """
+    Löschen eines BeteiligungsBeitrag-Records - aus Sicht der TOEB.
+
+    """
+    model = BPlanBeteiligungBeitrag
+    reference_model = BPlan
+    model_name_lower = str(model._meta.model_name).lower()
+    success_message = "Beteiligungsbeitrag wurde gelöscht!"
+
+    def dispatch(self, request, *args, **kwargs):
+        # Hier sind die Parameter aus der re_path verfügbar
+        self.plantyp = kwargs.get('plantyp')
+        if self.kwargs.get('plantyp') == 'bplan':
+            self.model = BPlanBeteiligungBeitrag
+            self.reference_model = BPlan
+        if self.kwargs.get('plantyp') == 'fplan':
+            self.model = FPlanBeteiligungBeitrag
+            self.reference_model = FPlan
+        self.planid = self.kwargs.get('planid') 
+        self.template_name = 'xplanung_light/beteiligungbeitrag_confirm_delete.html'
+        #TODO: Anpassen für FPlan
+        self.beteiligungid = kwargs.get('beteiligungid')
+        # Debugausgabe
+        print(f"Typ: {self.plantyp}")
+        return super().dispatch(request, *args, **kwargs)
+    
+    def test_func(self):
+        """
+        Funktion zur Berechtigungsprüfung 
+        """
+        obj = self.get_object()
+        toeb_unit_orga = ToebUnit.objects.filter(id=obj.toeb.id).values('organization')
+        return AdminOrgaUser.objects.filter(organization=toeb_unit_orga[0]['organization'], user=self.request.user, is_toeb_reporter=True).exists()
+
+    """
+    def get_queryset(self, **kwargs):
+        qs = super().get_queryset()
+        plan = self.reference_model.objects.get(pk=self.kwargs['planid'])
+        # check ob Nutzer toeb reporter für die jeweilige TOEBUnit ist
+        if self.request.user.is_superuser == False:
+            toeb_unit_orga = ToebUnit.objects.filter(id=self.object.toeb.id).values('organization')
+            if AdminOrgaUser.objects.filter(organization=toeb_unit_orga[0]['organization'], user=self.request.user, is_toeb_reporter=True).exists():
+                #context[self.reference_model_name_lower] = plan
+                #return context
+                pass
+            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        else:
+            if self.plantyp == 'bplan':  
+                return qs.filter(bplan_beteiligung_id=self.kwargs['beteiligungid'])
+            if self.plantyp == 'fplan':  
+                return qs.filter(fplan_beteiligung_id=self.kwargs['beteiligungid'])
+    """
+
+    def form_valid(self, form):
+        self.success_url = reverse_lazy('toebbeteiligungen-list')
+        return super().form_valid(form)
 
 
 class BeteiligungBeitragDetailView(ExtentUserOrgaInfo, DetailView):
