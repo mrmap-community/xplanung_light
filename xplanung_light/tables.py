@@ -92,11 +92,40 @@ class FPlanSpezExterneReferenzTable(tables.Table):
 class BeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
     end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
-    xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.bplan.id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
+    xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
     typ = tables.Column(verbose_name='Typ des Verfahrens')
     plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
     gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
   <a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a><br />{% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
+    #Problem: Man kann im view nicht über Relationen gehen - alles was man braucht, muss man vor dem union ziehen, bzw. als JSON rausgeben!
+    
+
+    class Meta:
+        #model = BPlanBeteiligung
+        template_name = "django_tables2/bootstrap5.html"
+        #fields = ("end_datum", "plantyp")
+
+
+class ToebUnitBeteiligungenTable(tables.Table):
+    # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
+    end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
+    plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
+    xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
+    beteiligung_typ = tables.Column(verbose_name='Typ des Verfahrens')
+    gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
+                                              <a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a><br />
+                                              {% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
+    toeb_unit_name = tables.Column(verbose_name='TOEB')
+    toeb_unit_id = tables.Column(verbose_name='TOEB ID')
+    count_beitrag = tables.TemplateColumn(verbose_name='Beitrag', template_code=u"""{% if record.count_beitrag == 0 %}
+                                          <a href="{% url 'beteiligungbeitrag-toeb-create' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id toeb_id=record.toeb_unit_id %}" class="btn btn-success" role="button">Kommentar abgeben</a>
+                                          {% else %}
+                                          {% if record.count_beitrag == 1 %}
+                                          <a href="{% url 'beteiligungbeitrag-toeb-update' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids %}" class="btn btn-primary" role="button">Kommentar bearbeiten</a>
+                                          {% else %}
+                                          {{ record.count_beitrag }}
+                                          {% endif %}
+                                          {% endif %}""", orderable=True)
     #Problem: Man kann im view nicht über Relationen gehen - alles was man braucht, muss man vor dem union ziehen, bzw. als JSON rausgeben!
     
 
@@ -141,7 +170,7 @@ class BPlanBeteiligungTable(tables.Table):
 
     def render_count_comments(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('beteiligungbeitrag-create', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'pk': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('beteiligungbeitrag-generic-create', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
         else:
             return format_html('<a href="' + reverse('beteiligungbeitrag-list', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
 
@@ -163,7 +192,7 @@ class FPlanBeteiligungTable(tables.Table):
 
     def render_count_comments(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('beteiligungbeitrag-create', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'pk': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('beteiligungbeitrag-generic-create', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
         else:
             return format_html('<a href="' + reverse('beteiligungbeitrag-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
 
@@ -191,7 +220,7 @@ class BPlanBeteiligungBeitragTable(tables.Table):
     class Meta:
         model = BPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("id", "last_changed", "titel", "typ", "name", "email", "approved", "withdrawn", "attachments", "count_stellungnahmen", "edit", "delete")
+        fields = ("id", "last_changed", "titel", "typ", "toeb", "name", "email", "approved", "withdrawn", "attachments", "count_stellungnahmen", "edit", "delete")
 
 
 class FPlanBeteiligungBeitragTable(tables.Table):

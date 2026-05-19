@@ -1882,6 +1882,54 @@ class FPlanBeteiligungBeitragGenericForm(ModelForm):
             #'approved': HiddenInput(),
         }
 
+"""
+Andere Formulare für die TOEB-Beiträge
+"""
+class BPlanBeteiligungBeitragToebForm(ModelForm):
+
+    id = IntegerField(
+        required=False,
+        widget=HiddenInput,
+    )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        #self.fields['name'].required = True
+        #self.fields['email'].required = False
+        # Bestehende Choices abrufen und filtern
+        #original_choices = self.fields['typ'].choices
+        # Beispiel: Nur '2000', '3000' und '4000' behalten
+        #filtered_choices = [c for c in original_choices if c[0] in ['2000', '3000', '4000']]
+        #self.fields['typ'].choices = filtered_choices
+
+    # in der save Funktion kann man die Instanz einfach anpassen - hidden fields sind nicht sinnvoll
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        #print("save ausgeführt - jetzt überschreiben ...")
+        instance.approved = True
+        if commit:
+            instance.save()
+        return instance
+
+    class Meta:
+        model = BPlanBeteiligungBeitrag
+        fields = ['id', 'titel', 'email', 'beschreibung', 'bplan_beteiligung']
+        widgets = {
+            'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+            'bplan_beteiligung': HiddenInput(),
+            'email': HiddenInput(),
+        }
+
+
+class FPlanBeteiligungBeitragToebForm(BPlanBeteiligungBeitragToebForm):
+
+    class Meta:
+        model = FPlanBeteiligungBeitrag
+        fields = ['id', 'titel', 'email', 'beschreibung', 'fplan_beteiligung']
+        widgets = {
+            'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+            'fplan_beteiligung': HiddenInput(),
+            'email': HiddenInput(),
+        }
 
 """
 Formular Collections für den generischen Fall - Sicht des Sachbearbeiters - er hat alle Freiheiten verschiedene 
@@ -1907,6 +1955,25 @@ class FPlanBeteiligungBeitragGenericCollection(FormCollection):
     beitrag = FPlanBeteiligungBeitragGenericForm()
     attachments = FPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
 
+"""
+Für TOEB-Beiträge
+"""
+class BPlanBeteiligungBeitragToebCollection(FormCollection):
+    default_renderer = FormRenderer(field_css_classes='mb-3')
+    legend = "Beitrag"
+    beitrag = BPlanBeteiligungBeitragToebForm()
+    attachments = BPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+
+"""
+Für FPläne
+"""
+class FPlanBeteiligungBeitragToebCollection(FormCollection):
+    default_renderer = FormRenderer(field_css_classes='mb-3')
+    legend = "Beitrag"
+    add_label = "Beitrag hinzufügen"
+    beitrag = FPlanBeteiligungBeitragToebForm()
+    attachments = FPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+
 
 """
 Generisches Formulare
@@ -1923,9 +1990,28 @@ Für FPläne
 """
 class FPlanBeteiligungGenericCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
-    bplan_beteiligung = FPlanBeteiligungFormFormset()
+    fplan_beteiligung = FPlanBeteiligungFormFormset()
     beitrag = FPlanBeteiligungBeitragGenericCollection()
     #captcha = CaptchaForm()
+
+
+"""
+Für TOEB-Beiträge
+"""
+class BPlanBeteiligungToebCollection(FormCollection):
+    default_renderer = FormRenderer(field_css_classes='mb-3')
+    bplan_beteiligung = BPlanBeteiligungFormFormset()
+    beitrag = BPlanBeteiligungBeitragToebCollection()
+
+
+"""
+Für FPläne
+"""
+class FPlanBeteiligungToebCollection(FormCollection):
+    default_renderer = FormRenderer(field_css_classes='mb-3')
+    fplan_beteiligung = FPlanBeteiligungFormFormset()
+    beitrag = FPlanBeteiligungBeitragToebCollection()
+
 
 class RequestForOrganizationAdminCreateForm(ModelForm):
     """

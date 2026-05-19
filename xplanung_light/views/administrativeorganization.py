@@ -13,6 +13,7 @@ from dal import autocomplete
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 from django.contrib.auth.mixins import LoginRequiredMixin
+from xplanung_light.views.user import ExtentUserOrgaInfo
 
 class AdministrativeOrganizationAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
@@ -25,7 +26,7 @@ class AdministrativeOrganizationAutocomplete(autocomplete.Select2QuerySetView):
         return qs
 
 
-class AdministrativeOrganizationPublishingListView(SingleTableView):
+class AdministrativeOrganizationPublishingListView(ExtentUserOrgaInfo, SingleTableView):
     """
     Tabellen View zur Auflistung der Pläne der einzelnen Gebietskörperschaften (AdministrativeOrganization) mit den 
     Zugriffspunkten der jeweiligen die OGC-Dienste 
@@ -52,7 +53,7 @@ class AdministrativeOrganizationPublishingListView(SingleTableView):
         return qs
     
 
-class AdministrativeOrganizationListView(LoginRequiredMixin, SingleTableView):
+class AdministrativeOrganizationListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableView):
     """
     Liste der Organisations-Datensätze.
 
@@ -80,7 +81,7 @@ class AdministrativeOrganizationListView(LoginRequiredMixin, SingleTableView):
         return qs
 
 
-class AdministrativeOrganizationUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+class AdministrativeOrganizationUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Editieren eines Organisations-Datensatzes.
 

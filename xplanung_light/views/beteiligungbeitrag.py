@@ -1,10 +1,11 @@
 from xplanung_light.models import BPlan, BPlanBeteiligung, BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang, AdministrativeOrganization
 from xplanung_light.models import FPlanBeteiligung, FPlan, FPlanBeteiligungBeitrag, ContactOrganization
 from xplanung_light.views.xplanrelations import XPlanRelationsCreateView, XPlanRelationsUpdateView, XPlanRelationsDeleteView
-from xplanung_light.models import ConsentOption
+from xplanung_light.models import ConsentOption, AdminOrgaUser, ToebUnit
 from xplanung_light.forms import BPlanBeteiligungBeitragForm
 from xplanung_light.forms import BPlanBeteiligungGenericCollection, FPlanBeteiligungGenericCollection
 from xplanung_light.forms import BPlanBeteiligungBeitragGenericCollection, FPlanBeteiligungBeitragGenericCollection
+from xplanung_light.forms import BPlanBeteiligungBeitragToebCollection, FPlanBeteiligungBeitragToebCollection
 from django.views.generic import CreateView, ListView, DeleteView, DetailView, UpdateView
 from formset.views import FormViewMixin, FormCollectionView, EditCollectionView
 from django_tables2 import SingleTableView
@@ -27,9 +28,9 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
+from xplanung_light.views.user import ExtentUserOrgaInfo
 
-
-class XPlanBeteiligungBeitragCreateView(CreateView):
+class XPlanBeteiligungBeitragCreateView(ExtentUserOrgaInfo, CreateView):
     """
     Anlagen eines BPlanBeteiligungBeitrag-Datensatzes über Formular.
 
@@ -37,7 +38,7 @@ class XPlanBeteiligungBeitragCreateView(CreateView):
     #form_class = BPlanCreateForm
 
 
-class BeteiligungBeitragListView(SingleTableView):
+class BeteiligungBeitragListView(ExtentUserOrgaInfo, SingleTableView):
     """
     ListView zur Anzeige der BeteiligungBeitrag-Records. Hier Die Klasse entscheidet je nach URL, um welchen Plantyp es sich handelt.
 
@@ -120,7 +121,7 @@ class BeteiligungBeitragListView(SingleTableView):
         return context
 
 
-class BeteiligungBeitragDeleteView(SuccessMessageMixin, DeleteView):
+class BeteiligungBeitragDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
     """
     Löschen eines BeteiligungsBeitrag-Records.
 
@@ -174,7 +175,7 @@ class BeteiligungBeitragDeleteView(SuccessMessageMixin, DeleteView):
         return super().form_valid(form)
 
     
-class BeteiligungBeitragCreateView(EditCollectionView):
+class BeteiligungBeitragCreateView(ExtentUserOrgaInfo, EditCollectionView):
     """
     View für Abbildung des kombinierten Fomulars über django-formsets EditCollectionView
     https://django-formset.fly.dev/model-collections/
@@ -311,7 +312,7 @@ class BeteiligungBeitragCreateView(EditCollectionView):
         return result
     
 
-class BeteiligungBeitragGenericCreateView(FormCollectionView):
+class BeteiligungBeitragGenericCreateView(ExtentUserOrgaInfo, FormCollectionView):
     """
     Der generische CreateView ist für die Sachbearbeiter gedacht und dient zur Erfassung der Beiträge die
     nicht über das Online-Formular erfasst wurden. 
@@ -459,7 +460,7 @@ class BeteiligungBeitragGenericCreateView(FormCollectionView):
             return super().form_collection_valid(form_collection)
 
 
-class BeteiligungBeitragGenericUpdateView(EditCollectionView):
+class BeteiligungBeitragGenericUpdateView(ExtentUserOrgaInfo, EditCollectionView):
     """
     Der generische CreateView ist für die Sachbearbeiter gedacht und dient zur Erfassung der Beiträge die
     nicht über das Online-Formular erfasst wurden. pk ist in Url vorhanden.
@@ -543,8 +544,258 @@ class BeteiligungBeitragGenericUpdateView(EditCollectionView):
         return super().post(request, *args, **kwargs)
     """
 
+class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, FormCollectionView):
+    """
+    Der CreateView für die TOEB. Hier darf nur ein Beitrag pro TOEB und Beteiligung möglich sein. Die 
+    Erstellung und Bearbeitung kann nur innerhalb der Fristen erfolgen. 
+    In django-formset 1.7.8 gibt es noch keine CreateCollectionView, man muss das Speichern selbst implementieren.
+    """
+    # Initialisierung der Attribute - werden in dispatch Funktion überschrieben!
+    plantyp = None
+    # Modell der zu erstellenden Instanz
+    model = BPlanBeteiligungBeitrag
+    # Modell des Beteiligungsverfahrens zu der der Beitrag eingereicht wird
+    model_parent = BPlanBeteiligung
+    # django-formset CollectionClass für das dynamische Formular
+    collection_class = BPlanBeteiligungCollection
+    planmodel = None
+    reference_model_name_lower = None
+    beteiligung_pk = None
+    template_name = 'xplanung_light/beteiligungbeitrag_toeb_form.html'
+    extra_context = None
 
-class BeteiligungBeitragDetailView(DetailView):
+    def get_initial(self):
+        """
+        :param self: Description
+        """
+        # 'beitrag' ist der Name der Form in Ihrer Collection
+        # 'beteiligung' ist das Feld des Foreign Keys
+        initial = super().get_initial()
+        #print(initial)
+        initial.update({
+            'beitrag': {
+                self.kwargs['plantyp'] + "_" + 'beteiligung': str(self.kwargs['beteiligungid'])
+            }
+        })
+        # Url zu der nach dem Erstellen der Instanz weitergeleitet wird
+        self.success_url = reverse('toebbeteiligungen-list')
+        return initial
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Hier sind die Parameter aus der re_path verfügbar. Die Klasse wird je nach Plantyp abgeändert.
+        """
+        self.beteiligung_pk = kwargs.get('beteiligungid')
+        self.plantyp = kwargs.get('plantyp')
+        if self.kwargs.get('plantyp') == 'bplan':
+            self.model = BPlanBeteiligungBeitrag
+            self.model_parent = BPlanBeteiligung
+            self.planmodel = BPlan
+            self.reference_model_name_lower = 'bplan'
+            self.collection_class = BPlanBeteiligungBeitragToebCollection
+        if self.kwargs.get('plantyp') == 'fplan':
+            self.model = FPlanBeteiligungBeitrag
+            self.model_parent = FPlanBeteiligung
+            self.planmodel = FPlan
+            self.reference_model_name_lower = 'fplan'
+            self.collection_class = FPlanBeteiligungBeitragToebCollection
+        self.planid = kwargs.get('planid')
+        if "toeb_id" in kwargs.keys():
+            self.toeb_id = kwargs.get('toeb_id')
+        else:
+            self.toeb_id = None
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        """
+        get_context_data wird überschrieben, um weitere Informationen (Plan/Beteiligung) in das Formular zu übernehmen und 
+        um auf den Plantyp reagieren zu können.
+        
+        :param self: Description
+        :param kwargs: Description
+        """
+        context = super().get_context_data(**kwargs)
+        context["plantyp"] = self.kwargs['plantyp']
+        plan = self.planmodel.objects.get(pk=self.kwargs['planid'])
+        context["plan"] = plan
+        #debug
+        #print("get_context_data: plan name: " + plan.name)
+        beteiligung = None
+        try:
+            beteiligung = self.model_parent.objects.get(pk=self.kwargs['beteiligungid'])
+        except:
+            pass
+        context["beteiligung"] = beteiligung
+        # Extra Context - hier wird definiert, ob create oder update aufgerufen wurde
+        context['extra_context'] = self.extra_context
+        # Berechtigungsprüfung
+        # check ob Nutzer toeb reporter für den angegebenen TOEB ist
+        if self.request.user.is_superuser == False:
+            toeb_unit_orga = ToebUnit.objects.filter(id=self.toeb_id).values('organization')
+            if AdminOrgaUser.objects.filter(organization=toeb_unit_orga[0]['organization'], user=self.request.user, is_toeb_reporter=True).exists():
+                context[self.reference_model_name_lower] = plan
+                return context
+            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        # Übergabe des Planobjekts - warum unter bplan/fplan - kann ggf. raus
+        context[self.reference_model_name_lower] = plan
+        return context
+    
+    # Zum testen, was als json übetragen wird
+    #def post(self, request, *args, **kwargs):
+        # Die Daten liegen im Body des Requests
+        #raw_data = json.loads(request.body)
+        #print(raw_data)  # JSON-Objekt
+        #return super().post(request, *args, **kwargs)
+
+    def form_collection_valid(self, form_collection):
+        """
+        In der älteren Version von django-formset - 1.7.8 muss man das Objekt noch 
+        eigenständig abspeichern.
+        """
+        parent_pk = self.kwargs.get('beteiligungid')
+        holders = form_collection.valid_holders
+        # 1. Hauptobjekt speichern
+        # Ersetze 'beitrag_form' durch den Namen in der Haupt-Collection
+        beitrag_form = holders.get('beitrag')
+        beitrag_instance = None
+        if beitrag_form:
+            if beitrag_form.instance.pk:
+                # Der Beitrag wird immer neu angelegt
+                beitrag_form.instance.pk = None
+                beitrag_form.instance._state.adding = True
+            
+            beitrag_instance = beitrag_form.save(commit=False)
+            #Definition der TOEB-ID
+            beitrag_instance.toeb = ToebUnit.objects.get(id=self.toeb_id)
+            # Automatisches Eintragen der email des Kommentierenden
+            beitrag_instance.email = self.request.user.email
+            # Überschrieben der beteiligungsid (zur Sicherheit - hier braucht man eine instanz, keine id!):
+            #setattr(beitrag_instance, self.plantyp + '_beteiligung', parent_pk)
+            # beitrag_instance.parent_id = parent_pk 
+            beitrag_instance.save()
+            beitrag_form.save_m2m()
+            #print(f"Beitrag gespeichert: ID {beitrag_instance.pk}")
+             # 2. Anhänge speichern
+            anhang_collection_holder = holders.get('attachments') # Name in deiner Haupt-Collection
+            # Wenn es keine Liste ist, hat es ein eigenes valid_holders Attribut
+            if hasattr(anhang_collection_holder, 'valid_holders'):
+                # Bei Collections mit siblings ist valid_holders oft eine Liste von Dicts
+                siblings = anhang_collection_holder.valid_holders
+                # Jetzt prüfen, ob diese 'valid_holders' die Liste sind
+                if isinstance(siblings, list):
+                    for sib_dict in siblings:
+                        # 'attachment' ist der Name in BeteiligungBeitragAnhangCollection
+                        form = sib_dict.get('attachment')
+                        if form:
+                            instance = form.save(commit=False)
+                            instance.beitrag = beitrag_instance
+                            instance.save()
+                else:
+                    # Falls es doch eine einfache Collection ohne Siblings ist
+                    form = siblings.get('attachment')
+                    if form:
+                        instance = form.save(commit=False)
+                        instance.beitrag = beitrag_instance
+                        instance.save()
+            return super().form_collection_valid(form_collection)
+
+
+class BeteiligungBeitragToebUpdateView(ExtentUserOrgaInfo, EditCollectionView):
+    """
+    Der generische UpdateView ist für die Sachbearbeiter gedacht und dient zur Erfassung der Beiträge die
+    nicht über das Online-Formular erfasst wurden. pk ist in Url vorhanden.
+    """
+    # Initialisierung der Attribute - werden in dispatch Funktion überschrieben!
+    plantyp = None
+    model = BPlanBeteiligungBeitrag
+    beteiligung_model = BPlanBeteiligung
+    collection_class = BPlanBeteiligungBeitragToebCollection
+    reference_model_name_lower = 'bplan'
+    planmodel = None
+    beteiligung_pk = None
+    template_name = 'xplanung_light/beteiligungbeitrag_toeb_form.html'
+    extra_context = None
+
+    def get_initial(self):
+        """
+        :param self: Description
+        """
+        self.success_url = reverse('toebbeteiligungen-list')
+        return super().get_initial()
+
+    def dispatch(self, request, *args, **kwargs):
+        # Hier sind die Parameter aus der re_path verfügbar:
+        self.plantyp = kwargs.get('plantyp')
+        if self.kwargs.get('plantyp') == 'bplan':
+            self.model = BPlanBeteiligungBeitrag
+            self.beteiligung_model = BPlanBeteiligung
+            self.planmodel = BPlan
+            self.reference_model_name_lower = 'bplan'
+            self.collection_class = BPlanBeteiligungBeitragToebCollection
+        if self.kwargs.get('plantyp') == 'fplan':
+            self.model = FPlanBeteiligungBeitrag
+            self.beteiligung_model = FPlanBeteiligung
+            self.planmodel = FPlan
+            self.reference_model_name_lower = 'fplan'
+            self.collection_class = FPlanBeteiligungBeitragToebCollection
+        #TODO: Anpassen für FPlan
+        self.planid = kwargs.get('planid')
+        self.beteiligung_pk = kwargs.get('beteiligungid')
+        self.pk = kwargs.get('pk')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        """
+        get_context_data wird überschrieben, weil wir die Stellungnahmen nur für Pläne ermöglichen, für die
+        der Anbieter das zugelassen hat.
+        
+        :param self: Description
+        :param kwargs: Description
+        """
+        context = super().get_context_data(**kwargs)
+        context["plantyp"] = self.kwargs['plantyp']
+        plan = self.planmodel.objects.get(pk=self.kwargs['planid'])
+        context["plan"] = plan
+        beteiligung = None
+        try:
+            beteiligung = self.beteiligung_model.objects.get(pk=self.kwargs['beteiligungid'])
+        except:
+            pass
+        context["beteiligung"] = beteiligung
+        #context["beitrag"] = self.get_object()
+        context['extra_context'] = self.extra_context
+        # check ob Nutzer toeb reporter für die jeweilige TOEBUnit ist
+        if self.request.user.is_superuser == False:
+            toeb_unit_orga = ToebUnit.objects.filter(id=self.object.toeb.id).values('organization')
+            if AdminOrgaUser.objects.filter(organization=toeb_unit_orga[0]['organization'], user=self.request.user, is_toeb_reporter=True).exists():
+                context[self.reference_model_name_lower] = plan
+                return context
+            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        context[self.reference_model_name_lower] = plan
+        return context
+    
+    """
+    # Scheint bei händischer Überschreibung zu Problemen mit den Anhängen zu kommen - daher erst mal zurückgestellt
+    # die EMail kann ja auch über die History abgegriffen werden
+    # 
+    def form_collection_valid(self, form_collection):
+        main_instance = self.get_object()
+        form_collection.construct_instance(main_instance)
+        #main_instance.email = self.request.user.email
+        main_instance.email = "test2@example.com"
+        main_instance.save()
+        # 4. Alle Sub-Collections (Kind-Elemente) manuell mitspeichern
+        #for name, holder in form_collection.valid_holders.items():
+        #    if callable(getattr(holder, 'construct_instance', None)):
+        #        holder.construct_instance(main_instance) # Speichert die Child-Modelle
+
+        # 5. AJAX-Erfolgskonforme Antwort zurückgeben (wichtig für django-formset)
+        #return JsonResponse({'success_url': self.get_success_url()})
+        return super().form_collection_valid(form_collection)
+    """
+
+
+class BeteiligungBeitragDetailView(ExtentUserOrgaInfo, DetailView):
     """
     View für die Details zum Beteiligungsbeitrag. Soll nur für den Ersteller und die zuständigen Bearbeiter sichtbar sein!
     Für die Ersteller brauchen wir eine spezielle function based view - damit wir den redirect handhaben können.

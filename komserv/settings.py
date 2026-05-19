@@ -66,6 +66,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
+    'xplanung_light.middleware.UserRoleInfoMiddleware',
 ]
 
 ROOT_URLCONF = 'komserv.urls'
@@ -89,7 +90,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'komserv.wsgi.application'
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
@@ -179,6 +180,9 @@ LEAFLET_CONFIG = {
     # RLP
     #'SPATIAL_EXTENT': (6.0, 49.0, 8.5, 52),
     #'DEFAULT_CENTER': (7.0, 50.0),
+    'TILES': 'https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png',
+    #'TILES': 'https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{x}/{y}.png',
+    #'TILES': 'https://sgx.geodatenzentrum.de/wmts_basemapde/tile/1.0.0/de_basemapde_web_raster_farbe/default/GLOBAL_WEBMERCATOR/{z}/{x}/{-y}.png',
     # Deutschland
     'SPATIAL_EXTENT': (5.67, 47.44, 14.86, 55.67),
     'DEFAULT_CENTER': (9.55, 51.68),
@@ -233,9 +237,19 @@ XPLANUNG_LIGHT_CONFIG = {
         'city': 'Musterstadt',
         'postcode': '11111',
     },
+    'version': '0.0.1',
     'metadata_keywords': ['bebauungsplan', 'kommunal', ],
     'mapfile_cache_duration_seconds': 20,
     "mapfile_force_online_resource_https": False,
+    "further_base_layers": [
+        #{"name": "dop20rp", "title": "DOP20 RP", "url": "https://geo4.service24.rlp.de/wms/rp_dop20.fcgi?", "attribution": "Lizenz ...", "layer_name": "rp_dop20"},
+        {"name": "topplusfarbe", "title": "TopPlus Farbe", "url": "https://sgx.geodatenzentrum.de/wms_topplus_open?", "attribution": "Lizenz ...", "layer_name": "web"},
+        {"name": "topplusfarbegrau", "title": "TopPlus Grau", "url": "https://sgx.geodatenzentrum.de/wms_topplus_open?", "attribution": "Lizenz ...", "layer_name": "web_grau"},   
+    ],
+    "overlay_layers": [
+        {"name": "likarp", "title": "Liegenschaftskarte RP", "url": "https://geo5.service24.rlp.de/wms/liegenschaften_rp.fcgi?", "attribution": "Lizenz ...", "layer_name": "Flurstueck"},
+        #{"name": "topplusfarbegrau", "title": "TopPlus Grau", "url": "https://sgx.geodatenzentrum.de/wms_topplus_open?", "attribution": "Lizenz ...", "layer_name": "web_grau"},   
+    ],
 }
 
 CLAMD_SOCKET = '/var/run/clamav/clamd.ctl'

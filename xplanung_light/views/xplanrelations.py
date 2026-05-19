@@ -4,11 +4,11 @@ from django.urls import reverse_lazy
 from django_tables2 import SingleTableView
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import LoginRequiredMixin
-
+from xplanung_light.views.user import ExtentUserOrgaInfo
 """
 Generische Klassen zur Verwaltung von Relationen zu XPlänen
 """
-class XPlanRelationsCreateView(LoginRequiredMixin, CreateView):
+class XPlanRelationsCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
     reference_model = BPlan
     list_url_name = 'test'
     reference_model_name_lower = str(reference_model._meta.model_name).lower()
@@ -60,7 +60,7 @@ class XPlanRelationsCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy(self.list_url_name, kwargs={'planid': self.kwargs['planid']})   
     
 
-class XPlanRelationsListView(LoginRequiredMixin, SingleTableView):
+class XPlanRelationsListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableView):
     reference_model = BPlan
     list_url_name = 'test'
     reference_model_name_lower = str(reference_model._meta.model_name).lower()
@@ -96,7 +96,7 @@ class XPlanRelationsListView(LoginRequiredMixin, SingleTableView):
             return self.model.objects#.order_by('-created')
         
 
-class XPlanRelationsUpdateView(LoginRequiredMixin, UpdateView):
+class XPlanRelationsUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, UpdateView):
     reference_model = BPlan
     reference_model_name_lower = str(reference_model._meta.model_name).lower()
     list_url_name = 'dummy'
@@ -143,7 +143,7 @@ class XPlanRelationsUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy(self.list_url_name, kwargs={'planid': self.kwargs['planid']})
 
 
-class XPlanRelationsDeleteView(LoginRequiredMixin, DeleteView):
+class XPlanRelationsDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, DeleteView):
     reference_model = BPlan
     reference_model_name_lower = str(reference_model._meta.model_name).lower()
     list_url_name = 'dummy'

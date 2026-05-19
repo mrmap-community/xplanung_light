@@ -36,6 +36,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.gis.geos import GEOSGeometry
+from xplanung_light.views.user import ExtentUserOrgaInfo
 
 def qualify_gml_geometry(gml_from_db:str):
     ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
@@ -68,7 +69,7 @@ def qualify_gml_geometry(gml_from_db:str):
         return '<gml:MultiSurface srsName="EPSG:25832"><gml:surfaceMember>' + ET.tostring(polygon_element, encoding="utf-8", method="xml").decode('utf8') + '</gml:surfaceMember></gml:MultiSurface>'
 
 
-class XPlanCreateView(LoginRequiredMixin, CreateView):
+class XPlanCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
     """
     Anlagen eines XPlanPlan-Datensatzes über Formular.
     Generische Klasse zur Vererbung an BPlan und FPlan
@@ -123,7 +124,7 @@ class XPlanCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
     
 
-class XPlanUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+class XPlanUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Editieren eines XPlan-Datensatzes.
     """
@@ -195,7 +196,7 @@ class XPlanUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
         return object  
       
 
-class XPlanDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
+class XPlanDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Löschen eines XPlan-Datensatzes.
     """
@@ -240,7 +241,7 @@ class XPlanDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
 
 
 #class XPlanListView(LoginRequiredMixin, FilterView, SingleTableView):
-class XPlanListView(LoginRequiredMixin, SingleTableMixin, FilterView):
+class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, FilterView):
     """
     Liste der Plan-Datensätze.
 
@@ -256,6 +257,8 @@ class XPlanListView(LoginRequiredMixin, SingleTableMixin, FilterView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        #print("User is some admin: " + str(context['user_is_admin']))
+        #print("User is some toeb reporter: " + str(context['user_is_toeb_reporter']))
         # TODO: Anstatt object_list.data vlt. table.data? ... - dann haben wir mehr Einfluss auf die Darstellung im Leaflet Client
         #context["markers"] = json.loads(
         #    serialize("geojson", context['table'].page.object_list.data, fields=["id", "name", "pk", "planart"], geometry_field='geltungsbereich')

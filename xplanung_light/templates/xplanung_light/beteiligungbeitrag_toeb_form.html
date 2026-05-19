@@ -1,0 +1,47 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% load render_form from formsetify %}
+{% load richtext %}
+{% bootstrap_css %}
+{% block title %}
+    {% if beteiligung %}
+    Beitrag im Beteiligungsverfahren zum {% if plantyp == "bplan" %}Bebauungsplan{% endif %}{% if plantyp == "fplan" %}Flächennutzungsplan{% endif %}
+    {%  else %}
+    Beteiligung nicht möglich!
+    {% endif %}
+{% endblock %}
+{% block content %}
+{% if beteiligung %}
+{% if extra_context.create %}
+<h3>Erfassung eines Beitrags</h3>
+{% endif %}
+{% if extra_context.update %}
+<h3>Editierung eines Beitrags</h3>
+{% endif %}
+<p>{{ beteiligung.get_typ_display }} zum {% if plantyp == "bplan" %}Bebauungsplan{% endif %}{% if plantyp == "fplan" %}Flächennutzungsplan{% endif %} <b>{{ plan.name }}</b> der Kommune(n):<br>
+    <ul>
+        {% for gemeinde in plan.gemeinde.all %}<li>{{ gemeinde }} - <a href='{{ gemeinde.contacts.first.datenschutz_link }}' target='_blank'>Datenschutzbestimmungen</a></li>{% endfor %}
+    </ul>
+</p>  
+<p>Beteiligung möglich bis zum <!--<i title="Datumsangabe" class="fa-regular fa-calendar"></i>-->{{ beteiligung.end_datum }}</p>
+{% if beteiligung.beschreibung %}
+<h3>Nähere Informationen zum Verfahren</h3>
+<p>{% render_richtext beteiligung.beschreibung %}</p>
+{% endif %}
+<!-- email -->
+<!-- datenschutzerklärung -->
+<django-formset endpoint="{{ request.path }}" csrf-token="{{ csrf_token }}">
+  {{ form_collection }}
+  <div>
+  {% if extra_context.create %}
+    <button type="button" class="btn btn-primary" df-click="submit -> proceed">Erstellen</button>
+    {% endif %}
+  {% if extra_context.update %}
+    <button type="button" class="btn btn-primary" df-click="submit -> proceed">Aktualisieren</button>
+  {% endif %}
+  </div>
+</django-formset> 
+{% else %}
+Beteiligung nicht möglich!
+{% endif %}
+{% endblock %}

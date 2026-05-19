@@ -797,16 +797,28 @@ def fplan_import_archiv(request):
     else:
         # print("bplan_import: no post")
         form = FPlanImportArchivForm()
-    return render(request, "xplanung_light/fplan_import_archiv.html", {"form": form})
+    return render(request, "xplanung_light/fplan_import_archiv.html", {'form': form,
+                                                                       'user_is_admin': request.user_is_admin,
+                                                                       'user_is_toeb_reporter': request.user_is_toeb_reporter,
+                                                                      }
+    )
 
 def aggregates(request):
-    return render(request, "xplanung_light/aggregates.html")
+    context = {
+        "user_is_admin": request.user_is_admin,
+        "user_is_toeb_reporter": request.is_toeb_reporter,
+    }
+    return render(request, "xplanung_light/aggregates.html", context)
 
 def datenschutz(request):
     # Lade die aktuellen Informationen bezüglich des Datenschutzes und der Nutzungsbedingungen 
     today = datetime.datetime.now().date()
     consent_options = ConsentOption.objects.filter(obsolete=False, mandatory=True, valid_from__lte=today, valid_until__gte=today, type='application')
-    return render(request, "xplanung_light/datenschutz.html", {'consent_options': consent_options})
+    return render(request, "xplanung_light/datenschutz.html", { 'consent_options': consent_options,
+                                                                'user_is_admin': request.user_is_admin,
+                                                                'user_is_toeb_reporter': request.user_is_toeb_reporter,
+                                                              }
+    )
 
 def impressum(request):
     # Lade die aktuellen Informationen aus den Metadaten zu den Diensten - Provider Informationen aus den settings 
@@ -815,10 +827,19 @@ def impressum(request):
     responsible_organisation['name'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['organization_name']
     responsible_organisation['phone'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone']
     responsible_organisation['email'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email']
-    return render(request, "xplanung_light/impressum.html", {'orga_info': responsible_organisation})
+    return render(request, "xplanung_light/impressum.html", { 'orga_info': responsible_organisation,
+                                                              'user_is_admin': request.user_is_admin,
+                                                              'user_is_toeb_reporter': request.user_is_toeb_reporter,
+                                                            }
+    )
     
 
 def home(request):
+    # The attributes are already attached by the middleware
+    #context = {
+    #    "user_is_admin": request.user_is_admin,
+    #    "user_is_toeb_reporter": request.is_toeb_reporter
+    #}
     # Lade alle Informationen zu den vorhandenen Daten für das Dashboard
     bplan_info = {}
     fplan_info = {}
@@ -870,7 +891,14 @@ def home(request):
     #fplan_info['public_objects']  = FPlan.objects.filter(public=True).only('id').count()
     #orga_info['public_objects']  = AdministrativeOrganization.filter(public=True).objects.only('id').count()
 
-    return render(request, "xplanung_light/home.html", {'bplan_info': bplan_info, 'fplan_info': fplan_info, 'orga_info': orga_info, 'beteiligungen_info': beteiligungen_info})
+    return render(request, "xplanung_light/home.html", {'bplan_info': bplan_info, 
+                                                        'fplan_info': fplan_info, 
+                                                        'orga_info': orga_info, 
+                                                        'beteiligungen_info': beteiligungen_info,
+                                                        'user_is_admin': request.user_is_admin,
+                                                        'user_is_toeb_reporter': request.user_is_toeb_reporter,
+                                                        }
+    )
     
 def bauleitplanung_orga_html(request, pk:int):
     orga = AdministrativeOrganization.objects.get(id=pk)
@@ -910,10 +938,21 @@ def bauleitplanung_orga_html(request, pk:int):
     #for beteiligung in beteiligungen_qs:
     #    print(str(beteiligung.id) + " - " + beteiligung.xplan_name)
         #print(beteiligung.geltungsbereich)
-    return render(request, "xplanung_light/bauleitplanung_orga_list.html", {'orga': orga, 'beteiligungen': beteiligungen_qs, 'bplaene': bplaene, 'fplaene': fplaene, 'other_info': other_info})
+    return render(request, "xplanung_light/bauleitplanung_orga_list.html", {'orga': orga,
+                                                                            'beteiligungen': beteiligungen_qs,
+                                                                            'bplaene': bplaene,
+                                                                            'fplaene': fplaene,
+                                                                            'other_info': other_info,
+                                                                            'user_is_admin': request.user_is_admin,
+                                                                            'user_is_toeb_reporter': request.user_is_toeb_reporter,
+                                                                            }
+    )
     
 def about(request):
-    return render(request, "xplanung_light/about.html")
+    return render(request, "xplanung_light/about.html", {'user_is_admin': request.user_is_admin,
+                                                         'user_is_toeb_reporter': request.user_is_toeb_reporter,
+                                                        }
+    )
 
 # https://dev.to/balt1794/registration-page-using-usercreationform-django-part-1-21j7
 def register(request):
@@ -942,6 +981,7 @@ def beitrag_activate(request, **kwargs):
     :param request: Description
     :param kwargs: Description
     """
+    context={}
     # Switch für den Plantyp
     gemeinden = None
     if kwargs['plantyp'] == 'bplan':
@@ -977,7 +1017,6 @@ def beitrag_activate(request, **kwargs):
         beitrag.save()
     # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
     if request.user.is_anonymous:
-        context={}
         context['beitrag'] = beitrag
         context['plantyp'] = kwargs['plantyp']
         if kwargs['plantyp'] =='bplan':

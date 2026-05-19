@@ -25,9 +25,9 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 from formset.views import FormViewMixin
+from xplanung_light.views.user import ExtentUserOrgaInfo
 
-
-class XPlanBeitragStellungnahmeCreateView(CreateView):
+class XPlanBeitragStellungnahmeCreateView(ExtentUserOrgaInfo, CreateView):
     """
     Anlagen eines BPlanBeitragStellungnahme-Datensatzes über Formular.
 
@@ -35,7 +35,7 @@ class XPlanBeitragStellungnahmeCreateView(CreateView):
     #form_class = BPlanCreateForm
 
 
-class BeitragStellungnahmeListView(SingleTableView):
+class BeitragStellungnahmeListView(ExtentUserOrgaInfo, SingleTableView):
     """
     ListView zur Anzeige der BeitragStellungnahme-Records. Hier Die Klasse entscheidet je nach URL, um welchen Plantyp es sich handelt.
 

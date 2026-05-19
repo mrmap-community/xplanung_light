@@ -919,14 +919,6 @@ class BeteiligungBeitrag(GenericMetadata):
     name = models.CharField(null=True, blank=True, max_length=300, verbose_name="Name", help_text="Name der Person oder Institution die den Beitrag einreicht")
     email = models.EmailField(null=True, blank=True, verbose_name='EMail', help_text='EMail-Adresse zur Bestätigung der Abgabe Ihrer Stellungnahme. Sie bekommen eine Aktivierungsmail geschickt.')
     withdrawn = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag zurückgezogen")
-
-    def clean(self):
-        super().clean()
-        if self.typ in ['1000', '2000']:
-            if self.email == '' or self.email == None:
-                raise ValidationError({
-                    'email': 'Bei einer Einreichung über das Online-Formular oder per E-Mail, muss die E-Mail Adresse angegeben werden!',
-                })
             
     class Meta:
         abstract = True
@@ -955,7 +947,18 @@ class BeteiligungBeitragAnhang(GenericMetadata):
 class BPlanBeteiligungBeitrag(BeteiligungBeitrag):
 
     bplan_beteiligung = HistoricForeignKey(BPlanBeteiligung, on_delete=models.CASCADE, verbose_name="BPlanBeteiligung", help_text="BPlanBeteiligung", related_name="comments")
+    toeb = HistoricForeignKey(ToebUnit, on_delete=models.SET_NULL, null = True, blank = True, verbose_name="Träger öffentlicher Belange")
     history = HistoricalRecords()
+
+    """
+    def clean(self):
+        super().clean()
+        if self.typ in ['1000', '2000'] and not self.toeb:
+            if self.email == '' or self.email == None:
+                raise ValidationError({
+                    'email': 'Bei einer Einreichung über das Online-Formular oder per E-Mail, muss die E-Mail Adresse angegeben werden!',
+                })
+    """
 
 class BPlanBeteiligungBeitragAnhang(BeteiligungBeitragAnhang):   
 
@@ -966,8 +969,18 @@ class BPlanBeteiligungBeitragAnhang(BeteiligungBeitragAnhang):
 class FPlanBeteiligungBeitrag(BeteiligungBeitrag):
 
     fplan_beteiligung = HistoricForeignKey(FPlanBeteiligung, null=True, on_delete=models.CASCADE, verbose_name="FPlanBeteiligung", help_text="FPlanBeteiligung", related_name="comments")
+    toeb = HistoricForeignKey(ToebUnit, on_delete=models.SET_NULL, null = True, blank = True, verbose_name="Träger öffentlicher Belange")
     history = HistoricalRecords()
 
+    """
+    def clean(self):
+        super().clean()
+        if self.typ in ['1000', '2000'] and not self.toeb:
+            if self.email == '' or self.email == None:
+                raise ValidationError({
+                    'email': 'Bei einer Einreichung über das Online-Formular oder per E-Mail, muss die E-Mail Adresse angegeben werden!',
+                })
+    """
 
 class FPlanBeteiligungBeitragAnhang(BeteiligungBeitragAnhang):   
 

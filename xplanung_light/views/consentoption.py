@@ -10,8 +10,9 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import PermissionDenied
 from formset.views import FormViewMixin
 from datetime import datetime
+from xplanung_light.views.user import ExtentUserOrgaInfo
 
-class ConsentOptionCreateView(FormViewMixin, SuccessMessageMixin, CreateView):
+class ConsentOptionCreateView(ExtentUserOrgaInfo, FormViewMixin, SuccessMessageMixin, CreateView):
     model = ConsentOption
     form_class = ConsentOptionForm
     template_name = "xplanung_light/consentoption_form.html"
@@ -47,7 +48,7 @@ class ConsentOptionCreateView(FormViewMixin, SuccessMessageMixin, CreateView):
         return reverse_lazy("consentoption-list")
     
 
-class ConsentOptionUpdateView(FormViewMixin, SuccessMessageMixin, UpdateView):
+class ConsentOptionUpdateView(ExtentUserOrgaInfo, FormViewMixin, SuccessMessageMixin, UpdateView):
     model = ConsentOption
     form_class = ConsentOptionForm
     template_name = "xplanung_light/consentoption_form.html"
@@ -91,13 +92,13 @@ class ConsentOptionUpdateView(FormViewMixin, SuccessMessageMixin, UpdateView):
         return reverse_lazy("consentoption-list")
     
     
-class ConsentOptionListView(SingleTableView):
+class ConsentOptionListView(ExtentUserOrgaInfo, SingleTableView):
     model = ConsentOption
     table_class = ConsentOptionTable
     template_name = "xplanung_light/consentoption_list.html"
 
 
-class ConsentOptionDeleteView(SuccessMessageMixin, DeleteView):
+class ConsentOptionDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
     model = ConsentOption
     success_message = "Zustimmungsoption wurde gelöscht!"
     template_name = "xplanung_light/consentoption_confirm_delete.html"

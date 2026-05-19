@@ -13,8 +13,9 @@ from django.core.mail import send_mail, EmailMessage
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
+from xplanung_light.views.user import ExtentUserOrgaInfo
 
-class RequestForOrganizationAdminCreateView(LoginRequiredMixin, CreateView):
+class RequestForOrganizationAdminCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
     """
     Antragsformular um eine Organisationsadminrolle zugeteilt
     zu bekommen.
@@ -74,7 +75,7 @@ class RequestForOrganizationAdminCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy("requestforadmin-list")
 
 
-class RequestForOrganizationAdminListView(LoginRequiredMixin, SingleTableView):
+class RequestForOrganizationAdminListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableView):
     """
     View für die Anzeige einer Liste von Anträgen für die Organisationsadmin-Rolle
     """
@@ -94,7 +95,7 @@ class RequestForOrganizationAdminListView(LoginRequiredMixin, SingleTableView):
         return qs
 
 
-class RequestForOrganizationAdminAdminListView(LoginRequiredMixin, SingleTableView):
+class RequestForOrganizationAdminAdminListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableView):
     """
     View für die Anzeige einer Liste von Anträgen für die Organisationsadmin-Rolle (Sicht Zentraladmin)
     """
@@ -114,7 +115,7 @@ class RequestForOrganizationAdminAdminListView(LoginRequiredMixin, SingleTableVi
         return qs
 
 
-class RequestForOrganizationAdminDeleteView(LoginRequiredMixin, DeleteView):
+class RequestForOrganizationAdminDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, DeleteView):
     """
     View für das Löschen eines Antrags für die Organisationsadmin-Rolle
     """

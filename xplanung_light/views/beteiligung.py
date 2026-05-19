@@ -1,11 +1,11 @@
 from __future__ import annotations
 from django.http import HttpResponseRedirect
-from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung, AdministrativeOrganization
+from xplanung_light.models import BPlanBeteiligung, FPlanBeteiligung, AdministrativeOrganization, ToebUnit, AdminOrgaUser
 from xplanung_light.models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme
-from xplanung_light.tables import BeteiligungenTable, BeteiligungenOrgaTable
+from xplanung_light.tables import BeteiligungenTable, ToebUnitBeteiligungenTable, BeteiligungenOrgaTable
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.utils import timezone
-from django.db.models import Count, F, Value, OuterRef, Subquery
+from django.db.models import Count, F, Q, Value, OuterRef, Subquery
 from django.db.models.functions import Concat
 from django_tables2 import SingleTableView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -18,6 +18,7 @@ import os
 from django.core.exceptions import PermissionDenied
 from django.conf import settings
 from django.template.defaultfilters import filesizeformat
+from xplanung_light.views.user import ExtentUserOrgaInfo
 #from django.db.models.aggregates import Aggregate
 
 # https://stackoverflow.com/questions/74111981/django-aggregate-into-array
@@ -46,35 +47,50 @@ class SQLiteJSONObject(Func):
     function = "json_object"
 
 
-def sqlite_organization_aggregation(plantyp='bplan'):
-    return SQLiteJSONGroupArray(
-        SQLiteJSONObject(
-            Value("id"), plantyp + "__gemeinde__id",
-            Value("name"), plantyp + "__gemeinde__name",
-        )
-    )   
+def sqlite_organization_aggregation(plantyp='bplan', beteiligung=False):
+    if beteiligung:
+        return SQLiteJSONGroupArray(
+            SQLiteJSONObject(
+                Value("id"), plantyp + "beteiligung__" + plantyp + "__gemeinde__id",
+                Value("name"), plantyp + "beteiligung__" + plantyp + "__gemeinde__name",
+            )
+        )   
+    else:
+        return SQLiteJSONGroupArray(
+            SQLiteJSONObject(
+                Value("id"), plantyp + "__gemeinde__id",
+                Value("name"), plantyp + "__gemeinde__name",
+            )
+        )    
 
-def postgres_organization_aggregation(plantyp='bplan'):
-    return JSONBAgg(
-        JSONObject(
-            id = plantyp + "__gemeinde__id",
-            name = plantyp + "__gemeinde__name",
+def postgres_organization_aggregation(plantyp='bplan', beteiligung=False):
+    if beteiligung:
+        return JSONBAgg(
+            JSONObject(
+                id = plantyp + "beteiligung__" + plantyp + "__gemeinde__id",
+                name = plantyp + "beteiligung__" + plantyp + "__gemeinde__name",
+            )
         )
-    )
+    else:
+        return JSONBAgg(
+            JSONObject(
+                id = plantyp + "__gemeinde__id",
+                name = plantyp + "__gemeinde__name",
+            )
+        )
 
-def organization_json_aggregation(plantyp='bplan'):
+def organization_json_aggregation(plantyp='bplan', beteiligung=False):
     if connection.vendor == "postgresql":
-
-        return postgres_organization_aggregation(plantyp)
+        return postgres_organization_aggregation(plantyp, beteiligung)
 
     if connection.vendor == "sqlite":
-        result = sqlite_organization_aggregation(plantyp)
+        result = sqlite_organization_aggregation(plantyp, beteiligung)
         return result
 
     raise NotImplementedError
 
 
-class BeteiligungenListView(SingleTableView):
+class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
     """
     Klasse zur Anzeige der laufenden BPlan- und FPlan-Verfahren einer Gebietskörperschaft.
 
@@ -164,6 +180,77 @@ class BeteiligungenOrgaListView(BeteiligungenListView):
         context['gemeinde'] = AdministrativeOrganization.objects.get(pk=self.kwargs['pk'])
         return context
     
+
+class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableView):
+    """
+    Klasse für die Anzeige der Liste der Beteiligungsverfahren für eine TOEB-Unit. Diese bekommt nur die Beteiligungsverfahren zu sehen,
+    denen sie zugewiesen wurde. Daher der Filter nach Typ und TOEB-Unit editors.
+    """
+    template_name = "xplanung_light/beteiligungen.html"
+    table_class = ToebUnitBeteiligungenTable
+
+    def get_queryset(self):
+        """
+        Überschreiben von get_queryset um ein union verschiedener Modelle zu ermöglichen.
+        
+        :param self: Description
+        """
+        # Check ob der angemeldete user irgendeine Orga hat, für die is_admin = True ist
+        #if self.request.user.is_authenticated:
+        #    if not AdminOrgaUser.objects.filter(user=self.request.user, is_admin=True).exists():
+        #        raise PermissionDenied('Nutzer hat keine Admin-Rolle!')
+        beteiligungen_bplaene = BPlanBeteiligung.assigned_toebs.through.objects.filter(
+                bplanbeteiligung__end_datum__gte=timezone.now()
+            ).filter(
+                bplanbeteiligung__bekanntmachung_datum__lte=timezone.now(), bplanbeteiligung__bplan__public=True, bplanbeteiligung__typ__in=['2000', '20001']
+            ).distinct(
+            ).annotate(
+                xplan_name=F('bplanbeteiligung__bplan__name'), 
+                plantyp=Value('BPlan'), 
+                beteiligung_typ=F('bplanbeteiligung__typ'),
+                beteiligung_id=F('bplanbeteiligung__id'),
+                xplan_id=F('bplanbeteiligung__bplan__id'), 
+                toeb_unit_name=F('toebunit__name'), 
+                toeb_unit_id=F('toebunit__id'),
+                end_datum=F('bplanbeteiligung__end_datum'), 
+                count_beitrag=Count("bplanbeteiligung__comments", filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))),
+                # id eines vorhandenen beitrags
+                beitrag_ids=F('bplanbeteiligung__comments__id'),
+                gemeinden=organization_json_aggregation(beteiligung=True)
+            )
+        beteiligungen_fplaene = FPlanBeteiligung.assigned_toebs.through.objects.filter(
+                fplanbeteiligung__end_datum__gte=timezone.now()
+            ).filter(
+                fplanbeteiligung__bekanntmachung_datum__lte=timezone.now(), fplanbeteiligung__fplan__public=True, fplanbeteiligung__typ__in=['2000', '20001']
+            ).distinct().annotate(
+                xplan_name=F('fplanbeteiligung__fplan__name'), 
+                plantyp=Value('FPlan'), 
+                beteiligung_typ=F('fplanbeteiligung__typ'),
+                beteiligung_id=F('fplanbeteiligung__id'),
+                xplan_id=F('fplanbeteiligung__fplan__id'), 
+                toeb_unit_name=F('toebunit__name'), 
+                toeb_unit_id=F('toebunit__id'),
+                end_datum=F('fplanbeteiligung__end_datum'), 
+                count_beitrag=Count("fplanbeteiligung__comments", filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))),
+                # id eines vorhandenen beitrags
+                beitrag_ids=F('fplanbeteiligung__comments__id'),
+                gemeinden=organization_json_aggregation(plantyp='fplan', beteiligung=True)
+            )
+        #if self.request.user.is_anonymous:
+        #    raise PermissionDenied("Keine Berechtigung!")
+        if not self.request.user.is_superuser:
+            toeb_units = ToebUnit.objects.filter(
+                editors__user=self.request.user, editors__is_toeb_reporter=True
+            )
+            beteiligungen_bplaene = beteiligungen_bplaene.filter(toebunit__in=toeb_units)
+            beteiligungen_fplaene = beteiligungen_fplaene.filter(toebunit__in=toeb_units)
+        # Info:
+        # union(), intersection(), and difference() return model instances of the type of the first QuerySet even if the arguments are QuerySets of other models. Passing different models works as long as the SELECT list is the same in all QuerySets (at least the types, the names don’t matter as long as the types in the same order).   
+        # https://pythonguides.com/union-operation-on-models-django/
+        beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
+        return beteiligungen_plaene  
+
+
 import copy, csv
 #from reportlab.pdfgen import canvas
 from django.http import HttpResponse

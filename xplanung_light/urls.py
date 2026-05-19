@@ -5,10 +5,10 @@ from xplanung_light.views.bplan import BPlanCreateView, BPlanUpdateView, BPlanDe
 from xplanung_light.views.bplan import BPlanPublicListView
 from xplanung_light.views.fplan import FPlanPublicListView
 from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDeleteView, FPlanListView, FPlanDetailView, FPlanListViewHtml
-from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView, BeteiligungPdfView
+from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView, BeteiligungPdfView, ToebUnitBeteiligungenListView
 from xplanung_light.views.requestforadmin import RequestForOrganizationAdminCreateView, RequestForOrganizationAdminListView, RequestForOrganizationAdminDeleteView, RequestForOrganizationAdminAdminListView
 from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragCreateView, BeteiligungBeitragListView, BeteiligungBeitragDeleteView, BeteiligungBeitragDetailView
-from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragGenericCreateView, BeteiligungBeitragGenericUpdateView
+from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragGenericCreateView, BeteiligungBeitragGenericUpdateView, BeteiligungBeitragToebCreateView, BeteiligungBeitragToebUpdateView
 from xplanung_light.views.beitragstellungnahme import XPlanBeitragStellungnahmeCreateView, XPlanBeitragStellungnahmeUpdateView, BeitragStellungnahmeListView, XPlanBeitragStellungnahmeDeleteView
 from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
@@ -74,7 +74,10 @@ urlpatterns = [
     # Formular für die Sachbearbeiter
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-generic/create/$', BeteiligungBeitragGenericCreateView.as_view(extra_context={'create': True}), name="beteiligungbeitrag-generic-create"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-generic/(?P<pk>\d+)/update/$', BeteiligungBeitragGenericUpdateView.as_view(extra_context={'update': True}), name="beteiligungbeitrag-generic-update"),
-
+    # Formular für TOEB Reporter
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/create/toeb/(?P<toeb_id>\d+)/$', BeteiligungBeitragToebCreateView.as_view(extra_context={'create': True}), name="beteiligungbeitrag-toeb-create"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/(?P<pk>\d+)/update/$', BeteiligungBeitragToebUpdateView.as_view(extra_context={'update': True}), name="beteiligungbeitrag-toeb-update"),
+    
     # Aktivierungslink
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/activate$', views.beitrag_activate, name="beteiligungbeitrag-activate"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/withdraw$', views.beitrag_withdraw, name="beteiligungbeitrag-withdraw"),
@@ -162,11 +165,14 @@ urlpatterns = [
     path("contact/", ContactOrganizationListView.as_view(), name="contact-list"),
     path("contact/<int:pk>/update/", ContactOrganizationUpdateView.as_view(), name="contact-update"),
     path("contact/<int:pk>/delete/", ContactOrganizationDeleteView.as_view(), name="contact-delete"),
-    # TOEB Units
+    # TOEB Units - für Organization admins!
     path("toebunit/create/", ToebUnitCreateView.as_view(), name="toebunit-create"),
     path("toebunit/", ToebUnitListView.as_view(), name="toebunit-list"),
     path("toebunit/<int:pk>/update/", ToebUnitUpdateView.as_view(), name="toebunit-update"),
     path("toebunit/<int:pk>/delete/", ToebUnitDeleteView.as_view(), name="toebunit-delete"),
+    # TOEB Unit Beteiligungen
+    path("toeb/beteiligungen/", ToebUnitBeteiligungenListView.as_view(), name="toebbeteiligungen-list"),
+    # 
     # Anträge auf Admin-Berechtigung
     path("requestforadmin/create/", RequestForOrganizationAdminCreateView.as_view(), name="requestforadmin-create"),
     path("requestforadmin/", RequestForOrganizationAdminListView.as_view(), name="requestforadmin-list"),

@@ -10,9 +10,9 @@ from xplanung_light.forms import ContactOrganizationCreateForm, ContactOrganizat
 from django.db.models import Subquery, OuterRef
 from django.contrib.gis.db.models import Extent
 from django.core.exceptions import PermissionDenied
+from xplanung_light.views.user import ExtentUserOrgaInfo
 
-
-class ContactOrganizationCreateView(SuccessMessageMixin, CreateView):
+class ContactOrganizationCreateView(ExtentUserOrgaInfo, SuccessMessageMixin, CreateView):
     model = ContactOrganization
     form_class = ContactOrganizationCreateForm
     template_name = "xplanung_light/contact_form.html"
@@ -57,7 +57,7 @@ class ContactOrganizationCreateView(SuccessMessageMixin, CreateView):
         return reverse_lazy("contact-list")
     
 
-class ContactOrganizationUpdateView(SuccessMessageMixin, UpdateView):
+class ContactOrganizationUpdateView(ExtentUserOrgaInfo, SuccessMessageMixin, UpdateView):
     model = ContactOrganization
     form_class = ContactOrganizationUpdateForm
     template_name = "xplanung_light/contact_form_update.html"
@@ -120,7 +120,7 @@ class ContactOrganizationUpdateView(SuccessMessageMixin, UpdateView):
         return reverse_lazy("contact-list")
     
     
-class ContactOrganizationListView(SingleTableView):
+class ContactOrganizationListView(ExtentUserOrgaInfo, SingleTableView):
     model = ContactOrganization
     table_class = ContactOrganizationTable
     template_name = "xplanung_light/contact_list.html"
@@ -139,7 +139,7 @@ class ContactOrganizationListView(SingleTableView):
         return qs
 
 
-class ContactOrganizationDeleteView(SuccessMessageMixin, DeleteView):
+class ContactOrganizationDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
     model = ContactOrganization
     success_message = "Kontaktorganisation wurde gelöscht!"
     template_name = "xplanung_light/contact_confirm_delete.html"

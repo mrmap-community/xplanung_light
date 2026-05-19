@@ -14,8 +14,9 @@ from leaflet.forms.widgets import LeafletWidget
 from django.db import transaction
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db.models import Case, When, Value, CharField
+from xplanung_light.views.user import ExtentUserOrgaInfo
 
-class ToebUnitCreateView(SuccessMessageMixin, CreateView):
+class ToebUnitCreateView(ExtentUserOrgaInfo, SuccessMessageMixin, CreateView):
     model = ToebUnit
     form_class = ToebUnitCreateForm
 
@@ -49,7 +50,7 @@ class ToebUnitCreateView(SuccessMessageMixin, CreateView):
             
             """
             form.fields['organization'].queryset = form.fields['organization'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type", "name_part")
-            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True, organization_users__user=self.request.user)
+            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True)
         # Geometriefeld hinzufügen
         form.fields['geometry'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
         # Herausnehmen der organizationn, die schon eine Kontaktstelle zugewiesen bekommen haben
@@ -71,11 +72,11 @@ class ToebUnitCreateView(SuccessMessageMixin, CreateView):
         return reverse_lazy("toebunit-list")
 
 
-class ToebUnitUpdateView(SuccessMessageMixin, UpdateView):
+class ToebUnitUpdateView(ExtentUserOrgaInfo, SuccessMessageMixin, UpdateView):
     model = ToebUnit
     form_class = ToebUnitUpdateForm
     template_name = "xplanung_light/toebunit_form_update.html"
-    
+
     """
     def get_queryset(self):
         qs = super(self).get_queryset()
@@ -100,7 +101,7 @@ class ToebUnitUpdateView(SuccessMessageMixin, UpdateView):
             form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True)
         else:
             form.fields['organization'].queryset = form.fields['organization'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type", "name_part")
-            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True, organization_users__user=self.request.user)
+            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True)
         # Erweitern der organizationn, die noch keinem Kontakt zugewiesen wurden, mit denen, die schon am Record vorhanden sind 
         # https://studygyaan.com/django/combining-multiple-querysets-in-django-with-examples
         #form.fields['organization'].queryset = form.fields['organization'].queryset.filter(contacts__isnull = True).only("pk", "name", "type") | object.organization.get_queryset().only("pk", "name", "type")
@@ -167,7 +168,7 @@ class ToebUnitUpdateView(SuccessMessageMixin, UpdateView):
         return reverse_lazy("toebunit-list")
 
 
-class ToebUnitListView(SuccessMessageMixin, SingleTableView):
+class ToebUnitListView(ExtentUserOrgaInfo, SuccessMessageMixin, SingleTableView):
     model = ToebUnit
     table_class = ToebUnitTable
     template_name = "xplanung_light/toebunit_list.html"
@@ -185,7 +186,7 @@ class ToebUnitListView(SuccessMessageMixin, SingleTableView):
         return qs
 
 
-class ToebUnitDeleteView(SuccessMessageMixin, DeleteView):
+class ToebUnitDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
     model = ToebUnit
     success_message = "TOEB-Stelle wurde gelöscht!"
     template_name = "xplanung_light/toebunit_confirm_delete.html"
