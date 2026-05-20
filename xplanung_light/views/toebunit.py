@@ -3,7 +3,7 @@ from django.views.generic import (CreateView, UpdateView, DeleteView, ListView, 
 from xplanung_light.models import ToebUnit
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableView
-from xplanung_light.tables import ToebUnitTable
+from xplanung_light.tables import ToebUnitTable, ToebUnitPublicTable
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
 from xplanung_light.forms import ToebUnitCreateForm, ToebUnitUpdateForm
@@ -184,7 +184,20 @@ class ToebUnitListView(ExtentUserOrgaInfo, SuccessMessageMixin, SingleTableView)
             )).order_by('-last_changed')
         
         return qs
+    
 
+class ToebUnitPublicListView(ExtentUserOrgaInfo, SuccessMessageMixin, SingleTableView):
+    model = ToebUnit
+    table_class = ToebUnitPublicTable
+    template_name = "xplanung_light/toebunitpublic_list.html"
+
+    def get_queryset(self):   
+        qs = ToebUnit.objects.filter(public=True).distinct().prefetch_related('organization').annotate(last_changed=Subquery(
+                ToebUnit.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+            )).order_by('-last_changed')
+        
+        return qs
+    
 
 class ToebUnitDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
     model = ToebUnit

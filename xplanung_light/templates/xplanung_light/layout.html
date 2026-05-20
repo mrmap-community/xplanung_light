@@ -67,16 +67,16 @@
                  <a class="nav-link" aria-current="page" href="{% url 'organization-publishing-list' %}">Liste / Übersicht</a>
               </li>
               {% endif %}
-              {% if user_is_toeb_reporter  or user.is_superuser %}
                <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                   TOEB
                 </a>
+                {% if user_is_toeb_reporter  or user.is_superuser %}
                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
                   <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'toebbeteiligungen-list' %}">Meine Beteiligungen</a></li>
                 </ul>
+                {% endif %}
               </li>
-              {% endif %}
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                   Anträge
@@ -111,6 +111,9 @@
               </li>
               {% endif %}
               {% endif %}
+              <li class="nav-item">
+                <a class="nav-link" aria-current="page" href="{% url 'toebunitpublic-list' %}">Träger öffentlicher Belange</a>
+              </li> 
               <li class="nav-item">
                 <a class="nav-link" aria-current="page" href="{% url 'about' %}">Über</a>
               </li>

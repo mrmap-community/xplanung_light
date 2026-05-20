@@ -20,7 +20,7 @@ from xplanung_light.views.uvp import UvpCreateView, UvpUpdateView, UvpDeleteView
 from xplanung_light.views.fplanuvp import FPlanUvpCreateView, FPlanUvpUpdateView, FPlanUvpDeleteView, FPlanUvpListView
 from xplanung_light.views.administrativeorganization import AdministrativeOrganizationPublishingListView, AdministrativeOrganizationAutocomplete, AdministrativeOrganizationListView, AdministrativeOrganizationUpdateView
 from xplanung_light.views.contactorganization import ContactOrganizationCreateView, ContactOrganizationListView, ContactOrganizationUpdateView, ContactOrganizationDeleteView
-from xplanung_light.views.toebunit import ToebUnitCreateView, ToebUnitListView, ToebUnitUpdateView, ToebUnitDeleteView
+from xplanung_light.views.toebunit import ToebUnitCreateView, ToebUnitListView, ToebUnitUpdateView, ToebUnitDeleteView, ToebUnitPublicListView
 
 
 from xplanung_light.views.consentoption import ConsentOptionCreateView, ConsentOptionUpdateView, ConsentOptionListView, ConsentOptionDeleteView
@@ -171,6 +171,8 @@ urlpatterns = [
     path("toebunit/", ToebUnitListView.as_view(), name="toebunit-list"),
     path("toebunit/<int:pk>/update/", ToebUnitUpdateView.as_view(), name="toebunit-update"),
     path("toebunit/<int:pk>/delete/", ToebUnitDeleteView.as_view(), name="toebunit-delete"),
+    # TOEB Units - für Öffentlichkeit
+    path("toebunitpublic/", ToebUnitPublicListView.as_view(), name="toebunitpublic-list"),
     # TOEB Unit Beteiligungen
     path("toeb/beteiligungen/", ToebUnitBeteiligungenListView.as_view(), name="toebbeteiligungen-list"),
     # 

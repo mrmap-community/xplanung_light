@@ -913,7 +913,8 @@ def bauleitplanung_orga_html(request, pk:int):
             xplan_name=F('bplan__name'),
             xplan_id=F('bplan__id'),
             plantyp=Value('BPlan'),
-            geltungsbereich=F('bplan__geltungsbereich')#).distinct()
+            geltungsbereich=F('bplan__geltungsbereich'),#).distinct()
+            beteiligung_typ=F('typ')
         ).annotate(
             # TODO check warum filter nicht zieht...
             confirmed_comments=Count('comments', distinct=True, filter=Q(comments__approved=True, comments__withdrawn=False))
@@ -927,7 +928,8 @@ def bauleitplanung_orga_html(request, pk:int):
             xplan_name=F('fplan__name'),
             xplan_id=F('fplan__id'),
             plantyp=Value('FPlan'),
-            geltungsbereich=F('fplan__geltungsbereich')#).distinct()
+            geltungsbereich=F('fplan__geltungsbereich'),#).distinct()
+            beteiligung_typ=F('typ')
         ).annotate(
             confirmed_comments=Count('comments', distinct=True, filter=Q(comments__approved=True, comments__withdrawn=False))
         ).distinct()

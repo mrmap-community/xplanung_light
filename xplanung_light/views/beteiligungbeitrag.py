@@ -178,7 +178,7 @@ class BeteiligungBeitragDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, Dele
     
 class BeteiligungBeitragCreateView(ExtentUserOrgaInfo, EditCollectionView):
     """
-    View für Abbildung des kombinierten Fomulars über django-formsets EditCollectionView
+    View für Abbildung des kombinierten Fomulars über django-formsets EditCollectionView - das Formular ist nur für die Öffentlichkeit gedacht
     https://django-formset.fly.dev/model-collections/
 
     """
@@ -226,6 +226,13 @@ class BeteiligungBeitragCreateView(ExtentUserOrgaInfo, EditCollectionView):
             self.success_url = reverse('organization-bauleitplanung-list', kwargs={'pk': self.kwargs['orga_id']})
         else:
             self.success_url = reverse('beteiligungbeitrag-list', kwargs={'plantyp': self.kwargs['plantyp'], 'planid': self.kwargs['planid'], 'beteiligungid': self.kwargs['pk']})
+        if self.kwargs['pk']:
+            bplan_beteiligung_exist = BPlanBeteiligung.objects.filter(typ__in=[1000, 10001], id=self.kwargs['pk']).exists()
+            fplan_beteiligung_exist = FPlanBeteiligung.objects.filter(typ__in=[1000, 10001], id=self.kwargs['pk']).exists()
+            
+            if not bplan_beteiligung_exist and not fplan_beteiligung_exist:
+                raise PermissionDenied("Für das gewählte Verfahren ist eine nicht-authentifizierte Beteiligung nicht zulässig!")
+
         return super().get_initial()
     
     def get_context_data(self, **kwargs):

@@ -45,6 +45,7 @@ class ContactOrganizationTable(tables.Table):
 
 
 class ToebUnitTable(tables.Table):
+    last_changed = tables.Column(verbose_name='Letzte Änderung')
     edit = tables.LinkColumn('toebunit-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
                          orderable=False, empty_values=())
     delete = tables.LinkColumn('toebunit-delete', verbose_name='', text='Löschen', args=[A('pk')], \
@@ -52,7 +53,22 @@ class ToebUnitTable(tables.Table):
     class Meta:
         model = ToebUnit
         template_name = "django_tables2/bootstrap5.html"
-        fields = ['id', 'last_changed', 'organization', 'name', 'theme', 'editors', 'edit', 'delete']
+        fields = ['id', 'last_changed', 'public', 'organization', 'name', 'theme', 'editors', 'edit', 'delete']
+
+
+class ToebUnitPublicTable(tables.Table):
+    last_changed = tables.Column(verbose_name='Letzte Änderung')
+    #edit = tables.LinkColumn('toebunit-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
+    #                     orderable=False, empty_values=())
+    #delete = tables.LinkColumn('toebunit-delete', verbose_name='', text='Löschen', args=[A('pk')], \
+    #                     orderable=False, empty_values=())
+    #karte = tables.TemplateColumn(verbose_name='Zuständigkeit', template_code=u"""<button type="button" class="btn btn-transparent" data-bs-toggle="modal" 
+    #                              data-bs-target="#exampleModal" data-bs-title="Übersichtskarte" 
+    #                              data-bs-geojson="{{ record.geometry.geojson }}"><i title="Übersichtskarte" class="fa-regular fa-map"></i></button>""")
+    class Meta:
+        model = ToebUnit
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ['id', 'last_changed', 'organization', 'name', 'theme']
 
 
 class BPlanSpezExterneReferenzTable(tables.Table):
@@ -126,21 +142,25 @@ class ToebUnitBeteiligungenTable(tables.Table):
     toeb_unit_name = tables.columns.TemplateColumn(verbose_name='TOEB', template_code=u"""{{ record.toeb_unit_orga_name }} - {{ record.toeb_unit_name }} ({{ record.toeb_unit_id }})""")
     #toeb_unit_id = tables.Column(verbose_name='TOEB ID')
     count_beitrag_attachments = tables.TemplateColumn(verbose_name='Anlagen', template_code=u"""{% if record.count_beitrag_attachments > 0 %}{{ record.count_beitrag_attachments }}{% endif %}""")
-    count_beitrag = tables.TemplateColumn(verbose_name='Beitrag', template_code=u"""{% if record.count_beitrag == 0 and record.status == 2 %}
-                                          <a href="{% url 'beteiligungbeitrag-toeb-create' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id toeb_id=record.toeb_unit_id %}" class="btn btn-success" role="button">Erstellen</a>
+    edit = tables.TemplateColumn(verbose_name='', template_code=u"""{% if record.count_beitrag == 0 and record.status == 2 %}
+                                          <a href="{% url 'beteiligungbeitrag-toeb-create' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id toeb_id=record.toeb_unit_id %}">Anlegen</a>
                                           {% else %}
                                           {% if record.count_beitrag == 1 and record.status == 2 %}
-                                          <a href="{% url 'beteiligungbeitrag-toeb-update' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids.0.id %}" class="btn btn-primary" role="button">Bearbeiten</a>
-                                          <a href="{% url 'beteiligungbeitrag-toeb-delete' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids.0.id %}" class="btn btn-danger" role="button">Löschen</a>
+                                          <a href="{% url 'beteiligungbeitrag-toeb-update' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids.0.id %}">Bearbeiten</a>
                                           {% else %}
                                           {% if record.count_beitrag == 1 and record.status != 2 %}
-                                          <a href="{% url 'beteiligungbeitrag-toeb-update' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids.0.id %}" class="btn btn-secondary" role="button">Anzeigen</a>
+                                          <a href="{% url 'beteiligungbeitrag-toeb-update' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids.0.id %}">Anzeigen</a>
                                           {% else %}
                                           <span class="badge rounded-pill bg-secondary">Deaktiviert</span>
                                           {% endif %}
                                           {% endif %}
                                           {% endif %}""", orderable=True)
     
+    delete = tables.TemplateColumn(verbose_name='', template_code=u"""
+                                          {% if record.count_beitrag == 1 and record.status == 2 %}
+                                          <a href="{% url 'beteiligungbeitrag-toeb-delete' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids.0.id %}">Löschen</a>
+                                          {% else %}
+                                          {% endif %}""", orderable=True)  
     #Problem: Man kann im view nicht über Relationen gehen - alles was man braucht, muss man vor dem union ziehen, bzw. als JSON rausgeben!
     
 
