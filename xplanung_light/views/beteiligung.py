@@ -19,6 +19,9 @@ from django.core.exceptions import PermissionDenied
 from django.conf import settings
 from django.template.defaultfilters import filesizeformat
 from xplanung_light.views.user import ExtentUserOrgaInfo
+from django.utils import timezone
+from django.db.models import Avg, F, Q
+from django.db.models import Case, When, Value, CharField
 #from django.db.models.aggregates import Aggregate
 
 # https://stackoverflow.com/questions/74111981/django-aggregate-into-array
@@ -27,6 +30,14 @@ class JsonGroupArray(Aggregate):
     function = 'JSON_GROUP_ARRAY'
     output_field = JSONField()
     template = '%(function)s(%(distinct)s%(expressions)s)'
+
+    def __init__(self, *expressions, distinct=False, **extra):
+        super().__init__(*expressions, **extra)
+        self.distinct = 'DISTINCT ' if distinct else ''
+    
+    def as_sql(self, compiler, connection, **extra_context):
+        extra_context['distinct'] = self.distinct
+        return super().as_sql(compiler, connection, **extra_context)
 
 """
 Nach KI-Recherche - Abstraktion für postgresql und sqlite
@@ -41,6 +52,15 @@ from django.db import connection
 class SQLiteJSONGroupArray(Aggregate):
     function = "JSON_GROUP_ARRAY"
     output_field = JSONField()
+    template = '%(function)s(%(distinct)s%(expressions)s)'
+
+    def __init__(self, *expressions, distinct=False, **extra):
+        super().__init__(*expressions, **extra)
+        self.distinct = 'DISTINCT ' if distinct else ''
+    
+    def as_sql(self, compiler, connection, **extra_context):
+        extra_context['distinct'] = self.distinct
+        return super().as_sql(compiler, connection, **extra_context)
 
 
 class SQLiteJSONObject(Func):
@@ -48,35 +68,46 @@ class SQLiteJSONObject(Func):
 
 
 def sqlite_organization_aggregation(plantyp='bplan', beteiligung=False):
+
     if beteiligung:
+        print("aggregiere gemeinde")
         return SQLiteJSONGroupArray(
             SQLiteJSONObject(
                 Value("id"), plantyp + "beteiligung__" + plantyp + "__gemeinde__id",
                 Value("name"), plantyp + "beteiligung__" + plantyp + "__gemeinde__name",
-            )
+            ),
+            #Filter klappt nur, wenn überhaupt ein Beitrag abgegeben wurde, sonst nicht!
+            #filter = Q(**{f"{plantyp}beteiligung__comments__toeb": F('toebunit__id')}),
+            distinct=True
         )   
     else:
         return SQLiteJSONGroupArray(
             SQLiteJSONObject(
                 Value("id"), plantyp + "__gemeinde__id",
                 Value("name"), plantyp + "__gemeinde__name",
-            )
-        )    
+            ),
+            #filter=Q(comments__toeb=F("toebunit__id"))
+        )   
 
 def postgres_organization_aggregation(plantyp='bplan', beteiligung=False):
+
     if beteiligung:
         return JSONBAgg(
             JSONObject(
                 id = plantyp + "beteiligung__" + plantyp + "__gemeinde__id",
                 name = plantyp + "beteiligung__" + plantyp + "__gemeinde__name",
-            )
+            ),
+            distinct=True,
+            #filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))
         )
     else:
         return JSONBAgg(
             JSONObject(
                 id = plantyp + "__gemeinde__id",
                 name = plantyp + "__gemeinde__name",
-            )
+            ),
+            distinct=True,
+            #filter=Q(comments__toeb=F("toebunit__id"))
         )
 
 def organization_json_aggregation(plantyp='bplan', beteiligung=False):
@@ -88,6 +119,59 @@ def organization_json_aggregation(plantyp='bplan', beteiligung=False):
         return result
 
     raise NotImplementedError
+
+"""
+Die folgenden Funktionen werden benötigt, um Aggregate mit definierten Filtern umzusetzen.
+Die Beiträge eines Reporters können ja pro ToebUnit abgegeben werden. Daher aggregrieren wir hier 
+pro ToebUnit in ein jsonArray
+"""
+
+def sqlite_beitrag_aggregation(plantyp='bplan'):
+
+    if plantyp == 'bplan':
+        return SQLiteJSONGroupArray(
+            SQLiteJSONObject(
+                Value("id"), plantyp + "beteiligung__comments__id",
+            ),
+            filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))
+        )  
+    if plantyp == 'fplan':
+        return SQLiteJSONGroupArray(
+            SQLiteJSONObject(
+                Value("id"), plantyp + "beteiligung__comments__id",
+            ),
+            filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))
+        )  
+
+def postgres_beitrag_aggregation(plantyp='bplan'):
+    if plantyp == 'bplan':
+        return JSONBAgg(
+            JSONObject(
+                id = plantyp + "beteiligung__comments__id",
+                #name = plantyp + "beteiligung__" + plantyp + "__gemeinde__name",
+            ),
+            filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))
+        ) 
+    if plantyp == 'fplan':
+        return JSONBAgg(
+            JSONObject(
+                id = plantyp + "beteiligung__comments__id",
+                #name = plantyp + "beteiligung__" + plantyp + "__gemeinde__name",
+            ),
+            filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))
+        ) 
+
+def beitrag_json_aggregation(plantyp='bplan'):
+
+    if connection.vendor == "postgresql":
+        return postgres_beitrag_aggregation(plantyp)
+
+    if connection.vendor == "sqlite":
+        result = sqlite_beitrag_aggregation(plantyp)
+        return result
+
+    raise NotImplementedError
+
 
 
 class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
@@ -203,7 +287,6 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 bplanbeteiligung__end_datum__gte=timezone.now()
             ).filter(
                 bplanbeteiligung__bekanntmachung_datum__lte=timezone.now(), bplanbeteiligung__bplan__public=True, bplanbeteiligung__typ__in=['2000', '20001']
-            ).distinct(
             ).annotate(
                 xplan_name=F('bplanbeteiligung__bplan__name'), 
                 plantyp=Value('BPlan'), 
@@ -211,33 +294,69 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 beteiligung_id=F('bplanbeteiligung__id'),
                 xplan_id=F('bplanbeteiligung__bplan__id'), 
                 toeb_unit_name=F('toebunit__name'), 
+                toeb_unit_orga_name=F('toebunit__organization__name'), 
                 toeb_unit_id=F('toebunit__id'),
                 end_datum=F('bplanbeteiligung__end_datum'), 
                 count_beitrag=Count("bplanbeteiligung__comments", filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))),
                 count_beitrag_attachments=Count("bplanbeteiligung__comments__attachments", filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))),
                 # id eines vorhandenen beitrags
-                beitrag_ids=F('bplanbeteiligung__comments__id'),
-                gemeinden=organization_json_aggregation(beteiligung=True)
+                #beitrag_ids=F('bplanbeteiligung__comments__id'),
+                beitrag_ids=beitrag_json_aggregation(),
+                gemeinden=organization_json_aggregation(plantyp='bplan', beteiligung=True),
+            ).annotate(
+            status=Case(
+                When(
+                    bplanbeteiligung__end_datum__lt=timezone.now(),
+                    then=3,
+                ),
+                When(
+                    Q(bplanbeteiligung__start_datum__lte=timezone.now()) & Q(bplanbeteiligung__end_datum__gte=timezone.now()),
+                    then=2,
+                ),
+                When(
+                    Q(bplanbeteiligung__bekanntmachung_datum__lte=timezone.now()) & Q(bplanbeteiligung__start_datum__gte=timezone.now()),
+                    then=1,
+                ),
+                default=0,
             )
+        )
         beteiligungen_fplaene = FPlanBeteiligung.assigned_toebs.through.objects.filter(
                 fplanbeteiligung__end_datum__gte=timezone.now()
             ).filter(
                 fplanbeteiligung__bekanntmachung_datum__lte=timezone.now(), fplanbeteiligung__fplan__public=True, fplanbeteiligung__typ__in=['2000', '20001']
-            ).distinct().annotate(
+            ).annotate(
                 xplan_name=F('fplanbeteiligung__fplan__name'), 
                 plantyp=Value('FPlan'), 
                 beteiligung_typ=F('fplanbeteiligung__typ'),
                 beteiligung_id=F('fplanbeteiligung__id'),
                 xplan_id=F('fplanbeteiligung__fplan__id'), 
                 toeb_unit_name=F('toebunit__name'), 
+                toeb_unit_orga_name=F('toebunit__organization__name'), 
                 toeb_unit_id=F('toebunit__id'),
                 end_datum=F('fplanbeteiligung__end_datum'), 
                 count_beitrag=Count("fplanbeteiligung__comments", filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))),
                 count_beitrag_attachments=Count("fplanbeteiligung__comments__attachments", filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))),
-                # id eines vorhandenen beitrags
-                beitrag_ids=F('fplanbeteiligung__comments__id'),
-                gemeinden=organization_json_aggregation(plantyp='fplan', beteiligung=True)
+                # id eines vorhandenen beitrags - hier brauchen wir eine aggregat funktion
+                #beitrag_ids=F('fplanbeteiligung__comments__id'),
+                beitrag_ids=beitrag_json_aggregation(plantyp='fplan'),
+                gemeinden=organization_json_aggregation(plantyp='fplan', beteiligung=True),
+            ).annotate(
+            status=Case(
+                When(
+                    fplanbeteiligung__end_datum__lt=timezone.now(),
+                    then=3,
+                ),
+                When(
+                    Q(fplanbeteiligung__start_datum__lte=timezone.now()) & Q(fplanbeteiligung__end_datum__gte=timezone.now()),
+                    then=2,
+                ),
+                When(
+                    Q(fplanbeteiligung__bekanntmachung_datum__lte=timezone.now()) & Q(fplanbeteiligung__start_datum__gte=timezone.now()),
+                    then=1,
+                ),
+                default=0,
             )
+        )
         #if self.request.user.is_anonymous:
         #    raise PermissionDenied("Keine Berechtigung!")
         if not self.request.user.is_superuser:

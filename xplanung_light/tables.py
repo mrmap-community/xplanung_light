@@ -108,27 +108,39 @@ class BeteiligungenTable(tables.Table):
 
 class ToebUnitBeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
+    beteiligung_id = tables.Column(verbose_name='ID')
     end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
+    status = tables.columns.TemplateColumn(template_code=u"""
+                                           {% if record.status == 0 %}<span class="badge rounded-pill bg-secondary">Unbekannt</span>{% endif %}
+                                           {% if record.status == 1 %}<span class="badge rounded-pill bg-warning">Bekanntgegeben</span>{% endif %}
+                                           {% if record.status == 2 %}<span class="badge rounded-pill bg-success">Aktiv</span>{% endif %}
+                                           {% if record.status == 3 %}<span class="badge rounded-pill bg-dark">Abgelaufen</span>{% endif %}
+                                           """, orderable=True, verbose_name='Status')
     #plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
     xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }} ({{ record.plantyp }})</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }} ({{ record.plantyp }})</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
-    beteiligung_typ = tables.columns.TemplateColumn(verbose_name='Typ des Verfahrens', template_code=u"""{% if record.beteiligung_typ == '2000' %}Träger öffentlicher Belange{% endif %}
+    beteiligung_typ = tables.columns.TemplateColumn(verbose_name='Verfahren', template_code=u"""{% if record.beteiligung_typ == '2000' %}Träger öffentlicher Belange{% endif %}
                                                                                                          {% if record.beteiligung_typ == '20001' %}Frühzeitige Trägerbeteiligung{% endif %}""")
     gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
                                               <a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a><br />
                                               {% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
-    toeb_unit_name = tables.columns.TemplateColumn(verbose_name='TOEB', template_code=u"""{{ record.toeb_unit_name }} ({{ record.toeb_unit_id }})""")
+    toeb_unit_name = tables.columns.TemplateColumn(verbose_name='TOEB', template_code=u"""{{ record.toeb_unit_orga_name }} - {{ record.toeb_unit_name }} ({{ record.toeb_unit_id }})""")
     #toeb_unit_id = tables.Column(verbose_name='TOEB ID')
-    count_beitrag_attachments = tables.TemplateColumn(verbose_name='Anlagen', template_code=u"""{{ record.count_beitrag_attachments }}""")
-    count_beitrag = tables.TemplateColumn(verbose_name='Beitrag', template_code=u"""{% if record.count_beitrag == 0 %}
-                                          <a href="{% url 'beteiligungbeitrag-toeb-create' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id toeb_id=record.toeb_unit_id %}" class="btn btn-success" role="button">Kommentar abgeben</a>
+    count_beitrag_attachments = tables.TemplateColumn(verbose_name='Anlagen', template_code=u"""{% if record.count_beitrag_attachments > 0 %}{{ record.count_beitrag_attachments }}{% endif %}""")
+    count_beitrag = tables.TemplateColumn(verbose_name='Beitrag', template_code=u"""{% if record.count_beitrag == 0 and record.status == 2 %}
+                                          <a href="{% url 'beteiligungbeitrag-toeb-create' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id toeb_id=record.toeb_unit_id %}" class="btn btn-success" role="button">Erstellen</a>
                                           {% else %}
-                                          {% if record.count_beitrag == 1 %}
-                                          <a href="{% url 'beteiligungbeitrag-toeb-update' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids %}" class="btn btn-primary" role="button">Kommentar bearbeiten</a>
-                                          <a href="{% url 'beteiligungbeitrag-toeb-delete' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids %}" class="btn btn-danger" role="button">Kommentar löschen</a>
+                                          {% if record.count_beitrag == 1 and record.status == 2 %}
+                                          <a href="{% url 'beteiligungbeitrag-toeb-update' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids.0.id %}" class="btn btn-primary" role="button">Bearbeiten</a>
+                                          <a href="{% url 'beteiligungbeitrag-toeb-delete' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids.0.id %}" class="btn btn-danger" role="button">Löschen</a>
                                           {% else %}
-                                          {{ record.count_beitrag }}
+                                          {% if record.count_beitrag == 1 and record.status != 2 %}
+                                          <a href="{% url 'beteiligungbeitrag-toeb-update' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids.0.id %}" class="btn btn-secondary" role="button">Anzeigen</a>
+                                          {% else %}
+                                          <span class="badge rounded-pill bg-secondary">Deaktiviert</span>
+                                          {% endif %}
                                           {% endif %}
                                           {% endif %}""", orderable=True)
+    
     #Problem: Man kann im view nicht über Relationen gehen - alles was man braucht, muss man vor dem union ziehen, bzw. als JSON rausgeben!
     
 
@@ -168,8 +180,17 @@ class BPlanBeteiligungTable(tables.Table):
     #name = tables.Column(verbose_name="Name/Bezeichnung")
     #comments = tables.LinkColumn('bplanbeteiligung-update', verbose_name='', text='Beiträge/Kommentare', args=[A('bplan.id'), A('pk')], \
     #                     orderable=False, empty_values=())
-    count_comments = tables.Column(verbose_name="Kommentare/Beträge", accessor='count_comments', orderable=False)
+    count_comments = tables.Column(verbose_name="Kommentare/Beiträge", accessor='count_comments', orderable=False)
     typ = tables.Column(verbose_name="Art der Beteiligung")
+    end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende')
+    start_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.start_datum }}""", orderable=True, verbose_name='Beginn')
+    bekanntmachung_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.bekanntmachung_datum }}""", orderable=True, verbose_name='Bekanntmachung')
+    status = tables.columns.TemplateColumn(template_code=u"""
+                                           {% if record.status == 0 %}<span class="badge rounded-pill bg-secondary">Unbekannt</span>{% endif %}
+                                           {% if record.status == 1 %}<span class="badge rounded-pill bg-warning">Bekanntgegeben</span>{% endif %}
+                                           {% if record.status == 2 %}<span class="badge rounded-pill bg-success">Aktiv</span>{% endif %}
+                                           {% if record.status == 3 %}<span class="badge rounded-pill bg-dark">Abgelaufen</span>{% endif %}
+                                           """, orderable=True, verbose_name='Status')
 
     def render_count_comments(self, value, record):
         if value == 0:
@@ -180,7 +201,7 @@ class BPlanBeteiligungTable(tables.Table):
     class Meta:
         model = BPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "count_comments", "edit", "delete", )# "delete_recursive_history")
+        fields = ( "id", "status", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "count_comments", "edit", "delete", )# "delete_recursive_history")
 
    
 class FPlanBeteiligungTable(tables.Table):
@@ -189,9 +210,17 @@ class FPlanBeteiligungTable(tables.Table):
                          orderable=False, empty_values=())
     delete = tables.LinkColumn('fplanbeteiligung-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')], \
                          orderable=False, empty_values=())
-    count_comments = tables.Column(verbose_name="Kommentare/Beträge", accessor='count_comments', orderable=False)
-                      
+    count_comments = tables.Column(verbose_name="Kommentare/Beiträge", accessor='count_comments', orderable=False)
+    end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende')
+    start_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.start_datum }}""", orderable=True, verbose_name='Beginn')
+    bekanntmachung_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.bekanntmachung_datum }}""", orderable=True, verbose_name='Bekanntmachung')                
     typ = tables.Column(verbose_name="Art der Beteiligung")
+    status = tables.columns.TemplateColumn(template_code=u"""
+                                           {% if record.status == 0 %}<span class="badge rounded-pill bg-secondary">Unbekannt</span>{% endif %}
+                                           {% if record.status == 1 %}<span class="badge rounded-pill bg-warning">Bekanntgegeben</span>{% endif %}
+                                           {% if record.status == 2 %}<span class="badge rounded-pill bg-success">Aktiv</span>{% endif %}
+                                           {% if record.status == 3 %}<span class="badge rounded-pill bg-dark">Abgelaufen</span>{% endif %}
+                                           """, orderable=True, verbose_name='Status')
 
     def render_count_comments(self, value, record):
         if value == 0:
@@ -202,7 +231,7 @@ class FPlanBeteiligungTable(tables.Table):
     class Meta:
         model = FPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "bekanntmachung_datum", "typ", "start_datum", "count_comments", "end_datum", "edit", "delete")
+        fields = ( "id", "status", "bekanntmachung_datum", "typ", "start_datum", "count_comments", "end_datum", "edit", "delete")
 
 
 class BPlanBeteiligungBeitragTable(tables.Table):

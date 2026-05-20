@@ -8,6 +8,8 @@ from django.db.models import Count
 from formset.views import FormViewMixin
 from django.db.models import Case, When, Value, CharField
 from formset.views import EditCollectionView, IncompleteSelectResponseMixin
+from django.utils import timezone
+from django.db.models import Avg, F, Q
 
 class FPlanBeteiligungCreateView(FormViewMixin, XPlanRelationsCreateView):
     """
@@ -74,7 +76,23 @@ class FPlanBeteiligungListView(XPlanRelationsListView, SingleTableView):
     
         """
         qs = super().get_queryset()
-        qs = qs.annotate(count_comments=Count('comments', distinct=True))
+        qs = qs.annotate(count_comments=Count('comments', distinct=True)).annotate(
+            status=Case(
+                When(
+                    end_datum__lt=timezone.now(),
+                    then=3,
+                ),
+                When(
+                    Q(start_datum__lte=timezone.now()) & Q(end_datum__gte=timezone.now()),
+                    then=2,
+                ),
+                When(
+                    Q(bekanntmachung_datum__lte=timezone.now()) & Q(start_datum__gte=timezone.now()),
+                    then=1,
+                ),
+                default=0,
+            )
+        )
         return qs
     
 
