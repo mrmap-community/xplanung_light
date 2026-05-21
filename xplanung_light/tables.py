@@ -125,6 +125,7 @@ class BeteiligungenTable(tables.Table):
 class ToebUnitBeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
     beteiligung_id = tables.Column(verbose_name='ID')
+    beitrag_erfasst = tables.BooleanColumn(verbose_name='Erfasst')
     end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
     status = tables.columns.TemplateColumn(template_code=u"""
                                            {% if record.status == 0 %}<span class="badge rounded-pill bg-secondary">Unbekannt</span>{% endif %}

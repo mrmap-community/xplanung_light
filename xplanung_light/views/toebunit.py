@@ -42,15 +42,24 @@ class ToebUnitCreateView(ExtentUserOrgaInfo, SuccessMessageMixin, CreateView):
         """
         form = super().get_form(self.form_class)
         if self.request.user.is_superuser:
-            form.fields['organization'].queryset = form.fields['organization'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type", "name_part")
+            form.fields['organization'].queryset = form.fields['organization'].queryset.annotate(
+                bbox=(Extent("geometry"))
+                ).only("pk", "name", "type", "name_part")
             form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True)
         else:
             """
             Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
             
             """
-            form.fields['organization'].queryset = form.fields['organization'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type", "name_part")
-            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True)
+            form.fields['organization'].queryset = form.fields['organization'].queryset.filter(
+                organization_users__user=self.request.user, organization_users__is_admin=True
+                ).annotate(
+                    bbox=(Extent("geometry"))
+                ).only("pk", "name", "type", "name_part")
+            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(
+                organization__in=form.fields['organization'].queryset,
+                is_toeb_reporter=True
+            )
         # Geometriefeld hinzufügen
         form.fields['geometry'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
         # Herausnehmen der organizationn, die schon eine Kontaktstelle zugewiesen bekommen haben
@@ -91,17 +100,27 @@ class ToebUnitUpdateView(ExtentUserOrgaInfo, SuccessMessageMixin, UpdateView):
         )
         return qs
     """
-
     def get_form(self, form_class=None):
         #success_url = self.get_success_url()
         form = super().get_form(form_class)
         #object = self.get_object()
         if self.request.user.is_superuser:
-            form.fields['organization'].queryset = form.fields['organization'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "type", "name_part")
-            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True)
+            form.fields['organization'].queryset = form.fields['organization'].queryset.annotate(
+                bbox=(Extent("geometry"))
+                ).only("pk", "name", "type", "name_part")
+            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(
+                is_toeb_reporter=True
+                )
         else:
-            form.fields['organization'].queryset = form.fields['organization'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "type", "name_part")
-            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True)
+            form.fields['organization'].queryset = form.fields['organization'].queryset.filter(
+                organization_users__user=self.request.user, organization_users__is_admin=True
+                ).annotate(
+                    bbox=(Extent("geometry"))
+                ).only("pk", "name", "type", "name_part")
+            form.fields['editors'].queryset = form.fields['editors'].queryset.filter(
+                organization__in=form.fields['organization'].queryset,
+                is_toeb_reporter=True
+            )
         # Erweitern der organizationn, die noch keinem Kontakt zugewiesen wurden, mit denen, die schon am Record vorhanden sind 
         # https://studygyaan.com/django/combining-multiple-querysets-in-django-with-examples
         #form.fields['organization'].queryset = form.fields['organization'].queryset.filter(contacts__isnull = True).only("pk", "name", "type") | object.organization.get_queryset().only("pk", "name", "type")

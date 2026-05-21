@@ -22,6 +22,7 @@ from xplanung_light.views.user import ExtentUserOrgaInfo
 from django.utils import timezone
 from django.db.models import Avg, F, Q
 from django.db.models import Case, When, Value, CharField
+from django.db.models import Count, Q, ExpressionWrapper, BooleanField
 #from django.db.models.aggregates import Aggregate
 
 # https://stackoverflow.com/questions/74111981/django-aggregate-into-array
@@ -298,6 +299,10 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 toeb_unit_id=F('toebunit__id'),
                 end_datum=F('bplanbeteiligung__end_datum'), 
                 count_beitrag=Count("bplanbeteiligung__comments", filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))),
+                beitrag_erfasst = ExpressionWrapper(
+                    Q(bplanbeteiligung__comments__toeb=F("toebunit__id")),
+                    output_field=BooleanField()
+                ),
                 count_beitrag_attachments=Count("bplanbeteiligung__comments__attachments", filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))),
                 # id eines vorhandenen beitrags
                 #beitrag_ids=F('bplanbeteiligung__comments__id'),
@@ -318,7 +323,7 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                     then=1,
                 ),
                 default=0,
-            )
+            ),
         )
         beteiligungen_fplaene = FPlanBeteiligung.assigned_toebs.through.objects.filter(
                 fplanbeteiligung__end_datum__gte=timezone.now()
@@ -335,6 +340,10 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 toeb_unit_id=F('toebunit__id'),
                 end_datum=F('fplanbeteiligung__end_datum'), 
                 count_beitrag=Count("fplanbeteiligung__comments", filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))),
+                beitrag_erfasst = ExpressionWrapper(
+                    Q(fplanbeteiligung__comments__toeb=F("toebunit__id")),
+                    output_field=BooleanField()
+                ),
                 count_beitrag_attachments=Count("fplanbeteiligung__comments__attachments", filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))),
                 # id eines vorhandenen beitrags - hier brauchen wir eine aggregat funktion
                 #beitrag_ids=F('fplanbeteiligung__comments__id'),

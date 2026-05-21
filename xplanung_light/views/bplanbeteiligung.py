@@ -1,6 +1,6 @@
 from xplanung_light.forms import BPlanBeteiligungForm
 from xplanung_light.views.xplanrelations import XPlanRelationsCreateView, XPlanRelationsListView, XPlanRelationsUpdateView, XPlanRelationsDeleteView
-from xplanung_light.models import BPlan, BPlanBeteiligung, ToebUnit
+from xplanung_light.models import BPlan, BPlanBeteiligung, ToebUnit, AdministrativeOrganization
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableView
 from xplanung_light.tables import BPlanBeteiligungTable
@@ -14,7 +14,7 @@ from django.db.models import Avg, F, Q
 
 #from simple_history import skip_history # erst ab späterer Version von simple-history
 
-class BPlanBeteiligungCreateView(FormViewMixin, XPlanRelationsCreateView):
+class BPlanBeteiligungCreateView(IncompleteSelectResponseMixin, FormViewMixin, XPlanRelationsCreateView):
     """
     Klasse zum Anlegen eines Beteiligungsobjektes für Bebauungspläne. Die Klasse nutzt django-formset um 
     auch Richtext-Beschreibungen zu ermöglichen.
@@ -31,6 +31,7 @@ class BPlanBeteiligungCreateView(FormViewMixin, XPlanRelationsCreateView):
     def get_form(self, form_class=None):
 
         form = super().get_form(form_class)
+        allowed_orgas = AdministrativeOrganization.objects.filter(organization_users__user=self.request.user, organization_users__is_admin=True)
         form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
             theme_display=Case(
                 *[
@@ -39,6 +40,8 @@ class BPlanBeteiligungCreateView(FormViewMixin, XPlanRelationsCreateView):
                 ],
                 output_field=CharField(),
             )
+        ).filter(
+            (Q(public=True) | Q(organization__in=allowed_orgas)) & Q(editors__isnull=False),
         )
         return form
 
@@ -118,6 +121,7 @@ class BPlanBeteiligungUpdateView(IncompleteSelectResponseMixin, FormViewMixin, X
     def get_form(self, form_class=None):
 
         form = super().get_form(form_class)
+        allowed_orgas = AdministrativeOrganization.objects.filter(organization_users__user=self.request.user, organization_users__is_admin=True)
         form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
             theme_display=Case(
                 *[
@@ -126,6 +130,8 @@ class BPlanBeteiligungUpdateView(IncompleteSelectResponseMixin, FormViewMixin, X
                 ],
                 output_field=CharField(),
             )
+        ).filter(
+            (Q(public=True) | Q(organization__in=allowed_orgas)) & Q(editors__isnull=False),
         )
         return form
      
