@@ -831,11 +831,11 @@ class BeteiligungBeitragToebDeleteView(ExtentUserOrgaInfo, UserPassesTestMixin, 
     
     def test_func(self):
         """
-        Funktion zur Berechtigungsprüfung 
+        Funktion zur Berechtigungsprüfung - über UserPassesTestMixin - weniger Code ;-)
         """
         obj = self.get_object()
         toeb_unit_orga = ToebUnit.objects.filter(id=obj.toeb.id).values('organization')
-        return AdminOrgaUser.objects.filter(organization=toeb_unit_orga[0]['organization'], user=self.request.user, is_toeb_reporter=True).exists()
+        return AdminOrgaUser.objects.filter(organization=toeb_unit_orga[0]['organization'], user=self.request.user, is_toeb_reporter=True).exists() or self.request.user.is_superuser
 
     """
     def get_queryset(self, **kwargs):

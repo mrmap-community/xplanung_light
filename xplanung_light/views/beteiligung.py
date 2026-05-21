@@ -5,7 +5,7 @@ from xplanung_light.models import BPlanBeitragStellungnahme, FPlanBeitragStellun
 from xplanung_light.tables import BeteiligungenTable, ToebUnitBeteiligungenTable, BeteiligungenOrgaTable
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.utils import timezone
-from django.db.models import Count, F, Q, Value, OuterRef, Subquery
+from django.db.models import Count, F, Q, Value, OuterRef, Subquery, Exists
 from django.db.models.functions import Concat
 from django_tables2 import SingleTableView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -71,7 +71,7 @@ class SQLiteJSONObject(Func):
 def sqlite_organization_aggregation(plantyp='bplan', beteiligung=False):
 
     if beteiligung:
-        print("aggregiere gemeinde")
+        #print("aggregiere gemeinde")
         return SQLiteJSONGroupArray(
             SQLiteJSONObject(
                 Value("id"), plantyp + "beteiligung__" + plantyp + "__gemeinde__id",
@@ -79,7 +79,7 @@ def sqlite_organization_aggregation(plantyp='bplan', beteiligung=False):
             ),
             #Filter klappt nur, wenn überhaupt ein Beitrag abgegeben wurde, sonst nicht!
             #filter = Q(**{f"{plantyp}beteiligung__comments__toeb": F('toebunit__id')}),
-            distinct=True
+            distinct=True,
         )   
     else:
         return SQLiteJSONGroupArray(
@@ -87,6 +87,7 @@ def sqlite_organization_aggregation(plantyp='bplan', beteiligung=False):
                 Value("id"), plantyp + "__gemeinde__id",
                 Value("name"), plantyp + "__gemeinde__name",
             ),
+            distinct=True,
             #filter=Q(comments__toeb=F("toebunit__id"))
         )   
 
@@ -134,14 +135,16 @@ def sqlite_beitrag_aggregation(plantyp='bplan'):
             SQLiteJSONObject(
                 Value("id"), plantyp + "beteiligung__comments__id",
             ),
-            filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))
+            filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id")),
+            distinct=True,
         )  
     if plantyp == 'fplan':
         return SQLiteJSONGroupArray(
             SQLiteJSONObject(
                 Value("id"), plantyp + "beteiligung__comments__id",
             ),
-            filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))
+            filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id")),
+            distinct=True,
         )  
 
 def postgres_beitrag_aggregation(plantyp='bplan'):
@@ -151,7 +154,8 @@ def postgres_beitrag_aggregation(plantyp='bplan'):
                 id = plantyp + "beteiligung__comments__id",
                 #name = plantyp + "beteiligung__" + plantyp + "__gemeinde__name",
             ),
-            filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))
+            filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id")),
+            distinct=True,
         ) 
     if plantyp == 'fplan':
         return JSONBAgg(
@@ -159,7 +163,8 @@ def postgres_beitrag_aggregation(plantyp='bplan'):
                 id = plantyp + "beteiligung__comments__id",
                 #name = plantyp + "beteiligung__" + plantyp + "__gemeinde__name",
             ),
-            filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))
+            filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id")),
+            distinct=True,
         ) 
 
 def beitrag_json_aggregation(plantyp='bplan'):
@@ -284,6 +289,11 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
         #if self.request.user.is_authenticated:
         #    if not AdminOrgaUser.objects.filter(user=self.request.user, is_admin=True).exists():
         #        raise PermissionDenied('Nutzer hat keine Admin-Rolle!')
+        # Subquery, ob ein passender Kommentar existiert
+        kommentar_existiert = BPlanBeteiligungBeitrag.objects.filter(
+            bplan_beteiligung__id=OuterRef('bplanbeteiligung__id'), 
+            toeb=OuterRef('toebunit__id')
+        )
         beteiligungen_bplaene = BPlanBeteiligung.assigned_toebs.through.objects.filter(
                 bplanbeteiligung__end_datum__gte=timezone.now()
             ).filter(
@@ -298,12 +308,21 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 toeb_unit_orga_name=F('toebunit__organization__name'), 
                 toeb_unit_id=F('toebunit__id'),
                 end_datum=F('bplanbeteiligung__end_datum'), 
-                count_beitrag=Count("bplanbeteiligung__comments", filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))),
-                beitrag_erfasst = ExpressionWrapper(
-                    Q(bplanbeteiligung__comments__toeb=F("toebunit__id")),
-                    output_field=BooleanField()
+                count_beitrag=Count(
+                    "bplanbeteiligung__comments",
+                    filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id")),
+                    distinct=True,
                 ),
-                count_beitrag_attachments=Count("bplanbeteiligung__comments__attachments", filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id"))),
+                #beitrag_erfasst = ExpressionWrapper(
+                #    Q(bplanbeteiligung__comments__toeb=F("toebunit__id")),
+                #    output_field=BooleanField(),
+                #),
+                beitrag_erfasst=Exists(kommentar_existiert),
+                count_beitrag_attachments=Count(
+                    "bplanbeteiligung__comments__attachments",
+                    filter=Q(bplanbeteiligung__comments__toeb=F("toebunit__id")),
+                    distinct=True,
+                ),
                 # id eines vorhandenen beitrags
                 #beitrag_ids=F('bplanbeteiligung__comments__id'),
                 beitrag_ids=beitrag_json_aggregation(),
@@ -324,6 +343,10 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 ),
                 default=0,
             ),
+        ).distinct()
+        kommentar_existiert = FPlanBeteiligungBeitrag.objects.filter(
+            fplan_beteiligung__id=OuterRef('fplanbeteiligung__id'), 
+            toeb=OuterRef('toebunit__id')
         )
         beteiligungen_fplaene = FPlanBeteiligung.assigned_toebs.through.objects.filter(
                 fplanbeteiligung__end_datum__gte=timezone.now()
@@ -339,14 +362,22 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 toeb_unit_orga_name=F('toebunit__organization__name'), 
                 toeb_unit_id=F('toebunit__id'),
                 end_datum=F('fplanbeteiligung__end_datum'), 
-                count_beitrag=Count("fplanbeteiligung__comments", filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))),
-                beitrag_erfasst = ExpressionWrapper(
-                    Q(fplanbeteiligung__comments__toeb=F("toebunit__id")),
-                    output_field=BooleanField()
+                count_beitrag=Count(
+                    "fplanbeteiligung__comments",
+                    filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id")),
+                    distinct=True,
                 ),
-                count_beitrag_attachments=Count("fplanbeteiligung__comments__attachments", filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id"))),
+                beitrag_erfasst=Exists(kommentar_existiert),
+                #beitrag_erfasst = ExpressionWrapper(
+                #    Q(fplanbeteiligung__comments__toeb=F("toebunit__id")),
+                #    output_field=BooleanField(),
+                #),
+                count_beitrag_attachments=Count(
+                    "fplanbeteiligung__comments__attachments",
+                    filter=Q(fplanbeteiligung__comments__toeb=F("toebunit__id")),
+                    distinct=True,
+                ),
                 # id eines vorhandenen beitrags - hier brauchen wir eine aggregat funktion
-                #beitrag_ids=F('fplanbeteiligung__comments__id'),
                 beitrag_ids=beitrag_json_aggregation(plantyp='fplan'),
                 gemeinden=organization_json_aggregation(plantyp='fplan', beteiligung=True),
             ).annotate(
@@ -365,7 +396,7 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 ),
                 default=0,
             )
-        )
+        ).distinct()
         #if self.request.user.is_anonymous:
         #    raise PermissionDenied("Keine Berechtigung!")
         if not self.request.user.is_superuser:
