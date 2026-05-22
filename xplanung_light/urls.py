@@ -21,8 +21,8 @@ from xplanung_light.views.fplanuvp import FPlanUvpCreateView, FPlanUvpUpdateView
 from xplanung_light.views.administrativeorganization import AdministrativeOrganizationPublishingListView, AdministrativeOrganizationAutocomplete, AdministrativeOrganizationListView, AdministrativeOrganizationUpdateView
 from xplanung_light.views.contactorganization import ContactOrganizationCreateView, ContactOrganizationListView, ContactOrganizationUpdateView, ContactOrganizationDeleteView
 from xplanung_light.views.toebunit import ToebUnitCreateView, ToebUnitListView, ToebUnitUpdateView, ToebUnitDeleteView, ToebUnitPublicListView
-
-
+from xplanung_light.views.orgauser import OrganizationUserFormViewAdmin, OrganizationUserFormViewToebReporter
+from django.views.i18n import JavaScriptCatalog
 from xplanung_light.views.consentoption import ConsentOptionCreateView, ConsentOptionUpdateView, ConsentOptionListView, ConsentOptionDeleteView
 from django.urls import re_path as url
 
@@ -78,7 +78,6 @@ urlpatterns = [
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/create/toeb/(?P<toeb_id>\d+)/$', BeteiligungBeitragToebCreateView.as_view(extra_context={'create': True}), name="beteiligungbeitrag-toeb-create"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/(?P<pk>\d+)/update/$', BeteiligungBeitragToebUpdateView.as_view(extra_context={'update': True}), name="beteiligungbeitrag-toeb-update"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/(?P<pk>\d+)/delete/$', BeteiligungBeitragToebDeleteView.as_view(), name="beteiligungbeitrag-toeb-delete"),
-
     # Aktivierungslink
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/activate$', views.beitrag_activate, name="beteiligungbeitrag-activate"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/withdraw$', views.beitrag_withdraw, name="beteiligungbeitrag-withdraw"),
@@ -197,8 +196,12 @@ urlpatterns = [
     #path("beteiligungen/", views.beteiligungen, name="beteiligungen"),
     # Liste aller aktuellen Beteiligungsverfahren
     path("beteiligungen/", BeteiligungenListView.as_view(), name="beteiligungen"),
+    # Administrationsviews für die Beziehung zwischen Organisationen und Nutzern 
+    path("organization/manage-users/admin/", OrganizationUserFormViewAdmin.as_view(), name='manage-organization-users-admin'),
+    path("organization/manage-users/toeb-reporter/", OrganizationUserFormViewToebReporter.as_view(), name='manage-organization-users-toeb-reporter'),
     # Dokumentation
     path('docs/', include('docs.urls')),
+    path('jsi18n/', JavaScriptCatalog.as_view(), name='javascript-catalog'),
 ]
 urlpatterns += [
     path('captcha/', include('captcha.urls')),

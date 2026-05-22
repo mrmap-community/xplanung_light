@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization, Uvp, FPlanUvp
 from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung, FPlanBeteiligungBeitrag, FPlanBeteiligungBeitragAnhang
-from xplanung_light.models import ContactOrganization, RequestForOrganizationAdmin, ToebUnit
+from xplanung_light.models import ContactOrganization, RequestForOrganizationAdmin, ToebUnit, AdminOrgaUser
 
 from xplanung_light.models import BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang
 from xplanung_light.models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme
@@ -26,6 +26,8 @@ from django_clamd.validators import validate_file_infection
 from django.utils.timezone import now
 import uuid
 from django.db.models import Case, When, Value, CharField
+from django.db.models.functions import Concat
+#from django.db.models import CharField
 #from formset.utils import FormMixin
 
 class BPlanImportForm(forms.Form):
@@ -2127,3 +2129,167 @@ class ConsentOptionForm(ModelForm):
             'valid_until': DateInput(),
         }
 
+from formset.widgets import Selectize
+
+class OrganizationUserAssignmentFormAdmin(FormMixin, forms.Form):
+    default_renderer = FormRenderer(
+        form_css_classes = 'row',
+        field_css_classes={
+            #'*': 'mb-2 col-12',
+        },
+    )
+    organization = forms.ModelChoiceField(
+        queryset=AdministrativeOrganization.objects.all().only('name', 'name_part', 'id', 'type'),
+        label="Organisation",
+        #widget=forms.Select(attrs={
+        widget = Selectize(
+            search_lookup='name__icontains',
+            attrs={
+            'class': 'form-select',
+            'df-change': 'reload'  # Lädt Nutzer-Listen beim Wechsel neu
+        })
+    )
+    admins = forms.ModelMultipleChoiceField(
+        queryset=User.objects.all().annotate(full_name=Concat('username', Value(' ('), 'email', Value(')'), output_field=CharField())),
+        required=False,
+        label="Nutzer",
+        widget=DualSelector(
+            search_lookup='full_name__icontains',
+            attrs={
+                'data-role': 'is_admin'
+            }
+        ),
+        help_text="Nutzer - Rolle 'Admin' Zuweisung"
+    )
+
+    def __init__(self, *args, **kwargs):
+        #print("admin form")
+        organization_id = kwargs.pop('organization_id', None)
+        super().__init__(*args, **kwargs)
+        # Label überschreiben
+        self.fields['admins'].label_from_instance = lambda obj: obj.full_name
+        
+        if organization_id:
+            # Bereits zugewiesene Nutzer als initial values setzen
+            org_users = AdminOrgaUser.objects.filter(
+                organization__id=organization_id, is_admin=True
+            )
+            org_users_initial = AdminOrgaUser.objects.filter(
+                organization__id=organization_id, is_admin=True
+            ).values_list('user__id')
+            self.fields['admins'].initial = User.objects.filter(
+                id__in=org_users_initial,
+            )
+            self.fields['organization'].initial = AdministrativeOrganization.objects.get(pk=organization_id)
+
+    def save(self):
+        """Speichert die Nutzer-Rollen-Zuweisungen"""
+        organization = self.cleaned_data['organization']
+        admins = self.cleaned_data['admins']
+        
+        # Alle existierenden admin Zuweisungen für diese Organisation löschen
+        AdminOrgaUser.objects.filter(organization=organization, is_admin=True).delete()
+        
+        # Admins erstellen oder anpassen
+        for user in admins:
+            if not AdminOrgaUser.objects.filter(
+                organization=organization,
+                user=user
+            ).exists():
+                AdminOrgaUser.objects.create(
+                    organization=organization,
+                    user=user,
+                    is_admin=True,
+                    is_toeb_reporter=False
+                )
+            else:
+                org_user = AdminOrgaUser.objects.get(
+                    organization=organization,
+                    user=user
+                )
+                org_user.is_admin = True
+                org_user.save()
+        
+        return organization
+
+
+class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
+    default_renderer = FormRenderer(
+        form_css_classes = 'row',
+        field_css_classes={
+            #'*': 'mb-2 col-12',
+        },
+    )
+    organization = forms.ModelChoiceField(
+        queryset=AdministrativeOrganization.objects.all().only('name', 'name_part', 'id', 'type'),
+        label="Organisation",
+        #widget=forms.Select(attrs={
+        widget = Selectize(
+            search_lookup='name__icontains',
+            attrs={
+            'class': 'form-select',
+            'df-change': 'reload'  # Lädt Nutzer-Listen beim Wechsel neu
+        })
+    )
+    toeb_reporter = forms.ModelMultipleChoiceField(
+        queryset=User.objects.all().annotate(full_name=Concat('username', Value(' ('), 'email', Value(')'), output_field=CharField())),
+        required=False,
+        label="Nutzer",
+        widget=DualSelector(
+            search_lookup='full_name__icontains',
+            attrs={
+                'data-role': 'is_toeb_reporter'
+            }
+        ),
+        help_text="Nutzer - Rolle 'TOEB-Reporter' Zuweisung"
+    )
+
+    def __init__(self, *args, **kwargs):
+        print("toeb reporter form")
+        organization_id = kwargs.pop('organization_id', None)
+        super().__init__(*args, **kwargs)
+        # Label überschreiben
+        self.fields['toeb_reporter'].label_from_instance = lambda obj: obj.full_name
+        
+        if organization_id:
+            # Bereits zugewiesene Nutzer als initial values setzen
+            org_users = AdminOrgaUser.objects.filter(
+                organization__id=organization_id, is_toeb_reporter=True
+            )
+            org_users_initial = AdminOrgaUser.objects.filter(
+                organization__id=organization_id, is_toeb_reporter=True
+            ).values_list('user__id')
+            self.fields['toeb_reporter'].initial = User.objects.filter(
+                id__in=org_users_initial,
+            )
+            self.fields['organization'].initial = AdministrativeOrganization.objects.get(pk=organization_id)
+
+    def save(self):
+        """Speichert die Nutzer-Rollen-Zuweisungen"""
+        organization = self.cleaned_data['organization']
+        toeb_reporter = self.cleaned_data['toeb_reporter']
+        
+        # Alle existierenden admin Zuweisungen für diese Organisation löschen
+        AdminOrgaUser.objects.filter(organization=organization, is_toeb_reporter=True).delete()
+        
+        # Toeb Reporter erstellen oder anpassen
+        for user in toeb_reporter:
+            if not AdminOrgaUser.objects.filter(
+                organization=organization,
+                user=user
+            ).exists():
+                AdminOrgaUser.objects.create(
+                    organization=organization,
+                    user=user,
+                    is_admin=False,
+                    is_toeb_reporter=True
+                )
+            else:
+                org_user = AdminOrgaUser.objects.get(
+                    organization=organization,
+                    user=user
+                )
+                org_user.is_toeb_reporter = True
+                org_user.save()
+        
+        return organization

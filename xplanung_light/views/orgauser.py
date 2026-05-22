@@ -1,0 +1,89 @@
+from django.views.generic import CreateView, UpdateView, DeleteView, ListView, DetailView
+from xplanung_light.models import AdminOrgaUser, AdministrativeOrganization
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.gis.geos import GEOSGeometry
+from xplanung_light.views.user import ExtentUserOrgaInfo
+from formset.views import FormViewMixin, IncompleteSelectResponseMixin
+from django.core.exceptions import PermissionDenied
+# claude hilfe:
+# views.py
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.http import JsonResponse
+from formset.views import FormView
+from formset.views import FormViewMixin
+from xplanung_light.forms import OrganizationUserAssignmentFormAdmin, OrganizationUserAssignmentFormToebReporter
+
+# django-formset 
+class OrganizationUserFormViewAdmin(ExtentUserOrgaInfo, LoginRequiredMixin, FormView):
+    form_class = OrganizationUserAssignmentFormAdmin
+    template_name = 'xplanung_light/manage_users.html'
+    success_url = '/organization/manage-users/admin/'
+    #extra_context = None
+
+    #def get_initial(self):
+        #print(self.extra_context['role'])
+        #if self.extra_context['role'] == 'toeb_reporter':
+
+        #    self.form_class = OrganizationUserAssignmentFormToebReporter
+        #    self.success_url = '/organization/manage-users-toeb-reporter/'
+        #    return
+        #return super().get_initial()
+    def get_initial(self):
+        if not self.request.user.is_superuser:
+            raise PermissionDenied("Nutzer ist kein Zentraladmin - Zuweisung ist nicht möglich!")
+        return super().get_initial()
+
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['header'] = "Admin"
+        return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization_id'] = self.request.GET.get('organization')
+        return kwargs
+
+    def form_valid(self, form):
+        if not self.request.user.is_superuser:
+            form.add_error("organization", "Nutzer ist kein Zentraladmin - Zuweisung ist nicht möglich!")
+            return super().form_invalid(form)
+        organization = form.save()
+        messages.success(
+            self.request,
+            f'Nutzer-Zuweisungen für {organization.name} erfolgreich gespeichert.'
+        )
+        return super().form_valid(form)
+
+class OrganizationUserFormViewToebReporter(ExtentUserOrgaInfo, LoginRequiredMixin, FormView):
+    form_class = OrganizationUserAssignmentFormToebReporter
+    template_name = 'xplanung_light/manage_users.html'
+    success_url = '/organization/manage-users/toeb-reporter/'
+
+    def get_initial(self):
+        if not self.request.user.is_superuser:
+            raise PermissionDenied("Nutzer ist kein Zentraladmin - Zuweisung ist nicht möglich!")
+        return super().get_initial()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['header'] = "TOEB-Reporter"
+        return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['organization_id'] = self.request.GET.get('organization')
+        return kwargs
+
+    def form_valid(self, form):
+        if not self.request.user.is_superuser:
+            form.add_error("organization", "Nutzer ist kein Zentraladmin - Zuweisung ist nicht möglich!")
+            return super().form_invalid(form)
+        organization = form.save()
+        messages.success(
+            self.request,
+            f'Nutzer-Zuweisungen für {organization.name} erfolgreich gespeichert.'
+        )
+        return super().form_valid(form)

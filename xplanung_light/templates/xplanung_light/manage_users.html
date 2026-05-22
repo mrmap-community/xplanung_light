@@ -1,0 +1,26 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% load render_form from formsetify %}
+{% bootstrap_css %}
+{% block title %}
+    Nutzer verwalten
+{% endblock %}
+{% block content %}
+<h3><b>Rolle:</b> {{ header }}</h3>
+<django-formset endpoint="{{ request.path }}" csrf-token="{{ csrf_token }}">
+  <!--https://django-formset.fly.dev/form-renderer/ - Problem noch bei Richtextfield - TODO testen ob Layout nicht in Form Klasse definiert werden kann -->
+  {{ form }}
+  <div>
+    <button type="button" class="btn btn-primary" df-click="submit -> proceed">Zuweisen</button>
+  </div>
+</django-formset>
+<script>
+        // Optional: Dual-Selector beim Wechsel der Organisation neu laden
+        document.querySelector('[name="organization"]').addEventListener('change', function(e) {
+            const orgId = e.target.value;
+            if (orgId) {
+                window.location.href = `?organization=${orgId}`;
+            }
+        });
+</script>
+{% endblock %}
