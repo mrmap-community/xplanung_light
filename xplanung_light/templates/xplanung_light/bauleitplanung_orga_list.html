@@ -186,17 +186,17 @@
                         {% if beteiligung.allow_online_beitrag %}
                           <!-- https://getbootstrap.com/docs/5.3/components/buttons/ -->
                           {% if beteiligung.plantyp == "BPlan" %}
-                          {% if beteiligung_typ == 2000 or beteiligung_typ == 20001 %}
+                          {% if beteiligung.beteiligung_typ == '1000' or beteiligung.beteiligung_typ == '10001' %}
                           <a class="btn btn-success" href="{% url 'beteiligungbeitrag-create-orga' plantyp='bplan' planid=beteiligung.xplan_id pk=beteiligung.id orga_id=orga.id%}" tabindex="-1" role="button">Abgeben<span class="badge text-bg-secondary">{{ beteiligung.confirmed_comments }}</span></a>
                           {% else %}
-                          <a class="btn btn-success disabled" href="{% url 'beteiligungbeitrag-create-orga' plantyp='bplan' planid=beteiligung.xplan_id pk=beteiligung.id orga_id=orga.id%}" tabindex="-1" role="button">Nur für registrierte TOEB<span class="badge text-bg-secondary">{{ beteiligung.confirmed_comments }}</span></a>
+                          <a class="btn btn-success disabled" href="{% url 'beteiligungbeitrag-create-orga' plantyp='bplan' planid=beteiligung.xplan_id pk=beteiligung.id orga_id=orga.id%}" tabindex="-1" role="button">Nur für registrierte TOEB <span class="badge text-bg-secondary">{{ beteiligung.confirmed_comments }}</span></a>
                           {% endif %}
                           {% else %}
                           <!-- TODO: create fplanbeteiligung-beitrag ...-->
-                          {% if beteiligung_typ == 2000 or beteiligung_typ == 20001 %}
+                          {% if beteiligung.beteiligung_typ == '1000' or beteiligung.beteiligung_typ == '10001' %}
                           <a class="btn btn-success" href="{% url 'beteiligungbeitrag-create-orga' plantyp='fplan' planid=beteiligung.xplan_id pk=beteiligung.id orga_id=orga.id%}" tabindex="-1" role="button">Abgeben<span class="badge text-bg-secondary">{{ beteiligung.confirmed_comments }}</span></a>
                           {% else %}
-                          <a class="btn btn-success disabled" href="{% url 'beteiligungbeitrag-create-orga' plantyp='fplan' planid=beteiligung.xplan_id pk=beteiligung.id orga_id=orga.id%}" tabindex="-1" role="button">Nur für registrierte TOEB<span class="badge text-bg-secondary">{{ beteiligung.confirmed_comments }}</span></a>
+                          <a class="btn btn-success disabled" href="{% url 'beteiligungbeitrag-create-orga' plantyp='fplan' planid=beteiligung.xplan_id pk=beteiligung.id orga_id=orga.id%}" tabindex="-1" role="button">Nur für registrierte TOEB <span class="badge text-bg-secondary">{{ beteiligung.confirmed_comments }}</span></a>
                           {% endif %} 
                           {% endif %}
                         {% else %}
