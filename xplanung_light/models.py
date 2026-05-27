@@ -22,6 +22,14 @@ from organizations.base import (
     OrganizationOwnerBase,
     OrganizationInvitationBase,
 )
+# oder doch die abtract class:
+
+from organizations.abstract import (
+    AbstractOrganization,
+    AbstractOrganizationUser,
+    AbstractOrganizationOwner
+)
+
 from django_clamd.validators import validate_file_infection
 
 
@@ -87,10 +95,23 @@ class License(GenericMetadata):
 Die Klasse kann nur einmal pro app erstellt werden: https://django-organizations.readthedocs.io/en/latest/cookbook.html#advanced-customization-using-abstract-models
 """
 
-class AdminOrgaUser(OrganizationUserBase):
+#class AdminOrgaUser(OrganizationUserBase):
+class AdminOrgaUser(AbstractOrganizationUser):    
     is_admin = models.BooleanField(blank=False, null=False, verbose_name='Nutzer ist Administrator für Organisation', default=False)
     is_toeb_reporter = models.BooleanField(blank=False, null=False, verbose_name='Nutzer kann Stellungnahmen für TOEB-Einheiten dieser Organisation abgeben.', default=False)
-
+    # FKs explizit überschreiben – zeigen auf deine eigenen Klassen
+    organization = models.ForeignKey(
+        "xplanung_light.AdministrativeOrganization",  # nicht "organizations.Organization"
+        related_name="admin_orga_users",
+        on_delete=models.CASCADE,
+    )
+    user = models.ForeignKey(
+        User,
+        related_name="admin_orga_users",
+        on_delete=models.CASCADE,
+    )
+    # history TBD
+    history = HistoricalRecords()
     #give_statements = models.BooleanField(blank=False, null=False, verbose_name='Nutzer darf Stellungnahmen für Organisation abgeben', default=False)
     # Einfache Rollen
     """
@@ -104,21 +125,28 @@ class AdminOrgaUser(OrganizationUserBase):
     ]
     user_type = models.IntegerField(choices=USER_TYPE_CHOICES, default='1000', verbose_name='Typ / Rolle des Nutzers', db_index=True)
     """
+    #class Meta(AbstractOrganizationUser.Meta):
+    #    unique_together = ('organization', 'user')
     
     def __str__(self):
         return f"{self.user} - {self.organization}"
 
 
-class AdminOrgaOwner(OrganizationOwnerBase):
-    pass
-
+#class AdminOrgaOwner(OrganizationOwnerBase):
+#    pass
 
 class AdminOrgaInvitation(OrganizationInvitationBase):
     pass
 
+ 
+# This is REQUIRED by the library when defining custom organization models.
+class AdminOrgaOwner(AbstractOrganizationOwner):
+    pass
+
 
 # administrative organizations - Klasse 
-class AdministrativeOrganization(GenericMetadata, OrganizationBase):
+#class AdministrativeOrganization(GenericMetadata, OrganizationBase):
+class AdministrativeOrganization(GenericMetadata, AbstractOrganization):
 
     COUNTY = "KR"
     COUNTY_FREE_CITY = "KFS"
@@ -145,7 +173,9 @@ class AdministrativeOrganization(GenericMetadata, OrganizationBase):
         (UNT, "Unternehmen"),
         (UNKNOWN, "unbekannt"),
     ]
-
+    # Übergang zu etwas umfangreicherem django-organization model - mit slugs ... - damit wir auch Historisieren können - nur beim initialen Import müssen die slugs jetzt generiert werden!
+    # Dazu muss das Import-script angepasst werden! - slugs müssen unique sein, daher sinnvoll Namen der Orga in Kombination mit AGS für Gebietskörperschaften
+    slug = models.SlugField(unique=True, blank=True)
     ls = models.CharField(max_length=2, verbose_name='Landesschlüssel', help_text='Eindeutiger zweistelliger Schlüssel für das Bundesland - RLP: 07', default='07')
     ks = models.CharField(max_length=3, verbose_name='Kreisschlüssel', help_text='Eindeutiger dreistelliger Schlüssel für den Landkreis', default='000')
     vs = models.CharField(blank=True, null=True, max_length=2, verbose_name='Gemeindeverbandsschlüssel', help_text='Eindeutiger zweistelliger Schlüssel für den Gemeindeverband', default='00')

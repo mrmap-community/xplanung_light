@@ -5,7 +5,7 @@ import requests
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from openpyxl import load_workbook
-
+from django.utils.text import slugify
 from xplanung_light.models import AdministrativeOrganization
 
 
@@ -166,6 +166,7 @@ class Command(BaseCommand):
                     admin_unit['vg'] = row[1]
                     admin_unit['ge'] = row[2]
                     admin_unit['name'] = row[3]
+                    admin_unit['slug'] = slugify(admin_unit['name'] + '-07' + admin_unit['kr'] + admin_unit['ge'])
                     self.stdout.write(admin_unit['name'])
                     admin_unit['plz'] = row[4]
                     admin_unit['type'] = 'GE'
@@ -188,6 +189,7 @@ class Command(BaseCommand):
                             "gs": admin_unit['ge'],
                             "name": admin_unit['name'],
                             "type": admin_unit['type'],
+                            "slug": admin_unit['slug'],
                             "geometry": GEOSGeometry(admin_unit['geometry'])
                         },
                     )
