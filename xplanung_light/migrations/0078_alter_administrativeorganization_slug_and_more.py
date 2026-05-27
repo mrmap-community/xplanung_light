@@ -18,6 +18,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='historicaladministrativeorganization',
             name='slug',
-            field=models.SlugField(blank=True),
+            field=models.SlugField(blank=True, null=True),
         ),
     ]
