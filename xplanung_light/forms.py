@@ -2245,7 +2245,7 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
-        print("toeb reporter form")
+        #print("toeb reporter form")
         organization_id = kwargs.pop('organization_id', None)
         super().__init__(*args, **kwargs)
         # Label überschreiben
@@ -2293,3 +2293,33 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
                 org_user.save()
         
         return organization
+    
+
+class UserOrganizationFormRoles(FormMixin, forms.Form):
+    default_renderer = FormRenderer(
+        form_css_classes = 'row',
+        field_css_classes={
+            #'*': 'mb-2 col-12',
+        },
+    )
+    user = forms.ModelChoiceField(
+        queryset=User.objects.all().only('username', 'email', 'id').annotate(full_name=Concat('username', Value(' ('), 'email', Value(')'), output_field=CharField())),
+        label="Nutzer",
+        widget = Selectize(
+            search_lookup='username__icontains',
+            attrs={
+            'class': 'form-select',
+            'df-change': 'reload'  # Lädt Nutzer-Listen beim Wechsel neu
+        })
+    )
+
+    def __init__(self, *args, **kwargs):
+        user_id = kwargs.pop('user_id', None)
+        self.user_id = user_id
+        super().__init__(*args, **kwargs)
+        # Label überschreiben
+        self.fields['user'].label_from_instance = lambda obj: obj.full_name
+        
+        if user_id:
+            self.user_id = user_id
+            self.fields['user'].initial = User.objects.get(pk=user_id)

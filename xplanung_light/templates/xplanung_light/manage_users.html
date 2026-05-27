@@ -6,14 +6,21 @@
     Nutzer verwalten
 {% endblock %}
 {% block content %}
+{% if header != 'Nutzer und Rollen' %}
 <h3><b>Rolle:</b> {{ header }}</h3>
+{% else %}
+<h3>{{ header }}</h3>
+{% endif %}
 <django-formset endpoint="{{ request.path }}" csrf-token="{{ csrf_token }}">
   <!--https://django-formset.fly.dev/form-renderer/ - Problem noch bei Richtextfield - TODO testen ob Layout nicht in Form Klasse definiert werden kann -->
   {{ form }}
+  {% if header != 'Nutzer und Rollen' %}
   <div>
     <button type="button" class="btn btn-primary" df-click="submit -> proceed">Zuweisen</button>
   </div>
+  {% endif %}
 </django-formset>
+{% if header != 'Nutzer und Rollen' %}
 <script>
         // Optional: Dual-Selector beim Wechsel der Organisation neu laden
         document.querySelector('[name="organization"]').addEventListener('change', function(e) {
@@ -23,4 +30,29 @@
             }
         });
 </script>
+{% else %}
+<script>
+        // Optional: Dual-Selector beim Wechsel der Organisation neu laden
+        document.querySelector('[name="user"]').addEventListener('change', function(e) {
+            const userId = e.target.value;
+            if (userId) {
+                window.location.href = `?user=${userId}`;
+            }
+        });
+</script>
+<table>
+    <tr>
+        <th>Organisation</th>
+        <th>Admin</th>
+        <th>TOEB-Reporter</th>
+  </tr>
+{% for orgauser in adminorgauser %}
+    <tr>
+        <td>{{ orgauser.organization }}</td>
+        <td>{{ orgauser.is_admin }}</td>
+        <td>{{ orgauser.is_toeb_reporter }}</td>
+    </tr>
+{% endfor %}
+</table>
+{% endif %}
 {% endblock %}

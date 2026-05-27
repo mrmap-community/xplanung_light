@@ -13,7 +13,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from formset.views import FormView
 from formset.views import FormViewMixin
-from xplanung_light.forms import OrganizationUserAssignmentFormAdmin, OrganizationUserAssignmentFormToebReporter
+from xplanung_light.forms import OrganizationUserAssignmentFormAdmin, OrganizationUserAssignmentFormToebReporter, UserOrganizationFormRoles
 
 # django-formset 
 class OrganizationUserFormViewAdmin(ExtentUserOrgaInfo, LoginRequiredMixin, FormView):
@@ -85,5 +85,39 @@ class OrganizationUserFormViewToebReporter(ExtentUserOrgaInfo, LoginRequiredMixi
         messages.success(
             self.request,
             f'Nutzer-Zuweisungen für {organization.name} erfolgreich gespeichert.'
+        )
+        return super().form_valid(form)
+    
+
+class UserOrganizationFormViewRoles(ExtentUserOrgaInfo, LoginRequiredMixin, FormView):
+    form_class = UserOrganizationFormRoles
+    template_name = 'xplanung_light/manage_users.html'
+    success_url = '/organization/manage-users/roles/'
+
+    def get_initial(self):
+        if not self.request.user.is_superuser:
+            raise PermissionDenied("Nutzer ist kein Zentraladmin - Zuweisung ist nicht möglich!")
+        return super().get_initial()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['header'] = "Nutzer und Rollen"
+        if self.request.GET.get('user'):
+            context['adminorgauser'] = AdminOrgaUser.objects.filter(user__id = self.request.GET.get('user'))
+        return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user_id'] = self.request.GET.get('user')
+        return kwargs
+
+    def form_valid(self, form):
+        if not self.request.user.is_superuser:
+            form.add_error("user", "Nutzer ist kein Zentraladmin - Zuweisung ist nicht möglich!")
+            return super().form_invalid(form)
+        user = form.save()
+        messages.success(
+            self.request,
+            f'Rollen für Nutzer {user.username} erfolgreich selektiert.'
         )
         return super().form_valid(form)

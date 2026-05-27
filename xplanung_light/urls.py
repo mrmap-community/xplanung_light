@@ -21,7 +21,7 @@ from xplanung_light.views.fplanuvp import FPlanUvpCreateView, FPlanUvpUpdateView
 from xplanung_light.views.administrativeorganization import AdministrativeOrganizationPublishingListView, AdministrativeOrganizationAutocomplete, AdministrativeOrganizationListView, AdministrativeOrganizationUpdateView
 from xplanung_light.views.contactorganization import ContactOrganizationCreateView, ContactOrganizationListView, ContactOrganizationUpdateView, ContactOrganizationDeleteView
 from xplanung_light.views.toebunit import ToebUnitCreateView, ToebUnitListView, ToebUnitUpdateView, ToebUnitDeleteView, ToebUnitPublicListView
-from xplanung_light.views.orgauser import OrganizationUserFormViewAdmin, OrganizationUserFormViewToebReporter
+from xplanung_light.views.orgauser import OrganizationUserFormViewAdmin, OrganizationUserFormViewToebReporter, UserOrganizationFormViewRoles
 from django.views.i18n import JavaScriptCatalog
 from xplanung_light.views.consentoption import ConsentOptionCreateView, ConsentOptionUpdateView, ConsentOptionListView, ConsentOptionDeleteView
 from django.urls import re_path as url
@@ -199,6 +199,7 @@ urlpatterns = [
     # Administrationsviews für die Beziehung zwischen Organisationen und Nutzern 
     path("organization/manage-users/admin/", OrganizationUserFormViewAdmin.as_view(), name='manage-organization-users-admin'),
     path("organization/manage-users/toeb-reporter/", OrganizationUserFormViewToebReporter.as_view(), name='manage-organization-users-toeb-reporter'),
+    path("organization/manage-users/roles/", UserOrganizationFormViewRoles.as_view(), name='users-organization-roles'),
     # Dokumentation
     path('docs/', include('docs.urls')),
     path('jsi18n/', JavaScriptCatalog.as_view(), name='javascript-catalog'),
