@@ -189,6 +189,10 @@ class BeteiligungToebNotificationCreateView(ExtentUserOrgaInfo, CreateView):
         cleaned_data = form.cleaned_data
         # Identifikation der EMail-Adressen der Sachbearbeiter
         toebs = cleaned_data.get("selected_toebs")
+        if cleaned_data.get("message"):
+            comment = cleaned_data.get("message")
+        else:
+            comment = None
         # Zusätzliche Speicherung in json - ggf. später als Protokoll
         # 
         result = []
@@ -208,8 +212,8 @@ class BeteiligungToebNotificationCreateView(ExtentUserOrgaInfo, CreateView):
             direct_link = f"{direct_url}"
             list_link = f"{list_url}"
             subject = str("Benachrichtigung zur " + beteiligung.get_typ_display() + " vom " + datetime.today().strftime('%Y-%m-%d') + " - Frist: " + str(beteiligung.end_datum) )
-            html_content = render_to_string("xplanung_light/email/toeb_benachrichtigung.html", context={"plan": plan, "beteiligung": beteiligung, "direct_link": direct_link, "list_link": list_link, "contacts": contacts, "orgas": responsible_orgas, "toeb": toeb, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
-            text_content = render_to_string("xplanung_light/email/toeb_benachrichtigung.txt", context={"plan": plan, "beteiligung": beteiligung, "direct_link": direct_link, "list_link": list_link, "contacts": contacts,  "orgas": responsible_orgas, "toeb": toeb, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+            html_content = render_to_string("xplanung_light/email/toeb_benachrichtigung.html", context={"comment": comment, "plan": plan, "beteiligung": beteiligung, "direct_link": direct_link, "list_link": list_link, "contacts": contacts, "orgas": responsible_orgas, "toeb": toeb, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+            text_content = render_to_string("xplanung_light/email/toeb_benachrichtigung.txt", context={"comment": comment, "plan": plan, "beteiligung": beteiligung, "direct_link": direct_link, "list_link": list_link, "contacts": contacts,  "orgas": responsible_orgas, "toeb": toeb, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
             for editor in toeb.editors.all():
                 if editor.user.email:
                     result_toeb['email'].append(editor.user.email)

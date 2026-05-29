@@ -10,6 +10,10 @@ Bekanntmachung: {{ beteiligung.bekanntmachung_datum }}
 Beginn: {{ beteiligung.start_datum }}
 Ende: {{ beteiligung.end_datum }}
 
+{% if comment %}
+Zusätzliche Hinweise: {{ comment }}
+{% endif %}
+
 Direkter Link zur Abgabe eines Beitrags (vorherige Anmeldung erforderlich): {{ direct_link }}
 
 Liste der aktuell angefragten Beiträge (vorherige Anmeldung erforderlich): {{ list_link }}

@@ -15,9 +15,12 @@ Angefragte Stelle: {{ toeb }}<br><br>
 <b>Beginn:</b> {{ beteiligung.start_datum }}<br>
 <b>Ende:</b> {{ beteiligung.end_datum }}<br>
 <br>
-Direkter Link zur Abgabe eines Beitrags (vorherige Anmeldung erforderlich): {{ direct_link }}<br>
+{% if comment %}
+<b>Zusätzliche Hinweise:</b> {{ comment }}<br><br>
+{% endif %}
+Direkter Link zur Abgabe eines Beitrags (vorherige Anmeldung erforderlich): <a href="{{ direct_link }}">{{ direct_link }}</a><br>
 <br>
-Liste der aktuell angefragten Beiträge (vorherige Anmeldung erforderlich): {{ list_link }}<br>
+Liste der aktuell angefragten Beiträge (vorherige Anmeldung erforderlich): <a href="{{ list_link }}">{{ list_link }}</a><br>
 <br>
 
 Rückfragen zum Verfahren:<br>
