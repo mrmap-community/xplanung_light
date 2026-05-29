@@ -202,6 +202,9 @@ class BPlanBeteiligungTable(tables.Table):
     #comments = tables.LinkColumn('bplanbeteiligung-update', verbose_name='', text='Beiträge/Kommentare', args=[A('bplan.id'), A('pk')], \
     #                     orderable=False, empty_values=())
     count_comments = tables.Column(verbose_name="Kommentare/Beiträge", accessor='count_comments', orderable=False)
+    count_toebs = tables.Column(verbose_name="# TOEBs", accessor='count_toebs')
+    count_notifications = tables.Column(verbose_name="", accessor='count_notifications')
+                                           
     typ = tables.Column(verbose_name="Art der Beteiligung")
     end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende')
     start_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.start_datum }}""", orderable=True, verbose_name='Beginn')
@@ -213,6 +216,21 @@ class BPlanBeteiligungTable(tables.Table):
                                            {% if record.status == 3 %}<span class="badge rounded-pill bg-dark">Abgelaufen</span>{% endif %}
                                            """, orderable=True, verbose_name='Status')
 
+    def render_count_notifications(self, value, record):
+        if (record.typ == '2000' or record.typ == '20001'):
+            if record.status in [1, 2]:
+                if record.count_toebs > 0:
+                    if value == 0:
+                        return format_html('<a class="btn btn-success" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigen" + '</a>')
+                    if value > 0:
+                        return format_html('<a class="btn btn-warning" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigen (" + str(value) +')</a>')
+            else:
+                if value > 0:
+                    return format_html('<a class="btn btn-secondary" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigungen (" + str(value) +')</a>')
+                return format_html('')
+        else:
+            return format_html('')
+    
     def render_count_comments(self, value, record):
         if value == 0:
             return format_html('<a href="' + reverse('beteiligungbeitrag-generic-create', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
@@ -222,7 +240,7 @@ class BPlanBeteiligungTable(tables.Table):
     class Meta:
         model = BPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "status", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "count_comments", "edit", "delete", )# "delete_recursive_history")
+        fields = ( "id", "status", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "count_comments", "count_toebs", "count_notifications", "edit", "delete", )# "delete_recursive_history")
 
    
 class FPlanBeteiligungTable(tables.Table):
@@ -232,6 +250,8 @@ class FPlanBeteiligungTable(tables.Table):
     delete = tables.LinkColumn('fplanbeteiligung-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')], \
                          orderable=False, empty_values=())
     count_comments = tables.Column(verbose_name="Kommentare/Beiträge", accessor='count_comments', orderable=False)
+    count_toebs = tables.Column(verbose_name="# TOEBs", accessor='count_toebs')
+    count_notifications = tables.Column(verbose_name="", accessor='count_notifications')
     end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende')
     start_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.start_datum }}""", orderable=True, verbose_name='Beginn')
     bekanntmachung_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.bekanntmachung_datum }}""", orderable=True, verbose_name='Bekanntmachung')                
@@ -249,10 +269,25 @@ class FPlanBeteiligungTable(tables.Table):
         else:
             return format_html('<a href="' + reverse('beteiligungbeitrag-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
 
+    def render_count_notifications(self, value, record):
+        if (record.typ == '2000' or record.typ == '20001'):
+            if record.status in [1, 2]:
+                if record.count_toebs > 0:
+                    if value == 0:
+                        return format_html('<a class="btn btn-success" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigen" + '</a>')
+                    if value > 0:
+                        return format_html('<a class="btn btn-warning" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigen (" + str(value) +')</a>')
+            else:
+                if value > 0:
+                    return format_html('<a class="btn btn-secondary" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigungen (" + str(value) +')</a>')
+                return format_html('')
+        else:
+            return format_html('')
+    
     class Meta:
         model = FPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "status", "bekanntmachung_datum", "typ", "start_datum", "count_comments", "end_datum", "edit", "delete")
+        fields = ( "id", "status", "bekanntmachung_datum", "typ", "start_datum", "count_comments", "count_toebs", "count_notifications", "end_datum", "edit", "delete")
 
 
 class BPlanBeteiligungBeitragTable(tables.Table):

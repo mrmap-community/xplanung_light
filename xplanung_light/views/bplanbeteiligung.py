@@ -31,7 +31,11 @@ class BPlanBeteiligungCreateView(IncompleteSelectResponseMixin, FormViewMixin, X
     def get_form(self, form_class=None):
 
         form = super().get_form(form_class)
-        allowed_orgas = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True)
+        # Freigabe für superuser
+        if not self.request.user.is_superuser:
+            allowed_orgas = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True)
+        else:
+            allowed_orgas = AdministrativeOrganization.objects.all()
         form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
             theme_display=Case(
                 *[
@@ -84,6 +88,17 @@ class BPlanBeteiligungListView(XPlanRelationsListView, SingleTableView):
         """
         qs = super().get_queryset()
         qs = qs.annotate(count_comments=Count('comments', distinct=True)).annotate(
+            count_toebs=Case(
+                When(
+                    Q(typ='1000') | Q(typ='10001'),
+                    then=None,
+                ),
+                When(
+                    Q(typ='2000') | Q(typ='20001'),
+                    then=Count('assigned_toebs', distinct=True),
+                ),
+            )
+        ).annotate(
             status=Case(
                 When(
                     end_datum__lt=timezone.now(),
@@ -99,6 +114,8 @@ class BPlanBeteiligungListView(XPlanRelationsListView, SingleTableView):
                 ),
                 default=0,
             )
+        ).annotate(
+                count_notifications=Count('bplan_beteiligung_notifications', distinct=True)
         )
         return qs
     
@@ -121,7 +138,10 @@ class BPlanBeteiligungUpdateView(IncompleteSelectResponseMixin, FormViewMixin, X
     def get_form(self, form_class=None):
 
         form = super().get_form(form_class)
-        allowed_orgas = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True)
+        if not self.request.user.is_superuser:
+            allowed_orgas = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True)
+        else:
+            allowed_orgas = AdministrativeOrganization.objects.all()
         form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
             theme_display=Case(
                 *[

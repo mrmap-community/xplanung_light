@@ -1265,6 +1265,39 @@ class BPlanBeteiligungToebNotificationCreateForm(ModelForm):
 
 class FPlanBeteiligungToebNotificationCreateForm(BPlanBeteiligungToebNotificationCreateForm):
 
+    def __init__(self, *args, **kwargs):
+        beteiligung = kwargs.pop('beteiligung', None)
+        super().__init__(*args, **kwargs)
+        self._email_map = {}  # am Form-Objekt speichern
+        self.fields['selected_toebs'].form = self
+
+        if beteiligung is not None:
+            toebs = ToebUnit.objects.filter(fplan_beteiligungen=beteiligung).prefetch_related('editors')
+            for toeb in toebs:
+                emails = [
+                    user.user.email
+                    for user in toeb.editors.all()
+                    if user.user.email
+                ]
+                self._email_map[toeb.pk] = ', '.join(emails)
+            self.fields['selected_toebs'].queryset = toebs    
+
+
+        self.helper = FormHelper(self)
+        
+        self.helper.layout = Layout(
+            Fieldset(
+                "TOEB-Benachrichtigung",
+                Row(
+                        Field("message"),
+                    ),
+                Row(
+                        Field("selected_toebs"),
+                    ),
+            ),
+            Submit("submit", "Versenden"),
+        )
+
     class Meta:
         model = FPlanBeteiligungToebNotification
         fields = ["message", "selected_toebs",]

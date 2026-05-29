@@ -28,7 +28,10 @@ class FPlanBeteiligungCreateView(IncompleteSelectResponseMixin, FormViewMixin, X
     def get_form(self, form_class=None):
 
         form = super().get_form(form_class)
-        allowed_orgas = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True)
+        if not self.request.user.is_superuser:
+            allowed_orgas = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True)
+        else:
+            allowed_orgas = AdministrativeOrganization.objects.all()
         form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
             theme_display=Case(
                 *[
@@ -80,22 +83,35 @@ class FPlanBeteiligungListView(XPlanRelationsListView, SingleTableView):
         """
         qs = super().get_queryset()
         qs = qs.annotate(count_comments=Count('comments', distinct=True)).annotate(
-            status=Case(
+            count_toebs=Case(
                 When(
-                    end_datum__lt=timezone.now(),
-                    then=3,
+                    Q(typ='1000') | Q(typ='10001'),
+                    then=None,
                 ),
                 When(
-                    Q(start_datum__lte=timezone.now()) & Q(end_datum__gte=timezone.now()),
-                    then=2,
+                    Q(typ='2000') | Q(typ='20001'),
+                    then=Count('assigned_toebs', distinct=True),
                 ),
-                When(
-                    Q(bekanntmachung_datum__lte=timezone.now()) & Q(start_datum__gte=timezone.now()),
-                    then=1,
-                ),
-                default=0,
             )
-        )
+            ).annotate(
+                status=Case(
+                    When(
+                        end_datum__lt=timezone.now(),
+                        then=3,
+                    ),
+                    When(
+                        Q(start_datum__lte=timezone.now()) & Q(end_datum__gte=timezone.now()),
+                        then=2,
+                    ),
+                    When(
+                        Q(bekanntmachung_datum__lte=timezone.now()) & Q(start_datum__gte=timezone.now()),
+                        then=1,
+                    ),
+                    default=0,
+                )
+            ).annotate(
+                count_notifications=Count('fplan_beteiligung_notifications', distinct=True)
+            )
         return qs
     
 
@@ -117,7 +133,10 @@ class FPlanBeteiligungUpdateView(IncompleteSelectResponseMixin, FormViewMixin, X
     def get_form(self, form_class=None):
 
         form = super().get_form(form_class)
-        allowed_orgas = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True)
+        if not self.request.user.is_superuser:
+            allowed_orgas = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True)
+        else:
+            allowed_orgas = AdministrativeOrganization.objects.all()
         form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
             theme_display=Case(
                 *[

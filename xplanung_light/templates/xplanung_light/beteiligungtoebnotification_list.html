@@ -15,6 +15,9 @@
     </ul>
 </p>
 <p>Bekanntgabe: {{ beteiligung.bekanntmachung_datum }} | Beginn: {{ beteiligung.start_datum }} | Ende: {{ beteiligung.end_datum }}</p>
+{% if status == 1 %}
+<a class="btn btn-success" role="button" href="{% url 'beteiligungnotification-create' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id %}">Benachrichtung erstellen</a>
+{% endif %}
 {% render_table table %}
 <p>Anzahl: {{ object_list.count }}</p>
 {% endblock %}

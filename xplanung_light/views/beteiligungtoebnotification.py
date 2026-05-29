@@ -86,7 +86,7 @@ class BeteiligungToebNotificationListView(ExtentUserOrgaInfo, SingleTableView):
                 return qs.filter(bplanbeteiligung_id=self.kwargs['beteiligungid']).order_by('-last_changed')
             if self.plantyp == 'fplan': 
                 return qs.filter(fplanbeteiligung_id=self.kwargs['beteiligungid']).order_by('-last_changed')
-
+        
 
     def get_context_data(self, **kwargs):
         """
@@ -101,6 +101,10 @@ class BeteiligungToebNotificationListView(ExtentUserOrgaInfo, SingleTableView):
         context["plan"] = self.reference_model.objects.get(pk=self.planid)
         context["plantyp"] = self.plantyp
         context["beteiligung"] = self.parent_model.objects.get(pk=self.beteiligungid)
+        if context["beteiligung"].bekanntmachung_datum <= timezone.now().date() and context["beteiligung"].end_datum >= timezone.now().date():
+            context["status"] = 1
+        else:
+            context["status"] = 0
         return context
 
     
@@ -116,6 +120,7 @@ class BeteiligungToebNotificationCreateView(ExtentUserOrgaInfo, CreateView):
     form_class = BPlanBeteiligungToebNotificationCreateForm
     planmodel = None
     beteiligungid = None
+    parent_model = BPlanBeteiligung
     template_name = 'xplanung_light/beteiligungtoebnotification_form.html'
     #success_url = reverse_lazy("beteiligungnotification-list", { plantyp='bplan', }) 
 
@@ -125,16 +130,27 @@ class BeteiligungToebNotificationCreateView(ExtentUserOrgaInfo, CreateView):
         if self.kwargs.get('plantyp') == 'bplan':
             self.model = BPlanBeteiligungToebNotification
             self.planmodel = BPlan
+            self.parent_model = BPlanBeteiligung
             #self.template_name = 'xplanung_light/beteiligungtoebnotification_form.html'
         if self.kwargs.get('plantyp') == 'fplan':
             self.model = FPlanBeteiligungToebNotification
             self.planmodel = FPlan
+            self.parent_model = FPlanBeteiligung
             self.form_class = FPlanBeteiligungToebNotificationCreateForm
             #self.template_name = 'xplanung_light/beteiligungtoebnotification_form.html'
             #self.form_class = BeteiligungToebNotificationCreateForm
         self.planid = kwargs.get('planid')
         self.beteiligungid = kwargs.get('beteiligungid')
         return super().dispatch(request, *args, **kwargs)
+
+    #def get_queryset(self):
+    #    qs = super().get_queryset()
+        # Check Zeitrahmen des Verfahrens
+    #    print(str(beteiligung.bekanntmachung_datum))
+    #    beteiligung = self.parent_model.objects.get(pk=self.beteiligungid)
+    #    if not (beteiligung.bekanntmachung_datum <= timezone.now().date() and beteiligung.end_datum >= timezone.now().date()):
+    #        raise PermissionDenied("Benachrichtigungen außerhalb des Zeitrahmens sind nicht möglich!")
+    #    return qs
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -145,6 +161,8 @@ class BeteiligungToebNotificationCreateView(ExtentUserOrgaInfo, CreateView):
             beteiligungmodel,
             pk=self.beteiligungid
         )
+        if not (kwargs['beteiligung'].bekanntmachung_datum <= timezone.now().date() and kwargs['beteiligung'].end_datum >= timezone.now().date()):
+            raise PermissionDenied("Benachrichtigungen außerhalb des Zeitrahmens sind nicht möglich!")
         return kwargs
     
     def form_valid(self, form):
