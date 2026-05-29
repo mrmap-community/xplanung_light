@@ -75,7 +75,7 @@ class AdministrativeOrganizationListView(ExtentUserOrgaInfo, LoginRequiredMixin,
                 AdministrativeOrganization.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed').only('id', 'name', 'name_part', 'ls', 'ks', 'gs', 'ts')
         else:
-            qs = AdministrativeOrganization.objects.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(last_changed=Subquery(
+            qs = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).annotate(last_changed=Subquery(
                 AdministrativeOrganization.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed').only('id', 'name', 'name_part', 'ls', 'ks', 'gs', 'ts')
         return qs
@@ -104,7 +104,7 @@ class AdministrativeOrganizationUpdateView(ExtentUserOrgaInfo, LoginRequiredMixi
     def get_object(self):
         object = super().get_object()
         if self.request.user.is_superuser == False:
-            for user in object.organization_users.all():
+            for user in object.admin_orga_users.all():
                 if user.user == self.request.user and user.is_admin:                    
                     return object
             raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")

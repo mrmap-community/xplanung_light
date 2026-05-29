@@ -1,0 +1,14 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% load crispy_forms_tags %}
+{% bootstrap_css %}
+{% block title %}
+    {% if beteiligung %}
+    Benachrichtigung im Beteiligungsverfahren zum {% if plantyp == "bplan" %}Bebauungsplan{% endif %}{% if plantyp == "fplan" %}Flächennutzungsplan{% endif %}
+    {%  else %}
+    Benachrichtigung nicht möglich!
+    {% endif %}
+{% endblock %}
+{% block content %}
+{% crispy form %}
+{% endblock %}

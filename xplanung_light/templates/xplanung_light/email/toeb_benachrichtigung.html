@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title></title>
+</head>
+<body>
+Im Rahmen der Aufstellung oder Änderung eines Bauleitplans wird ein Verfahren zur Beteiligung von Trägern öffentlicher Belange durchgeführt.<br><br>
+Angefragte Stelle: {{ toeb }}<br><br>
+<b>Plan:</b> {% if plantyp == 'bplan' %}Bebauungsplan{% endif %} "{{ plan.name }}"<br>
+<b>Zuständige Stellen(n):</b> {{ plan.gemeinde.all|join:", " }} <br>
+<b>Beteiligungsart:</b> {{ beteiligung.get_typ_display }}<br>
+<br>
+<b>Bekanntmachung:</b> {{ beteiligung.bekanntmachung_datum }}<br>
+<b>Beginn:</b> {{ beteiligung.start_datum }}<br>
+<b>Ende:</b> {{ beteiligung.end_datum }}<br>
+<br>
+Direkter Link zur Abgabe eines Beitrags (vorherige Anmeldung erforderlich): {{ direct_link }}<br>
+<br>
+Liste der aktuell angefragten Beiträge (vorherige Anmeldung erforderlich): {{ list_link }}<br>
+<br>
+
+Rückfragen zum Verfahren:<br>
+{% for contact in contacts %}
+{{ contact.name }}<br>
+{{ contact.phone }}<br>
+<a href="mailto:{{ contact.email }}">{{ contact.email }}</a><br>
+{% endfor %}
+________________________<br>
+Ihr XPlanung-light Team:<br>
+{{ metadata_contact.organization_name }}<br>
+{{ metadata_contact.phone }}<br>
+<a href="mailto:{{ metadata_contact.email }}">{{ metadata_contact.email }}</a><br>
+</body>
+</html>

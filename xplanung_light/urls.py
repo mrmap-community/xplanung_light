@@ -22,6 +22,7 @@ from xplanung_light.views.administrativeorganization import AdministrativeOrgani
 from xplanung_light.views.contactorganization import ContactOrganizationCreateView, ContactOrganizationListView, ContactOrganizationUpdateView, ContactOrganizationDeleteView
 from xplanung_light.views.toebunit import ToebUnitCreateView, ToebUnitListView, ToebUnitUpdateView, ToebUnitDeleteView, ToebUnitPublicListView
 from xplanung_light.views.orgauser import OrganizationUserFormViewAdmin, OrganizationUserFormViewToebReporter, UserOrganizationFormViewRoles
+from xplanung_light.views.beteiligungtoebnotification import BeteiligungToebNotificationCreateView, BeteiligungToebNotificationListView
 from django.views.i18n import JavaScriptCatalog
 from xplanung_light.views.consentoption import ConsentOptionCreateView, ConsentOptionUpdateView, ConsentOptionListView, ConsentOptionDeleteView
 from django.urls import re_path as url
@@ -63,9 +64,12 @@ urlpatterns = [
     path("bplan/<int:planid>/beteiligung/<int:pk>/delete/", BPlanBeteiligungDeleteView.as_view(), name="bplanbeteiligung-delete"),
     # Hinzufügen der Option nicht nur die Objekte, sondern auch deren Historie zu löschen
     path("bplan/<int:planid>/beteiligung/<int:pk>/delete_recursive_history/", BPlanBeteiligungDeleteRecursiveHistoryView.as_view(), name="bplanbeteiligung-delete-recursive-history"),
-    # Test für django-formsets - sollte mit einem view möglich sein, klappt aber nicht
+    # Beteiligungsviews mit django-formset - sollte mit einem view möglich sein, klappt aber nicht
     path("bplan/<int:planid>/beteiligung/create/", BPlanBeteiligungCreateView.as_view(extra_context={'create': True}), name="bplanbeteiligung-create"),
     path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="bplanbeteiligung-update"),
+    # Benachrichtigungsmodule (zunächst nur für TOEB)
+    path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="bplanbeteiligung-update"),path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="bplanbeteiligung-update"),
+    #path("bplan/<int:planid>/beteiligung/<int:pk>/notify/create", BPlanBeteiligungNotifyCreateView.as_view(), name="bplanbeteiligungnotify-create"),
     # Neue Struktur für Routen, die für alle Plantypen gelten!
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<pk>\d+)/beitrag/create/$', BeteiligungBeitragCreateView.as_view(), name="beteiligungbeitrag-create"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<pk>\d+)/beitrag/create/organization/(?P<orga_id>\d+)/$', BeteiligungBeitragCreateView.as_view(), name="beteiligungbeitrag-create-orga"),
@@ -95,6 +99,9 @@ urlpatterns = [
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/(?P<pk>\d+)/update/$', XPlanBeitragStellungnahmeUpdateView.as_view(extra_context={'update': True}), name="beitragstellungnahme-update"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/$', BeitragStellungnahmeListView.as_view(), name="beitragstellungnahme-list"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/(?P<pk>\d+)/delete/$', XPlanBeitragStellungnahmeDeleteView.as_view(), name="beitragstellungnahme-delete"),
+    # TOEB Notification
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/notification/create/$', BeteiligungToebNotificationCreateView.as_view(), name="beteiligungnotification-create"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/notification/$', BeteiligungToebNotificationListView.as_view(), name="beteiligungnotification-list"),
     # BPlan UVP Info
     path("bplan/<int:planid>/uvp/create/", UvpCreateView.as_view(), name="uvp-create"),
     path("bplan/<int:planid>/uvp/", UvpListView.as_view(), name="uvp-list"),
@@ -124,7 +131,9 @@ urlpatterns = [
     path("fplan/<int:planid>/beteiligung/create/", FPlanBeteiligungCreateView.as_view(extra_context={'create': True}), name="fplanbeteiligung-create"),
     path("fplan/<int:planid>/beteiligung/<int:pk>/update/", FPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="fplanbeteiligung-update"),
     path("fplan/<int:planid>/beteiligung/<int:pk>/delete/", FPlanBeteiligungDeleteView.as_view(), name="fplanbeteiligung-delete"),
-     # FPlan Anlagen
+    # Notify
+    #path("fplan/<int:planid>/beteiligung/<int:pk>/notify/create", FPlanBeteiligungNotifyCreateView.as_view(), name="fplanbeteiligungnotify-create"),
+    # FPlan Anlagen
     path("fplan/<int:planid>/attachment/create/", FPlanSpezExterneReferenzCreateView.as_view(), name="fplanattachment-create"),
     path("fplan/<int:planid>/attachment/", FPlanSpezExterneReferenzListView.as_view(), name="fplanattachment-list"),
     path("fplan/<int:planid>/attachment/<int:pk>/update/", FPlanSpezExterneReferenzUpdateView.as_view(), name="fplanattachment-update"),

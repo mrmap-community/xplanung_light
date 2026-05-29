@@ -27,10 +27,10 @@ class ContactOrganizationCreateView(ExtentUserOrgaInfo, SuccessMessageMixin, Cre
             form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.only("pk", "name", "type", "name_part")
         else:
             """
-            Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
+            Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *admin_orga_users* und auf die Eigenschaft *is_admin*
             
             """
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).only("pk", "name", "type", "name_part")
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).only("pk", "name", "type", "name_part")
         # Herausnehmen der Gemeinden, die schon eine Kontaktstelle zugewiesen bekommen haben
         form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(contacts__isnull = True)
         return form
@@ -45,7 +45,7 @@ class ContactOrganizationCreateView(ExtentUserOrgaInfo, SuccessMessageMixin, Cre
             # Überprüfen, ob der jeweilige Nutzer auch als Administrator für jede Gemeinde eingetragen ist
             for gemeinde in form.cleaned_data['gemeinde']:
                 user_is_admin = False
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True 
                 if user_is_admin == False:
@@ -74,7 +74,7 @@ class ContactOrganizationUpdateView(ExtentUserOrgaInfo, SuccessMessageMixin, Upd
             user_orga_admin = []
             for gemeinde in object.gemeinde.all():
                 user_is_admin = False
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True 
                 user_orga_admin.append(user_is_admin)
@@ -83,9 +83,9 @@ class ContactOrganizationUpdateView(ExtentUserOrgaInfo, SuccessMessageMixin, Upd
                 form.fields['gemeinde'].label = "Gemeinden sind nicht editierbar (Nutzer ist nicht Administrator aller Gemeinden)"
             else:
                 """
-                Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
+                Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *admin_orga_users* und auf die Eigenschaft *is_admin*
                 """
-                form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).only("pk", "name", "type")
+                form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).only("pk", "name", "type")
         # Erweitern der Gemeinden, die noch keinem Kontakt zugewiesen wurden, mit denen, die schon am Record vorhanden sind 
         # https://studygyaan.com/django/combining-multiple-querysets-in-django-with-examples
         form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(contacts__isnull = True).only("pk", "name", "type") | object.gemeinde.get_queryset().only("pk", "name", "type")
@@ -96,7 +96,7 @@ class ContactOrganizationUpdateView(ExtentUserOrgaInfo, SuccessMessageMixin, Upd
             # Überprüfen, ob der jeweilige Nutzer auch als Administrator eine der Gemeinden eingetragen ist
             for gemeinde in form.cleaned_data['gemeinde']:
                 user_is_admin = False
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True                         
                         return super().form_valid(form)
@@ -110,7 +110,7 @@ class ContactOrganizationUpdateView(ExtentUserOrgaInfo, SuccessMessageMixin, Upd
         object = super().get_object()
         if self.request.user.is_superuser == False:
             for gemeinde in object.gemeinde.all():
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:                    
                         return object
             raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
@@ -132,7 +132,7 @@ class ContactOrganizationListView(ExtentUserOrgaInfo, SingleTableView):
                 ContactOrganization.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed')
         else:
-            qs = ContactOrganization.objects.filter(gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+            qs = ContactOrganization.objects.filter(gemeinde__admin_orga_users__user=self.request.user, gemeinde__admin_orga_users__is_admin=True).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
                 ContactOrganization.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed')
         
@@ -151,7 +151,7 @@ class ContactOrganizationDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, Del
             user_orga_admin = []
             for gemeinde in object.gemeinde.all():
                 user_is_admin = False
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True 
                 user_orga_admin.append(user_is_admin)
@@ -168,7 +168,7 @@ class ContactOrganizationDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, Del
             user_orga_admin = []
             for gemeinde in object.gemeinde.all():
                 user_is_admin = False
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True 
                 user_orga_admin.append(user_is_admin)

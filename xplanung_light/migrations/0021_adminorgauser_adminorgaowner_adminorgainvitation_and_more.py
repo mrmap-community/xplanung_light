@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('user_type', models.CharField(default='', max_length=1)),
-                ('organization', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='organization_users', to='xplanung_light.administrativeorganization')),
+                ('organization', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='admin_orga_users', to='xplanung_light.administrativeorganization')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='%(app_label)s_%(class)s', to=settings.AUTH_USER_MODEL)),
             ],
             options={

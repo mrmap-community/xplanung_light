@@ -1,0 +1,28 @@
+Im Rahmen der Aufstellung oder Änderung eines Bauleitplans wird ein Verfahren zur Beteiligung von Trägern öffentlicher Belange durchgeführt. 
+
+Angefragte Stelle: {{ toeb }}
+
+Plan: {% if plantyp == 'bplan' %}Bebauungsplan{% endif %} "{{ plan.name }}"
+Zuständige Stellen(n): {{ plan.gemeinde.all|join:", " }} 
+Beteiligungsart: {{ beteiligung.get_typ_display }}
+
+Bekanntmachung: {{ beteiligung.bekanntmachung_datum }}
+Beginn: {{ beteiligung.start_datum }}
+Ende: {{ beteiligung.end_datum }}
+
+Direkter Link zur Abgabe eines Beitrags (vorherige Anmeldung erforderlich): {{ direct_link }}
+
+Liste der aktuell angefragten Beiträge (vorherige Anmeldung erforderlich): {{ list_link }}
+
+Rückfragen zum Verfahren:
+{% for contact in contacts %}
+{{ contact.name }}
+{{ contact.phone }}
+{{ contact.email }}
+{% endfor %}
+
+________________________
+Ihr XPlanung-light Team:
+{{ metadata_contact.organization_name }}
+{{ metadata_contact.phone }}
+{{ metadata_contact.email }}

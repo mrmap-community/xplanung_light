@@ -91,7 +91,7 @@ class BeteiligungBeitragListView(ExtentUserOrgaInfo, SingleTableView):
         # check ob Nutzer admin einer der Gemeinden des BPlans ist
         if self.request.user.is_superuser == False:
             for gemeinde in plan.gemeinde.all():
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:   
                         # Zugriff wird erteilt
                         if self.plantyp == 'bplan':                    
@@ -161,7 +161,7 @@ class BeteiligungBeitragDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, Dele
         # check ob Nutzer admin einer der Gemeinden des BPlans ist
         if self.request.user.is_superuser == False:
             for gemeinde in plan.gemeinde.all():
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:   
                         # Zugriff wird erteilt 
                         if self.plantyp == 'bplan':                    
@@ -404,7 +404,7 @@ class BeteiligungBeitragGenericCreateView(ExtentUserOrgaInfo, FormCollectionView
         # check ob Nutzer admin einer der Gemeinden des BPlans ist
         if self.request.user.is_superuser == False:
             for gemeinde in plan.gemeinde.all():
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:                        
                          context[self.reference_model_name_lower] = plan
                          return context
@@ -535,7 +535,7 @@ class BeteiligungBeitragGenericUpdateView(ExtentUserOrgaInfo, EditCollectionView
         # check ob Nutzer admin einer der Gemeinden des BPlans ist
         if self.request.user.is_superuser == False:
             for gemeinde in plan.gemeinde.all():
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:                        
                          context[self.reference_model_name_lower] = plan
                          return context
@@ -904,7 +904,7 @@ class BeteiligungBeitragDetailView(ExtentUserOrgaInfo, DetailView):
         access_allowed = False
         if self.request.user.is_superuser == False:
             for gemeinde in gemeinden:
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:   
                         # Zugriff wird erteilt                     
                         access_allowed = True

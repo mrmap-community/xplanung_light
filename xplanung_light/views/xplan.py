@@ -103,10 +103,10 @@ class XPlanCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
             form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
         else:
             """
-            Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users*
+            Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *admin_orga_users*
             und auf die Eigenschaft *is_admin*
             """
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
         form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
         return form
     
@@ -115,7 +115,7 @@ class XPlanCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
             # Überprüfen, ob der jeweilige Nutzer auch als Administrator für jede Gemeinde eingetragen ist
             for gemeinde in form.cleaned_data['gemeinde']:
                 user_is_admin = False
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True 
                 if user_is_admin == False:
@@ -146,7 +146,7 @@ class XPlanUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
             user_orga_admin = []
             for gemeinde in object.gemeinde.all():
                 user_is_admin = False
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True 
                 user_orga_admin.append(user_is_admin)
@@ -155,9 +155,9 @@ class XPlanUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
                 form.fields['gemeinde'].label = "Gemeinden sind nicht editierbar (Nutzer ist nicht Administrator aller Gemeinden)"
             else:
                 """
-                Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
+                Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *admin_orga_users* und auf die Eigenschaft *is_admin*
                 """
-                form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(organization_users__user=self.request.user, organization_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
+                form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
         form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
         return form
     
@@ -175,7 +175,7 @@ class XPlanUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
             # Überprüfen, ob der jeweilige Nutzer auch als Administrator eine der Gemeinden eingetragen ist
             for gemeinde in form.cleaned_data['gemeinde']:
                 user_is_admin = False
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True                         
                         return super().form_valid(form)
@@ -189,7 +189,7 @@ class XPlanUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
         object = super().get_object()
         if self.request.user.is_superuser == False:
             for gemeinde in object.gemeinde.all():
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:                    
                         return object
             raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
@@ -211,7 +211,7 @@ class XPlanDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
             user_orga_admin = []
             for gemeinde in object.gemeinde.all():
                 user_is_admin = False
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True 
                 user_orga_admin.append(user_is_admin)
@@ -228,7 +228,7 @@ class XPlanDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
             user_orga_admin = []
             for gemeinde in object.gemeinde.all():
                 user_is_admin = False
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True 
                 user_orga_admin.append(user_is_admin)
@@ -345,7 +345,7 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
             # admin für alle Gemeinden eines Plans
             if self.model_name_lower == 'bplan':
                 qs = self.model.objects.filter(
-                    gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True
+                    gemeinde__admin_orga_users__user=self.request.user, gemeinde__admin_orga_users__is_admin=True
                 ).distinct().prefetch_related('gemeinde').annotate(
                     last_changed=Subquery(
                         # user ist Organisation zugewiesen - ohen id_admin=True
@@ -369,7 +369,7 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
                 )
             if self.model_name_lower == 'fplan':
                 qs = self.model.objects.filter(
-                    gemeinde__organization_users__user=self.request.user, gemeinde__organization_users__is_admin=True
+                    gemeinde__admin_orga_users__user=self.request.user, gemeinde__admin_orga_users__is_admin=True
                 ).distinct().prefetch_related('gemeinde').annotate(
                     last_changed=Subquery(
                         # user ist Organisation zugewiesen - ohen id_admin=True

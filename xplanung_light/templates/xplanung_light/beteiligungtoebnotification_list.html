@@ -1,0 +1,20 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% load crispy_forms_tags %}
+{% load richtext %}
+{% load render_table from django_tables2 %}
+{% bootstrap_css %}
+{% block title %}
+    Benachrichtigungen im Beteiligungsverfahren zum Plan
+{% endblock %}
+{% block content %}
+<p>TOEB-Benachrichtigungen zum Beteiligungsverfahren {{ beteiligung.id }} ({{ beteiligung.get_typ_display }})<p>
+<p>{% if plantyp == 'bplan' %}Bebauungsplan{% endif %}{% if plantyp == 'fplan' %}Flächennutzungsplan{% endif %} <b><a href="{% if plantyp == 'bplan'%}{% url 'bplan-detail' pk=plan.id %}{% endif %}{% if plantyp == 'fplan'%}{% url 'fplan-detail' pk=plan.id %}{% endif %}">{{ plan.name }} ({{ plan.id }})</a></b> der Kommune(n):<br>
+    <ul>
+        {% for gemeinde in plan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
+    </ul>
+</p>
+<p>Bekanntgabe: {{ beteiligung.bekanntmachung_datum }} | Beginn: {{ beteiligung.start_datum }} | Ende: {{ beteiligung.end_datum }}</p>
+{% render_table table %}
+<p>Anzahl: {{ object_list.count }}</p>
+{% endblock %}

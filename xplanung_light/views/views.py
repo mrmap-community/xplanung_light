@@ -57,7 +57,7 @@ def get_bplan_attachment(request, pk):
         pass
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
-            for user in gemeinde.organization_users.all():
+            for user in gemeinde.admin_orga_users.all():
                 if user.user == request.user and user.is_admin:   
                     # Zugriff wird erteilt                     
                     access_allowed = True
@@ -93,7 +93,7 @@ def get_fplan_attachment(request, pk):
         pass
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
-            for user in gemeinde.organization_users.all():
+            for user in gemeinde.admin_orga_users.all():
                 if user.user == request.user and user.is_admin:   
                     # Zugriff wird erteilt                     
                     access_allowed = True
@@ -135,7 +135,7 @@ def get_beteiligung_beitrag_attachment(request, **kwargs):
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
-            for user in gemeinde.organization_users.all():
+            for user in gemeinde.admin_orga_users.all():
                 if user.user == request.user and user.is_admin:   
                     # Zugriff wird erteilt                     
                     access_allowed = True
@@ -628,7 +628,7 @@ def bplan_import(request):
                 user_orga_admin = []
                 for gemeinde in orgas:
                     user_is_admin = False
-                    for user in gemeinde.organization_users.all():
+                    for user in gemeinde.admin_orga_users.all():
                         if user.user == request.user and user.is_admin:
                             user_is_admin = True 
                     user_orga_admin.append(user_is_admin)
@@ -676,7 +676,7 @@ def fplan_import(request):
                 user_orga_admin = []
                 for gemeinde in orgas:
                     user_is_admin = False
-                    for user in gemeinde.organization_users.all():
+                    for user in gemeinde.admin_orga_users.all():
                         if user.user == request.user and user.is_admin:
                             user_is_admin = True 
                     user_orga_admin.append(user_is_admin)
@@ -723,7 +723,7 @@ def bplan_import_archiv(request):
                 user_orga_admin = []
                 for gemeinde in orgas:
                     user_is_admin = False
-                    for user in gemeinde.organization_users.all():
+                    for user in gemeinde.admin_orga_users.all():
                         if user.user == request.user and user.is_admin:
                             user_is_admin = True 
                     user_orga_admin.append(user_is_admin)
@@ -769,7 +769,7 @@ def fplan_import_archiv(request):
                 user_orga_admin = []
                 for gemeinde in orgas:
                     user_is_admin = False
-                    for user in gemeinde.organization_users.all():
+                    for user in gemeinde.admin_orga_users.all():
                         if user.user == request.user and user.is_admin:
                             user_is_admin = True 
                     user_orga_admin.append(user_is_admin)
@@ -857,11 +857,11 @@ def home(request):
 
     # Filtern der querysets auf nicht anonyme Nutzer die kein Administrator sind (my...)
     if not request.user.is_superuser and request.user.is_anonymous == False:
-        orga_qs = orga_qs.filter(organization_users__user=request.user, organization_users__is_admin=True)
-        bplan_qs = bplan_qs.filter(gemeinde__organization_users__user=request.user, gemeinde__organization_users__is_admin=True)
-        fplan_qs = fplan_qs.filter(gemeinde__organization_users__user=request.user, gemeinde__organization_users__is_admin=True)
-        bplan_beteiligungen_qs = bplan_beteiligungen_qs.filter(bplan__gemeinde__organization_users__user=request.user, bplan__gemeinde__organization_users__is_admin=True)
-        fplan_beteiligungen_qs = fplan_beteiligungen_qs.filter(fplan__gemeinde__organization_users__user=request.user, fplan__gemeinde__organization_users__is_admin=True)
+        orga_qs = orga_qs.filter(admin_orga_users__user=request.user, admin_orga_users__is_admin=True)
+        bplan_qs = bplan_qs.filter(gemeinde__admin_orga_users__user=request.user, gemeinde__admin_orga_users__is_admin=True)
+        fplan_qs = fplan_qs.filter(gemeinde__admin_orga_users__user=request.user, gemeinde__admin_orga_users__is_admin=True)
+        bplan_beteiligungen_qs = bplan_beteiligungen_qs.filter(bplan__gemeinde__admin_orga_users__user=request.user, bplan__gemeinde__admin_orga_users__is_admin=True)
+        fplan_beteiligungen_qs = fplan_beteiligungen_qs.filter(fplan__gemeinde__admin_orga_users__user=request.user, fplan__gemeinde__admin_orga_users__is_admin=True)
 
     plan_orga_qs = orga_qs.annotate(count_plan=Count('bplan') + Count('fplan')).filter(count_plan__gt=0)
     plan_orga_public_qs = orga_qs.annotate(count_plan=Count('bplan', distinct=True, filter=Q(bplan__public=True)) + Count('fplan', distinct=True, filter=Q(fplan__public=True))).filter(count_plan__gt=0)
@@ -996,7 +996,7 @@ def beitrag_activate(request, **kwargs):
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
-            for user in gemeinde.organization_users.all():
+            for user in gemeinde.admin_orga_users.all():
                 if user.user == request.user and user.is_admin:   
                     # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird                  
                     access_allowed = True
@@ -1053,7 +1053,7 @@ def beitrag_withdraw(request, **kwargs):
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
-            for user in gemeinde.organization_users.all():
+            for user in gemeinde.admin_orga_users.all():
                 if user.user == request.user and user.is_admin:   
                     # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird                  
                     access_allowed = True
@@ -1111,7 +1111,7 @@ def beitrag_reactivate(request, **kwargs):
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
-            for user in gemeinde.organization_users.all():
+            for user in gemeinde.admin_orga_users.all():
                 if user.user == request.user and user.is_admin:   
                     # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird                  
                     access_allowed = True
@@ -1218,7 +1218,7 @@ def beitrag_detail(request, **kwargs):
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
-            for user in gemeinde.organization_users.all():
+            for user in gemeinde.admin_orga_users.all():
                 if user.user == request.user and user.is_admin:   
                     # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird                  
                     access_allowed = True

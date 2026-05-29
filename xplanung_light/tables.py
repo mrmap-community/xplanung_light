@@ -3,7 +3,7 @@ from django_tables2.utils import A
 from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp, ToebUnit
 from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz, BPlanBeteiligungBeitrag, FPlanBeteiligungBeitrag,  RequestForOrganizationAdmin
 from .models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme 
-from .models import ConsentOption
+from .models import ConsentOption, BPlanBeteiligungToebNotification, FPlanBeteiligungToebNotification
 from django.urls import reverse
 from django.utils.html import format_html
 from django.contrib.gis.gdal import OGRGeometry
@@ -320,6 +320,27 @@ class BPlanBeitragStellungnahmeTable(tables.Table):
         model = BPlanBeitragStellungnahme
         template_name = "django_tables2/bootstrap5.html"
         fields = ("id", "last_changed", "bezug_beitrag", "stellungnahme", "beruecksichtigung", "edit", "delete")
+
+
+"""
+Tabellen für die TOEB-Notifications 
+BPlanBeteiligungToebNotificationTable, FPlanBeteiligungToebNotificationTable, 
+"""
+class BPlanBeteiligungToebNotificationTable(tables.Table):
+    
+    class Meta:
+        model = BPlanBeteiligungToebNotification
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ("id", "last_changed", "message", "protocol")
+
+
+class FPlanBeteiligungToebNotificationTable(tables.Table):
+    
+    class Meta:
+        model = FPlanBeteiligungToebNotification
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ("id", "last_changed", "message", "protocol")
+
 
 
 class FPlanBeitragStellungnahmeTable(BPlanBeitragStellungnahmeTable):

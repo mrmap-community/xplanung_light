@@ -48,11 +48,11 @@ class ToebUnitCreateView(ExtentUserOrgaInfo, SuccessMessageMixin, CreateView):
             form.fields['editors'].queryset = form.fields['editors'].queryset.filter(is_toeb_reporter=True)
         else:
             """
-            Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*
+            Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *admin_orga_users* und auf die Eigenschaft *is_admin*
             
             """
             form.fields['organization'].queryset = form.fields['organization'].queryset.filter(
-                organization_users__user=self.request.user, organization_users__is_admin=True
+                admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True
                 ).annotate(
                     bbox=(Extent("geometry"))
                 ).only("pk", "name", "type", "name_part")
@@ -113,7 +113,7 @@ class ToebUnitUpdateView(ExtentUserOrgaInfo, SuccessMessageMixin, UpdateView):
                 )
         else:
             form.fields['organization'].queryset = form.fields['organization'].queryset.filter(
-                organization_users__user=self.request.user, organization_users__is_admin=True
+                admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True
                 ).annotate(
                     bbox=(Extent("geometry"))
                 ).only("pk", "name", "type", "name_part")
@@ -132,7 +132,7 @@ class ToebUnitUpdateView(ExtentUserOrgaInfo, SuccessMessageMixin, UpdateView):
             # Überprüfen, ob der jeweilige Nutzer auch als Administrator der Organisation eingetragen ist
             organization = form.cleaned_data['organization']
             user_is_admin = False
-            for user in organization.organization_users.all():
+            for user in organization.admin_orga_users.all():
                 if user.user == self.request.user and user.is_admin:
                     user_is_admin = True                         
                     return super().form_valid(form)
@@ -177,7 +177,7 @@ class ToebUnitUpdateView(ExtentUserOrgaInfo, SuccessMessageMixin, UpdateView):
         #object = self.object
         if self.request.user.is_superuser == False:
             organization = object.organization
-            for user in organization.organization_users.all():
+            for user in organization.admin_orga_users.all():
                 if user.user == self.request.user and user.is_admin:                    
                     return object
             raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
@@ -198,7 +198,7 @@ class ToebUnitListView(ExtentUserOrgaInfo, SuccessMessageMixin, SingleTableView)
                 ToebUnit.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed')
         else:
-            qs = ToebUnit.objects.filter(organization__organization_users__user=self.request.user, organization__organization_users__is_admin=True).distinct().prefetch_related('organization').annotate(last_changed=Subquery(
+            qs = ToebUnit.objects.filter(organization__admin_orga_users__user=self.request.user, organization__admin_orga_users__is_admin=True).distinct().prefetch_related('organization').annotate(last_changed=Subquery(
                 ToebUnit.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed')
         
@@ -229,7 +229,7 @@ class ToebUnitDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
             object = self.get_object()
             organization = object.organization
             user_is_admin = False
-            for user in organization.organization_users.all():
+            for user in organization.admin_orga_users.all():
                 if user.user == self.request.user and user.is_admin:
                     user_is_admin = True 
             if user_is_admin == False:
@@ -244,7 +244,7 @@ class ToebUnitDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
         if self.request.user.is_superuser == False:
             organization = object.organization
             user_is_admin = False
-            for user in organization.organization_users.all():
+            for user in organization.admin_orga_users.all():
                 if user.user == self.request.user and user.is_admin:
                     user_is_admin = True 
             if user_is_admin == False:

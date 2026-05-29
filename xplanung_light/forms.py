@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization, Uvp, FPlanUvp
 from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung, FPlanBeteiligungBeitrag, FPlanBeteiligungBeitragAnhang
 from xplanung_light.models import ContactOrganization, RequestForOrganizationAdmin, ToebUnit, AdminOrgaUser
-
+from xplanung_light.models import BPlanBeteiligungToebNotification, FPlanBeteiligungToebNotification
 from xplanung_light.models import BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang
 from xplanung_light.models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme
 from xplanung_light.models import ConsentOption
@@ -25,7 +25,7 @@ from django.core.exceptions import ValidationError
 from django_clamd.validators import validate_file_infection
 from django.utils.timezone import now
 import uuid
-from django.db.models import Case, When, Value, CharField
+from django.db.models import Case, When, Value, CharField, Count
 from django.db.models.functions import Concat
 #from django.db.models import CharField
 #from formset.utils import FormMixin
@@ -1209,6 +1209,65 @@ class ContactOrganizationUpdateForm(ModelForm):
         model = ContactOrganization
 
         fields = ["gemeinde", "name", "unit", "person", "email", "phone", "facsimile", "homepage", "datenschutz_link" ]
+
+
+class ToebMultipleChoiceField(forms.ModelMultipleChoiceField):
+    """Überschreibt die Label-Darstellung mit zusätzlichen Annotierungen."""
+    def label_from_instance(self, obj):
+        emails = self.form._email_map.get(obj.pk, 'keine E-Mails')
+        return f"{obj.name} – EMails: ({emails})"
+
+
+class BPlanBeteiligungToebNotificationCreateForm(ModelForm):
+    selected_toebs = ToebMultipleChoiceField(
+        queryset=ToebUnit.objects.none(),  
+        widget=forms.CheckboxSelectMultiple,
+        label="TÖBs auswählen",
+    )
+
+    def __init__(self, *args, **kwargs):
+        beteiligung = kwargs.pop('beteiligung', None)
+        super().__init__(*args, **kwargs)
+        self._email_map = {}  # am Form-Objekt speichern
+        self.fields['selected_toebs'].form = self
+
+        if beteiligung is not None:
+            toebs = ToebUnit.objects.filter(bplan_beteiligungen=beteiligung).prefetch_related('editors')
+            for toeb in toebs:
+                emails = [
+                    user.user.email
+                    for user in toeb.editors.all()
+                    if user.user.email
+                ]
+                self._email_map[toeb.pk] = ', '.join(emails)
+            self.fields['selected_toebs'].queryset = toebs    
+
+
+        self.helper = FormHelper(self)
+        
+        self.helper.layout = Layout(
+            Fieldset(
+                "TOEB-Benachrichtigung",
+                Row(
+                        Field("message"),
+                    ),
+                Row(
+                        Field("selected_toebs"),
+                    ),
+            ),
+            Submit("submit", "Versenden"),
+        )
+
+    class Meta:
+        model = BPlanBeteiligungToebNotification
+        fields = ["message", "selected_toebs",]
+
+
+class FPlanBeteiligungToebNotificationCreateForm(BPlanBeteiligungToebNotificationCreateForm):
+
+    class Meta:
+        model = FPlanBeteiligungToebNotification
+        fields = ["message", "selected_toebs",]
 
 
 class ToebUnitCreateForm(ModelForm):

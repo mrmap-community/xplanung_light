@@ -20,7 +20,7 @@ class XPlanRelationsCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateVie
         # check ob Nutzer admin einer der Gemeinden des BPlans ist
         if self.request.user.is_superuser == False:
             for gemeinde in plan.gemeinde.all():
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:                        
                          context[self.reference_model_name_lower] = plan
                          return context
@@ -123,7 +123,7 @@ class XPlanRelationsUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, UpdateVie
                 # TODO alter to fplan
                 gemeinden = object.fplan.gemeinde.all()
             for gemeinde in gemeinden:
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:                        
                         return object
             raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
@@ -162,7 +162,7 @@ class XPlanRelationsDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, DeleteVie
                 gemeinden = object.bplan.gemeinde.all()
             for gemeinde in gemeinden:
                 user_is_admin = False
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
                         user_is_admin = True 
                 user_orga_admin.append(user_is_admin)

@@ -175,7 +175,7 @@ class AdministrativeOrganization(GenericMetadata, AbstractOrganization):
     ]
     # Übergang zu etwas umfangreicherem django-organization model - mit slugs ... - damit wir auch Historisieren können - nur beim initialen Import müssen die slugs jetzt generiert werden!
     # Dazu muss das Import-script angepasst werden! - slugs müssen unique sein, daher sinnvoll Namen der Orga in Kombination mit AGS für Gebietskörperschaften
-    slug = models.SlugField(unique=True, blank=True)
+    slug = models.SlugField(unique=True, blank=True, default=uuid.uuid4)
     ls = models.CharField(max_length=2, verbose_name='Landesschlüssel', help_text='Eindeutiger zweistelliger Schlüssel für das Bundesland - RLP: 07', default='07')
     ks = models.CharField(max_length=3, verbose_name='Kreisschlüssel', help_text='Eindeutiger dreistelliger Schlüssel für den Landkreis', default='000')
     vs = models.CharField(blank=True, null=True, max_length=2, verbose_name='Gemeindeverbandsschlüssel', help_text='Eindeutiger zweistelliger Schlüssel für den Gemeindeverband', default='00')
@@ -911,7 +911,7 @@ class BPlanBeteiligung(XPlanBeteiligung):
 
     bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="beteiligungen")
     # Nur benötigt bei Trägerbeteiligung
-    assigned_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Zugewiesene TOEBs", help_text="Zugewiesene TOEBs")
+    assigned_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Zugewiesene TOEBs", help_text="Zugewiesene TOEBs", related_name="bplan_beteiligungen")
     history = HistoricalRecords(m2m_fields=[assigned_toebs])
 
 
@@ -919,8 +919,33 @@ class FPlanBeteiligung(XPlanBeteiligung):
 
     fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE, verbose_name="FPlan", help_text="FPlan", related_name="beteiligungen")
     # Nur benötigt bei Trägerbeteiligung
-    assigned_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Zugewiesene TOEBs", help_text="Zugewiesene TOEBs")
+    assigned_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Zugewiesene TOEBs", help_text="Zugewiesene TOEBs", related_name="fplan_beteiligungen")
     history = HistoricalRecords(m2m_fields=[assigned_toebs])
+
+"""
+Hier kommen die Modelle für die Benachrichtigungen zu den Beteiligungsverfahren
+"""
+
+class XPlanBeteiligungToebNotification(GenericMetadata):
+    start = models.DateTimeField(null=False, blank=False, verbose_name="Startzeit", help_text="Startzeit")
+    end = models.DateTimeField(null=True, blank=True, verbose_name="Abschlusszeit", help_text="Abschlusszeit")
+    message = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Bemerkung', help_text='Zusätzlicher Hinweis für Benachrichtigungsmail')
+    protocol = models.JSONField(blank=True, null=True, verbose_name='Protokoll', help_text='Protokoll im json-Format')
+    class Meta:
+        abstract = True
+
+
+class BPlanBeteiligungToebNotification(XPlanBeteiligungToebNotification):
+    bplanbeteiligung = HistoricForeignKey(BPlanBeteiligung, blank=False, null=False, on_delete=models.CASCADE, verbose_name="BPlan-Beteiligung", help_text="BPlan-Beteiligung", related_name="bplan_beteiligung_notifications")
+    selected_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Ausgewählte TOEBs", help_text="Ausgewählte TOEBs")
+    history = HistoricalRecords(m2m_fields=[selected_toebs])
+    
+
+class FPlanBeteiligungToebNotification(XPlanBeteiligungToebNotification):
+    fplanbeteiligung = HistoricForeignKey(FPlanBeteiligung, blank=False, null=False, on_delete=models.CASCADE, verbose_name="FPlan-Beteiligung", help_text="FPlan-Beteiligung", related_name="fplan_beteiligung_notifications")
+    selected_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Ausgewählte TOEBs", help_text="Ausgewählte TOEBs")
+    history = HistoricalRecords(m2m_fields=[selected_toebs])
+
 
 """
 Die folgenden Klassen dienen der Abbildung eines Beteiligungsprozesses - zumindest soll die Möglichkeit geschaffen werden,

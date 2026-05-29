@@ -210,8 +210,8 @@ class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
         beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), gemeinden=organization_json_aggregation(plantyp='fplan'))
 
         if not self.request.user.is_superuser and not self.request.user.is_anonymous:
-            beteiligungen_bplaene = beteiligungen_bplaene.filter(bplan__gemeinde__organization_users__user=self.request.user, bplan__gemeinde__organization_users__is_admin=True)
-            beteiligungen_fplaene = beteiligungen_fplaene.filter(fplan__gemeinde__organization_users__user=self.request.user, fplan__gemeinde__organization_users__is_admin=True)
+            beteiligungen_bplaene = beteiligungen_bplaene.filter(bplan__gemeinde__admin_orga_users__user=self.request.user, bplan__gemeinde__admin_orga_users__is_admin=True)
+            beteiligungen_fplaene = beteiligungen_fplaene.filter(fplan__gemeinde__admin_orga_users__user=self.request.user, fplan__gemeinde__admin_orga_users__is_admin=True)
         # Info:
         # union(), intersection(), and difference() return model instances of the type of the first QuerySet even if the arguments are QuerySets of other models. Passing different models works as long as the SELECT list is the same in all QuerySets (at least the types, the names don’t matter as long as the types in the same order).   
         # https://pythonguides.com/union-operation-on-models-django/
@@ -956,7 +956,7 @@ class BeteiligungPdfView(DetailView):
         # check ob Nutzer admin einer der Gemeinden des BPlans ist
         if self.request.user.is_superuser == False:
             for gemeinde in plan.gemeinde.all():
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:   
                         # Zugriff wird erteilt
                         if self.plantyp == 'bplan':                    
@@ -997,7 +997,7 @@ class BeteiligungPdfView(DetailView):
         access_allowed = False
         if self.request.user.is_superuser == False:
             for gemeinde in self.plan.gemeinde.all():
-                for user in gemeinde.organization_users.all():
+                for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:   
                         access_allowed = True
         else:

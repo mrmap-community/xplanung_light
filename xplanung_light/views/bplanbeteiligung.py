@@ -31,7 +31,7 @@ class BPlanBeteiligungCreateView(IncompleteSelectResponseMixin, FormViewMixin, X
     def get_form(self, form_class=None):
 
         form = super().get_form(form_class)
-        allowed_orgas = AdministrativeOrganization.objects.filter(organization_users__user=self.request.user, organization_users__is_admin=True)
+        allowed_orgas = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True)
         form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
             theme_display=Case(
                 *[
@@ -121,7 +121,7 @@ class BPlanBeteiligungUpdateView(IncompleteSelectResponseMixin, FormViewMixin, X
     def get_form(self, form_class=None):
 
         form = super().get_form(form_class)
-        allowed_orgas = AdministrativeOrganization.objects.filter(organization_users__user=self.request.user, organization_users__is_admin=True)
+        allowed_orgas = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True)
         form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
             theme_display=Case(
                 *[

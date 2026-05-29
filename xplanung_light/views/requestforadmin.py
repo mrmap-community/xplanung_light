@@ -38,7 +38,7 @@ class RequestForOrganizationAdminCreateView(ExtentUserOrgaInfo, LoginRequiredMix
             form.fields['organizations'].queryset = form.fields['organizations'].queryset.only("pk", "name", "type", "name_part")
         else:
             """
-            Wir excluden hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *organization_users* und auf die Eigenschaft *is_admin*,
+            Wir excluden hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *admin_orga_users* und auf die Eigenschaft *is_admin*,
             da der Nutzer dann ja schon die admin Rolle hat.
             """
             #pending_requests = RequestForOrganizationAdmin.objects.filter(owned_by_user=self.request.user)
@@ -46,7 +46,7 @@ class RequestForOrganizationAdminCreateView(ExtentUserOrgaInfo, LoginRequiredMix
             #pending_requested_orgas = pending_requests.organizations.all()
 
             pending_requested_orgas = AdministrativeOrganization.objects.filter(pending_admin_requests__owned_by_user=self.request.user).distinct()
-            form.fields['organizations'].queryset = form.fields['organizations'].queryset.exclude(organization_users__user=self.request.user, organization_users__is_admin=True).exclude(id__in = pending_requested_orgas).only("pk", "name", "type", "name_part")
+            form.fields['organizations'].queryset = form.fields['organizations'].queryset.exclude(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).exclude(id__in = pending_requested_orgas).only("pk", "name", "type", "name_part")
         return form
     
     def form_valid(self, form):
