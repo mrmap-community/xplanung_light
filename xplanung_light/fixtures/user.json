@@ -1,0 +1,38 @@
+[
+{
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+        "password": "pbkdf2_sha256$600000$RDQH0EDD4gYA2cfsySIUwJ$7sZs/ILLNo683QmY/+y+usQWbyoULXKYmHz9g6NXhow=",
+        "last_login": "2026-05-28T12:11:50.748Z",
+        "is_superuser": true,
+        "username": "admin",
+        "first_name": "",
+        "last_name": "",
+        "email": "test@example.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2025-09-08T10:44:54.741Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 7,
+    "fields": {
+        "password": "pbkdf2_sha256$600000$RDQH0EDD4gYA2cfsySIUwJ$7sZs/ILLNo683QmY/+y+usQWbyoULXKYmHz9g6NXhow=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "admin_stadt_neustadt",
+        "first_name": "",
+        "last_name": "",
+        "email": "admin_plan_neustadt@example.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2026-06-03T09:44:23Z",
+        "groups": [],
+        "user_permissions": []
+    }
+}
+]

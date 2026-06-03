@@ -1,0 +1,14 @@
+[
+{
+    "model": "xplanung_light.adminorgauser",
+    "pk": 34,
+    "fields": {
+        "created": "2026-06-03T09:45:56.280Z",
+        "modified": "2026-06-03T09:45:56.280Z",
+        "is_admin": true,
+        "is_toeb_reporter": false,
+        "organization": 1531,
+        "user": 7
+    }
+}
+]

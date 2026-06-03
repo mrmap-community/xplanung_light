@@ -48,7 +48,7 @@ class XPlanung():
                     print("helper/xplanung.py init: read gml from zip archive")
                     self.xml_string = file_file.read().decode('UTF-8')
         else:
-            print("helper/xplanung.py init: read directly from gml")
+            #print("helper/xplanung.py init: read directly from gml")
             self.xml_string = self.context_file_bytesio.read().decode('UTF-8')
 
     def get_orgas(self):
