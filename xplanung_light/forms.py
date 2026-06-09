@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization, Uvp, FPlanUvp
 from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung, FPlanBeteiligungBeitrag, FPlanBeteiligungBeitragAnhang
-from xplanung_light.models import ContactOrganization, RequestForOrganizationAdmin, ToebUnit, AdminOrgaUser
+from xplanung_light.models import ContactOrganization, RequestForOrganizationAdmin, ToebUnit, AdminOrgaUser, RequestForRole
 from xplanung_light.models import BPlanBeteiligungToebNotification, FPlanBeteiligungToebNotification
 from xplanung_light.models import BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang
 from xplanung_light.models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme
@@ -2176,6 +2176,75 @@ class RequestForOrganizationAdminConfirmForm(ModelForm):
             'editing_note': forms.CharField(widget=forms.Textarea),
         }
         """
+
+class RequestForRoleCreateForm(ModelForm):
+    """
+    for crispy-forms
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.fields['organizations'].widget = GemeindeSelect3()
+        
+        self.helper.layout = Layout(
+            Fieldset(
+                'Antrag Rollenzuweisung',
+                Row(
+                    Column(
+                        Field("role"),
+                    ),
+                    Column(
+                        Field("organizations"),
+                    ),
+                ),
+            ), 
+            Submit("submit", "Antrag stellen")
+        )
+
+    class Meta:
+        model = RequestForRole
+        fields = ["role", "organizations"]
+
+
+class RequestForRoleRefuseForm(ModelForm):
+    """
+    ModelForm für das Zurückweisen eines Antrags auf Zuweisung einer Rolle
+    """
+    default_renderer = FormRenderer(
+        field_css_classes={
+            'editing_note': 'mb-2 col-4',
+        },
+    )
+
+    class Meta:
+        model = RequestForRole
+        fields = ["editing_note"]
+        """
+        widgets = {
+            'editing_note': forms.CharField(widget=forms.Textarea),
+        }
+        """
+
+
+class RequestForRoleConfirmForm(ModelForm):
+    """
+    ModelForm für das Genehmigen eines Antrags auf Zuweisung einer Rolle
+    """
+    default_renderer = FormRenderer(
+        field_css_classes={
+            'editing_note': 'mb-2 col-4',
+        },
+    )
+
+    class Meta:
+        model = RequestForRole
+        fields = ["editing_note"]
+        """
+        widgets = {
+            'editing_note': forms.CharField(widget=forms.Textarea),
+        }
+        """
+
 
 from formset.richtext.controls import DialogControl
 from formset.richtext.dialogs import SimpleLinkDialogForm

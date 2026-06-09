@@ -8,12 +8,15 @@ from xplanung_light.models import AdministrativeOrganization, BPlanSpezExterneRe
 from xplanung_light.models import BPlanBeteiligung, BPlanBeteiligungBeitragAnhang, BPlanBeteiligungBeitrag
 from xplanung_light.models import FPlanBeteiligung, FPlanBeteiligungBeitragAnhang, FPlanBeteiligungBeitrag
 from xplanung_light.models import RequestForOrganizationAdmin, AdminOrgaUser, ConsentOption
+from xplanung_light.models import RequestForRole
 import uuid
 import xml.etree.ElementTree as ET
 from django.urls import reverse
 from xplanung_light.helper.xplanung import XPlanung
 from django.contrib import messages
-from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanImportArchivForm, FPlanImportForm, FPlanImportArchivForm, RequestForOrganizationAdminRefuseForm, RequestForOrganizationAdminConfirmForm
+from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanImportArchivForm, FPlanImportForm, FPlanImportArchivForm
+from xplanung_light.forms import RequestForOrganizationAdminRefuseForm, RequestForOrganizationAdminConfirmForm
+from xplanung_light.forms import RequestForRoleRefuseForm, RequestForRoleConfirmForm
 
 from xplanung_light.filter import BPlanIdFilter, FPlanIdFilter
 from django.http import HttpResponse
@@ -1333,3 +1336,97 @@ class RequestForAdminRefuse(FormView):
         # TODO
         return super().form_valid(form)
     
+
+class RequestForRoleConfirm(FormView):
+    form_class = RequestForRoleConfirmForm
+    template_name = "xplanung_light/requestforrole_form_confirm.html"
+    success_url = reverse_lazy("requestforrole-admin-list")
+
+    def get_context_data(self, **kwargs):
+        pk = self.kwargs['pk']
+        context = super().get_context_data(**kwargs)
+        context['anfrage'] = RequestForRole.objects.get(id=pk)
+        return context
+
+    def form_valid(self, form):
+        # Auslesen des pk zur Aktualisierung des Antragrecords
+        request = RequestForRole.objects.get(id=self.kwargs['pk'])
+        organizations = []
+        # Administratorrollen anlegen
+        for organization in request.organizations.all():
+            #print(organization)
+            # Füge Rolle für Nutzer hinzu
+            # get or create !
+            try:
+                obj = AdminOrgaUser.objects.get(user=request.owned_by_user, organization=organization)
+            except AdminOrgaUser.DoesNotExist:
+                obj = AdminOrgaUser()
+                obj.user = request.owned_by_user
+                obj.organization = organization
+            if request.role == "OA":
+                obj.is_admin = True
+            if request.role == "TR":
+                obj.is_toeb_reporter = True
+            obj.save()
+        organizations.append(organization)
+        request.editing_note = form.cleaned_data['editing_note']
+        request.delete_reason = 'c'
+        request.save()
+        request.delete()
+        messages.add_message(self.request, messages.SUCCESS, "Antrag " + str(self.kwargs['pk']) + " wurde bestätigt!")
+        # Senden einer EMail mit Benachrichtung an Antragsteller
+        # Senden einer EMail mit Benachrichtung an Antragsteller
+        subject = str("XPlanung-light: Ihr Antrag auf Zuweisung der " + request.get_role_display() + "-Rolle vom " + datetime.date.today().strftime('%Y-%m-%d'))
+        html_content = render_to_string("xplanung_light/email/role_antrag_confirm.html", context={"organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+        text_content = render_to_string("xplanung_light/email/role_antrag_confirm.txt", context={"organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
+            to=[str(request.owned_by_user.email),],
+            #bcc=[str(farmshop.contact_email),],
+            reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
+        )
+        #email.content_subtype = "text"
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=True)
+        # TODO
+        return super().form_valid(form)
+
+
+class RequestForRoleRefuse(FormView):
+    form_class = RequestForRoleRefuseForm
+    template_name = "xplanung_light/requestforrole_form_refuse.html"
+    success_url = reverse_lazy("requestforrole-admin-list")
+
+    def get_context_data(self, **kwargs):
+        pk = self.kwargs['pk']
+        context = super().get_context_data(**kwargs)
+        context['anfrage'] = RequestForRole.objects.get(id=pk)
+        return context
+
+    def form_valid(self, form):
+        # Auslesen des pk zur Aktualisierung des Antragrecords
+        request = RequestForRole.objects.get(id=self.kwargs['pk'])
+        request.editing_note = form.cleaned_data['editing_note']
+        request.delete_reason = 'r'
+        request.save()
+        request.delete()
+        messages.add_message(self.request, messages.SUCCESS, "Antrag " + str(self.kwargs['pk']) + " wurde zurückgewiesen!")
+        # Senden einer EMail mit Benachrichtung an Antragsteller
+        subject = str("XPlanung-light: Ihr Antrag auf Zuweisung der " + request.get_role_display() + "-Rolle vom " + datetime.date.today().strftime('%Y-%m-%d'))
+        html_content = render_to_string("xplanung_light/email/role_antrag_refuse.html", context={"editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+        text_content = render_to_string("xplanung_light/email/role_antrag_refuse.txt", context={"editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
+            to=[str(request.owned_by_user.email),],
+            #bcc=[str(farmshop.contact_email),],
+            reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
+        )
+        #email.content_subtype = "text"
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=True)
+        # TODO
+        return super().form_valid(form)

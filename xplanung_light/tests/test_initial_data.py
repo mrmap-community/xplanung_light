@@ -6,6 +6,7 @@ from xplanung_light.models import BPlan
 from django.urls import reverse
 from django.db.models import Subquery, OuterRef, Q
 import io
+import xml.etree.ElementTree as ET
 from django.http import FileResponse, HttpResponse
 # https://medium.com/an-engineer-a-reader-a-guy/django-test-fixture-setup-setupclass-and-setuptestdata-72b6d944cdef
 
@@ -70,12 +71,36 @@ class InitialDataIntegrity(TestCase):
         
     def test_if_wms_capabilities_is_created(self):
         """
-        Test ob status = 200 für WMS-Capabilities über mapserver
+        Test ob status = 200 für WMS-Capabilities über mapserver. Außerdem wird die Zahl der Layer für die Organisation geprüft - soll 8.
         """
         client = Client()
         response = client.get(reverse('ows', args=[1531]) + "?REQUEST=GetCapabilities&VERSION=1.3.0&SERVICE=WMS")
         #print(response.content)
-        self.assertEqual(response.status_code, 200)
+        # Parse Capabilities und extrahiere Layer
+        ET.register_namespace("wms", "http://www.opengis.net/wms")
+        root = ET.fromstring(response.content.decode('utf-8'))
+        # check for version
+        """
+        <WMS_Capabilities version="1.3.0"
+            xmlns="http://www.opengis.net/wms"
+            xmlns:sld="http://www.opengis.net/sld"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xmlns:ms="http://mapserver.gis.umn.edu/mapserver"
+            xsi:schemaLocation="http://www.opengis.net/wms http://schemas.opengis.net/wms/1.3.0/capabilities_1_3_0.xsd  http://www.opengis.net/sld http://schemas.opengis.net/sld/1.1.0/sld_capabilities.xsd  http://mapserver.gis.umn.edu/mapserver https://xplanung.geoportal.rlp.de/organization/1393/ows/?service=WMS&amp;version=1.3.0&amp;request=GetSchemaExtension">
+
+        """
+        ns = {
+            'wms': 'http://www.opengis.net/wms',
+            'sld': 'http://www.opengis.net/sld',
+            'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+            #'xlink': 'http://www.w3.org/1999/xlink',
+            #'wfs': 'http://www.opengis.net/wfs',
+            'ms': 'http://mapserver.gis.umn.edu/mapserver',
+        }
+        # Auslesen der Layer
+        layer = root.findall(".//wms:Layer", ns)
+        # Test ob 8 Layer vorhanden sind - 1 x FPlan, 2 x BPlan, jeweils ein Gruppenlayer, jeweils ein Umringlayer und der root-Layer
+        self.assertEqual(len(layer), 8)
 
     """
     def test_false_is_false(self):

@@ -84,9 +84,9 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
                   {% if user.is_superuser %}
-                      <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'requestforadmin-admin-list' %}">Admin-Berechtigung</a></li>
+                      <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'requestforrole-admin-list' %}">Rollenfreigabe</a></li>
                   {% else %}
-                      <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'requestforadmin-list' %}">Admin-Berechtigung</a></li>
+                      <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'requestforrole-list' %}">Rollenfreigabe</a></li>
                   {% endif %}
                   <!-- <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'contact-list' %}">Meine Kontaktstellen</a></li>-->
                   <!-- <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'organization-publishing-list' %}">Übersicht Schnittstellen</a></li> -->

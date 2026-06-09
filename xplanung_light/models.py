@@ -1329,6 +1329,31 @@ class RequestForOrganizationAdmin(models.Model):
     editing_note = models.TextField(null=True, verbose_name="Begründung", help_text="Begründung für die Ablehnung des Antrags bzw. Hinweise zur Freigabe - wie wurde Antragsteller kontaktiert/geprüft. Bei Ablehnung bekommt der Antragsteller die Begründung als Mail zugestellt!")
 
 
+# Generischer Ansatz
+class RequestForRole(models.Model):
+
+    CONFIRMED = 'c'
+    REFUSED = 'r'
+    DELETE_REASON_CHOICES = [
+        (CONFIRMED,  "Bestätigt"),
+        (REFUSED, "Zurückgewiesen"),
+    ]
+
+    TOEBREPORTER = 'TR'
+    ORGADMIN = 'OA'
+    ROLE_CHOICES = [
+        (TOEBREPORTER, "TOEB-Reporter"),
+        (ORGADMIN, "Organisationsadministrator"),
+    ]
+
+    owned_by_user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
+    organizations = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gebietskörperschaft(en)", related_name='pending_role_requests')
+    history = HistoricalRecords(m2m_fields=[organizations])
+    delete_reason = models.CharField(null=True, blank=True, max_length=10, choices=DELETE_REASON_CHOICES, verbose_name='Grund für die Löschung', help_text="Grund für die Löschung des Antrags")
+    role = models.CharField(max_length=2, choices=ROLE_CHOICES, default='OA', verbose_name='Rolle', help_text="Rolle des Nutzers in Bezug auf die Organisation")
+    editing_note = models.TextField(null=True, verbose_name="Begründung", help_text="Begründung für die Ablehnung des Antrags bzw. Hinweise zur Freigabe - wie wurde Antragsteller kontaktiert/geprüft. Bei Ablehnung bekommt der Antragsteller die Begründung als Mail zugestellt!")
+
+
 class ConsentOption(models.Model):
     """
     Klasse für das Management der Nutzungsbedingungen. Es können mehrere verschiedene Nutzungsbedingungen gleichzeitig gelten.

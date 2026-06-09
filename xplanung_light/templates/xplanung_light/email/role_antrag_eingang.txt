@@ -1,0 +1,5 @@
+Es ist ein Antrag auf Rollenzuweisung eingegangen.
+
+Bitte bearbeiten sie den Antrag zeitnah:
+
+{{ antragsliste_link }}
