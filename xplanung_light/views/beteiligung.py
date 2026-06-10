@@ -893,6 +893,8 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
             for stellungnahme in stellungnahmen:
                 bezug_beitrag_mixed = TipTapToReportLab().convert_to_elements(TipTapNode.model_validate(stellungnahme.bezug_beitrag))
                 stellungnahme_mixed = TipTapToReportLab().convert_to_elements(TipTapNode.model_validate(stellungnahme.stellungnahme))
+                if beteiligung_beitrag.email == None:
+                    beteiligung_beitrag.email = "Email nicht erfasst oder nicht interpretierbar"
                 if bezug_beitrag_mixed == None:
                     bezug_beitrag_mixed = "Bezug nicht erfasst oder nicht lesbar"
                 if stellungnahme_mixed == None:
