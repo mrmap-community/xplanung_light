@@ -7,7 +7,7 @@ from django.contrib.auth import login
 from xplanung_light.models import AdministrativeOrganization, BPlanSpezExterneReferenz, BPlan, FPlan, FPlanSpezExterneReferenz
 from xplanung_light.models import BPlanBeteiligung, BPlanBeteiligungBeitragAnhang, BPlanBeteiligungBeitrag
 from xplanung_light.models import FPlanBeteiligung, FPlanBeteiligungBeitragAnhang, FPlanBeteiligungBeitrag
-from xplanung_light.models import RequestForOrganizationAdmin, AdminOrgaUser, ConsentOption
+from xplanung_light.models import AdminOrgaUser, ConsentOption
 from xplanung_light.models import RequestForRole
 import uuid
 import xml.etree.ElementTree as ET
@@ -15,7 +15,6 @@ from django.urls import reverse
 from xplanung_light.helper.xplanung import XPlanung
 from django.contrib import messages
 from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanImportArchivForm, FPlanImportForm, FPlanImportArchivForm
-from xplanung_light.forms import RequestForOrganizationAdminRefuseForm, RequestForOrganizationAdminConfirmForm
 from xplanung_light.forms import RequestForRoleRefuseForm, RequestForRoleConfirmForm
 
 from xplanung_light.filter import BPlanIdFilter, FPlanIdFilter
@@ -1248,94 +1247,6 @@ def beitrag_detail(request, **kwargs):
         context['plan'] = beitrag.fplan_beteiligung.fplan
     return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
 
-
-class RequestForAdminConfirm(FormView):
-    form_class = RequestForOrganizationAdminConfirmForm
-    template_name = "xplanung_light/requestforadmin_form_confirm.html"
-    success_url = reverse_lazy("requestforadmin-admin-list")
-
-    def get_context_data(self, **kwargs):
-        pk = self.kwargs['pk']
-        context = super().get_context_data(**kwargs)
-        context['anfrage'] = RequestForOrganizationAdmin.objects.get(id=pk)
-        return context
-
-    def form_valid(self, form):
-        # Auslesen des pk zur Aktualisierung des Antragrecords
-        request = RequestForOrganizationAdmin.objects.get(id=self.kwargs['pk'])
-        organizations = []
-        # Administratorrollen anlegen
-        for organization in request.organizations.all():
-            #print(organization)
-            # Füge Nutzer als Admin zur Organisation hinzu
-            new_admin = AdminOrgaUser()
-            new_admin.user = request.owned_by_user
-            new_admin.organization = organization
-            new_admin.is_admin = True
-            new_admin.save()
-            organizations.append(organization)
-        request.editing_note = form.cleaned_data['editing_note']
-        request.delete_reason = 'c'
-        request.save()
-        request.delete()
-        messages.add_message(self.request, messages.SUCCESS, "Antrag " + str(self.kwargs['pk']) + " wurde bestätigt!")
-        # Senden einer EMail mit Benachrichtung an Antragsteller
-        # Senden einer EMail mit Benachrichtung an Antragsteller
-        subject = str("XPlanung-light: Ihr Antrag auf Organisationsadmin vom " + datetime.date.today().strftime('%Y-%m-%d'))
-        html_content = render_to_string("xplanung_light/email/admin_antrag_confirm.html", context={"organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
-        text_content = render_to_string("xplanung_light/email/admin_antrag_confirm.txt", context={"organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=text_content,
-            from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
-            to=[str(request.owned_by_user.email),],
-            #bcc=[str(farmshop.contact_email),],
-            reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
-        )
-        #email.content_subtype = "text"
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=True)
-        # TODO
-        return super().form_valid(form)
-
-
-class RequestForAdminRefuse(FormView):
-    form_class = RequestForOrganizationAdminRefuseForm
-    template_name = "xplanung_light/requestforadmin_form_refuse.html"
-    success_url = reverse_lazy("requestforadmin-admin-list")
-
-    def get_context_data(self, **kwargs):
-        pk = self.kwargs['pk']
-        context = super().get_context_data(**kwargs)
-        context['anfrage'] = RequestForOrganizationAdmin.objects.get(id=pk)
-        return context
-
-    def form_valid(self, form):
-        # Auslesen des pk zur Aktualisierung des Antragrecords
-        request = RequestForOrganizationAdmin.objects.get(id=self.kwargs['pk'])
-        request.editing_note = form.cleaned_data['editing_note']
-        request.delete_reason = 'r'
-        request.save()
-        request.delete()
-        messages.add_message(self.request, messages.SUCCESS, "Antrag " + str(self.kwargs['pk']) + " wurde zurückgewiesen!")
-        # Senden einer EMail mit Benachrichtung an Antragsteller
-        subject = str("XPlanung-light: Ihr Antrag auf Organisationsadmin vom " + datetime.date.today().strftime('%Y-%m-%d'))
-        html_content = render_to_string("xplanung_light/email/admin_antrag_refuse.html", context={"editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
-        text_content = render_to_string("xplanung_light/email/admin_antrag_refuse.txt", context={"editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=text_content,
-            from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
-            to=[str(request.owned_by_user.email),],
-            #bcc=[str(farmshop.contact_email),],
-            reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
-        )
-        #email.content_subtype = "text"
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=True)
-        # TODO
-        return super().form_valid(form)
-    
 
 class RequestForRoleConfirm(FormView):
     form_class = RequestForRoleConfirmForm

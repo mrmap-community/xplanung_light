@@ -6,7 +6,6 @@ from xplanung_light.views.bplan import BPlanPublicListView
 from xplanung_light.views.fplan import FPlanPublicListView
 from xplanung_light.views.fplan import FPlanCreateView, FPlanUpdateView, FPlanDeleteView, FPlanListView, FPlanDetailView, FPlanListViewHtml
 from xplanung_light.views.beteiligung import BeteiligungenListView, BeteiligungenOrgaListView, BeteiligungPdfView, ToebUnitBeteiligungenListView
-from xplanung_light.views.requestforadmin import RequestForOrganizationAdminCreateView, RequestForOrganizationAdminListView, RequestForOrganizationAdminDeleteView, RequestForOrganizationAdminAdminListView
 from xplanung_light.views.requestforrole import RequestForRoleCreateView, RequestForRoleListView, RequestForRoleDeleteView, RequestForRoleAdminListView
 from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragCreateView, BeteiligungBeitragListView, BeteiligungBeitragDeleteView, BeteiligungBeitragDetailView
 from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragGenericCreateView, BeteiligungBeitragGenericUpdateView, BeteiligungBeitragToebCreateView, BeteiligungBeitragToebUpdateView, BeteiligungBeitragToebDeleteView
@@ -184,18 +183,7 @@ urlpatterns = [
     path("toebunitpublic/", ToebUnitPublicListView.as_view(), name="toebunitpublic-list"),
     # TOEB Unit Beteiligungen
     path("toeb/beteiligungen/", ToebUnitBeteiligungenListView.as_view(), name="toebbeteiligungen-list"),
-    # 
-    # Anträge auf Admin-Berechtigung
-    #path("requestforadmin/create/", RequestForOrganizationAdminCreateView.as_view(), name="requestforadmin-create"),
-    #path("requestforadmin/", RequestForOrganizationAdminListView.as_view(), name="requestforadmin-list"),
-    # url für den Zentraladministrator - der darf Anträge bestätigen und zurückweisen
-    #path("requestforadmin_admin/", RequestForOrganizationAdminAdminListView.as_view(), name="requestforadmin-admin-list"),
-    #path("requestforadmin/<int:pk>/delete/", RequestForOrganizationAdminDeleteView.as_view(), name="requestforadmin-delete"),
-    # RequestForAdminConfirm
-    #path("requestforadmin/<int:pk>/confirm/", views.RequestForAdminConfirm.as_view(), name="requestforadmin-confirm"),
-    # RequestForAdminRefuse
-    #path("requestforadmin/<int:pk>/refuse/", views.RequestForAdminRefuse.as_view(), name="requestforadmin-refuse"),
-
+    # Berechtigungsanfragen
     path("requestforrole/create/", RequestForRoleCreateView.as_view(), name="requestforrole-create"),
     path("requestforrole/", RequestForRoleListView.as_view(), name="requestforrole-list"),
     # url für den Zentraladministrator - der darf Anträge bestätigen und zurückweisen

@@ -1,5 +1,0 @@
-Es ist ein Antrag auf Freigabe der Organisationsadminrolle eingegangen.
-
-Bitte bearbeiten sie den Antrag zeitnah:
-
-{{ antragsliste_link }}

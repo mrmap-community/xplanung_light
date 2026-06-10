@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django_tables2.utils import A
 from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp, ToebUnit
-from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz, BPlanBeteiligungBeitrag, FPlanBeteiligungBeitrag,  RequestForOrganizationAdmin, RequestForRole
+from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz, BPlanBeteiligungBeitrag, FPlanBeteiligungBeitrag, RequestForRole
 from .models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme 
 from .models import ConsentOption, BPlanBeteiligungToebNotification, FPlanBeteiligungToebNotification
 from django.urls import reverse
@@ -388,40 +388,6 @@ class FPlanBeitragStellungnahmeTable(BPlanBeitragStellungnahmeTable):
         model = FPlanBeitragStellungnahme
         #template_name = "django_tables2/bootstrap5.html"
         fields = ("id", "last_changed", "bezug_beitrag", "stellungnahme", "beruecksichtigung", "edit", "delete")
-
-
-class RequestForOrganizationAdminTable(tables.Table):
-
-    delete = tables.LinkColumn('requestforadmin-delete', verbose_name='', text='Löschen', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    #owned_by_user = tables.Column(verbose_name="Antragsteller")
-
-    #def render_owned_by_user(self, value, record):
-    #    return format_html('Nutzername: ' + record.owned_by_user.username + '<br>' + 'EMail: ' + record.owned_by_user.email + '<br>' + 'Telefon: ')
-
-    class Meta:
-        model = RequestForOrganizationAdmin
-        template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "last_changed", "organizations", "delete")
-
-
-class RequestForOrganizationAdminAdminTable(tables.Table):
-
-    delete = tables.LinkColumn('requestforadmin-delete', verbose_name='', text='Löschen', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    confirm = tables.LinkColumn('requestforadmin-confirm', verbose_name='', text='Bestätigen', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    refuse = tables.LinkColumn('requestforadmin-refuse', verbose_name='', text='Zurückweisen', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    owned_by_user = tables.Column(verbose_name="Antragsteller")
-
-    def render_owned_by_user(self, value, record):
-        return format_html('Nutzername: ' + record.owned_by_user.username + '<br>' + 'EMail: ' + record.owned_by_user.email + '<br>' + 'Telefon: ')
-
-    class Meta:
-        model = RequestForOrganizationAdmin
-        template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "last_changed", "owned_by_user", "organizations", "confirm", "refuse", "delete")
 
 
 class RequestForRoleTable(tables.Table):

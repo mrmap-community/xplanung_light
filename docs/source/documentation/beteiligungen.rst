@@ -11,7 +11,7 @@ XPlanung sieht hier aktuell nur zwei verschiedene Typen vor, die in Form von Dat
 
 Da dies nicht ausreichend ist, um Beteiligungsverfahren abbilden zu können, nutzt XPlanung-light ein eigenes Datenmodell.
 
-.. image:: ../media/xplanung_light_bplan_schema.png
+.. image:: ../media/bplan_models_graph_1.png
 
 *****************************
 Beteiligungsverfahren anlegen
@@ -27,9 +27,9 @@ Liste der Beteiligungsverfahren
 
 .. image:: ../media/bplan_beteiligung_liste.png
 
-********************
-Online Stellungnahme
-********************
+*************************************
+Online Stellungnahme (Öffentlichkeit)
+*************************************
 
 Auf der Auskunftsseite der Gebietskörperschaft werden die aktuell laufenden Beteiligungsverfahren aufgelistet.
 Ist die Online-Stellungnahme aktiviert, kann bekommt der Nutzer dies angezeigt und ein Formular angeboten.
@@ -83,3 +83,32 @@ Report zum Beteiligungsverfahren
 Man kann einen PDF-Report für die Akten generieren lassen.
 
 .. image:: ../media/bplan_beteiligung_stellungnahmen_report.png
+
+****************
+TOEB-Beteiligung
+****************
+
+Neben der Online-Öffentlichkeitsbeteiligung lassen sich auch TOEB-Beteiligungen (Trägerbeteiligungen) abbilden. 
+
+Bei der Trägerbeteiligung entscheidet die jeweilige Gebietskörperschaft darüber, welche Institution beteiligt werden soll.
+In der Regel sind das Behörden, NGOs oder aber auch andere Gebietskörperschaften und ggf. sogar Vereine. Zum aktuellen Zeitpunkt 
+nutzen die meisten Kommunen Excel-Tabellen zur Pflege der zu beteiligenden Organisationen. Kontaktinformationen werden also **hochgradig
+redundant** verwaltet. Es gibt selten einheitliche Vorgaben wie beispielsweise in Hessen (`Anlage zum Erlass über TOEB-Beteiligung`_).
+
+Die verwendeten Listen haben i.d.R. einen Umfang von 40 - 120 Kontaktstellen und gliedern sich nach thematischen und räumlichen 
+Zuständigkeiten. Je nach Verfahren entscheidet der Träger darüber welche der Stellen angeschrieben werden. Die Benachrichtigung der Träger
+erfolgt in fast allen Fällen per E-Mail. 
+
+==================
+Modellierung TOEBs
+==================
+
+Die TOEBs sind, wie auch die Gebietskörperschaften Objekte der Klasse AdministrativeOrganization. Es gibt zusätzlich ein ToebUnit Modell, dass die jeweiligen
+Kontaktstellen abbildet. TOEB-Kontaktstellen haben sowohl eigene fachliche und räumliche Zuständigkeiten als auch eine eindeutige Zuordnung zu 
+einem fachlichen Thema. Eine TOEB-Kontaktstelle kann mehrere Sachbearbeiter haben. Die Sachbearbeiter sind Nutzer des Systems mit der
+Rolle **TOEB-Reporter**. Da sich die Rolle auf die **Organisation** TOEB bezieht, kann ein Sachbearbeiter Beiträge für verschiedene Kontaktstellen (sogar Organisationsübrgreifend)
+anlegen und verwalten. 
+
+... **WIP** ...
+
+.. _Anlage zum Erlass über TOEB-Beteiligung: https://bauleitplanung.hessen.de/sites/bauleitplanung.hessen.de/files/2022-06/verzeichnis_der_traeger_oeffentlicher_belange_hessen_0.pdf

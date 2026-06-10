@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User 
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization, Uvp, FPlanUvp
 from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung, FPlanBeteiligungBeitrag, FPlanBeteiligungBeitragAnhang
-from xplanung_light.models import ContactOrganization, RequestForOrganizationAdmin, ToebUnit, AdminOrgaUser, RequestForRole
+from xplanung_light.models import ContactOrganization, ToebUnit, AdminOrgaUser, RequestForRole
 from xplanung_light.models import BPlanBeteiligungToebNotification, FPlanBeteiligungToebNotification
 from xplanung_light.models import BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang
 from xplanung_light.models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme
@@ -2111,71 +2111,6 @@ class FPlanBeteiligungToebCollection(FormCollection):
     fplan_beteiligung = FPlanBeteiligungFormFormset()
     beitrag = FPlanBeteiligungBeitragToebCollection()
 
-
-class RequestForOrganizationAdminCreateForm(ModelForm):
-    """
-    for crispy-forms
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.helper = FormHelper(self)
-        self.fields['organizations'].widget = GemeindeSelect3()
-        
-        self.helper.layout = Layout(
-            Fieldset(
-                'Antrag auf Administrationsberechtigung für',
-                Row(
-                    Column(
-                        Field("organizations"),
-                    ),
-                ),
-            ), 
-            Submit("submit", "Antrag stellen")
-        )
-
-    class Meta:
-        model = RequestForOrganizationAdmin
-        fields = ["organizations"]
-
-
-class RequestForOrganizationAdminRefuseForm(ModelForm):
-    """
-    ModelForm für das Zurückweisen eines Antrags auf Organisationsadmin
-    """
-    default_renderer = FormRenderer(
-        field_css_classes={
-            'editing_note': 'mb-2 col-4',
-        },
-    )
-
-    class Meta:
-        model = RequestForOrganizationAdmin
-        fields = ["editing_note"]
-        """
-        widgets = {
-            'editing_note': forms.CharField(widget=forms.Textarea),
-        }
-        """
-
-
-class RequestForOrganizationAdminConfirmForm(ModelForm):
-    """
-    ModelForm für das Genehmigen eines Antrags auf Organisationsadmin
-    """
-    default_renderer = FormRenderer(
-        field_css_classes={
-            'editing_note': 'mb-2 col-4',
-        },
-    )
-
-    class Meta:
-        model = RequestForOrganizationAdmin
-        fields = ["editing_note"]
-        """
-        widgets = {
-            'editing_note': forms.CharField(widget=forms.Textarea),
-        }
-        """
 
 class RequestForRoleCreateForm(ModelForm):
     """
