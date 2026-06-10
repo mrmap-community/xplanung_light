@@ -103,11 +103,13 @@ erfolgt in fast allen Fällen per E-Mail.
 Modellierung TOEBs
 ==================
 
-Die TOEBs sind, wie auch die Gebietskörperschaften Objekte der Klasse AdministrativeOrganization. Es gibt zusätzlich ein ToebUnit Modell, dass die jeweiligen
+Die TOEBs sind - wie auch die Gebietskörperschaften - Objekte der Klasse AdministrativeOrganization. Es gibt zusätzlich ein ToebUnit Modell, dass die jeweiligen
 Kontaktstellen abbildet. TOEB-Kontaktstellen haben sowohl eigene fachliche und räumliche Zuständigkeiten als auch eine eindeutige Zuordnung zu 
 einem fachlichen Thema. Eine TOEB-Kontaktstelle kann mehrere Sachbearbeiter haben. Die Sachbearbeiter sind Nutzer des Systems mit der
-Rolle **TOEB-Reporter**. Da sich die Rolle auf die **Organisation** TOEB bezieht, kann ein Sachbearbeiter Beiträge für verschiedene Kontaktstellen (sogar Organisationsübrgreifend)
+Rolle **TOEB-Reporter**. Da sich die Rolle auf die **Organisation** TOEB bezieht, kann ein Sachbearbeiter Beiträge für verschiedene Kontaktstellen (sogar organisationsübergreifend)
 anlegen und verwalten. 
+
+.. image:: ../media/xplanung_light_roles.png
 
 ... **WIP** ...
 

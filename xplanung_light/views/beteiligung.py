@@ -819,6 +819,8 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         description_paragraph_style.alignment = 0
         description_paragraph_style.fontSize = 8
         for beteiligung_beitrag in beteiligung_beitraege:
+            #if not beteiligung_beitrag.email:
+            #    beteiligung_beitrag.email = "dummy@example.com"
             table_grid.append([beteiligung_beitrag.id, beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), Paragraph(beteiligung_beitrag.titel, description_paragraph_style), beteiligung_beitrag.email, beteiligung_beitrag.count_attachments])
         total_paragraph_style = copy.deepcopy(self.style['Normal'])
         total_paragraph_style.alignment = 2
@@ -891,6 +893,10 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
             for stellungnahme in stellungnahmen:
                 bezug_beitrag_mixed = TipTapToReportLab().convert_to_elements(TipTapNode.model_validate(stellungnahme.bezug_beitrag))
                 stellungnahme_mixed = TipTapToReportLab().convert_to_elements(TipTapNode.model_validate(stellungnahme.stellungnahme))
+                if bezug_beitrag_mixed == None:
+                    bezug_beitrag_mixed = "Bezug nicht erfasst oder nicht lesbar"
+                if stellungnahme_mixed == None:
+                    stellungnahme_mixed = "Text der Stellungnahme nicht erfasst oder nicht lesbar"
                 #table_grid.append([beteiligung_beitrag.id, beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), Paragraph(beteiligung_beitrag.email, description_paragraph_style), bezug_beitrag_mixed, stellungnahme_mixed, Paragraph(stellungnahme.beruecksichtigung, description_paragraph_style)])
                 table_grid.append([Paragraph(str(beteiligung_beitrag.id) + " - " + str(stellungnahme.id), description_paragraph_style), Paragraph(beteiligung_beitrag.email, description_paragraph_style), Paragraph(beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), description_paragraph_style), bezug_beitrag_mixed, stellungnahme_mixed, Paragraph(str(stellungnahme.beruecksichtigung).replace('[', '').replace(']', '').replace("'", ""), description_paragraph_style)])
         # Wechsel zu Querformat!
