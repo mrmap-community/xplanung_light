@@ -111,6 +111,42 @@ anlegen und verwalten.
 
 .. image:: ../media/xplanung_light_roles.png
 
-... **WIP** ...
+
+==========================
+Verwalten von TOEB-Stellen
+==========================
+
+Ein Nutzer, der die Administratorrolle für eine Organisation hat, kann eigene TOEB-Stellen verwalten. In der Liste der Sachbearbeiter 
+stehen Nutzer zur Auswahl, die die **TOEB-Reporter** Rolle haben. 
+
+.. image:: ../media/xplanung_light_toeb_units.png
+
+=======================================
+Trägerbeteiligung - Zuordnung der TOEBs
+=======================================
+
+Bei der Verwaltung von Trägerbeteiligungen können TOEBs selektiert und zugewiesen werden.
+
+.. image:: ../media/xplanung_light_beteiligung_toeb_zuweisen.png
+
+
+=====================
+Benachrichtigung TOEB
+=====================
+
+Über die Liste der durchgeführten Beteiligungsverfahren gibt es die Möglichkeit die zugewiesenen TOEBs automatisch per Mail zu 
+benachrichtigen. Die Benachrichtigung wird dokumentiert und ein Protokoll im json-Format abgespeichert.
+
+.. image:: ../media/xplanung_light_beteiligung_liste.png
+
+.. image:: ../media/xplanung_light_toeb_benachrichtigung_doku.png
+
+=================
+Arbeitsliste TOEB
+=================
+
+Die TOEB-Reporter haben Zugriff auf eine **Arbeitsliste**. 
+
+.. image:: ../media/xplanung_light_toeb_arbeitsliste.png
 
 .. _Anlage zum Erlass über TOEB-Beteiligung: https://bauleitplanung.hessen.de/sites/bauleitplanung.hessen.de/files/2022-06/verzeichnis_der_traeger_oeffentlicher_belange_hessen_0.pdf
