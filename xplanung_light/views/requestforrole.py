@@ -42,7 +42,7 @@ class RequestForRoleCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateVie
             da der Nutzer dann ja schon die admin Rolle hat.
             """
 
-            pending_requested_orgas = AdministrativeOrganization.objects.filter(pending_admin_requests__owned_by_user=self.request.user).distinct()
+            #pending_requested_orgas = AdministrativeOrganization.objects.filter(pending_admin_requests__owned_by_user=self.request.user).distinct()
             
             # TODO queryset ggf. anpassen
             #form.fields['organizations'].queryset = form.fields['organizations'].queryset.exclude(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).exclude(id__in = pending_requested_orgas).only("pk", "name", "type", "name_part")
