@@ -1,5 +1,6 @@
 from django.db import models
 import datetime
+from django.utils import timezone
 from django.contrib.auth.models import User
 import uuid, os
 from simple_history.models import HistoricalRecords, HistoricForeignKey
@@ -899,6 +900,24 @@ class XPlanBeteiligung(GenericMetadata):
     beschreibung = RichTextField(null=True, blank=True, verbose_name="Erläuternde Beschreibung des Beteiligungsverfahrens")
     allow_online_beitrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Online-Stellungnahme zulassen", help_text="Gibt an, ob das Online-Verfahren für den Beteiligungsprozess zugelassen wird.")
     
+    @property
+    def days_left(self):
+        if self.end_datum:
+            return (self.end_datum - timezone.now().date()).days
+        return 0
+    
+    @property
+    def days_passed(self):
+        if self.start_datum:
+            return (timezone.now().date() - self.start_datum).days
+        return 0
+    
+    @property
+    def days_total(self):
+        if self.end_datum and self.start_datum:
+            return (self.end_datum - self.start_datum).days
+        return 0
+
     def __str__(self):
             """Returns a string representation of Beteiligung."""
             return f"{self.get_typ_display()} - vom {self.bekanntmachung_datum}"

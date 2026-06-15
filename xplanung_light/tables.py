@@ -108,11 +108,18 @@ class FPlanSpezExterneReferenzTable(tables.Table):
 class BeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
     end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
+    #days_left = tables.columns.TemplateColumn(template_code=u"""{{ record.days_left }}""", orderable=False, verbose_name='Tage bis Fristablauf')
+    progress = tables.columns.TemplateColumn(template_code=u"""<div class="progress">
+        <div class="progress-bar" role="progressbar" style="width: {% widthratio record.days_passed record.days_total 100 %}%" aria-valuenow="{{ record.days_passed }}" aria-valuemin="0" aria-valuemax="{{ record.days_total }}">{{ record.days_left }}</div>
+    </div>""", verbose_name="Tage bis Fristablauf", orderable=False)
     xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
     typ = tables.Column(verbose_name='Typ des Verfahrens')
     plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
     gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
   <a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a><br />{% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
+    bearbeiten = tables.columns.TemplateColumn(verbose_name = "", template_code=u"""{% if not user.is_anonymous %}<a href="{% if record.plantyp == 'BPlan' %}{% url 'bplanbeteiligung-update' planid=record.xplan_id pk=record.id %}{% endif %}{% if record.plantyp == 'FPlan' %}{% url 'fplanbeteiligung-update' planid=record.xplan_id pk=record.id %}{% endif %}">Bearbeiten</a>{% endif %}""")
+    alle_verfahren = tables.columns.TemplateColumn(verbose_name = "", template_code=u"""{% if not user.is_anonymous %}<a href="{% if record.plantyp == 'BPlan' %}{% url 'bplanbeteiligung-list' planid=record.xplan_id %}{% endif %}{% if record.plantyp == 'FPlan' %}{% url 'fplanbeteiligung-list' planid=record.xplan_id %}{% endif %}">Alle Verfahren</a>{% endif %}""")
+    
     #Problem: Man kann im view nicht über Relationen gehen - alles was man braucht, muss man vor dem union ziehen, bzw. als JSON rausgeben!
     
 

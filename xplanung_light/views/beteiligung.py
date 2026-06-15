@@ -23,6 +23,7 @@ from django.utils import timezone
 from django.db.models import Avg, F, Q
 from django.db.models import Case, When, Value, CharField
 from django.db.models import Count, Q, ExpressionWrapper, BooleanField
+from django.db.models.functions import ( ExtractDay )
 #from django.db.models.aggregates import Aggregate
 
 # https://stackoverflow.com/questions/74111981/django-aggregate-into-array
@@ -205,6 +206,10 @@ class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
         #beteiligungen_bplaene_1 = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=Subquery(gemeinden_bplaene))
 
         #beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=JsonGroupArray('bplan__gemeinde__name'))
+
+        #rest_tage=ExtractDay(timezone.now().date() - F('end_datum')), gesamt_tage=ExtractDay(F('start_datum') - F('end_datum')), 
+
+
         beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), xplan_id=F('bplan__id'), gemeinden=organization_json_aggregation())
         #beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), gemeinden=JsonGroupArray('fplan__gemeinde__name'))
         beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), gemeinden=organization_json_aggregation(plantyp='fplan'))
@@ -212,6 +217,9 @@ class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
         if not self.request.user.is_superuser and not self.request.user.is_anonymous:
             beteiligungen_bplaene = beteiligungen_bplaene.filter(bplan__gemeinde__admin_orga_users__user=self.request.user, bplan__gemeinde__admin_orga_users__is_admin=True)
             beteiligungen_fplaene = beteiligungen_fplaene.filter(fplan__gemeinde__admin_orga_users__user=self.request.user, fplan__gemeinde__admin_orga_users__is_admin=True)
+        
+        
+        
         # Info:
         # union(), intersection(), and difference() return model instances of the type of the first QuerySet even if the arguments are QuerySets of other models. Passing different models works as long as the SELECT list is the same in all QuerySets (at least the types, the names don’t matter as long as the types in the same order).   
         # https://pythonguides.com/union-operation-on-models-django/
