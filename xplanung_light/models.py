@@ -993,7 +993,11 @@ class BeteiligungBeitrag(GenericMetadata):
     name = models.CharField(null=True, blank=True, max_length=300, verbose_name="Name", help_text="Name der Person oder Institution die den Beitrag einreicht")
     email = models.EmailField(null=True, blank=True, verbose_name='EMail', help_text='EMail-Adresse zur Bestätigung der Abgabe Ihrer Stellungnahme. Sie bekommen eine Aktivierungsmail geschickt.')
     withdrawn = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag zurückgezogen")
-            
+    # Feld mit Eingangsdatum falls nicht Online abgegeben! Wenn über Online-Formular, dann wird Datum des Abschickens automatisch gesetzt.
+    #eingangsdatum = models.DateField(null=False, blank=False, default=datetime.date.today, verbose_name="Eingangsdatum", help_text="Eingangsdatum des Beitrags.")
+    eingangsdatum = models.DateField(null=False, blank=False, verbose_name="Eingangsdatum", help_text="Eingangsdatum des Beitrags.")
+
+
     class Meta:
         abstract = True
 

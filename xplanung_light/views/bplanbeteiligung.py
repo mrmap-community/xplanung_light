@@ -36,6 +36,7 @@ class BPlanBeteiligungCreateView(IncompleteSelectResponseMixin, FormViewMixin, X
             allowed_orgas = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True)
         else:
             allowed_orgas = AdministrativeOrganization.objects.all()
+        plan = BPlan.objects.get(pk=self.kwargs['planid'])
         form.fields['assigned_toebs'].queryset = form.fields['assigned_toebs'].queryset.annotate(
             theme_display=Case(
                 *[
@@ -43,7 +44,12 @@ class BPlanBeteiligungCreateView(IncompleteSelectResponseMixin, FormViewMixin, X
                     for value, label in ToebUnit.THEME_CLASS_CHOICES
                 ],
                 output_field=CharField(),
-            )
+            ),
+            # Nutzer hat Admin-Rolle zur jeweiligen Organisation - dementsprechend gilt TOEB als owned
+            owned=Q(organization__in=allowed_orgas),
+            # Prüfung auf räumliche Überschneidung zuwischen Zuständigkeit einer TOEB-Stelle und Geltungsbereich
+            # Bei create exitiert bplan noch nicht - bplan vorher ziehen!
+            intersects=Q(geometry__intersects=plan.geltungsbereich),
         ).filter(
             (Q(public=True) | Q(organization__in=allowed_orgas)) & Q(editors__isnull=False),
         )
@@ -149,7 +155,11 @@ class BPlanBeteiligungUpdateView(IncompleteSelectResponseMixin, FormViewMixin, X
                     for value, label in ToebUnit.THEME_CLASS_CHOICES
                 ],
                 output_field=CharField(),
-            )
+            ),
+            # Nutzer hat Admin-Rolle zur jeweiligen Organisation - dementsprechend gilt TOEB als owned
+            owned=Q(organization__in=allowed_orgas),
+            # Prüfung auf räumliche Überschneidung zuwischen Zuständigkeit einer TOEB-Stelle und Geltungsbereich
+            intersects=Q(geometry__intersects=self.object.bplan.geltungsbereich),
         ).filter(
             (Q(public=True) | Q(organization__in=allowed_orgas)) & Q(editors__isnull=False),
         )

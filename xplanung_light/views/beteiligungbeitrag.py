@@ -18,6 +18,7 @@ from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.db.models import Count
 import json
+from datetime import date
 from django.core.exceptions import PermissionDenied
 from django.db.models import Subquery, OuterRef, Q
 from django.http import HttpResponse
@@ -271,6 +272,10 @@ class BeteiligungBeitragCreateView(ExtentUserOrgaInfo, EditCollectionView):
         return JsonResponse(form_collection._errors, status=422, safe=False)
     
     def form_collection_valid(self, form_collection):
+        beitrag_form = form_collection.valid_holders.get('beitrag')
+        # Überschreiben des Eingangsdatums - zur Sicherheit - wird auch als Hidden Field geschickt
+        if beitrag_form:
+            beitrag_form.instance.eingangsdatum = date.today
         result = super().form_collection_valid(form_collection)
         # Nach der Speicherung
         if result:
@@ -432,6 +437,8 @@ class BeteiligungBeitragGenericCreateView(ExtentUserOrgaInfo, FormCollectionView
         beitrag_form = holders.get('beitrag')
         beitrag_instance = None
         if beitrag_form:
+            #print("cleaned_data:", beitrag_form.cleaned_data)
+            #print("eingangsdatum:", beitrag_form.cleaned_data.get('eingangsdatum'))
             if beitrag_form.instance.pk:
                 # Der Beitrag wird immer neu angelegt
                 beitrag_form.instance.pk = None

@@ -1510,10 +1510,32 @@ from formset.widgets import DualSelector
 from formset.widgets import DualSortableSelector
 
 
+class BeteiligungToebDualSortableSelector(DualSortableSelector):
+    """
+    Spezielle Klasse um den Selektor adptieren zu können
+    """
+    """
+    def optgroups(self, name, value, attrs=None):
+        groups = super().optgroups(name, value, attrs)
+        # groups ist eine Liste von (group_name, subgroup, index)
+        for group_name, subgroup, index in groups:
+            for option in subgroup:
+                option['label'] = f"* {option['label']}"
+        return groups
+    """
+    def label_from_instance(self, obj):
+        """Überschreibt die Label-Darstellung mit zusätzlichen Annotierungen."""
+        print(f"label_from_instance aufgerufen für: {obj}") 
+        prefix = "* "
+        return f"{prefix}{obj.label}"
+        #emails = self.form._email_map.get(obj.pk, 'keine E-Mails')
+        #return f"{obj.name} – EMails: ({emails})"
+
+
 class BPlanBeteiligungForm(FormMixin, ModelForm):
     """
-    Neue Klasse für das Anlegen und Update von Informationen zum BPlanBeteiligungsverfahren - diesmal mit django-formset
-    Überlegung  mehrseitiges Formular: https://django-formset.fly.dev/bootstrap/checkout
+    Klasse für das Anlegen und Update von Informationen zum BPlanBeteiligungsverfahren (django-formset).
+    Überlegung  ggf. mehrseitiges Formular: https://django-formset.fly.dev/bootstrap/checkout
     https://django-formset.fly.dev/form-stepper/
     Problem bei Firefox unter debian: Richtext Formular Elemente bleiben nicht an fester Position ...
 
@@ -1531,6 +1553,74 @@ class BPlanBeteiligungForm(FormMixin, ModelForm):
             #'assigned_toebs': 'mb-2 col-12',
         },
     )
+
+    def __init__(self, *args, **kwargs):
+        """
+        In der init Funktion kann "OnLoad" beim Update gewisse Elemente deaktivieren.
+        """
+        super().__init__(*args, **kwargs)
+        # Über die lambda Funktion können wir auf weitere Attribute reagieren - Eigene TOEBS und Räumliche Überdeckung
+        #self.fields['assigned_toebs'].label_from_instance = lambda obj:  str(obj) if not obj.owned and not obj.intersects else "* " + str(obj)  if obj.owned and not obj.intersects else "+ " + str(obj) if obj.intersects and not obj.owned else "*+ " + str(obj)
+        self.fields['assigned_toebs'].label_from_instance = lambda obj:  "~- " + str(obj) if not obj.owned and not obj.intersects else "*- " + str(obj)  if obj.owned and not obj.intersects else "~+ " + str(obj) if obj.intersects and not obj.owned else "*+ " + str(obj)
+        self.fields['assigned_toebs'].help_text = "TOEBS - Filter: (*) - eigene, (~) - fremde, (+) - räumliche Überdeckung Zuständigkeitsbereich mit Planung, (-) - keine räumliche Überdeckung"
+        is_update = self.instance.pk is not None
+        # Bei Update und bereits vorhandene Beiträge -> alles sperren bis auf ...
+        if is_update:
+            typ = self.instance.typ
+            # typ darf bei Update nie geändert werden -> Feld sperren
+            self.fields['typ'].disabled = True
+            hat_beitraege = BPlanBeteiligungBeitrag.objects.filter(
+                bplan_beteiligung=self.instance.pk
+            ).exists()
+            if hat_beitraege:
+                print('Deaktivieren spezieller Felder wenn schon Beteiligungsbeiträge vorhanden sind')
+                # Problem - cache? - Deaktivierung des Dualselectors erfolgt erst bei refresh ... - strange
+                # TODO klären warum?
+                #self.fields['assigned_toebs'].disabled = True
+                for field in self.fields.values():
+                    field.disabled = True
+
+    def clean(self):
+        """
+        Hier werden alle Attribute getestet, BEVOR das Formular als valide gilt
+        und bevor die View versucht, das Modell zu speichern.
+        """
+        # Zuerst die Standard-Validierung von Django ausführen
+        cleaned_data = super().clean()
+        # Prüfen, ob es sich um ein Update oder ein Create handelt
+        is_update = self.instance.pk is not None
+        is_create = self.instance.pk is None
+        if is_update:
+            # Nur bei Update
+            # Bestimmte Typen dürfen nachträglich nicht mehr geändert werden
+            alter_typ = self.instance.typ  # Wert aus der Datenbank vor dem Update
+            neuer_typ = cleaned_data.get('typ')
+            if alter_typ != neuer_typ:
+                self.add_error('typ', "Der Typ des Beteiligungsverfahrens kann nachträglich nicht mehr geändert werden.")
+            
+            # Test ob es schon Beitraege gibt - falls das der Fall ist, soll die Bearbeitung verhindert werden
+            beitraege = BPlanBeteiligungBeitrag.objects.filter(bplan_beteiligung__in=[self.instance.pk])
+            if len(beitraege) > 0:
+                self.add_error(None, "Es gibt schon Beiträge zum Verfahren - das Verfahren darf daher nicht mehr verändert werden!")
+        # Attribute aus den bereinigten Daten auslesen
+        start_datum = cleaned_data.get('start_datum')
+        end_datum = cleaned_data.get('end_datum')
+        typ = cleaned_data.get('typ')
+        publikation_internet = cleaned_data.get('publikation_internet')
+
+        # Benutzerdefinierte Test durchführen:
+        # Logische Datumsprüfung
+        if start_datum and end_datum and start_datum > end_datum:
+            # Fehler an ein bestimmtes Feld binden (wird direkt unter dem Feld angezeigt)
+            self.add_error('end_datum', "Das Enddatum darf nicht vor dem Startdatum liegen.")
+
+        # Abhängigkeiten prüfen basierend auf deinem 'typ'
+        # Passend zu deinen 'df-hide/show' Bedingungen im Frontend:
+        #if typ not in ['2000', '20001'] and not publikation_internet:
+        #    self.add_error('publikation_internet', "Für diesen Typ ist eine Internet-Publikation erforderlich.")
+
+        # Rückgabe der bereinigten Daten
+        return cleaned_data
 
     class Meta:
         model = BPlanBeteiligung
@@ -1542,7 +1632,7 @@ class BPlanBeteiligungForm(FormMixin, ModelForm):
             'end_datum': DateInput(),
             #'allow_online_beitrag': widgets.CheckboxInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),
             'publikation_internet': TextInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),                         
-            'assigned_toebs': DualSortableSelector(search_lookup='label__icontains',
+            'assigned_toebs': BeteiligungToebDualSortableSelector(search_lookup='label__icontains',
                                                    group_field_name='theme_display',
                                                    attrs={'df-show': ".typ=='2000' || .typ=='20001'"}),
         }
@@ -1554,7 +1644,6 @@ class FPlanBeteiligungForm(FormMixin, ModelForm):
     Überlegung  mehrseitiges Formular: https://django-formset.fly.dev/bootstrap/checkout
     https://django-formset.fly.dev/form-stepper/
     Problem bei Firefox unter debian: Richtext Formular Elemente bleiben nicht an fester Position ...
-
     """
 
     default_renderer = FormRenderer(
@@ -1571,6 +1660,72 @@ class FPlanBeteiligungForm(FormMixin, ModelForm):
         },
     )
 
+    def __init__(self, *args, **kwargs):
+        """
+        In der init Funktion kann beim Update gewisse Elemente deaktivieren.
+        """
+        super().__init__(*args, **kwargs)
+        self.fields['assigned_toebs'].label_from_instance = lambda obj:  "~- " + str(obj) if not obj.owned and not obj.intersects else "*- " + str(obj)  if obj.owned and not obj.intersects else "~+ " + str(obj) if obj.intersects and not obj.owned else "*+ " + str(obj)
+        self.fields['assigned_toebs'].help_text = "TOEBS - Filter: (*) - eigene, (~) - fremde, (+) - räumliche Überdeckung Zuständigkeitsbereich mit Planung, (-) - keine räumliche Überdeckung"
+        is_update = self.instance.pk is not None
+        # Bei Update und bereits vorhandene Beiträge -> alles sperren bis auf ...
+        if is_update:
+            typ = self.instance.typ
+            # typ darf bei Update nie geändert werden -> Feld sperren
+            self.fields['typ'].disabled = True
+            hat_beitraege = FPlanBeteiligungBeitrag.objects.filter(
+                fplan_beteiligung=self.instance.pk
+            ).exists()
+            if hat_beitraege:
+                print('Deaktivieren spezieller Felder wenn schon Beteiligungsbeiträge vorhanden sind')
+                # Problem - cache? - Deaktivierung des Dualselectors erfolgt erst bei refresh ... - strange
+                # TODO klären warum?
+                #self.fields['assigned_toebs'].disabled = True
+                for field in self.fields.values():
+                    field.disabled = True
+
+    def clean(self):
+        """
+        Hier werden alle Attribute getestet, BEVOR das Formular als valide gilt
+        und bevor die View versucht, das Modell zu speichern.
+        """
+        # Zuerst die Standard-Validierung von Django ausführen
+        cleaned_data = super().clean()
+        # Prüfen, ob es sich um ein Update oder ein Create handelt
+        is_update = self.instance.pk is not None
+        is_create = self.instance.pk is None
+        if is_update:
+            # Nur bei Update
+            # Bestimmte Typen dürfen nachträglich nicht mehr geändert werden
+            alter_typ = self.instance.typ  # Wert aus der Datenbank vor dem Update
+            neuer_typ = cleaned_data.get('typ')
+            if alter_typ != neuer_typ:
+                self.add_error('typ', "Der Typ des Beteiligungsverfahrens kann nachträglich nicht mehr geändert werden.")
+            
+            # Test ob es schon Beitraege gibt - falls das der Fall ist, soll die Bearbeitung verhindert werden
+            beitraege = FPlanBeteiligungBeitrag.objects.filter(fplan_beteiligung__in=[self.instance.pk])
+            if len(beitraege) > 0:
+                self.add_error(None, "Es gibt schon Beiträge zum Verfahren - das Verfahren darf daher nicht mehr verändert werden!")
+        # Attribute aus den bereinigten Daten auslesen
+        start_datum = cleaned_data.get('start_datum')
+        end_datum = cleaned_data.get('end_datum')
+        typ = cleaned_data.get('typ')
+        publikation_internet = cleaned_data.get('publikation_internet')
+
+        # Benutzerdefinierte Test durchführen:
+        # Logische Datumsprüfung
+        if start_datum and end_datum and start_datum > end_datum:
+            # Fehler an ein bestimmtes Feld binden (wird direkt unter dem Feld angezeigt)
+            self.add_error('end_datum', "Das Enddatum darf nicht vor dem Startdatum liegen.")
+
+        # Abhängigkeiten prüfen basierend auf deinem 'typ'
+        # Passend zu deinen 'df-hide/show' Bedingungen im Frontend:
+        #if typ not in ['2000', '20001'] and not publikation_internet:
+        #    self.add_error('publikation_internet', "Für diesen Typ ist eine Internet-Publikation erforderlich.")
+
+        # Rückgabe der bereinigten Daten
+        return cleaned_data
+
     class Meta:
         model = FPlanBeteiligung
         fields = ['typ', 'beschreibung', 'bekanntmachung_datum', 'start_datum', 'end_datum' , "allow_online_beitrag", "publikation_internet", "assigned_toebs"]
@@ -1581,7 +1736,7 @@ class FPlanBeteiligungForm(FormMixin, ModelForm):
             'end_datum': DateInput(),
             #'allow_online_beitrag': widgets.CheckboxInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),
             'publikation_internet': TextInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}), 
-            'assigned_toebs': DualSortableSelector(search_lookup='label__icontains',
+            'assigned_toebs': BeteiligungToebDualSortableSelector(search_lookup='label__icontains',
                                                    group_field_name='theme_display',
                                                    attrs={'df-show': ".typ=='2000' || .typ=='20001'"}),
         }
@@ -1707,13 +1862,16 @@ class BPlanBeteiligungBeitragForm(ModelForm):
         #self.fields['name'].required = True
         self.fields['typ'].initial = 1000
         self.fields['email'].required = True
+        self.fields['eingangsdatum'].initial = datetime.now().date()
+
 
     class Meta:
         model = BPlanBeteiligungBeitrag
-        fields = ['name', 'email', 'titel', 'beschreibung', 'typ']
+        fields = ['name', 'email', 'eingangsdatum', 'titel', 'beschreibung', 'typ']
         widgets = {
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
             'typ': HiddenInput(),
+            'eingangsdatum': HiddenInput(),
         }
 
 """
@@ -1726,13 +1884,16 @@ class FPlanBeteiligungBeitragForm(ModelForm):
         #self.fields['name'].required = True
         self.fields['typ'].initial = 1000
         self.fields['email'].required = True
+        self.fields['eingangsdatum'].initial = datetime.now().date()
+
 
     class Meta:
         model = FPlanBeteiligungBeitrag
-        fields = ['name', 'email', 'titel', 'beschreibung', 'typ']
+        fields = ['name', 'email', 'eingangsdatum', 'titel', 'beschreibung', 'typ']
         widgets = {
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
             'typ': HiddenInput(),
+            'eingangsdatum': HiddenInput(),
         }
 
 
@@ -1935,6 +2096,11 @@ class BPlanBeteiligungBeitragGenericForm(ModelForm):
         # Beispiel: Nur '2000', '3000' und '4000' behalten
         filtered_choices = [c for c in original_choices if c[0] in ['2000', '3000', '4000']]
         self.fields['typ'].choices = filtered_choices
+        if not self.instance.pk:
+            self.fields['eingangsdatum'].initial = None
+            #self.fields['eingangsdatum'].widget.attrs.pop('value', None)
+            # Instanz-Default überschreiben damit Django kein value rendert
+            #self.instance.eingangsdatum = None
 
     # in der save Funktion kann man die Instanz einfach anpassen - hidden fields sind nicht sinnvoll
     def save(self, commit=True):
@@ -1945,12 +2111,28 @@ class BPlanBeteiligungBeitragGenericForm(ModelForm):
             instance.save()
         return instance
 
+    def clean(self):
+        cleaned_data = super().clean()
+
+        eingangsdatum = cleaned_data.get('eingangsdatum')
+        bplan_beteiligung = cleaned_data.get('bplan_beteiligung')
+
+        if eingangsdatum and bplan_beteiligung:
+            if eingangsdatum > bplan_beteiligung.end_datum:
+                self.add_error(
+                    'eingangsdatum',
+                    "Der Beitrag darf nicht nach Ablauf der Frist eingegangen sein!"
+                )
+
+        return cleaned_data
+
     class Meta:
         model = BPlanBeteiligungBeitrag
-        fields = ['id', 'typ', 'name', 'email', 'titel', 'beschreibung', 'bplan_beteiligung']
+        fields = ['id', 'typ', 'eingangsdatum', 'name', 'email', 'titel', 'beschreibung', 'bplan_beteiligung']
         widgets = {
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
             'bplan_beteiligung': HiddenInput(),
+            'eingangsdatum': widgets.DateInput(attrs={'type': 'date', 'pattern': r'\d{4}-\d{2}-\d{2}'}),
         }
 
 
@@ -1975,9 +2157,10 @@ class FPlanBeteiligungBeitragGenericForm(ModelForm):
 
     class Meta:
         model = FPlanBeteiligungBeitrag
-        fields = ['typ', 'name', 'email', 'titel', 'beschreibung', 'approved']
+        fields = ['typ', 'eingangsdatum', 'name', 'email', 'titel', 'beschreibung', 'approved']
         widgets = {
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
+            'eingangsdatum': widgets.DateInput(attrs={'type': 'date', 'pattern': r'\d{4}-\d{2}-\d{2}'}),
             #'approved': HiddenInput(),
         }
 
@@ -2043,6 +2226,12 @@ class BPlanBeteiligungBeitragGenericCollection(FormCollection):
     legend = "Beitrag"
     beitrag = BPlanBeteiligungBeitragGenericForm()
     attachments = BPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+
+    #def retrieve_initial_dict(self, name, instance):
+    #    initial = super().retrieve_initial_dict(name, instance)
+    #    if name == 'beitrag' and not instance.pk:
+    #        initial['eingangsdatum'] = datetime.date.today().isoformat()
+    #    return initial
 
 """
 Für FPläne

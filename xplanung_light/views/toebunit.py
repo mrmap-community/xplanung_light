@@ -1,6 +1,6 @@
 from django.http import  HttpResponseRedirect
 from django.views.generic import (CreateView, UpdateView, DeleteView, ListView, DetailView)
-from xplanung_light.models import ToebUnit
+from xplanung_light.models import ToebUnit, BPlanBeteiligungBeitrag, FPlanBeteiligungBeitrag, BPlanBeteiligung, FPlanBeteiligung
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableView
 from xplanung_light.tables import ToebUnitTable, ToebUnitPublicTable
@@ -225,8 +225,8 @@ class ToebUnitDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
 
     def form_valid(self, form):
         success_url = self.get_success_url()
+        object = self.get_object()
         if self.request.user.is_superuser == False:
-            object = self.get_object()
             organization = object.organization
             user_is_admin = False
             for user in organization.admin_orga_users.all():
@@ -235,6 +235,13 @@ class ToebUnitDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
             if user_is_admin == False:
                 messages.add_message(self.request, messages.WARNING, "Nutzer ist kein Administrator der angegebenen Organisation - TOEB-Stelle kann nicht gelöscht werden!")
                 return HttpResponseRedirect(success_url)
+        # Check, ob Beteiligungen am Objekt hängen - falls ja Löschen verhindern
+        bplan_beteiligung = BPlanBeteiligung.objects.filter(assigned_toebs__in=[object])
+        fplan_beteiligung = FPlanBeteiligung.objects.filter(assigned_toebs__in=[object])
+        if bplan_beteiligung.exists() or fplan_beteiligung.exists():
+            messages.add_message(self.request, messages.WARNING, "TOEB-Stelle ist mit Beteiligungsverfahren verknüpft - sie kann nicht gelöscht werden!")
+            return HttpResponseRedirect(success_url)
+        #beitraege = BPlan TODO 
         self.object.delete()
         messages.add_message(self.request, messages.SUCCESS, "TOEB-Stelle " + self.object.name + " wurde gelöscht!")
         return HttpResponseRedirect(success_url)
