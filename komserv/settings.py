@@ -86,6 +86,11 @@ TEMPLATES = [
         },
     },
 ]
+# django-organization
+# Tells django-organization to use your concrete custom model
+#ORGS_ORGANIZATION_MODEL = 'xplanung_light.AdministrativeOrganization'
+
+#AUTH_USER_MODEL = 'your_django_app_name.CustomUser' 
 
 WSGI_APPLICATION = 'komserv.wsgi.application'
 
@@ -93,6 +98,7 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+
 
 DATABASES = {
     'default': {
@@ -127,7 +133,10 @@ DATABASES = {
 """
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
-
+FIXTURE_DIRS = [
+    BASE_DIR / 'fixtures', # Assuming BASE_DIR is defined
+    BASE_DIR / 'tests/fixtures'
+]
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -258,3 +267,5 @@ CLAMD_TCP_SOCKET = 3310
 CLAMD_TCP_ADDR = '127.0.0.1'
 CLAMD_FAIL_BY_DEFAULT = True
 CLAMD_ENABLED = False
+
+CAPTCHA_AJAX = True

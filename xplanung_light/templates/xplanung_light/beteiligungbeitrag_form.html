@@ -11,6 +11,42 @@
     {% endif %}
 {% endblock %}
 {% block content %}
+<script type="text/javascript">
+  
+  document.addEventListener('DOMContentLoaded', function () {
+    injectCaptchaRefreshButton();
+});
+
+function injectCaptchaRefreshButton() {
+    // django-formset rendert das Captcha-Bild mit class="captcha"
+    const captchaImg = document.querySelector('img.captcha');
+    if (!captchaImg) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '↻';
+    btn.className = 'btn btn-sm btn-outline-secondary ms-2';
+
+    btn.addEventListener('click', function () {
+        fetch('/captcha/refresh/', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            // Key-Feld aktualisieren
+            document.querySelector('input[name$="_0"]').value = data.key;
+            // Bild tauschen
+            captchaImg.src = data.image_url;
+            // Antwort leeren
+            const answer = document.querySelector('input[name$="_1"]');
+            if (answer) answer.value = '';
+        });
+    });
+
+    // Button nach dem Bild einfügen
+    captchaImg.insertAdjacentElement('afterend', btn);
+}
+</script>
 {% if beteiligung %}
 <h3>Abgabe einer Stellungnahme</h3>
 <p>{{ beteiligung.get_typ_display }} zum {% if plantyp == "bplan" %}Bebauungsplan{% endif %}{% if plantyp == "fplan" %}Flächennutzungsplan{% endif %} <b>{{ plan.name }}</b> der Kommune(n):<br>

@@ -315,7 +315,7 @@ class BPlanBeteiligungBeitragTable(tables.Table):
     class Meta:
         model = BPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("id", "last_changed", "titel", "typ", "toeb", "name", "email", "approved", "withdrawn", "attachments", "count_stellungnahmen", "edit", "delete")
+        fields = ("id", "last_changed", "eingangsdatum", "titel", "typ", "toeb", "name", "email", "approved", "withdrawn", "attachments", "count_stellungnahmen", "edit", "delete")
 
 
 class FPlanBeteiligungBeitragTable(tables.Table):
@@ -339,7 +339,7 @@ class FPlanBeteiligungBeitragTable(tables.Table):
     class Meta:
         model = FPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("id", "last_changed", "titel", "typ", "name", "email", "approved", "withdrawn", "attachments", "count_stellungnahmen", "delete")
+        fields = ("id", "last_changed", "eingangsdatum", "titel", "typ", "name", "email", "approved", "withdrawn", "attachments", "count_stellungnahmen", "delete")
 
 
 class BPlanBeitragStellungnahmeTable(tables.Table):
