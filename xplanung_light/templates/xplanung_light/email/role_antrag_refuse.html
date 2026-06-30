@@ -10,6 +10,7 @@
 </p>
 <hr />
 <p><b>{{ editing_note }}<br></p>
+<p>{% if contact_org_admin %}Die Zurückweisung erfolgte durch <a href="mailto:{{ contact_org_admin.email }}">{{ contact_org_admin.email }}</a>{% endif %}</p>
 <hr />
 <p>
     Ihr XPlanung-light Team:

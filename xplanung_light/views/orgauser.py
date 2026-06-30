@@ -56,15 +56,21 @@ class OrganizationUserFormViewAdmin(ExtentUserOrgaInfo, LoginRequiredMixin, Form
             f'Nutzer-Zuweisungen für {organization.name} erfolgreich gespeichert.'
         )
         return super().form_valid(form)
+    
 
 class OrganizationUserFormViewToebReporter(ExtentUserOrgaInfo, LoginRequiredMixin, FormView):
+    """
+    Klasse um Nutzern die TOEB-Reporter Rolle zuzuweisen. Die View kann sowohl vom Zerntraladmin, als auch den admins einzelner Orgas genutzt werden.
+    Wichtig: Benutzernamen und EMail-Adressen aller Nutzer sind sichtbar. Das muss in den Nutzungsbedingungen dokumentiert sein!
+    """
     form_class = OrganizationUserAssignmentFormToebReporter
     template_name = 'xplanung_light/manage_users.html'
     success_url = '/organization/manage-users/toeb-reporter/'
 
     def get_initial(self):
-        if not self.request.user.is_superuser:
-            raise PermissionDenied("Nutzer ist kein Zentraladmin - Zuweisung ist nicht möglich!")
+        # Middleware ergänzt request schon um user_is_admin Eigenschaft  
+        if not self.request.user.is_superuser and not self.request.user_is_admin:
+            raise PermissionDenied("Nutzer ist weder Zentraladmin, noch hat er die Admin-Rolle für eine Organisation - Zuweisung ist nicht möglich!")
         return super().get_initial()
 
     def get_context_data(self, **kwargs):
@@ -75,13 +81,21 @@ class OrganizationUserFormViewToebReporter(ExtentUserOrgaInfo, LoginRequiredMixi
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['organization_id'] = self.request.GET.get('organization')
+        kwargs['user'] = self.request.user
         return kwargs
 
     def form_valid(self, form):
-        if not self.request.user.is_superuser:
-            form.add_error("organization", "Nutzer ist kein Zentraladmin - Zuweisung ist nicht möglich!")
+        if not self.request.user.is_superuser and not self.request.user_is_admin:
+            form.add_error("organization", "Nutzer ist weder Zentraladmin, noch hat er die Admin-Rolle für eine Organisation - Zuweisung ist nicht möglich!")
             return super().form_invalid(form)
-        organization = form.save()
+        if form.is_valid():
+            organization = form.cleaned_data['organization']
+            if not (self.request.user.is_superuser or AdminOrgaUser.objects.filter(
+                organization=organization, user=self.request.user, is_admin=True
+            ).exists()):
+                raise PermissionDenied("Keine Berechtigung für diese Organisation")
+            organization = form.save()        
+        #organization = form.save()
         messages.success(
             self.request,
             f'Nutzer-Zuweisungen für {organization.name} erfolgreich gespeichert.'

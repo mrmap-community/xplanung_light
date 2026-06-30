@@ -4,7 +4,7 @@ from xplanung_light.forms import RequestForRoleCreateForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from xplanung_light.tables import RequestForRoleTable, RequestForRoleAdminTable
 from django_tables2 import SingleTableView
-from django.db.models import Subquery, OuterRef, Q
+from django.db.models import Subquery, OuterRef, Q, Count, F
 from django.urls import reverse_lazy, reverse
 from django.http import HttpResponseRedirect
 from django.contrib import messages
@@ -102,17 +102,48 @@ class RequestForRoleAdminListView(ExtentUserOrgaInfo, LoginRequiredMixin, Single
     """
     model = RequestForRole
     table_class = RequestForRoleAdminTable
-    template_name = "xplanung_light/requestforrole_list.html"
+    template_name = "xplanung_light/requestforroleadmin_list.html"
 
+    """
     def get_queryset(self):
         if self.request.user.is_superuser:
             qs = RequestForRole.objects.prefetch_related('organizations').annotate(last_changed=Subquery(
                 RequestForRole.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed')
         else:
-            qs = RequestForRole.objects.filter(owned_by_user=self.request.user).distinct().prefetch_related('organizations').annotate(last_changed=Subquery(
+            # Nur die Anträge für Orgas anzeigen, für die der Nutzer die Admin-Rolle hat (muss für alle Organisationen gelten - da die Anträge für mehrere gestelt werden können)
+            user_admin_orgas = AdministrativeOrganization.objects.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True)
+            qs = RequestForRole.objects.filter(organizations__in=user_admin_orgas).distinct().prefetch_related('organizations').annotate(last_changed=Subquery(
                 RequestForRole.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
             )).order_by('-last_changed')
+        return qs
+    """
+    # Count ist hier schneller als der doppelte Ausschluss mit zweimal exclude - es werden nur Antrage für TOEB-Reporter zugelassen
+    def get_queryset(self):
+        base_qs = RequestForRole.objects.prefetch_related('organizations').annotate(
+            last_changed=Subquery(
+                RequestForRole.history.filter(id=OuterRef("pk"))
+                .order_by('-history_date')
+                .values('history_date')[:1]
+            )
+        ).order_by('-last_changed')
+
+        if self.request.user.is_superuser:
+            qs = base_qs
+        else:
+            user = self.request.user
+            qs = base_qs.annotate(
+                total_orgas=Count('organizations', distinct=True),
+                admin_orgas=Count(
+                    'organizations',
+                    filter=Q(
+                        organizations__admin_orga_users__user=user,
+                        organizations__admin_orga_users__is_admin=True,
+                    ),
+                    distinct=True,
+                ),
+            ).filter(total_orgas=F('admin_orgas'), total_orgas__gt=0).filter(role='TR')
+
         return qs
 
 

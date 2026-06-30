@@ -2506,7 +2506,8 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
         },
     )
     organization = forms.ModelChoiceField(
-        queryset=AdministrativeOrganization.objects.all().only('name', 'name_part', 'id', 'type'),
+        #queryset=AdministrativeOrganization.objects.all().only('name', 'name_part', 'id', 'type'),
+        queryset=AdministrativeOrganization.objects.none(),
         label="Organisation",
         #widget=forms.Select(attrs={
         widget = Selectize(
@@ -2531,11 +2532,24 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
 
     def __init__(self, *args, **kwargs):
         #print("toeb reporter form")
-        organization_id = kwargs.pop('organization_id', None)
+        organization_id = kwargs.pop('organization_id', None) 
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         # Label überschreiben
         self.fields['toeb_reporter'].label_from_instance = lambda obj: obj.full_name
-        
+        # Organisationen filtern, für die der User is_admin ist
+        if user is not None:
+            if user.is_superuser:
+                self.fields['organization'].queryset = AdministrativeOrganization.objects.all().only(
+                    'name', 'name_part', 'id', 'type'
+                )
+            else:
+                self.fields['organization'].queryset = AdministrativeOrganization.objects.filter(
+                    admin_orga_users__user=user,
+                    admin_orga_users__is_admin=True
+                ).only('name', 'name_part', 'id', 'type').distinct()
+        else:
+            self.fields['organization'].queryset = AdministrativeOrganization.objects.none()        
         if organization_id:
             # Bereits zugewiesene Nutzer als initial values setzen
             org_users = AdminOrgaUser.objects.filter(

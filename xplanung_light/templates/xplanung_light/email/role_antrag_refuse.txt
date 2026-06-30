@@ -1,6 +1,10 @@
 Ihr Antrag wurde mit folgender Begründung zurückgewiesen:
 
 "{{ editing_note }}"
+
+{% if contact_org_admin %}
+Die Zurückweisung erfolgte durch {{ contact_org_admin.email }}
+{% endif %}
 ________________________
 Ihr XPlanung-light Team:
 {{ metadata_contact.organization_name }}

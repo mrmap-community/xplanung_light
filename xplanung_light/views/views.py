@@ -45,6 +45,7 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
+from django.core.exceptions import ValidationError
 #from django.utils.timezone import datetime
 
 def get_bplan_attachment(request, pk):
@@ -1262,6 +1263,23 @@ class RequestForRoleConfirm(FormView):
     def form_valid(self, form):
         # Auslesen des pk zur Aktualisierung des Antragrecords
         request = RequestForRole.objects.get(id=self.kwargs['pk'])
+        contact_org_admin = None
+        if not self.request.user.is_superuser:
+            # Check auf Admin-Rolle des Nutzers für jede Organisation 
+            user_is_admin_for_all = True
+            for organization in request.organizations.all():
+                # Check if Eintrag existiert
+                if not AdminOrgaUser.objects.filter(organization=organization, user=self.request.user, is_admin=True).exists():
+                   user_is_admin_for_all = False
+                   break
+            if not user_is_admin_for_all:
+                form.add_error(None, "Nutzer ist nicht Administrator für alle beantragten Organisationen - Freigabe kann nicht erfolgen!")
+                return super().form_invalid(form)
+            if request.role != "TR":
+                form.add_error(None, "Nutzer kann nur TOEB-Reporter Rollen freischalten - Freigabe kann nicht erfolgen!")
+                return super().form_invalid(form)
+            # Kontaktinformationen in View übernehmen damit Antragsteller mit Genehmiger (OrgAdmin) Kontakt aufnehmen kann
+            contact_org_admin = self.request.user
         organizations = []
         # Administratorrollen anlegen
         for organization in request.organizations.all():
@@ -1288,8 +1306,8 @@ class RequestForRoleConfirm(FormView):
         # Senden einer EMail mit Benachrichtung an Antragsteller
         # Senden einer EMail mit Benachrichtung an Antragsteller
         subject = str("XPlanung-light: Ihr Antrag auf Zuweisung der " + request.get_role_display() + "-Rolle vom " + datetime.date.today().strftime('%Y-%m-%d'))
-        html_content = render_to_string("xplanung_light/email/role_antrag_confirm.html", context={"organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
-        text_content = render_to_string("xplanung_light/email/role_antrag_confirm.txt", context={"organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+        html_content = render_to_string("xplanung_light/email/role_antrag_confirm.html", context={"organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'], "contact_org_admin": contact_org_admin, },)
+        text_content = render_to_string("xplanung_light/email/role_antrag_confirm.txt", context={"organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'], "contact_org_admin": contact_org_admin, },)
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
@@ -1319,6 +1337,23 @@ class RequestForRoleRefuse(FormView):
     def form_valid(self, form):
         # Auslesen des pk zur Aktualisierung des Antragrecords
         request = RequestForRole.objects.get(id=self.kwargs['pk'])
+        contact_org_admin = None
+        if not self.request.user.is_superuser:
+            # Check auf Admin-Rolle des Nutzers für jede Organisation 
+            user_is_admin_for_all = True
+            for organization in request.organizations.all():
+                # Check if Eintrag existiert
+                if not AdminOrgaUser.objects.filter(organization=organization, user=self.request.user, is_admin=True).exists():
+                   user_is_admin_for_all = False
+                   break 
+            if not user_is_admin_for_all:
+                form.add_error(None, "Nutzer ist nicht Administrator für alle beantragten Organisationen - Zurückweisung kann nicht erfolgen!")
+                return super().form_invalid(form)
+            if request.role != "TR":
+                form.add_error(None, "Nutzer kann nur TOEB-Reporter Rollen verwalten - Zurückweisung nicht möglich!")
+                return super().form_invalid(form)
+            # Kontaktinformationen in View übernehmen damit Antragsteller mit Genehmiger (OrgAdmin) Kontakt aufnehmen kann
+            contact_org_admin = self.request.user
         request.editing_note = form.cleaned_data['editing_note']
         request.delete_reason = 'r'
         request.save()
@@ -1326,8 +1361,8 @@ class RequestForRoleRefuse(FormView):
         messages.add_message(self.request, messages.SUCCESS, "Antrag " + str(self.kwargs['pk']) + " wurde zurückgewiesen!")
         # Senden einer EMail mit Benachrichtung an Antragsteller
         subject = str("XPlanung-light: Ihr Antrag auf Zuweisung der " + request.get_role_display() + "-Rolle vom " + datetime.date.today().strftime('%Y-%m-%d'))
-        html_content = render_to_string("xplanung_light/email/role_antrag_refuse.html", context={"editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
-        text_content = render_to_string("xplanung_light/email/role_antrag_refuse.txt", context={"editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'],},)
+        html_content = render_to_string("xplanung_light/email/role_antrag_refuse.html", context={"editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'], "contact_org_admin": contact_org_admin, },)
+        text_content = render_to_string("xplanung_light/email/role_antrag_refuse.txt", context={"editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'], "contact_org_admin": contact_org_admin,},)
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,

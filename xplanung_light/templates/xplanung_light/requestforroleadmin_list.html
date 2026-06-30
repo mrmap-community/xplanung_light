@@ -1,0 +1,13 @@
+{% extends "xplanung_light/layout.html" %}
+{% block title %}
+ Anträge für Rollenzuweisung
+{% endblock %}
+{% load render_table from django_tables2 %}
+{% load django_bootstrap5 %}
+{% block content %}
+{% if user.is_superuser %}
+{% else %}
+{% endif %}
+Aktuelle Anträge auf Rollenzuweisungen
+{% render_table table %}
+{% endblock %}
