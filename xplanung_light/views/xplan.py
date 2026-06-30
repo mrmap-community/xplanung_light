@@ -654,7 +654,7 @@ class XPlanDetailXPlanLightZipView(XPlanDetailView):
                 model_name_lower = str(model._meta.model_name).lower()
             xplan_gml_view = test.as_view(template_name="xplanung_light/bplan_template_xplanung_light_6.xml")(pk=self.kwargs['pk'], request=self.request).render()
             # Alle Anhaenge ziehen
-            attachments = BPlanSpezExterneReferenz.objects.filter(bplan=self.kwargs['pk'])
+            attachments = BPlanSpezExterneReferenz.objects.filter(bplan=self.kwargs['pk'], public=True)
         if self.model_name_lower == 'fplan':
             # TODO adopt
             class test(XPlanDetailXPlanLightView):
@@ -662,7 +662,7 @@ class XPlanDetailXPlanLightZipView(XPlanDetailView):
                 model_name_lower = str(model._meta.model_name).lower()
             xplan_gml_view = test.as_view(template_name="xplanung_light/fplan_template_xplanung_light_6.xml")(pk=self.kwargs['pk'], request=self.request).render()
             # Alle Anhaenge ziehen
-            attachments = FPlanSpezExterneReferenz.objects.filter(fplan=self.kwargs['pk'])
+            attachments = FPlanSpezExterneReferenz.objects.filter(fplan=self.kwargs['pk'], public=True)
         #print(xplan_gml_view.content)
         # https://stackoverflow.com/questions/2463770/python-in-memory-zip-library
         zip_buffer = io.BytesIO()
