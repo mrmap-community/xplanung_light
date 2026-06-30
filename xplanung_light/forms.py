@@ -88,7 +88,7 @@ class BPlanSpezExterneReferenzForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(BPlanSpezExterneReferenzForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
-        self.helper.layout = Layout(Fieldset("Anlage hochladen", "typ", "name", "attachment"), Submit("submit", "Hochladen/Aktualisieren"))
+        self.helper.layout = Layout(Fieldset("Anlage hochladen", "public", "typ", "name", "attachment"), Submit("submit", "Hochladen/Aktualisieren"))
 
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
     def clean(self):
@@ -101,7 +101,7 @@ class BPlanSpezExterneReferenzForm(forms.ModelForm):
 
     class Meta:
        model = BPlanSpezExterneReferenz
-       fields = ["typ", "name", "attachment"] # list of fields you want from model
+       fields = ["public", "typ", "name", "attachment"] # list of fields you want from model
 
 
 class FPlanSpezExterneReferenzForm(forms.ModelForm):
@@ -111,7 +111,7 @@ class FPlanSpezExterneReferenzForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(FPlanSpezExterneReferenzForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
-        self.helper.layout = Layout(Fieldset("Anlage hochladen", "typ", "name", "attachment"), Submit("submit", "Hochladen/Aktualisieren"))
+        self.helper.layout = Layout(Fieldset("Anlage hochladen", "public", "typ", "name", "attachment"), Submit("submit", "Hochladen/Aktualisieren"))
 
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
     def clean(self):
@@ -124,7 +124,7 @@ class FPlanSpezExterneReferenzForm(forms.ModelForm):
 
     class Meta:
        model = FPlanSpezExterneReferenz
-       fields = ["typ", "name", "attachment"] # list of fields you want from model
+       fields = ["public", "typ", "name", "attachment"] # list of fields you want from model
 
 
 class BPlanBeteiligungFormOld(forms.ModelForm):

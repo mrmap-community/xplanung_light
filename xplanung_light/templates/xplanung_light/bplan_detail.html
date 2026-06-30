@@ -75,7 +75,7 @@
           </tr>
           {% for anlage in bplan.attachments.all %}
           <tr>
-            <td><a href="{% url 'bplanattachment-download' pk=anlage.id %}">{{ anlage.name }} (<i>{{ anlage.get_typ_display }})</a></td>
+            <td>{% if anlage.public %}<b>Öffentlich: </b>{% else %}<b>Gesperrt: </b>{% endif %}<a href="{% url 'bplanattachment-download' pk=anlage.id %}">{{ anlage.name }} (<i>{{ anlage.get_typ_display }})</a></td>
           </tr>
           {% endfor %}
         </table>

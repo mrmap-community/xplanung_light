@@ -85,7 +85,7 @@ class BPlanSpezExterneReferenzTable(tables.Table):
     class Meta:
         model = BPlanSpezExterneReferenz
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
+        fields = ( "id", "public",  "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
 
 
 class FPlanSpezExterneReferenzTable(tables.Table):
@@ -102,7 +102,7 @@ class FPlanSpezExterneReferenzTable(tables.Table):
     class Meta:
         model = FPlanSpezExterneReferenz
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
+        fields = ( "id", "public", "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
 
 
 class BeteiligungenTable(tables.Table):

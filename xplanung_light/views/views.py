@@ -52,29 +52,31 @@ def get_bplan_attachment(request, pk):
     # Nur admins der Gebietskörperschaften oder superuser
     gemeinden = AdministrativeOrganization.objects.filter(bplan__attachments__in=[pk])
     access_allowed = False
-    # Prüfung, ob Plan public ist, auch dann wird der Zugriff auf die Anlagen freigegeben
-    try:
-        bplan = BPlan.objects.filter(id=pk, public=True)
+    # Prüfung, ob Plan public ist, nur dann wird auch der Zugriff auf die Anlagen freigegeben
+    bplan_public = BPlan.objects.filter(attachments__in=[pk], public=True).exists()
+    if request.user.is_superuser:
         access_allowed = True
-    except:
-        pass
-    if request.user.is_superuser == False:
+    else:
+        # Prüfung für Orga-Admins
         for gemeinde in gemeinden:
             for user in gemeinde.admin_orga_users.all():
                 if user.user == request.user and user.is_admin:   
                     # Zugriff wird erteilt                     
                     access_allowed = True
-    else:
-        access_allowed = True
-
+                    break
+            if access_allowed:
+                break
+        # Prüfung für anonymous und user, die keine admins sind
+        if not access_allowed:
+            attachment_public = BPlanSpezExterneReferenz.objects.filter(pk=pk, public=True).exists()
+            if bplan_public and attachment_public:
+                access_allowed = True
     if not access_allowed:
         return HttpResponse("401 Unauthorized", status=401) 
     try:
-        #attachment = BPlanSpezExterneReferenz.objects.get(owned_by_user=request.user, pk=pk)
         attachment = BPlanSpezExterneReferenz.objects.get(pk=pk)
     except BPlanSpezExterneReferenz.DoesNotExist:
         attachment = None
-    #print(str(attachment))
     if attachment:
         if os.path.exists(attachment.attachment.file.name):
             response = FileResponse(attachment.attachment)
@@ -88,20 +90,25 @@ def get_fplan_attachment(request, pk):
     # Nur admins der Gebietskörperschaften oder superuser
     gemeinden = AdministrativeOrganization.objects.filter(fplan__attachments__in=[pk])
     access_allowed = False
-    # Prüfung, ob Plan public ist, auch dann wird der Zugriff auf die Anlagen freigegeben
-    try:
-        bplan = FPlan.objects.filter(id=pk, public=True)
+    # Prüfung, ob Plan public ist, nur dann wird auch der Zugriff auf die Anlagen freigegeben
+    fplan_public = FPlan.objects.filter(attachments__in=[pk], public=True).exists()
+    if request.user.is_superuser:
         access_allowed = True
-    except:
-        pass
-    if request.user.is_superuser == False:
+    else:
+        # Prüfung für Orga-Admins
         for gemeinde in gemeinden:
             for user in gemeinde.admin_orga_users.all():
                 if user.user == request.user and user.is_admin:   
                     # Zugriff wird erteilt                     
                     access_allowed = True
-    else:
-        access_allowed = True
+                    break
+            if access_allowed:
+                break
+        # Prüfung für anonymous user
+        if not access_allowed:
+            attachment_public = FPlanSpezExterneReferenz.objects.filter(pk=pk, public=True).exists()
+            if fplan_public and attachment_public:
+                access_allowed = True
     if not access_allowed:
         return HttpResponse("401 Unauthorized", status=401) 
     try:

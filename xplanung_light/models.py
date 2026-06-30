@@ -1017,6 +1017,7 @@ class BeteiligungBeitragAnhang(GenericMetadata):
     name = models.CharField(null=False, blank=False, max_length=256)
     typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_ATTACHMENT_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des Anhangs', help_text="Typ / Inhalt des Anhangs zum Kommentar", db_index=True)
     attachment = models.FileField(null = True, blank = True, max_length=1024, upload_to='uploads', verbose_name="Dokument")
+    #public
 
     class Meta:
         abstract = True
@@ -1255,6 +1256,7 @@ class XPlanSpezExterneReferenz(GenericMetadata):
     
     # Anwendungsspezifische Felder
     aus_archiv = models.BooleanField(null=False, blank=False, default=False, verbose_name="Anhang stammt aus hochgeladenem ZIP-Archiv", help_text="Gibt an, ob der Anhang ursprünglich aus einem hochgeladenem ZIP-Archiv stammt.")
+    public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Anlage öffentlich verfügbar", help_text="Gibt an, ob Informationen über die frei verfügbaren Schnittstellen publiziert werden (Links in Detail-Ansicht, ZIP-Archiv, ...).")
     #history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
