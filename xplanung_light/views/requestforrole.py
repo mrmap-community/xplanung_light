@@ -14,6 +14,7 @@ from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from xplanung_light.views.user import ExtentUserOrgaInfo
+from django.contrib.auth.models import User
 
 class RequestForRoleCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
     """
@@ -51,8 +52,21 @@ class RequestForRoleCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateVie
         return form
     
     def form_valid(self, form):
+
         form.instance.owned_by_user = self.request.user
-        # Versand einer EMail an den Zentraladmin Account - dann weiß er Bescheid, dass etwas zu tun ist
+        """ 
+        Versand einer EMail an den Zentraladmin Account - dann weiß er Bescheid, dass etwas zu tun ist.
+        Zusätzlich wird die EMail an alle Admins geschickt, die ebenfalls in der Lage sind den Antrag zu bearbeiten.
+        Orga-Admins können nur Antrage für die TOEB-Reporter Rolle bearbeiten und auch nur dann, wenn
+        sie Admin für alle im Antrag aufgeführten Organisationen sind.
+        """
+        cc = None
+        if form.cleaned_data['role'] == 'TR':
+            cc = []
+            admin_users = self.get_admin_users_for_all_orgas(form.cleaned_data['organizations'])
+            for user in admin_users:
+                if str(user.email) != '':
+                    cc += [str(user.email)]
         antragsliste_link = self.request.build_absolute_uri(reverse("requestforrole-admin-list"))
         if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
             antragsliste_link = antragsliste_link.replace('http://', 'https://')
@@ -65,12 +79,34 @@ class RequestForRoleCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateVie
             from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
             to=[str(settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email']),],
             #bcc=[str(farmshop.contact_email),],
+            cc=cc,
             reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
         )
         #email.content_subtype = "text"
         email.attach_alternative(html_content, "text/html")
         email.send(fail_silently=True)
         return super().form_valid(form)
+
+    def get_admin_users_for_all_orgas(self, organizations):
+        total_orgas = organizations.count()
+        if total_orgas == 0:
+            return User.objects.none()
+
+        users = User.objects.filter(
+            admin_orga_users__organization__in=organizations,
+            admin_orga_users__is_admin=True,
+        ).annotate(
+            matching_orgas=Count(
+                'admin_orga_users__organization',
+                filter=Q(
+                    admin_orga_users__organization__in=organizations,
+                    admin_orga_users__is_admin=True,
+                ),
+                distinct=True,
+            )
+        ).filter(matching_orgas=total_orgas).distinct()
+
+        return users
 
     def get_success_url(self):
         return reverse_lazy("requestforrole-list")
@@ -172,6 +208,6 @@ class RequestForRoleDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, DeleteVie
     
     def get_success_url(self):
         if self.request.user.is_superuser == True:
-            return reverse_lazy("requestforrole-list")
-        else:
             return reverse_lazy("requestforrole-admin-list")
+        else:
+            return reverse_lazy("requestforrole-list")
