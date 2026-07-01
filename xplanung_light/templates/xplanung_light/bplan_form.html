@@ -27,7 +27,47 @@
             )
         );
     }
-
+    //Funktion von claude um Gazetteer einzubinden - wird über eigenen Proxy genutzt, dmit key serverseitig angefügt werden kann
+    L.Control.Geocoder.BkgGazetteer = L.Class.extend({
+    options: {
+        serviceUrl: '/api/geocode/',
+    },
+    initialize: function (options) {
+        L.Util.setOptions(this, options);
+    },
+    geocode: function (query) {
+        const url = this.options.serviceUrl + L.Util.getParamString({ query });
+        return fetch(url)
+        .then((res) => res.json())
+        .then((data) => this._parseResults(data))
+        .catch(() => []);
+    },
+    reverse: function (location, scale) {
+        return Promise.resolve([]);
+    },
+    _parseResults: function (data) {
+        const features = data.features || [];
+        return features.map((feature) => {
+        const props = feature.properties;
+        const coords = feature.geometry.coordinates; // [lon, lat]
+        const latlng = L.latLng(coords[1], coords[0]);
+        // bbox kommt als top-level Array [minx, miny, maxx, maxy]
+        const bb = feature.bbox;
+        const bbox = bb
+            ? L.latLngBounds(L.latLng(bb[1], bb[0]), L.latLng(bb[3], bb[2]))
+            : L.latLngBounds(latlng, latlng);
+        return {
+            name: props.text,
+            center: latlng,
+            bbox: bbox,
+            properties: props,
+        };
+        });
+    },
+    });
+    L.Control.Geocoder.bkgGazetteer = function (options) {
+    return new L.Control.Geocoder.BkgGazetteer(options);
+    };
     window.addEventListener("map:init", function(e) {
             var detail = e.detail;
             var map = detail.map;
@@ -100,6 +140,18 @@
                     '.kml',
                     '.gpx',
                 ]
+            }).addTo(map);
+            map.addControl(new L.control.fullscreen({
+                title: {
+                    'false': 'Vollbild',
+                    'true':  'Vollbild beenden',
+                }
+            }));
+            //new L.Control.Geocoder().addTo(map);
+            /* Einrichtung des BKG Geocoders */
+            L.Control.geocoder({
+                geocoder: L.Control.Geocoder.bkgGazetteer(),
+                defaultMarkGeocode: true,
             }).addTo(map);
             // hard to find - but it work as expected ;-) : https://github.com/makinacorpus/Leaflet.FileLayer/issues/22
             var drawnItems;

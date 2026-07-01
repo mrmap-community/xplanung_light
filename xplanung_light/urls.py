@@ -212,6 +212,7 @@ urlpatterns = [
     # Dokumentation
     path('docs/', include('docs.urls')),
     path('jsi18n/', JavaScriptCatalog.as_view(), name='javascript-catalog'),
+    path('api/geocode/', views.geocodeBkg, name="geocode"),
 ]
 urlpatterns += [
     path('captcha/', include('captcha.urls')),

@@ -205,9 +205,25 @@ LEAFLET_CONFIG = {
             'js': ['https://unpkg.com/@tmcw/togeojson@7.1.2/dist/togeojson.umd.js', 'https://cdn.jsdelivr.net/npm/leaflet-filelayer@1.2.0/src/leaflet.filelayer.min.js'],
             'auto-include': True,
         },
-        #'geocoder': {
-        # 'css': ['https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css'],
-        # 'js': ['https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js'],
+        'geocoder': {
+         'css': ['https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css'],
+         'js': ['https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js'],
+         'auto-include': True,
+        },
+        'fullscreen': {
+            'css': ['https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/3.0.2/Control.FullScreen.css'],
+            'js': ['https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/3.0.2/Control.FullScreen.min.js'],
+            'auto-include': True,
+        },
+        # TODO: Geocoder und Fullscreen als vendor mit ins Projekt nehmen um cross-origin Problematik zu umgehen!
+        #'fullscreen': {
+        #    'css': ['https://unpkg.com/leaflet.fullscreen/dist/Control.FullScreen.css'],
+        #    'js': ['https://unpkg.com/leaflet.fullscreen/dist/Control.FullScreen.umd.js'],
+        #    'auto-include': True,
+        #},
+        #'fullscreen': {
+        #    'css': ['https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css'],
+        #    'js': ['https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.min.js'],
         #},
     }
 }
@@ -269,3 +285,10 @@ CLAMD_FAIL_BY_DEFAULT = True
 CLAMD_ENABLED = False
 
 CAPTCHA_AJAX = True
+
+# Geocoder BKG
+BKG_GEOCODER_CONFIG = {
+    'base_url': 'https://sg.geodatenzentrum.de/gdz_geokodierung__',
+    'api_key': 'XXX',
+}
+
