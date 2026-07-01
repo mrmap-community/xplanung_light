@@ -1561,8 +1561,8 @@ class BPlanBeteiligungForm(FormMixin, ModelForm):
         super().__init__(*args, **kwargs)
         # Über die lambda Funktion können wir auf weitere Attribute reagieren - Eigene TOEBS und Räumliche Überdeckung
         #self.fields['assigned_toebs'].label_from_instance = lambda obj:  str(obj) if not obj.owned and not obj.intersects else "* " + str(obj)  if obj.owned and not obj.intersects else "+ " + str(obj) if obj.intersects and not obj.owned else "*+ " + str(obj)
-        self.fields['assigned_toebs'].label_from_instance = lambda obj:  "~- " + str(obj) if not obj.owned and not obj.intersects else "*- " + str(obj)  if obj.owned and not obj.intersects else "~+ " + str(obj) if obj.intersects and not obj.owned else "*+ " + str(obj)
-        self.fields['assigned_toebs'].help_text = "TOEBS - Filter: (*) - eigene, (~) - fremde, (+) - räumliche Überdeckung Zuständigkeitsbereich mit Planung, (-) - keine räumliche Überdeckung"
+        self.fields['assigned_toebs'].label_from_instance = lambda obj:  "&~ " + str(obj) if not obj.owned and not obj.intersects else "*~ " + str(obj)  if obj.owned and not obj.intersects else "&# " + str(obj) if obj.intersects and not obj.owned else "*# " + str(obj)
+        self.fields['assigned_toebs'].help_text = "TOEBS - Filter: (*) - eigene, (&) - fremde, (#) - räumliche Überdeckung Zuständigkeitsbereich mit Planung, (~) - keine räumliche Überdeckung"
         is_update = self.instance.pk is not None
         # Bei Update und bereits vorhandene Beiträge -> alles sperren bis auf ...
         if is_update:
@@ -1665,8 +1665,8 @@ class FPlanBeteiligungForm(FormMixin, ModelForm):
         In der init Funktion kann beim Update gewisse Elemente deaktivieren.
         """
         super().__init__(*args, **kwargs)
-        self.fields['assigned_toebs'].label_from_instance = lambda obj:  "~- " + str(obj) if not obj.owned and not obj.intersects else "*- " + str(obj)  if obj.owned and not obj.intersects else "~+ " + str(obj) if obj.intersects and not obj.owned else "*+ " + str(obj)
-        self.fields['assigned_toebs'].help_text = "TOEBS - Filter: (*) - eigene, (~) - fremde, (+) - räumliche Überdeckung Zuständigkeitsbereich mit Planung, (-) - keine räumliche Überdeckung"
+        self.fields['assigned_toebs'].label_from_instance = lambda obj:  "&~ " + str(obj) if not obj.owned and not obj.intersects else "*~ " + str(obj)  if obj.owned and not obj.intersects else "&# " + str(obj) if obj.intersects and not obj.owned else "*# " + str(obj)
+        self.fields['assigned_toebs'].help_text = "TOEBS - Filter: (*) - eigene, (&) - fremde, (#) - räumliche Überdeckung Zuständigkeitsbereich mit Planung, (~) - keine räumliche Überdeckung"
         is_update = self.instance.pk is not None
         # Bei Update und bereits vorhandene Beiträge -> alles sperren bis auf ...
         if is_update:

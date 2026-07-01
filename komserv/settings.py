@@ -205,14 +205,19 @@ LEAFLET_CONFIG = {
             'js': ['https://unpkg.com/@tmcw/togeojson@7.1.2/dist/togeojson.umd.js', 'https://cdn.jsdelivr.net/npm/leaflet-filelayer@1.2.0/src/leaflet.filelayer.min.js'],
             'auto-include': True,
         },
+        #'geocoder': {
+        # 'css': ['https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css'],
+        # 'js': ['https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js'],
+        # 'auto-include': True,
+        #},
         'geocoder': {
-         'css': ['https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css'],
-         'js': ['https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js'],
+         'css': ['vendor/leaflet-geocoder/dist/Control.Geocoder.css'],
+         'js': ['vendor/leaflet-geocoder/dist/Control.Geocoder.js'],
          'auto-include': True,
         },
         'fullscreen': {
-            'css': ['https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/3.0.2/Control.FullScreen.css'],
-            'js': ['https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/3.0.2/Control.FullScreen.min.js'],
+            'css': ['vendor/leaflet-fullscreen/Control.FullScreen.css'],
+            'js': ['vendor/leaflet-fullscreen/Control.FullScreen.min.js'],
             'auto-include': True,
         },
         # TODO: Geocoder und Fullscreen als vendor mit ins Projekt nehmen um cross-origin Problematik zu umgehen!
@@ -292,3 +297,7 @@ BKG_GEOCODER_CONFIG = {
     'api_key': 'XXX',
 }
 
+#REQUESTS_PROXIES = {
+#    'http': 'http://192.168.0.1:3128',
+#    'https': 'http://192.168.0.1:3128',
+#}
