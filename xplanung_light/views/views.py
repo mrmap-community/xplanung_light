@@ -436,23 +436,6 @@ def ows_fplan_overview(request, pk:int, plan_typ='fplan'):
     http_response.headers['Content-Length'] = str(len(result))
     return http_response
 
-def geocode(request):
-    """
-    Geocoder aus dem Geoportal.rlp - Wrapper für den BKG-Gazetteer
-    """
-    url = "https://www.geoportal.rlp.de/mapbender/geoportal/gaz_geom_mobile_new.php"
-    # kompletten Query-String 1:1 durchreichen
-    params = request.GET.copy()
-    # Optional: erzwingen, dass bestimmte Parameter nicht vom Client überschrieben werden können
-    params['outputFormat'] = 'json'
-    try:
-        response = requests.get(url, params=params, timeout=5)
-        response.raise_for_status()
-    except requests.RequestException:
-        return HttpResponseBadRequest("Geocoding service unavailable")
-
-    return JsonResponse(response.json(), safe=False)
-
 def geocodeBkg(request):
     """
     Geocoder BKG-Gazetteer
@@ -462,13 +445,15 @@ def geocodeBkg(request):
     params = {k: v for k, v in request.GET.items() if k in ALLOWED_PARAMS}
     params.setdefault('count', 20)
     try:
-        response = requests.get(url, params=params, timeout=5)
+        if settings.REQUESTS_PROXIES:
+            response = requests.get(url, params=params, timeout=5, proxies=settings.REQUESTS_PROXIES)
+        else:
+            response = requests.get(url, params=params, timeout=5)
         response.raise_for_status()
     except requests.RequestException:
         return HttpResponseBadRequest("Geocoding service unavailable")
     return JsonResponse(response.json(), safe=False)
 
-    
 def ows(request, pk:int):
     """
     OWS Proxy für den Mapserver, der per mapscript aufgerufen wird. Beim GetFeatureInfo wird in den Prozess eingegriffen und die HTML-Anzeige der Django Anwendung
