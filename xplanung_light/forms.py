@@ -2551,8 +2551,8 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
         },
     )
     organization = forms.ModelChoiceField(
-        #queryset=AdministrativeOrganization.objects.all().only('name', 'name_part', 'id', 'type'),
-        queryset=AdministrativeOrganization.objects.none(),
+        queryset=AdministrativeOrganization.objects.all().only('name', 'name_part', 'id', 'type'),
+        #queryset=AdministrativeOrganization.objects.none(),
         label="Organisation",
         #widget=forms.Select(attrs={
         widget = Selectize(
@@ -2613,11 +2613,14 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
         organization = self.cleaned_data['organization']
         toeb_reporter = self.cleaned_data['toeb_reporter']
         
-        # Alle existierenden admin Zuweisungen für diese Organisation löschen
+        # Alle existierenden toeb-reporter Zuweisungen für diese Organisation löschen - kein guter Weg
+        # Erst mal alle auflisten lassen und prüfen, ob eine ToebUnit mit diesem Reporter existiert
+        # TODO: Nicht die Löschen, die editor in einem laufenden Beteiligungsverfahren sind!!!! 
         AdminOrgaUser.objects.filter(organization=organization, is_toeb_reporter=True).delete()
         
         # Toeb Reporter erstellen oder anpassen
         for user in toeb_reporter:
+            # Wenn noch keine Rolle zugewiesen
             if not AdminOrgaUser.objects.filter(
                 organization=organization,
                 user=user
@@ -2629,6 +2632,7 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
                     is_toeb_reporter=True
                 )
             else:
+                # Es ist schon eine Rolle zugewiesen
                 org_user = AdminOrgaUser.objects.get(
                     organization=organization,
                     user=user
