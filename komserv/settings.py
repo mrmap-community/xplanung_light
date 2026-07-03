@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'xplanung_light',
     'dal',
     'dal_select2',
     'django.contrib.admin',
@@ -40,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'xplanung_light',
+    #'xplanung_light',
     'debug_toolbar',
     'django_bootstrap5',
     'simple_history',
@@ -294,10 +295,10 @@ CAPTCHA_AJAX = True
 # Geocoder BKG
 BKG_GEOCODER_CONFIG = {
     'base_url': 'https://sg.geodatenzentrum.de/gdz_geokodierung__',
-    'api_key': 'XXX',
+    'api_key': '{api_key}',
 }
 
 #REQUESTS_PROXIES = {
-#    'http': 'http://192.168.0.1:3128',
-#    'https': 'http://192.168.0.1:3128',
+#    'http': 'http://xxx:xxx',
+#    'https': 'http://xxx:xxx',
 #}
