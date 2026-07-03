@@ -50,6 +50,7 @@ class BPlanBeteiligungCreateView(IncompleteSelectResponseMixin, FormViewMixin, X
             # Prüfung auf räumliche Überschneidung zuwischen Zuständigkeit einer TOEB-Stelle und Geltungsbereich
             # Bei create exitiert bplan noch nicht - bplan vorher ziehen!
             intersects=Q(geometry__intersects=plan.geltungsbereich),
+            has_geometry=Q(geometry__isnull=False),
         ).filter(
             (Q(public=True) | Q(organization__in=allowed_orgas)) & Q(editors__isnull=False),
         )
@@ -158,8 +159,9 @@ class BPlanBeteiligungUpdateView(IncompleteSelectResponseMixin, FormViewMixin, X
             ),
             # Nutzer hat Admin-Rolle zur jeweiligen Organisation - dementsprechend gilt TOEB als owned
             owned=Q(organization__in=allowed_orgas),
-            # Prüfung auf räumliche Überschneidung zuwischen Zuständigkeit einer TOEB-Stelle und Geltungsbereich
+            # Prüfung auf räumliche Überschneidung zwischen Zuständigkeit einer TOEB-Stelle und Geltungsbereich
             intersects=Q(geometry__intersects=self.object.bplan.geltungsbereich),
+            has_geometry=Q(geometry__isnull=False),
         ).filter(
             (Q(public=True) | Q(organization__in=allowed_orgas)) & Q(editors__isnull=False),
         )

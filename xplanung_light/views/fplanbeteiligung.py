@@ -46,6 +46,7 @@ class FPlanBeteiligungCreateView(IncompleteSelectResponseMixin, FormViewMixin, X
             # Prüfung auf räumliche Überschneidung zuwischen Zuständigkeit einer TOEB-Stelle und Geltungsbereich
             # Bei create exitiert bplan noch nicht - bplan vorher ziehen!
             intersects=Q(geometry__intersects=plan.geltungsbereich),
+            has_geometry=Q(geometry__isnull=False),
         ).filter(
             (Q(public=True) | Q(organization__in=allowed_orgas)) & Q(editors__isnull=False),
         )
@@ -155,6 +156,7 @@ class FPlanBeteiligungUpdateView(IncompleteSelectResponseMixin, FormViewMixin, X
             owned=Q(organization__in=allowed_orgas),
             # Prüfung auf räumliche Überschneidung zuwischen Zuständigkeit einer TOEB-Stelle und Geltungsbereich
             intersects=Q(geometry__intersects=self.object.fplan.geltungsbereich),
+            has_geometry=Q(geometry__isnull=False),
         ).filter(
             (Q(public=True) | Q(organization__in=allowed_orgas)) & Q(editors__isnull=False),
         )
