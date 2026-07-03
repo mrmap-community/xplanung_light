@@ -27,6 +27,7 @@
 <input type="hidden" name="next" value="{{ next }}">
 </form>
 <p>Noch keinen Zugang? <a href="{% url 'register' %}" class="navbar-item">Hier Registrieren</a></p>
+<p>Passwort vergessen? <a href="{% url 'password_reset' %}" class="navbar-item">Passwort zurücksetzen</a></p>
 {# Assumes you set up the password_reset view in your URLconf #}
 {# <p><a href="{% url 'password_reset' %}">Lost password?</a></p> #}
 {% endblock %}

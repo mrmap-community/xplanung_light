@@ -9,7 +9,7 @@ from xplanung_light.models import ContactOrganization, ToebUnit, AdminOrgaUser, 
 from xplanung_light.models import BPlanBeteiligungToebNotification, FPlanBeteiligungToebNotification
 from xplanung_light.models import BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang
 from xplanung_light.models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme
-from xplanung_light.models import ConsentOption
+from xplanung_light.models import ConsentOption, UserProfile
 from xplanung_light.validators import fplan_upload_file_validator, geotiff_raster_validator, bplan_content_validator, fplan_content_validator, bplan_upload_file_validator
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Row, Column, Field
@@ -27,6 +27,9 @@ from django.utils.timezone import now
 import uuid
 from django.db.models import Case, When, Value, CharField, Count
 from django.db.models.functions import Concat
+from django.contrib.auth.forms import PasswordResetForm
+from django.utils.translation import gettext_lazy as _
+
 #from django.db.models import CharField
 #from formset.utils import FormMixin
 
@@ -402,11 +405,53 @@ class FPlanUvpForm(forms.ModelForm):
 class RegistrationForm(UserCreationForm):
 
     email = forms.EmailField(required=True)
+    phone = forms.CharField(max_length=256, required=False, label='Telefonnummer', help_text='Die Angabe der dienstl. Telefonnumer erleichtert das Kontaktieren bei Rückfragen')
     captcha = CaptchaField()
 
     class Meta:
         model = User
         fields = ['username', 'email', 'password1', 'password2']
+
+    def save(self, commit=True):
+        """
+        Funktion für das Speichern der Informationen aus dem UserProfile
+        """
+        # Save the User model first
+        user = super().save(commit=False)
+        
+        if commit:
+            user.save()
+            # Save or update the related Profile model
+            profile, created = UserProfile.objects.get_or_create(user=user)
+            profile.phone = self.cleaned_data['phone']
+            profile.save()
+        return user
+
+
+class UsernamePasswordResetForm(PasswordResetForm):
+    """
+    Angepasstes Formular um Passwort zurückzusetzen, weil die EMail-Adresse in unserem Fall nicht unique ist!
+    """
+    username = forms.CharField(
+        label=_("Nutzername"),
+        max_length=150,
+        widget=forms.TextInput(attrs={"autofocus": True})
+    )
+
+    def get_users(self, email):
+        """Given an email, return matching users who also match the username."""
+        username = self.cleaned_data.get("username")
+        
+        # Filter active users matching both credentials
+        active_users = User.objects.filter(
+            **{
+                f"{User.EMAIL_FIELD}__iexact": email,
+                "username__iexact": username,
+                "is_active": True,
+            }
+        )
+        return active_users
+
 
 # https://docs.djangoproject.com/en/5.2/ref/forms/fields/
 # https://stackoverflow.com/questions/72004112/how-do-i-use-a-select2-multiple-select-in-a-django-crispy-form

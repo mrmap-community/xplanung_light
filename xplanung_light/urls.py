@@ -23,14 +23,22 @@ from xplanung_light.views.contactorganization import ContactOrganizationCreateVi
 from xplanung_light.views.toebunit import ToebUnitCreateView, ToebUnitListView, ToebUnitUpdateView, ToebUnitDeleteView, ToebUnitPublicListView
 from xplanung_light.views.orgauser import OrganizationUserFormViewAdmin, OrganizationUserFormViewToebReporter, UserOrganizationFormViewRoles
 from xplanung_light.views.beteiligungtoebnotification import BeteiligungToebNotificationCreateView, BeteiligungToebNotificationListView
+from xplanung_light.views.customuser import CustomPasswordResetView
 from django.views.i18n import JavaScriptCatalog
 from xplanung_light.views.consentoption import ConsentOptionCreateView, ConsentOptionUpdateView, ConsentOptionListView, ConsentOptionDeleteView
 from django.urls import re_path as url
-
+#https://learndjango.com/tutorials/django-login-and-logout-tutorial
 urlpatterns = [
     path("", views.home, name="home"),
     path("accounts/login/", auth_views.LoginView.as_view(next_page="home"), name="login"),
     path("accounts/logout/", auth_views.LogoutView.as_view(next_page="home"), name='logout'),
+    path("accounts/password_change/", auth_views.PasswordChangeView.as_view(template_name="registration/password_change_form.html"), name='password_change'),
+    path("accounts/password_change_done/", auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
+    #path("accounts/password_reset/", auth_views.PasswordResetView.as_view(), name='password_reset'),
+    path("accounts/password_reset/", CustomPasswordResetView.as_view(), name='password_reset'),
+    path("accounts/password_reset_done/", auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
+    path("accounts/reset/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(post_reset_login=True), name='password_reset_confirm'),
+    path("accounts/reset/done/", auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
     # https://dev.to/donesrom/how-to-set-up-django-built-in-registration-in-2023-41hg
     path("register/", views.register, name = "register"),
     path("about/", views.about, name="about"),

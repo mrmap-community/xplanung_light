@@ -145,6 +145,11 @@ class AdminOrgaOwner(AbstractOrganizationOwner):
     pass
 
 
+# User Profile um die Telefonnummer und ggf. weitere Informationen zum Standarduser abzulegen
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    phone = models.CharField(max_length=256, blank=True, null=True, verbose_name='Telefonnummer')
+
 # administrative organizations - Klasse 
 #class AdministrativeOrganization(GenericMetadata, OrganizationBase):
 class AdministrativeOrganization(GenericMetadata, AbstractOrganization):
