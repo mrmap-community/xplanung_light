@@ -29,6 +29,8 @@ from django.db.models import Case, When, Value, CharField, Count
 from django.db.models.functions import Concat
 from django.contrib.auth.forms import PasswordResetForm
 from django.utils.translation import gettext_lazy as _
+from django.db.models import Avg, F, Q
+from django.contrib import messages
 
 #from django.db.models import CharField
 #from formset.utils import FormMixin
@@ -2517,10 +2519,13 @@ class OrganizationUserAssignmentFormAdmin(FormMixin, forms.Form):
         organization = self.cleaned_data['organization']
         admins = self.cleaned_data['admins']
         
-        # Alle existierenden admin Zuweisungen für diese Organisation löschen
-        AdminOrgaUser.objects.filter(organization=organization, is_admin=True).delete()
+        # Alle existierenden admin-Zuweisungen für diese Organisation auf False setzen!
+        admin_orga_users_for_organisation = AdminOrgaUser.objects.filter(organization=organization, is_admin=True)
+        for admin_orga_user in admin_orga_users_for_organisation:
+            admin_orga_user.is_admin = False
+            admin_orga_user.save()
         
-        # Admins erstellen oder anpassen
+        # AdminOrgaUser neu erstellen oder is_admin = True setzen
         for user in admins:
             if not AdminOrgaUser.objects.filter(
                 organization=organization,
@@ -2544,6 +2549,9 @@ class OrganizationUserAssignmentFormAdmin(FormMixin, forms.Form):
 
 
 class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
+    # Feld für die initiale Liste - gegen die muss später verglichen werden!
+    org_users_initial = None
+    org_users_single_toebunit = None
     default_renderer = FormRenderer(
         form_css_classes = 'row',
         field_css_classes={
@@ -2554,7 +2562,6 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
         queryset=AdministrativeOrganization.objects.all().only('name', 'name_part', 'id', 'type'),
         #queryset=AdministrativeOrganization.objects.none(),
         label="Organisation",
-        #widget=forms.Select(attrs={
         widget = Selectize(
             search_lookup='name__icontains',
             attrs={
@@ -2597,29 +2604,103 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
             self.fields['organization'].queryset = AdministrativeOrganization.objects.none()        
         if organization_id:
             # Bereits zugewiesene Nutzer als initial values setzen
-            org_users = AdminOrgaUser.objects.filter(
-                organization__id=organization_id, is_toeb_reporter=True
-            )
             org_users_initial = AdminOrgaUser.objects.filter(
                 organization__id=organization_id, is_toeb_reporter=True
             ).values_list('user__id')
+            # Speichern für späteren Vergleich
+            self.org_users_initial = org_users_initial
             self.fields['toeb_reporter'].initial = User.objects.filter(
                 id__in=org_users_initial,
             )
             self.fields['organization'].initial = AdministrativeOrganization.objects.get(pk=organization_id)
+            # Selektion der vernüpften TOEBUnits die sich aktuell in einem Trägerbeteiligungsverfahren befinden - die müssen mindestens einen TOEB-Reporter behalten!
+            # Wenn kein TOEB-Reporter zugewiesen ist, dann steht die Info sonst niemandem mehr zur Verfügung!
+            # Am besten die Liste unterhalb des Formulars anzeigen
+            toeb_units = ToebUnit.objects.filter(organization__id=organization_id)
+            laufende_toeb_verfahren_bplan = BPlanBeteiligung.objects.filter(assigned_toebs__in=toeb_units, end_datum__gte=timezone.now(), bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), xplan_id=F('bplan__id'), beteiligung_id=F('id'))
+            laufende_toeb_verfahren_fplan = FPlanBeteiligung.objects.filter(assigned_toebs__in=toeb_units, end_datum__gte=timezone.now(), bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), beteiligung_id=F('id'))
+            toeb_beteiligungen_plaene = laufende_toeb_verfahren_bplan.union(laufende_toeb_verfahren_fplan).order_by('end_datum')
+            org_users_single_toebunit = []
+            for beteiligung in toeb_beteiligungen_plaene:
+                #print(str(beteiligung.beteiligung_id) + " - " + beteiligung.xplan_name)
+                for toeb in beteiligung.assigned_toebs.all():
+                    #print(toeb.name + ":")
+                    #print("Anzahl TOEB-Reporter: " + str(len(toeb.editors.all())))
+                    for editor in toeb.editors.all():
+                        if len(toeb.editors.all()) == 1:
+                            org_users_single_toebunit.append(editor.user_id)
+                        # wenn nur ein TOEB-Reporter zugewiesen wurde, muss er in die Liste der zu sperrenden User aufgenommen werden
+                        #print(str(editor.user.id) + ": " + editor.user.username + " ("+ editor.user.email + ")")
+            #print("Zu sichernde user: ")
+            #for user in org_users_single_toebunit:
+            #    print(str(user))
+            # In die Instanz schreiben um später vergleichen zu können
+            self.org_users_single_toebunit = org_users_single_toebunit 
 
     def save(self):
+        #print("Save Funktion des Formulars")
         """Speichert die Nutzer-Rollen-Zuweisungen"""
         organization = self.cleaned_data['organization']
         toeb_reporter = self.cleaned_data['toeb_reporter']
-        
-        # Alle existierenden toeb-reporter Zuweisungen für diese Organisation löschen - kein guter Weg
-        # Erst mal alle auflisten lassen und prüfen, ob eine ToebUnit mit diesem Reporter existiert
-        # TODO: Nicht die Löschen, die editor in einem laufenden Beteiligungsverfahren sind!!!! 
-        AdminOrgaUser.objects.filter(organization=organization, is_toeb_reporter=True).delete()
-        
-        # Toeb Reporter erstellen oder anpassen
-        for user in toeb_reporter:
+        # 1. NEUE IDs direkt aus den bereinigten Formulardaten holen
+        new_users = [user.id for user in toeb_reporter]
+        # 2. ALTE IDs (Initialzustand) frisch aus der Datenbank laden!
+        # Da wir die 'organization' aus cleaned_data haben, kennen wir die korrekte ID.
+        org_users_initial = list(AdminOrgaUser.objects.filter(
+            organization=organization, 
+            is_toeb_reporter=True
+        ).values_list('user__id', flat=True))
+        # 3. Sicherheitsliste (Single Toeb Units) ebenfalls frisch ermitteln!
+        # Da self.org_users_single_toebunit beim POST leer sein kann, berechnen wir es hier neu:
+        org_users_single_toebunit = []
+        toeb_units = ToebUnit.objects.filter(organization=organization)
+        laufende_toeb_verfahren_bplan = BPlanBeteiligung.objects.filter(
+            assigned_toebs__in=toeb_units, 
+            end_datum__gte=timezone.now(), 
+            bekanntmachung_datum__lte=timezone.now()
+        ).annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), xplan_id=F('bplan__id'), verfahren_id=F('id'))
+        laufende_toeb_verfahren_fplan = FPlanBeteiligung.objects.filter(
+            assigned_toebs__in=toeb_units, 
+            end_datum__gte=timezone.now(), 
+            bekanntmachung_datum__lte=timezone.now()
+        ).annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), verfahren_id=F('id'))
+        toeb_beteiligungen_plaene = laufende_toeb_verfahren_bplan.union(laufende_toeb_verfahren_fplan)
+        for verfahren in toeb_beteiligungen_plaene:
+            for toeb in verfahren.assigned_toebs.all():
+                # Ermitteln, wie viele Reporter dieser konkrete TOEB hat
+                active_editors = toeb.editors.all()
+                # Falls nur ein User mit der TOEBUnit verknüpft ist, kommt er in die Liste
+                if len(active_editors) == 1:
+                    org_users_single_toebunit.append(active_editors[0].user_id)
+        # Debug-Ausgaben
+        #print(f"Neue user ids für TOEB-Reporter Rolle: {new_users}")
+        #print(f"Alte user ids für TOEB-Reporter Rolle: {org_users_initial}")
+        # Differenz - Nutzer die zwar im initialen Set, aber nicht mehr in der neuen Liste auftauchen   
+        zu_entziehen = list(set(org_users_initial) - set(new_users))
+        # Diese müssen die Rolle toeb_reporter entzogen bekommen, wenn sie nicht self.org_users_single_toebunit vorhanden sind.
+        # Sonst Hinweis darauf, dass die Rolle aktuell nicht entzogen werden kann
+        #secured_users = User.objects.filter(id__in=self.org_users_single_toebunit)
+        some_user_excluded = False
+        for user_id in zu_entziehen:
+            if user_id not in org_users_single_toebunit:
+                org_user = AdminOrgaUser.objects.get(
+                        organization=organization,
+                        user__id=user_id
+                )
+                org_user.is_toeb_reporter = False
+                org_user.save()
+            else:
+                some_user_excluded = True
+        # Message erzeugen mit Nutzern, deren Rollen nicht angepasst werden können - müssen wir in den View verlagern!
+        #if some_user_excluded:
+            #print("some user excluded!")
+            #messages.add_message(self.request, messages.INFO, 'Manche Nutzer koennen nicht angepasst werden')
+        self.some_user_excluded = some_user_excluded
+        self.org_users_single_toebunit = org_users_single_toebunit
+        neu_anzulegen =  list(set(new_users) - set(org_users_initial))
+        for user_id in neu_anzulegen:
+            # Nutzer aus der DB ziehen
+            user=User.objects.get(pk=user_id)
             # Wenn noch keine Rolle zugewiesen
             if not AdminOrgaUser.objects.filter(
                 organization=organization,
@@ -2639,7 +2720,7 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
                 )
                 org_user.is_toeb_reporter = True
                 org_user.save()
-        
+            pass
         return organization
     
 
