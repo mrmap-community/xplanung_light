@@ -26,8 +26,11 @@ in Form von Handlungsempfehlungen bzw. Leitfäden veröffentlicht sind:
     * `BW-Anlage`_
 * `Bayern`_ (10/2024)
 * `Brandenburg`_ (10/2025)
+* `Nordrhein-Westfalen`_ (03/2022)
+    * `Köln`_ (05/2026)
 * `Rheinland-Pfalz`_ (2017)
-* `Sachsen-Amhalt`_ (03/2024)
+* `Sachsen-Anhalt`_ (03/2024)
+
 
 *********************
 Weitere Informationen
@@ -53,4 +56,9 @@ Weitere Informationen
 
 .. _Rheinland-Pfalz: https://www.geoportal.rlp.de/mediawiki/images/c/c7/Leitfaden_Bereitstellung_komm_Plaene.pdf
 
-.. _Sachsen-Amhalt: https://mid.sachsen-anhalt.de/fileadmin/Bibliothek/Politik_und_Verwaltung/MLV/MID/Ministerium/Publikationen/XPlanung-Leitfaden-Sachsen-Anhalt.pdf
+.. _Sachsen-Anhalt: https://mid.sachsen-anhalt.de/fileadmin/Bibliothek/Politik_und_Verwaltung/MLV/MID/Ministerium/Publikationen/XPlanung-Leitfaden-Sachsen-Anhalt.pdf
+
+.. _Nordrhein-Westfalen: https://bauportal.nrw/system/files/media/document/file/22-03-14-musterpflichtenheft_xplanung_nrw.pdf
+
+.. _Köln: https://www.stadt-koeln.de/mediaasset/content/pdf61/xplanung_pflichtenheft_3.0.pdf
+
