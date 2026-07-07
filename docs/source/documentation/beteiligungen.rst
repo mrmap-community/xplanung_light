@@ -130,6 +130,10 @@ Bei der Verwaltung von Trägerbeteiligungen können TOEBs selektiert und zugewie
 .. image:: ../media/xplanung_light_beteiligung_toeb_zuweisen.png
 
 
+Es gibt verschiedene Filter (Ergänzung der Titel um Sonderzeichen), die die Selektion der TOEBS erleichtern
+
+.. image:: ../media/xplanung_light_beteiligung_toeb_zuweisen_filter.png
+
 =====================
 Benachrichtigung TOEB
 =====================

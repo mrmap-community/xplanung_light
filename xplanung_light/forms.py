@@ -2623,7 +2623,7 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
             org_users_single_toebunit = []
             for beteiligung in toeb_beteiligungen_plaene:
                 #print(str(beteiligung.beteiligung_id) + " - " + beteiligung.xplan_name)
-                for toeb in beteiligung.assigned_toebs.all():
+                for toeb in beteiligung.assigned_toebs.filter(organization__id=organization_id):
                     #print(toeb.name + ":")
                     #print("Anzahl TOEB-Reporter: " + str(len(toeb.editors.all())))
                     for editor in toeb.editors.all():
