@@ -2666,7 +2666,7 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
         ).annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), verfahren_id=F('id'))
         toeb_beteiligungen_plaene = laufende_toeb_verfahren_bplan.union(laufende_toeb_verfahren_fplan)
         for verfahren in toeb_beteiligungen_plaene:
-            for toeb in verfahren.assigned_toebs.all():
+            for toeb in verfahren.assigned_toebs.filter(organization=organization):
                 # Ermitteln, wie viele Reporter dieser konkrete TOEB hat
                 active_editors = toeb.editors.all()
                 # Falls nur ein User mit der TOEBUnit verknüpft ist, kommt er in die Liste
