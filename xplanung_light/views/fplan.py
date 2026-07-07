@@ -56,6 +56,11 @@ class FPlanPublicListView(XPlanPublicListView):
     success_url = reverse_lazy("fplan-public-list") 
     filterset_class = FPlanPublicFilter
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(public=True)
+        return qs
+
 
 class FPlanListViewHtml(XPlanListViewHtml):
     """

@@ -753,6 +753,41 @@ class AdministrativeOrganizationPublishingTable(tables.Table):
         fields = ("name", "ags", "num_bplan", "num_bplan_public", "num_fplan", "num_fplan_public", "laufende_verfahren", "wms", "wfs", )
 
 
+class AdministrativeOrganizationPublishingPublicTable(AdministrativeOrganizationPublishingTable):
+
+    num_fplan = None
+    num_bplan = None
+
+    def render_num_bplan_public(self, record):
+        if not record.num_bplan_public == 0:
+            url = reverse('bplan-public-list')
+            return format_html('<a href="{}?gemeinde={}&is_public=on">{}</a>', url, record.id, record.num_bplan_public)
+        else:
+            return format_html('{}', record.num_bplan_public)
+
+    def render_num_fplan_public(self, record):
+        if not record.num_fplan_public == 0:
+            url = reverse('fplan-public-list')
+            return format_html('<a href="{}?gemeinde={}&is_public=on">{}</a>', url, record.id, record.num_fplan_public)
+        else:
+            return format_html('{}', record.num_fplan_public)
+        
+    def render_laufende_verfahren(self, record):
+        #url = reverse('organization-beteiligungen-list', kwargs={'pk': record.id})
+        sum_laufende_verfahren = record.num_bplan_beteiligung + record.num_fplan_beteiligung
+        #return format_html('<a href="{}">{}</a>', url, sum_laufende_verfahren)
+        #if not sum_laufende_verfahren == 0:
+        #    return format_html('<a href="{}">{}</a>', url, sum_laufende_verfahren)
+        #else:
+        return format_html('{}', sum_laufende_verfahren)
+        
+
+    class Meta:
+        model = AdministrativeOrganization
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ("name", "ags", "num_bplan_public", "num_fplan_public", "laufende_verfahren", "wms", "wfs", )
+
+
 class ConsentOptionTable(tables.Table):
 
     edit = tables.LinkColumn('consentoption-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \

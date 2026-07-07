@@ -56,6 +56,11 @@ class BPlanPublicListView(XPlanPublicListView):
     success_url = reverse_lazy("bplan-public-list") 
     filterset_class = BPlanPublicFilter
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.filter(public=True)
+        return qs
+
 
 class BPlanListViewHtml(XPlanListViewHtml):
     """

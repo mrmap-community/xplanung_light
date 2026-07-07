@@ -3,7 +3,7 @@ from xplanung_light.models import AdministrativeOrganization, BPlan
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableView
 
-from xplanung_light.tables import AdministrativeOrganizationTable, AdministrativeOrganizationPublishingTable
+from xplanung_light.tables import AdministrativeOrganizationTable, AdministrativeOrganizationPublishingTable, AdministrativeOrganizationPublishingPublicTable
 from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 from xplanung_light.forms import AdministrativeOrganizationUpdateForm
@@ -39,16 +39,40 @@ class AdministrativeOrganizationPublishingListView(ExtentUserOrgaInfo, SingleTab
     def get_queryset(self):
         qs = super().get_queryset().only('id', 'name', 'ls', 'ks', 'gs')
         if self.request.user.is_superuser:
-            qs = qs.filter(Q(bplan__isnull=False) | Q(fplan__isnull=False)).distinct()
+            qs = qs.filter(Q(bplan__isnull=False) or Q(fplan__isnull=False)).distinct()
         else:
-            qs = qs.filter(Q(bplan__isnull=False) | Q(fplan__isnull=False), users=self.request.user).distinct()
+            qs = qs.filter(Q(bplan__isnull=False) or Q(fplan__isnull=False), users=self.request.user).distinct()
         qs = qs.annotate(
                 num_bplan=Count('bplan', distinct=True),
                 num_bplan_public=Count('bplan', distinct=True, filter=Q(bplan__public=True)),
                 num_fplan=Count('fplan', distinct=True),
                 num_fplan_public=Count('fplan', distinct=True, filter=Q(fplan__public=True)),
-                num_fplan_beteiligung=Count('fplan', distinct=True, filter=Q(fplan__public=True) & Q(fplan__beteiligungen__end_datum__gte=timezone.now()) & Q(fplan__beteiligungen__bekanntmachung_datum__lte=timezone.now())),
-                num_bplan_beteiligung=Count('bplan', distinct=True, filter=Q(bplan__public=True) & Q(bplan__beteiligungen__end_datum__gte=timezone.now()) & Q(bplan__beteiligungen__bekanntmachung_datum__lte=timezone.now())),
+                num_fplan_beteiligung=Count('fplan', distinct=True, filter=Q(fplan__public=True) and Q(fplan__beteiligungen__end_datum__gte=timezone.now()) & Q(fplan__beteiligungen__bekanntmachung_datum__lte=timezone.now())),
+                num_bplan_beteiligung=Count('bplan', distinct=True, filter=Q(bplan__public=True) and Q(bplan__beteiligungen__end_datum__gte=timezone.now()) & Q(bplan__beteiligungen__bekanntmachung_datum__lte=timezone.now())),
+        )
+        return qs
+    
+
+class AdministrativeOrganizationPublishingListPublicView(ExtentUserOrgaInfo, SingleTableView):
+    """
+    Tabellen View zur Auflistung der Pläne der einzelnen Gebietskörperschaften (AdministrativeOrganization) mit den 
+    Zugriffspunkten der jeweiligen die OGC-Dienste 
+    """
+    model = AdministrativeOrganization
+    table_class = AdministrativeOrganizationPublishingPublicTable
+    template_name = 'xplanung_light/orga_publishing_list.html'
+    success_url = reverse_lazy("orga-publishing-list-public") 
+
+    def get_queryset(self):
+        qs = super().get_queryset().only('id', 'name', 'ls', 'ks', 'gs')
+        qs = qs.filter(Q(bplan__isnull=False, bplan__public=True) or Q(fplan__isnull=False, fplan__public=True)).distinct()
+        qs = qs.annotate(
+                #num_bplan=Count('bplan', distinct=True),
+                num_bplan_public=Count('bplan', distinct=True, filter=Q(bplan__public=True)),
+                #num_fplan=Count('fplan', distinct=True),
+                num_fplan_public=Count('fplan', distinct=True, filter=Q(fplan__public=True)),
+                num_fplan_beteiligung=Count('fplan', distinct=True, filter=Q(fplan__public=True) and Q(fplan__beteiligungen__end_datum__gte=timezone.now()) & Q(fplan__beteiligungen__bekanntmachung_datum__lte=timezone.now())),
+                num_bplan_beteiligung=Count('bplan', distinct=True, filter=Q(bplan__public=True) and Q(bplan__beteiligungen__end_datum__gte=timezone.now()) & Q(bplan__beteiligungen__bekanntmachung_datum__lte=timezone.now())),
         )
         return qs
     

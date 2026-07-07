@@ -18,7 +18,7 @@ from xplanung_light.views.bplanbeteiligung import BPlanBeteiligungCreateView, BP
 from xplanung_light.views.fplanbeteiligung import FPlanBeteiligungCreateView, FPlanBeteiligungUpdateView, FPlanBeteiligungDeleteView, FPlanBeteiligungListView
 from xplanung_light.views.uvp import UvpCreateView, UvpUpdateView, UvpDeleteView, UvpListView
 from xplanung_light.views.fplanuvp import FPlanUvpCreateView, FPlanUvpUpdateView, FPlanUvpDeleteView, FPlanUvpListView
-from xplanung_light.views.administrativeorganization import AdministrativeOrganizationPublishingListView, AdministrativeOrganizationAutocomplete, AdministrativeOrganizationListView, AdministrativeOrganizationUpdateView
+from xplanung_light.views.administrativeorganization import AdministrativeOrganizationPublishingListView, AdministrativeOrganizationAutocomplete, AdministrativeOrganizationListView, AdministrativeOrganizationUpdateView, AdministrativeOrganizationPublishingListPublicView
 from xplanung_light.views.contactorganization import ContactOrganizationCreateView, ContactOrganizationListView, ContactOrganizationUpdateView, ContactOrganizationDeleteView
 from xplanung_light.views.toebunit import ToebUnitCreateView, ToebUnitListView, ToebUnitUpdateView, ToebUnitDeleteView, ToebUnitPublicListView
 from xplanung_light.views.orgauser import OrganizationUserFormViewAdmin, OrganizationUserFormViewToebReporter, UserOrganizationFormViewRoles
@@ -169,6 +169,7 @@ urlpatterns = [
     path("organization/<int:pk>/bauleitplanung/", views.bauleitplanung_orga_html, name="organization-bauleitplanung-list"),
     # 
     path("organization/publishing/", AdministrativeOrganizationPublishingListView.as_view(), name="organization-publishing-list"),
+    path("organization/publishing-public/", AdministrativeOrganizationPublishingListPublicView.as_view(), name="organization-publishing-list-public"),
     url(
         r'^administrativeorganization-autocomplete/$',
         AdministrativeOrganizationAutocomplete.as_view(),
