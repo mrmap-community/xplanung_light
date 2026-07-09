@@ -16,6 +16,7 @@
 <p>
     Beteiligungsverfahren: {{ beteiligung.get_typ_display }} vom {{ beteiligung.start_datum}} bis {{ beteiligung.end_datum }}
 </p>
+<p><a href="{% url 'beteiligungbeitrag-list' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id %}">Beitragsliste</a></p>
 <div class="container border border-dark">
 {% if plantyp == "bplan" %}
 <p>Stellungnahmen zum Beitrag <a href="{% url 'beteiligungbeitrag-detail' plantyp='bplan' planid=plan.id beteiligungid=beteiligung.id pk=beitrag.id  %}">{{ beitrag.id }}</a>

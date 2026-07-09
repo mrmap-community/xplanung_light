@@ -31,6 +31,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from xplanung_light.views.user import ExtentUserOrgaInfo
 from django.contrib.auth.mixins import UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 class XPlanBeteiligungBeitragCreateView(ExtentUserOrgaInfo, CreateView):
     """
@@ -275,7 +276,7 @@ class BeteiligungBeitragCreateView(ExtentUserOrgaInfo, EditCollectionView):
         beitrag_form = form_collection.valid_holders.get('beitrag')
         # Überschreiben des Eingangsdatums - zur Sicherheit - wird auch als Hidden Field geschickt
         if beitrag_form:
-            beitrag_form.instance.eingangsdatum = date.today
+            beitrag_form.instance.eingangsdatum = date.today()
         result = super().form_collection_valid(form_collection)
         # Nach der Speicherung
         if result:
@@ -559,7 +560,7 @@ class BeteiligungBeitragGenericUpdateView(ExtentUserOrgaInfo, EditCollectionView
         return super().post(request, *args, **kwargs)
     """
 
-class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, FormCollectionView):
+class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, FormCollectionView):
     """
     Der CreateView für die TOEB. Hier darf nur ein Beitrag pro TOEB und Beteiligung möglich sein. Die 
     Erstellung und Bearbeitung kann nur innerhalb der Fristen erfolgen. 
@@ -646,6 +647,8 @@ class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, FormCollectionView):
         # Berechtigungsprüfung
         # check ob Nutzer toeb reporter für den angegebenen TOEB ist
         if self.request.user.is_superuser == False:
+            if self.request.user.is_anonymous:
+                raise PermissionDenied("Um diese Funktion zu nutzen, müssen sie angemeldet sein!")
             toeb_unit_orga = ToebUnit.objects.filter(id=self.toeb_id).values('organization')
             if AdminOrgaUser.objects.filter(organization=toeb_unit_orga[0]['organization'], user=self.request.user, is_toeb_reporter=True).exists():
                 context[self.reference_model_name_lower] = plan
@@ -684,6 +687,7 @@ class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, FormCollectionView):
             beitrag_instance.toeb = ToebUnit.objects.get(id=self.toeb_id)
             # Automatisches Eintragen der email des Kommentierenden
             beitrag_instance.email = self.request.user.email
+            beitrag_instance.eingangsdatum = date.today()
             # Überschrieben der beteiligungsid (zur Sicherheit - hier braucht man eine instanz, keine id!):
             #setattr(beitrag_instance, self.plantyp + '_beteiligung', parent_pk)
             # beitrag_instance.parent_id = parent_pk 
