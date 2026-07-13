@@ -166,7 +166,7 @@ class Command(BaseCommand):
                     admin_unit['vg'] = row[1]
                     admin_unit['ge'] = row[2]
                     admin_unit['name'] = row[3]
-                    admin_unit['slug'] = slugify(admin_unit['name'] + '-07' + admin_unit['kr'] + admin_unit['vg'] + admin_unit['ge'])
+                    admin_unit['slug'] = slugify(admin_unit['name'] + '-07' + str(admin_unit['kr']) + str(admin_unit['vg']) + str(admin_unit['ge']))
                     self.stdout.write(admin_unit['name'])
                     admin_unit['plz'] = row[4]
                     admin_unit['type'] = 'GE'
