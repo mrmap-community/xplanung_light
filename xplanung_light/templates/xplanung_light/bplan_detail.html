@@ -58,7 +58,7 @@
     </tr>
     <tr>
       <th scope="row">Rechtsstand</th>
-      <td></td>
+      <td>{{ bplan.get_rechtsstand_display|default:"--" }}</td>
     </tr>
     <tr>
       <th scope="row">Erstellungsmassstab</th>
@@ -93,7 +93,7 @@
           </tr>
           {% for beteiligung in bplan.beteiligungen.all %}
           <tr>
-            <td>{{ beteiligung.bekanntmachung_datum }}: <a href="">{{beteiligung.get_typ_display }}</a></td>
+            <td>{{ beteiligung.get_typ_display }} ({{ beteiligung.start_datum }} - {{ beteiligung.end_datum }})</td>
           </tr>
           {% endfor %}
         </table>

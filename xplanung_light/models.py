@@ -547,6 +547,7 @@ class BPlan(XPlan):
         (SONSTIGES, "Sonstiges"),
     ]
 
+    """
     AUFSTELLUNGSBESCHLUSS = "1000"
     IMVERFAHREN = "2000"
     SATZUNG = "3000"
@@ -560,7 +561,15 @@ class BPlan(XPlan):
         (INKRAFTGETRETEN, "InKraftGetreten"),
         (UNTERGEGANGEN, "Untergegangen"),
     ]
-
+    """
+    BPLAN_RECHTSSTAND_CHOICES = {
+        '1000': "Austellungsbeschluss",
+        '2000': "ImVerfahren",
+        '3000': "Satzung",
+        '4000': "InKraftGetreten",
+        '5000': "Untergegangen",
+    }
+    
     #gemeinde [1..*], XP_Gemeinde
     # Zur Vereinfachung zunächst nur Kardinalität 1 implementieren
     #gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
@@ -638,6 +647,11 @@ class BPlan(XPlan):
     """
     @property
     def rechtsstand(self):
+        zahl_laufender_beteiligungen = BPlanBeteiligung.objects.filter(bplan=self.pk, start_datum__lte=datetime.date.today(), end_datum__gt=datetime.date.today()).exists()
+        if zahl_laufender_beteiligungen:
+            zahl_laufender_beteiligungen = 1
+        else:
+            zahl_laufender_beteiligungen = 0
         if self.untergangs_datum and self.untergangs_datum <= datetime.date.today():
             return "5000"
         if not self.untergangs_datum and self.inkrafttretens_datum and self.inkrafttretens_datum <= datetime.date.today():
@@ -650,6 +664,12 @@ class BPlan(XPlan):
             return "1000"
         return None
     
+    def get_rechtsstand_display(self):
+        """
+        Funktion zur Anzeige der Strings für das computed attribute
+        """
+        return self.BPLAN_RECHTSSTAND_CHOICES[self.rechtsstand]
+
     """
     def save(self, *args, **kwargs):
         
@@ -705,6 +725,14 @@ class FPlan(XPlan):
         (SONSTIGES, "Sonstiges"),
     ]
 
+    FPLAN_RECHTSSTAND_CHOICES = {
+        '1000': "Austellungsbeschluss",
+        '2000': "Im Verfahren",
+        '3000': "Plan",
+        '4000': "Wirksamkeit",
+        '5000': "Untergegangen",
+    }
+
     #gemeinde [1..*], XP_Gemeinde
     #gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
     gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
@@ -721,9 +749,52 @@ class FPlan(XPlan):
     aufstellungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Aufstellungsbeschlusses", help_text="Datum des Aufstellungsbeschlusses")
     # Aus FP_Plan https://xleitstelle.de/releases/objektartenkatalog_6_0
     #planbeschlussDatum [0..1], Date
+    # TODO: Prüfen, was planbeschluss_datum in diesem Kontext eigentlich bedeutet - prüfen gegen Rechtsstand '3000'!
     planbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Planbeschlusses", help_text="Datum des Planbeschlusses")
     #wirksamkeitsDatum [0..1], Date
     wirksamkeits_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Wirksamkeit", help_text="Datum der Wirksamkeit")
+
+    def clean(self, *args, **kwargs):
+        """
+        Funktion um die saubere Reihenfolge der jeweiligen Datumsangeben sicherzustellen
+        """
+        dates = []
+        if self.aufstellungsbeschluss_datum:
+            dates.append(self.aufstellungsbeschluss_datum)
+        if self.planbeschluss_datum:
+            dates.append(self.planbeschluss_datum)
+        if self.wirksamkeits_datum:
+            dates.append(self.wirksamkeits_datum)
+        if self.untergangs_datum:
+            dates.append(self.untergangs_datum)
+        is_sorted = dates == sorted(dates)
+        if is_sorted == False:
+            raise ValidationError(('Die Datumsangaben entsprechen nicht ihrer logischen zeitlichen Abfolge!'))
+        
+    @property
+    def rechtsstand(self):
+        zahl_laufender_beteiligungen = FPlanBeteiligung.objects.filter(fplan=self.pk, start_datum__lte=datetime.date.today(), end_datum__gt=datetime.date.today()).exists()
+        if zahl_laufender_beteiligungen:
+            zahl_laufender_beteiligungen = 1
+        else:
+            zahl_laufender_beteiligungen = 0
+        if self.untergangs_datum and self.untergangs_datum <= datetime.date.today():
+            return "5000"
+        if not self.untergangs_datum and self.wirksamkeits_datum and self.wirksamkeits_datum <= datetime.date.today():
+            return "4000"
+        if not self.untergangs_datum and not self.wirksamkeits_datum and self.planbeschluss_datum and self.planbeschluss_datum <= datetime.date.today():
+            return "3000" 
+        if not self.untergangs_datum and not self.wirksamkeits_datum and not self.planbeschluss_datum and self.aufstellungsbeschluss_datum and self.aufstellungsbeschluss_datum <= datetime.date.today() and zahl_laufender_beteiligungen > 0:
+            return "2000"
+        if not self.untergangs_datum and not self.wirksamkeits_datum and not self.planbeschluss_datum and self.aufstellungsbeschluss_datum and self.aufstellungsbeschluss_datum <= datetime.date.today() and zahl_laufender_beteiligungen == 0:
+            return "1000"
+        return None
+    
+    def get_rechtsstand_display(self):
+        """
+        Funktion zur Anzeige der Strings für das computed attribute
+        """
+        return self.FPLAN_RECHTSSTAND_CHOICES[self.rechtsstand]
 
     def __str__(self):
         """Returns a string representation of a BPlan."""
