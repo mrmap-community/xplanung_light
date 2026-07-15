@@ -668,7 +668,9 @@ class BPlan(XPlan):
         """
         Funktion zur Anzeige der Strings für das computed attribute
         """
-        return self.BPLAN_RECHTSSTAND_CHOICES[self.rechtsstand]
+        if self.rechtsstand:
+            return self.BPLAN_RECHTSSTAND_CHOICES[self.rechtsstand]
+        return None
 
     """
     def save(self, *args, **kwargs):
@@ -794,7 +796,9 @@ class FPlan(XPlan):
         """
         Funktion zur Anzeige der Strings für das computed attribute
         """
-        return self.FPLAN_RECHTSSTAND_CHOICES[self.rechtsstand]
+        if self.rechtsstand:
+            return self.FPLAN_RECHTSSTAND_CHOICES[self.rechtsstand]
+        return None
 
     def __str__(self):
         """Returns a string representation of a BPlan."""
