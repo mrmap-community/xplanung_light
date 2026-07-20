@@ -23,7 +23,7 @@ from xplanung_light.views.contactorganization import ContactOrganizationCreateVi
 from xplanung_light.views.toebunit import ToebUnitCreateView, ToebUnitListView, ToebUnitUpdateView, ToebUnitDeleteView, ToebUnitPublicListView
 from xplanung_light.views.orgauser import OrganizationUserFormViewAdmin, OrganizationUserFormViewToebReporter, UserOrganizationFormViewRoles
 from xplanung_light.views.beteiligungtoebnotification import BeteiligungToebNotificationCreateView, BeteiligungToebNotificationListView
-from xplanung_light.views.customuser import CustomPasswordResetView
+from xplanung_light.views.customuser import CustomPasswordResetView, CustomProfileUpdateView
 from django.views.i18n import JavaScriptCatalog
 from xplanung_light.views.consentoption import ConsentOptionCreateView, ConsentOptionUpdateView, ConsentOptionListView, ConsentOptionDeleteView
 from django.urls import re_path as url
@@ -39,6 +39,9 @@ urlpatterns = [
     path("accounts/password_reset_done/", auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
     path("accounts/reset/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(post_reset_login=True), name='password_reset_confirm'),
     path("accounts/reset/done/", auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
+    # Nutzern die Änderung ihrer EMail-Adresse und Telefonnummer ermöglichen
+    path("accounts/user_profile_update/<int:pk>/", CustomProfileUpdateView.as_view(), name='user_profile_update'),
+
     # https://dev.to/donesrom/how-to-set-up-django-built-in-registration-in-2023-41hg
     path("register/", views.register, name = "register"),
     path("about/", views.about, name="about"),

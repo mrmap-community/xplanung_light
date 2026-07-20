@@ -2752,3 +2752,11 @@ class UserOrganizationFormRoles(FormMixin, forms.Form):
         if user_id:
             self.user_id = user_id
             self.fields['user'].initial = User.objects.get(pk=user_id)
+
+
+class UserProfileUpdateForm(forms.ModelForm):
+    email = forms.EmailField()
+    
+    class Meta:
+        model = UserProfile
+        fields = ['phone']
