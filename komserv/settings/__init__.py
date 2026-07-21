@@ -1,8 +1,12 @@
 import json
 from pathlib import Path
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_FILE = BASE_DIR / '.my_xplanung_light_env.json'
+
+from .base import *
+
 try:
     with open(CONFIG_FILE) as config_file:
         config = json.load(config_file)

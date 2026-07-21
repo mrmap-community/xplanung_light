@@ -92,8 +92,6 @@ Zunächst und als Fallback wird base.py geladen. Danach werden die Inhalte durch
 ## Beispiel dev.py (einfach das überschreiben was man benötigt)
 
 ```python
-from .base import *
-
 DEBUG = True
 
 ALLOWED_HOSTS = []
