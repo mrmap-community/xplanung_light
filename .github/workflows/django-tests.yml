@@ -4,28 +4,40 @@ on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    # Wechsel auf das aktuellere Ubuntu-Image passend zum Node24-Runner
+    runs-on: ubuntu-24.04
     steps:
+    # Nutzt die aktuellste Unterversion, um Node 24 nativ anzusprechen
     - uses: actions/checkout@v4
+    
     - name: Set up Python
       uses: actions/setup-python@v5
-      with: {python-version: '3.11'}
+      with: 
+        python-version: '3.12'
+
     - name: Install System Deps
-      run: sudo apt-get install -y binutils libproj-dev gdal-bin spatialite-bin python3-mapscript
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y binutils libproj-dev gdal-bin spatialite-bin python3-mapscript
+
     - name: Install Python Deps
       run: |
         python -m venv .venv
         source .venv/bin/activate
         pip install -r requirements.txt mapscript==8.0.0
+
     - name: Link Mapscript C-Lib (Fix für CI)
       run: |
         source .venv/bin/activate
-        # Kopiert die .so Datei dynamisch für Python 3.10/3.11
+        # Findet die .so Datei dynamisch im Ubuntu-Dateisystem
         SO_FILE=$(find /usr/lib/python3/dist-packages/mapscript -name "_mapscript*.so" | head -n 1)
-        TARGET_DIR=.venv/lib/python3.11/site-packages/mapscript/
+        # Pfad angepasst an Python 3.12
+        TARGET_DIR=.venv/lib/python3.12/site-packages/mapscript/
         mkdir -p $TARGET_DIR
         cp $SO_FILE $TARGET_DIR/_mapscript.so
-    - name: Run Tests
+
+    - name: SpatiaLite initialisieren & Tests ausführen
       run: |
         source .venv/bin/activate
+        python manage.py shell -c "import django; django.db.connection.cursor().execute('SELECT InitSpatialMetaData(1);')"
         python manage.py test
