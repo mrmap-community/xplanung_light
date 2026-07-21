@@ -333,19 +333,16 @@ def ows_beteiligungen(request):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        try:
-            map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
-        except:
-            map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
+        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
         try:
             os.unlink(tmp_path)
         except OSError:
             pass
     else:
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
+        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
     
     mapscript.msIO_installStdoutToBuffer()
-    dispatch_status = map.OWSDispatch(req)
+    dispatch_status = map_obj.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
         if dispatch_status == mapscript.MS_DONE:
             return HttpResponse("No valid OWS Request!")
@@ -400,22 +397,19 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        try:
-            map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
-        except:
-            map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
+        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
         try:
             os.unlink(tmp_path)
         except OSError:
             pass 
     else:
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
+        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
     #try:
     #    dispatch_status = map.OWSDispatch(req)
     #except:
     #    return HttpResponse("Fehler beim Mapserver aufgetreten!")
-    dispatch_status = map.OWSDispatch(req)
+    dispatch_status = map_obj.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
         if dispatch_status == mapscript.MS_DONE:
             return HttpResponse("No valid OWS Request!")
@@ -469,18 +463,15 @@ def ows_fplan_overview(request, pk:int, plan_typ='fplan'):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        try:
-            map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
-        except:
-            map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
+        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
         try:
             os.unlink(tmp_path)
         except OSError:
             pass
     else:
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
+        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
-    dispatch_status = map.OWSDispatch(req)
+    dispatch_status = map_obj.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
         if dispatch_status == mapscript.MS_DONE:
             return HttpResponse("No valid OWS Request!")
@@ -586,18 +577,15 @@ def ows(request, pk:int):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        try:
-            map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", mapserverConfig)
-        except:
-            map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/")
+        map_obj = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", mapserverConfig)
         try:
             os.unlink(tmp_path)
         except OSError:
             pass 
     else:
-        map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
+        map_obj = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
-    dispatch_status = map.OWSDispatch(req)
+    dispatch_status = map_obj.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
         if dispatch_status == mapscript.MS_DONE:
             return HttpResponse("No valid OWS Request!")
