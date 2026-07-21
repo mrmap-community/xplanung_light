@@ -3,5 +3,11 @@
 db.sqlite3
 __pycache__/
 uploads/
+upload_temp/
 docs/build/
 static_collected/
+komserv/.my_pgpass
+komserv/.pg_service.conf
+komserv/settings/prod.py
+komserv/settings/dev.py
+komserv/.my_xplanung_light_env.json
