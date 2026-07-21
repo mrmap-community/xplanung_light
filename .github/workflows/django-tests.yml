@@ -4,10 +4,8 @@ on: [push, pull_request]
 
 jobs:
   test:
-    # Wechsel auf das aktuellere Ubuntu-Image passend zum Node24-Runner
     runs-on: ubuntu-24.04
     steps:
-    # Nutzt die aktuellste Unterversion, um Node 24 nativ anzusprechen
     - uses: actions/checkout@v4
     
     - name: Set up Python
@@ -24,14 +22,17 @@ jobs:
       run: |
         python -m venv .venv
         source .venv/bin/activate
-        pip install -r requirements.txt mapscript==8.0.0
+        pip install --upgrade pip
+        
+        # FIX: Erst alle anderen Abhängigkeiten installieren, mapscript ignorieren...
+        pip install -r requirements.txt --ignore-installed mapscript || true
+        # ...und danach explizit die korrekte Version 8.0.0 erzwingen
+        pip install mapscript==8.0.0
 
     - name: Link Mapscript C-Lib (Fix für CI)
       run: |
         source .venv/bin/activate
-        # Findet die .so Datei dynamisch im Ubuntu-Dateisystem
         SO_FILE=$(find /usr/lib/python3/dist-packages/mapscript -name "_mapscript*.so" | head -n 1)
-        # Pfad angepasst an Python 3.12
         TARGET_DIR=.venv/lib/python3.12/site-packages/mapscript/
         mkdir -p $TARGET_DIR
         cp $SO_FILE $TARGET_DIR/_mapscript.so
