@@ -16,17 +16,19 @@ jobs:
     - name: Install System Deps
       run: |
         sudo apt-get update
-        # Installiert Mapserver + das korrekte, passende Python-Mapscript-Paket
         sudo apt-get install -y binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite python3-mapscript
 
     - name: Install Python Deps
       run: |
-        # WICHTIG: --system-site-packages erlaubt dem venv, das funktionierende System-Mapscript zu nutzen!
         python -m venv --system-site-packages .venv
         source .venv/bin/activate
         pip install --upgrade pip
-        # Installiert alle Django-Pakete, ignoriert aber das kaputte mapscript aus den requirements
-        pip install -r requirements.txt --ignore-installed mapscript || true
+        
+        # WICHTIG: Entfernt die mapscript-Zeile komplett aus den Requirements,
+        # damit pip nicht versucht, das kaputte Paket über das System-Paket drüberzuinstallieren!
+        sed -i '/mapscript/d' requirements.txt
+        
+        pip install -r requirements.txt
 
     - name: SpatiaLite initialisieren & Tests ausführen
       env:
