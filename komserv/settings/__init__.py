@@ -14,5 +14,6 @@ try:
             from .dev import *
         if config['ENV_NAME'] == 'prod':
             from .prod import *
-except:
-    from .base import *
+except FileNotFoundError:
+    # If JSON is missing, it safely falls back to base settings
+    pass
