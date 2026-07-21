@@ -320,7 +320,14 @@ def ows_beteiligungen(request):
                                                                                                ' password=' + str(settings.DATABASES['default']['PASSWORD']) +
                                                                                                ' port='+ str(settings.DATABASES['default']['PORT']))
         #print(map_file_string)
-    map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
+    # Switch für verschiedene Mapserver Versionen
+    mapserver_version = mapscript.msGetVersionInt()
+    # 2. Den Aufruf versionsabhängig steuern
+    if mapserver_version >= 80000:
+        config = mapscript.configObj()
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", config)
+    else:
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
     dispatch_status = map.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
@@ -367,7 +374,14 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
         geometry = OGRGeometry(str(plan.geltungsbereich), srs=4326)
         wgs84_extent = geometry.extent
         #print(wgs84_extent)
-    map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
+    # Switch für verschiedene Mapserver Versionen
+    mapserver_version = mapscript.msGetVersionInt()
+    # 2. Den Aufruf versionsabhängig steuern
+    if mapserver_version >= 80000:
+        config = mapscript.configObj()
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", config) 
+    else:
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
     #try:
     #    dispatch_status = map.OWSDispatch(req)
@@ -417,7 +431,14 @@ def ows_fplan_overview(request, pk:int, plan_typ='fplan'):
         geometry = OGRGeometry(str(plan.geltungsbereich), srs=4326)
         wgs84_extent = geometry.extent
         #print(wgs84_extent)
-    map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
+    # Switch für verschiedene Mapserver Versionen
+    mapserver_version = mapscript.msGetVersionInt()
+    # 2. Den Aufruf versionsabhängig steuern
+    if mapserver_version >= 80000:
+        config = mapscript.configObj()
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", config) 
+    else:
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
     dispatch_status = map.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
@@ -515,7 +536,14 @@ def ows(request, pk:int):
             mapfile = mapfile_generator.generate_mapfile(pk, request.build_absolute_uri(reverse('ows', kwargs={"pk": pk})), metadata_uri)
         cache.set("mapfile_" + orga.ags, mapfile, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
     #print(mapfile)
-    map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
+    # Switch für verschiedene Mapserver Versionen
+    mapserver_version = mapscript.msGetVersionInt()
+    # 2. Den Aufruf versionsabhängig steuern
+    if mapserver_version >= 80000:
+        config = mapscript.configObj()
+        map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", config) 
+    else:
+        map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
     dispatch_status = map.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
