@@ -324,8 +324,8 @@ def ows_beteiligungen(request):
     mapserver_version = mapscript.msGetVersionInt()
     # 2. Den Aufruf versionsabhängig steuern
     if mapserver_version >= 80000:
-        config = mapscript.msLoadConfigFromString("CONFIG\nEND")
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", config)
+        #config = mapscript.msLoadConfigFromString("CONFIG\nEND")
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", None)
     else:
         map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
@@ -378,8 +378,8 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
     mapserver_version = mapscript.msGetVersionInt()
     # 2. Den Aufruf versionsabhängig steuern
     if mapserver_version >= 80000:
-        config = mapscript.msLoadConfigFromString("CONFIG\nEND")
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", config) 
+        #config = mapscript.msLoadConfigFromString("CONFIG\nEND")
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", None) 
     else:
         map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
@@ -435,8 +435,8 @@ def ows_fplan_overview(request, pk:int, plan_typ='fplan'):
     mapserver_version = mapscript.msGetVersionInt()
     # 2. Den Aufruf versionsabhängig steuern
     if mapserver_version >= 80000:
-        config = mapscript.msLoadConfigFromString("CONFIG\nEND")
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", config) 
+        #config = mapscript.msLoadConfigFromString("CONFIG\nEND")
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", None) 
     else:
         map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
@@ -540,8 +540,8 @@ def ows(request, pk:int):
     mapserver_version = mapscript.msGetVersionInt()
     # 2. Den Aufruf versionsabhängig steuern
     if mapserver_version >= 80000:
-        config = mapscript.msLoadConfigFromString("CONFIG\nEND")
-        map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", config) 
+        #config = mapscript.msLoadConfigFromString("CONFIG\nEND")
+        map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", None) 
     else:
         map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
