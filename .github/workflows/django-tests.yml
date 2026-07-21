@@ -16,22 +16,22 @@ jobs:
     - name: Install System & MapServer Development Deps
       run: |
         sudo apt-get update
-        # libmapserver-dev liefert die Header-Dateien, damit pip das mapscript-Modul fehlerfrei kompilieren kann!
         sudo apt-get install -y binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite libmapserver-dev
 
     - name: Install Python Deps
       run: |
-        # Ganz normales, sauberes venv ohne System-Verknüpfungen
         python -m venv .venv
         source .venv/bin/activate
         pip install --upgrade pip setuptools wheel
-        
-        # Installiert erst deine Standard-Pakete
         pip install -r requirements.txt
-        
-        # Erzwingt die Installation von mapscript 8.0.0. 
-        # Da libmapserver-dev installiert ist, baut pip hieraus jetzt eine perfekt passende _mapscript.so!
         pip install mapscript==8.0.0
+        
+        # FIX: Das Pip-Paket baut die _mapscript.so fälschlicherweise im Hauptverzeichnis des venv-site-packages.
+        # Wir verschieben sie manuell in den mapscript-Unterordner, damit der Import klappt!
+        cd .venv/lib/python3.12/site-packages
+        if [ -f _mapscript*.so ]; then
+            mv _mapscript*.so mapscript/
+        fi
 
     - name: SpatiaLite initialisieren & Tests ausführen
       env:
@@ -40,4 +40,3 @@ jobs:
         source .venv/bin/activate
         python manage.py shell -c "import django; django.db.connection.cursor().execute('SELECT InitSpatialMetaData(1);')"
         python manage.py test
-
