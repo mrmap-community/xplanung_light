@@ -13,25 +13,32 @@ jobs:
       with: 
         python-version: '3.12'
 
-    - name: Install System & MapServer Development Deps
+    - name: Install System & MapServer Deps
       run: |
         sudo apt-get update
-        sudo apt-get install -y binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite libmapserver-dev
+        # python3-mapscript liefert die perfekt kompilierte, native Erweiterung für Python 3.12
+        sudo apt-get install -y binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite python3-mapscript
 
     - name: Install Python Deps
       run: |
         python -m venv .venv
         source .venv/bin/activate
         pip install --upgrade pip setuptools wheel
-        pip install -r requirements.txt
-        pip install mapscript==8.0.0
         
-        # FIX: Das Pip-Paket baut die _mapscript.so fälschlicherweise im Hauptverzeichnis des venv-site-packages.
-        # Wir verschieben sie manuell in den mapscript-Unterordner, damit der Import klappt!
-        cd .venv/lib/python3.12/site-packages
-        if [ -f _mapscript*.so ]; then
-            mv _mapscript*.so mapscript/
-        fi
+        # 1. Entfernt mapscript aus den requirements, damit pip nichts zerstört
+        sed -i '/mapscript/d' requirements.txt
+        pip install -r requirements.txt
+        
+        # 2. DEINE METHODE: Wir kopieren das saubere, systemweite Mapscript direkt ins venv
+        # Unter Ubuntu 24.04 liegen die Python 3.12 Systempakete in dist-packages
+        mkdir -p .venv/lib/python3.12/site-packages/mapscript
+        
+        # Kopiert die Python-Dateien
+        cp -r /usr/lib/python3/dist-packages/mapscript/* .venv/lib/python3.12/site-packages/mapscript/
+        
+        # Kopiert die kritische .so Datei an die richtige Stelle (dein Fix!)
+        SO_FILE=$(find /usr/lib/python3/dist-packages/mapscript -name "_mapscript*.so" | head -n 1)
+        cp $SO_FILE .venv/lib/python3.12/site-packages/mapscript/_mapscript.so
 
     - name: SpatiaLite initialisieren & Tests ausführen
       env:
@@ -40,3 +47,4 @@ jobs:
         source .venv/bin/activate
         python manage.py shell -c "import django; django.db.connection.cursor().execute('SELECT InitSpatialMetaData(1);')"
         python manage.py test
+
