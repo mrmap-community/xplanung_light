@@ -333,7 +333,10 @@ def ows_beteiligungen(request):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
+        try:
+            map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
+        except:
+            map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
         try:
             os.unlink(tmp_path)
         except OSError:
@@ -397,7 +400,10 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
+        try:
+            map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
+        except:
+            map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
         try:
             os.unlink(tmp_path)
         except OSError:
@@ -463,7 +469,10 @@ def ows_fplan_overview(request, pk:int, plan_typ='fplan'):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
+        try:
+            map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
+        except:
+            map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
         try:
             os.unlink(tmp_path)
         except OSError:
@@ -577,7 +586,10 @@ def ows(request, pk:int):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", mapserverConfig)
+        try:
+            map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", mapserverConfig)
+        except:
+            map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/")
         try:
             os.unlink(tmp_path)
         except OSError:
