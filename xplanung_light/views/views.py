@@ -47,7 +47,20 @@ from django.contrib import messages
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 from django.core.exceptions import ValidationError
+import tempfile
 #from django.utils.timezone import datetime
+
+# Erstellen einer Grundkonfigurationsdatei für Mapserver > 8.0.0
+# Gemini
+mapserver_version = mapscript.msGetVersionInt()
+if mapserver_version >= 80000:
+    # 1. Wir erstellen eine temporäre Dummy-Konfiguration auf der Festplatte
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.conf') as tmp:
+        tmp.write("CONFIG\nEND")
+        tmp_path = tmp.name
+    # 2. MapServer mitteilen, wo die globale Konfiguration liegt
+    os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
+    mapserverConfig = mapscript.configObj()
 
 def get_bplan_attachment(request, pk):
     # Nur admins der Gebietskörperschaften oder superuser
@@ -321,11 +334,8 @@ def ows_beteiligungen(request):
                                                                                                ' port='+ str(settings.DATABASES['default']['PORT']))
         #print(map_file_string)
     # Switch für verschiedene Mapserver Versionen
-    mapserver_version = mapscript.msGetVersionInt()
-    # 2. Den Aufruf versionsabhängig steuern
     if mapserver_version >= 80000:
-        #config = mapscript.msLoadConfigFromString("CONFIG\nEND")
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", None)
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
     else:
         map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
@@ -374,12 +384,10 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
         geometry = OGRGeometry(str(plan.geltungsbereich), srs=4326)
         wgs84_extent = geometry.extent
         #print(wgs84_extent)
-    # Switch für verschiedene Mapserver Versionen
-    mapserver_version = mapscript.msGetVersionInt()
     # 2. Den Aufruf versionsabhängig steuern
     if mapserver_version >= 80000:
         #config = mapscript.msLoadConfigFromString("CONFIG\nEND")
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", None) 
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig) 
     else:
         map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
@@ -431,12 +439,10 @@ def ows_fplan_overview(request, pk:int, plan_typ='fplan'):
         geometry = OGRGeometry(str(plan.geltungsbereich), srs=4326)
         wgs84_extent = geometry.extent
         #print(wgs84_extent)
-    # Switch für verschiedene Mapserver Versionen
-    mapserver_version = mapscript.msGetVersionInt()
     # 2. Den Aufruf versionsabhängig steuern
     if mapserver_version >= 80000:
         #config = mapscript.msLoadConfigFromString("CONFIG\nEND")
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", None) 
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig) 
     else:
         map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
@@ -536,12 +542,10 @@ def ows(request, pk:int):
             mapfile = mapfile_generator.generate_mapfile(pk, request.build_absolute_uri(reverse('ows', kwargs={"pk": pk})), metadata_uri)
         cache.set("mapfile_" + orga.ags, mapfile, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
     #print(mapfile)
-    # Switch für verschiedene Mapserver Versionen
-    mapserver_version = mapscript.msGetVersionInt()
     # 2. Den Aufruf versionsabhängig steuern
     if mapserver_version >= 80000:
         #config = mapscript.msLoadConfigFromString("CONFIG\nEND")
-        map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", None) 
+        map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", mapserverConfig) 
     else:
         map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
@@ -1302,6 +1306,12 @@ def beitrag_detail(request, **kwargs):
         context['plan'] = beitrag.fplan_beteiligung.fplan
     return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
 
+# Löschen des mapserverConfig Files
+if mapserver_version >= 80000:
+    try:
+        os.unlink(tmp_path)
+    except OSError:
+        pass
 
 class RequestForRoleConfirm(FormView):
     form_class = RequestForRoleConfirmForm
