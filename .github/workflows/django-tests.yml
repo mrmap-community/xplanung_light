@@ -13,22 +13,25 @@ jobs:
       with: 
         python-version: '3.12'
 
-    - name: Install System Deps
+    - name: Install System & MapServer Development Deps
       run: |
         sudo apt-get update
-        sudo apt-get install -y binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite python3-mapscript
+        # libmapserver-dev liefert die Header-Dateien, damit pip das mapscript-Modul fehlerfrei kompilieren kann!
+        sudo apt-get install -y binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite libmapserver-dev
 
     - name: Install Python Deps
       run: |
-        python -m venv --system-site-packages .venv
+        # Ganz normales, sauberes venv ohne System-Verknüpfungen
+        python -m venv .venv
         source .venv/bin/activate
-        pip install --upgrade pip
+        pip install --upgrade pip setuptools wheel
         
-        # WICHTIG: Entfernt die mapscript-Zeile komplett aus den Requirements,
-        # damit pip nicht versucht, das kaputte Paket über das System-Paket drüberzuinstallieren!
-        sed -i '/mapscript/d' requirements.txt
-        
+        # Installiert erst deine Standard-Pakete
         pip install -r requirements.txt
+        
+        # Erzwingt die Installation von mapscript 8.0.0. 
+        # Da libmapserver-dev installiert ist, baut pip hieraus jetzt eine perfekt passende _mapscript.so!
+        pip install mapscript==8.0.0
 
     - name: SpatiaLite initialisieren & Tests ausführen
       env:
