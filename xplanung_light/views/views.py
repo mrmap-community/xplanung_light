@@ -577,7 +577,7 @@ def ows(request, pk:int):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
+        map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", mapserverConfig)
         try:
             os.unlink(tmp_path)
         except OSError:
