@@ -335,7 +335,7 @@ def ows_beteiligungen(request):
         #print(map_file_string)
     # Switch für verschiedene Mapserver Versionen
     if mapserver_version >= 80000:
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
     else:
         map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
@@ -387,7 +387,7 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
     # 2. Den Aufruf versionsabhängig steuern
     if mapserver_version >= 80000:
         #config = mapscript.msLoadConfigFromString("CONFIG\nEND")
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig) 
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
     else:
         map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
@@ -442,7 +442,7 @@ def ows_fplan_overview(request, pk:int, plan_typ='fplan'):
     # 2. Den Aufruf versionsabhängig steuern
     if mapserver_version >= 80000:
         #config = mapscript.msLoadConfigFromString("CONFIG\nEND")
-        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig) 
+        map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
     else:
         map = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
@@ -545,7 +545,7 @@ def ows(request, pk:int):
     # 2. Den Aufruf versionsabhängig steuern
     if mapserver_version >= 80000:
         #config = mapscript.msLoadConfigFromString("CONFIG\nEND")
-        map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", mapserverConfig) 
+        map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
     else:
         map = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
     mapscript.msIO_installStdoutToBuffer()
