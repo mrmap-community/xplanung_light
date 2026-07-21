@@ -75,6 +75,58 @@ Der Prozess kann mehrfach gestartet werden. Das **AdministrativeOrganization**-m
 
 **Viel Spass**
 
+# Konfiguration
+
+Die Konfiguration der Anwendung erfolgt unter Django grundsätzlich in der settings.py. Um einfacher zwischen **dev** und **prod** wechseln zu können, gibt es verschiedene Möglichkeiten. Wir nutzen eine einfache versteckte json-Datei, die im Hauptordner liegt: .my_xplanung_light_env.json
+
+
+```json
+{
+    "ENV_NAME": "dev"
+}
+```
+
+Die Grundkonfiguration ist im git als settings/base.py hinterlegt und kann durch verschiedene Konfigurationsdateien überschrieben werden. Derzeit sind **dev.py** sowie **prod.py** vorgesehen. Diese Dateien muss man selbst im settings-Folder anlegen.
+Zunächst und als Fallback wird base.py geladen. Danach werden die Inhalte durch dev.py bzw. prod.py überschrieben. Zur weiteren Erhöhung der Sicherheit sollten der SECRET_KEY, sowie die Zugangsdaten für die Datenbank ebenfalls in speziell gesicherte Files ausgelagert werden.
+
+## Beispiel dev.py (einfach das überschreiben was man benötigt)
+
+```python
+from .base import *
+
+DEBUG = True
+
+ALLOWED_HOSTS = []
+
+# Datenbankverbindung PostGIS statt spatiallite
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'xplanung_light',
+        'USER': 'geodjango',
+        'PASSWORD': 'geodjango_password',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
+
+# Geocoder BKG
+BKG_GEOCODER_CONFIG = {
+    'base_url': 'https://sg.geodatenzentrum.de/gdz_geokodierung__',
+    'api_key': '{api-key}',
+}
+
+REQUESTS_PROXIES = {
+    'http': 'http://{proxy_host}:{proxy_port}',
+    'https': 'http://{proxy_host}:{proxy_port}',
+}
+``` 
+
+[Weiter Informationen 1](https://medium.com/@thehackadda/separate-your-development-and-production-settings-for-a-django-project-60ef3c718eb5)
+
+[Weiter Informationen 2](https://dev.to/vlntsolo/how-to-split-django-settings-for-different-environments-18ad)
+
+
 # Wechsel von spatialite zu PostGIS
 
 ## Debian 11
