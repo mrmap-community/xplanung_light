@@ -43,6 +43,7 @@ jobs:
     - name: SpatiaLite initialisieren & Tests ausführen
       env:
         SPATIALITE_LIBRARY_PATH: 'mod_spatialite.so'
+        DJANGO_ENV_NAME: test
       run: |
         source .venv/bin/activate
         python manage.py shell -c "import django; django.db.connection.cursor().execute('SELECT InitSpatialMetaData(1);')"
