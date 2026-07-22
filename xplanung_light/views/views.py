@@ -400,7 +400,7 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
             # Löschen der Proxy-Konfigurationseinträge
             map_file_string = map_file_string.replace('"wms_proxy_host" "<proxy_host>"', '')
             map_file_string = map_file_string.replace('"wms_proxy_port" "<proxy_port>"', '')
-            map_file_string = map_file_string.replace('"wms_proxy_type" "<proxy_type>"', '')
+            map_file_string = map_file_string.replace('"wms_proxy_type" "http"', '')
     # 2. Den Aufruf versionsabhängig steuern
     mapserver_version = mapscript.msGetVersionInt()
     if mapserver_version >= 80000:
@@ -479,7 +479,7 @@ def ows_fplan_overview(request, pk:int, plan_typ='fplan'):
             # Löschen der Proxy-Konfigurationseinträge
             map_file_string = map_file_string.replace('"wms_proxy_host" "<proxy_host>"', '')
             map_file_string = map_file_string.replace('"wms_proxy_port" "<proxy_port>"', '')
-            map_file_string = map_file_string.replace('"wms_proxy_type" "<proxy_type>"', '')
+            map_file_string = map_file_string.replace('"wms_proxy_type" "http"', '')
     # 2. Den Aufruf versionsabhängig steuern
     mapserver_version = mapscript.msGetVersionInt()
     if mapserver_version >= 80000:
