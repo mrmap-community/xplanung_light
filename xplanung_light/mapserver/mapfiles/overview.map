@@ -96,6 +96,10 @@ MAP
             "wms_server_version"  "1.1.1"
             "wms_format"          "image/png"
             "wms_extent"          "-180 -90 180 90"
+            # Proxy falls notwendig
+            "wms_proxy_host" "<proxy_host>"
+            "wms_proxy_port" "<proxy_port>"
+            "wms_proxy_type" "http"
         END
     END
     LAYER

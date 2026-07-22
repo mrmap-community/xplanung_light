@@ -48,6 +48,7 @@ from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 from django.core.exceptions import ValidationError
 import tempfile
+from urllib.parse import urlsplit
 #from django.utils.timezone import datetime
 
 def get_bplan_attachment(request, pk):
@@ -387,6 +388,19 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
         geometry = OGRGeometry(str(plan.geltungsbereich), srs=4326)
         wgs84_extent = geometry.extent
         #print(wgs84_extent)
+        # Nutzung des Proxy, wenn in settings definiert - da verhält sich gunicorn wohl anders als runserver im Debug
+        if 'http' in settings.REQUESTS_PROXIES.keys():
+            #print('proxy set')
+            # Get host, port
+            proxy = urlsplit(settings.REQUESTS_PROXIES['http'])
+            map_file_string = map_file_string.replace('<proxy_host>', proxy.hostname)
+            map_file_string = map_file_string.replace('<proxy_port>', str(proxy.port))
+        else:
+            #print('proxy not set')
+            # Löschen der Proxy-Konfigurationseinträge
+            map_file_string = map_file_string.replace('"wms_proxy_host" "<proxy_host>"', '')
+            map_file_string = map_file_string.replace('"wms_proxy_port" "<proxy_port>"', '')
+            map_file_string = map_file_string.replace('"wms_proxy_type" "<proxy_type>"', '')
     # 2. Den Aufruf versionsabhängig steuern
     mapserver_version = mapscript.msGetVersionInt()
     if mapserver_version >= 80000:
@@ -453,6 +467,19 @@ def ows_fplan_overview(request, pk:int, plan_typ='fplan'):
         geometry = OGRGeometry(str(plan.geltungsbereich), srs=4326)
         wgs84_extent = geometry.extent
         #print(wgs84_extent)
+        # Nutzung des Proxy, wenn in settings definiert - da verhält sich gunicorn wohl anders als runserver im Debug
+        if 'http' in settings.REQUESTS_PROXIES.keys():
+            #print('proxy set')
+            # Get host, port
+            proxy = urlsplit(settings.REQUESTS_PROXIES['http'])
+            map_file_string = map_file_string.replace('<proxy_host>', proxy.hostname)
+            map_file_string = map_file_string.replace('<proxy_port>', str(proxy.port))
+        else:
+            #print('proxy not set')
+            # Löschen der Proxy-Konfigurationseinträge
+            map_file_string = map_file_string.replace('"wms_proxy_host" "<proxy_host>"', '')
+            map_file_string = map_file_string.replace('"wms_proxy_port" "<proxy_port>"', '')
+            map_file_string = map_file_string.replace('"wms_proxy_type" "<proxy_type>"', '')
     # 2. Den Aufruf versionsabhängig steuern
     mapserver_version = mapscript.msGetVersionInt()
     if mapserver_version >= 80000:
