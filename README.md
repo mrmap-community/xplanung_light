@@ -124,6 +124,8 @@ REQUESTS_PROXIES = {
 
 [Weiter Informationen 2](https://dev.to/vlntsolo/how-to-split-django-settings-for-different-environments-18ad)
 
+> [!IMPORTANT]
+> **WICHTIG:** Die json-Datei muss existieren, sonst wird der Server aus Sicherheitsgründen nicht gestartet!
 
 # Wechsel von spatialite zu PostGIS
 
