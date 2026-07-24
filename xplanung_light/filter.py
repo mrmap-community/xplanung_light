@@ -46,7 +46,7 @@ def fplan_organizations(request):
 # https://stackoverflow.com/questions/68592837/custom-filter-with-django-filters
 class BPlanFilter(FilterSet):
     name = CharFilter(lookup_expr='icontains')
-    bbox = CharFilter(method='bbox_filter', label='BBOX')
+    bbox = CharFilter(method='bbox_filter', label='Ausschnitt')
     gemeinde = ModelChoiceFilter(queryset=bplan_organizations)
     in_beteiligung = BooleanFilter(
         widget=CheckboxInput(),

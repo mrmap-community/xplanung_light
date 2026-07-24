@@ -58,6 +58,19 @@ function map_init_basic (map, options) {
     )
     .addTo(map);       
     map.fitBounds(feature.getBounds());
+    /* Bei Bedarf OnLoad den bbox-Filter vorbelegen */
+    /*const bbox_field = document.getElementById("id_bbox");
+    const bounds = map.getBounds();
+    bbox_field.value = bounds._southWest.lng.toFixed(4) + "," + bounds._southWest.lat.toFixed(4) + "," + bounds._northEast.lng.toFixed(4) + "," + bounds._northEast.lat.toFixed(4);*/
+    /* Ende Vorbelegung */
+    // Automatisch den angezeigten Extent in den Geometriefilter übernehmen
+    map.on('moveend', function() { 
+        const bbox_field = document.getElementById("id_bbox");
+        //bbox_field.value = "test";
+        //alert(JSON.stringify(map.getBounds()));
+        const bounds = map.getBounds();
+        bbox_field.value = bounds._southWest.lng.toFixed(4) + "," + bounds._southWest.lat.toFixed(4) + "," + bounds._northEast.lng.toFixed(4) + "," + bounds._northEast.lat.toFixed(4);
+    });
     var popup = L.popup()
     map.on('click', e => {
         //var thisMap = map;
@@ -107,21 +120,27 @@ function map_init_basic (map, options) {
 }
 </script>
 {% leaflet_map "bplan_list_map" callback="window.map_init_basic" %}
-Filter
 <!-- add boostrap form css - if wished -->
 {% load django_bootstrap5 %}
 <form method="get" action="">
-    {{ filter.form.as_p }}
-    <input type="submit" /><a href="{% url 'bplan-public-list' %}">Filter löschen</a>.</p>
-    {# Dropdown für Ergebnisse pro Seite #}
-    <label for="per_page">Pro Seite:</label>
-    <select name="per_page" onchange="this.form.submit()">
-        {% for val in per_page_options %}
-        <option value="{{ val }}" {% if request.GET.per_page == val|stringformat:"i" %}selected{% endif %}>
-            {{ val }}
-        </option>    
-        {% endfor %}
-    </select>
+    <fieldset>
+        <legend>Filter</legend>
+        {{ filter.form.as_p }}
+        <button type="submit" class="btn btn-primary">Filter anwenden</button> <a class="btn btn-primary" role="button" href="{% url 'bplan-public-list' %}">Filter zurücksetzen</a>
+    </fieldset>
+    <fieldset>
+        {# Dropdown für Ergebnisse pro Seite #}
+        <div>
+            <label for="per_page">Treffer pro Seite:</label>
+            <select name="per_page" onchange="this.form.submit()">
+                {% for val in per_page_options %}
+                <option value="{{ val }}" {% if request.GET.per_page == val|stringformat:"i" %}selected{% endif %}>
+                    {{ val }}
+                </option>    
+                {% endfor %}
+            </select>
+        </div>
+    </fieldset>
 </form>
 <!-- https://stackoverflow.com/questions/44572682/dynamically-set-per-page-in-django-tables2 -->
 <div class="table-info">

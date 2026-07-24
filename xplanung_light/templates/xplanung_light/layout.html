@@ -136,12 +136,16 @@
             </ul>
             <div class="d-flex">
                 {% if user.is_authenticated %}
-                <p>
+                  <p>
                     Angemeldeter Benutzer: <b>{{ user.username }}</b><br>
                     {% if not user.is_superuser %}Rollen: {% if user_is_admin %}<b>admin</b>{% endif  %}{% if user_is_toeb_reporter %} <b>toeb-reporter</b>{% endif %}<br>{% endif %}
                     <a class="btn btn-primary" role="buton" href="{% url 'logout' %}">Abmelden</a>
                     <a class="btn btn-primary" role="buton" href="{% url 'password_change' %}">Passwort ändern</a>
-                </p>
+                    {% if user.userprofile %}
+                    <a class="btn btn-primary" role="buton" href="{% url 'user_profile_update' pk=user.userprofile.id %}">Profil</a>
+                    {% endif %}
+                    
+                  </p>
                 {% else %}
                 <a class="btn btn-primary" role="buton" href="{% url 'login' %}">Anmelden</a>
                 {% endif %}
