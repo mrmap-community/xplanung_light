@@ -616,8 +616,8 @@ class NumberedCanvas(canvas.Canvas):
         # Die Linie unterhalb des Headers
         self.line(2 * cm, height - 2 * cm, width - 2 * cm, height - 2 * cm)
         # Header
-        if 'version' in settings.XPLANUNG_LIGHT_CONFIG.keys():
-            version = settings.XPLANUNG_LIGHT_CONFIG['version']
+        if settings.XPLANUNG_LIGHT_VERSION:
+            version = settings.XPLANUNG_LIGHT_VERSION
         else:
             version = 'unknown'
         self.drawString(2.0 * cm, height - 1.7 * cm, 'XPlanung-light (V ' + version + ') - ' + self.url) 

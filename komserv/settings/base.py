@@ -69,6 +69,7 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
     'xplanung_light.middleware.UserRoleInfoMiddleware',
+    #'xplanung_light.middleware.SystemInfoMiddleware',
 ]
 
 ROOT_URLCONF = 'komserv.urls'
@@ -250,9 +251,8 @@ ORGS_SLUGFIELD = 'django_extensions.db.fields.AutoSlugField'
 #REGISTRATION_BACKEND = 'xplanung_light.backends.MyRegistrationBackend'
 
 # Konfigurationen für xplanung_light
-
+XPLANUNG_LIGHT_VERSION = "0.2.0"
 # Kontaktinformationen für Metadaten und Dienste
-
 XPLANUNG_LIGHT_CONFIG = {
     'metadata_contact': {
         'organization_name': 'Musterorganisation Metadaten / Dienste',

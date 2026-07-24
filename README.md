@@ -77,7 +77,7 @@ Der Prozess kann mehrfach gestartet werden. Das **AdministrativeOrganization**-m
 
 # Konfiguration
 
-Die Konfiguration der Anwendung erfolgt unter Django grundsätzlich in der settings.py. Um einfacher zwischen **dev** und **prod** wechseln zu können, gibt es verschiedene Möglichkeiten. Wir nutzen eine einfache versteckte json-Datei, die im Hauptordner liegt: .my_xplanung_light_env.json
+Die Konfiguration der Anwendung erfolgt unter Django grundsätzlich in der settings.py. Um einfacher zwischen **dev** und **prod** wechseln zu können, gibt es verschiedene Möglichkeiten. Wir nutzen eine einfache versteckte json-Datei, die im Projektordner (komserv) liegt: .my_xplanung_light_env.json
 
 
 ```json
