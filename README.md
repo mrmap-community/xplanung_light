@@ -6,6 +6,8 @@ Die initiale Entwicklung des Systems ist in einem Tutorial dokumentiert, dass si
 
 [Geodjango Tutorial](https://mrmap-community.github.io/django-tutorial/)
 
+[Dokumentation (github-pages)](https://mrmap-community.github.io/xplanung_light/)
+
 # Testphase
 
 In Rheinland-Pfalz befindet sich die Software gerade in einer Testphase. Einige Kommunen haben schon einen Administrativen Zugriff auf das System. Falls Interesse besteht, kann man sich registrieren und einen Online-Antrag auf Freischaltung für eine Gebietskörperschaft stellen :wink: .
