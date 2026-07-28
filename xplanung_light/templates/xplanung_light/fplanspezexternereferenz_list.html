@@ -10,7 +10,7 @@
         {% for gemeinde in fplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
     </ul>
 </p>  
-<p><a href="{% url 'fplanattachment-create' planid=fplan.id %}">Anlage erstellen</a></p>
+<p><a class="btn btn-success" role="button" href="{% url 'fplanattachment-create' planid=fplan.id %}">Anlage erstellen</a></p>
 {% render_table table %}
 <p>Anzahl: {{ fplanspezexternereferenz_list.count }}</p>
 {% endblock %}

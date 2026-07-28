@@ -10,7 +10,7 @@
         {% for gemeinde in fplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
     </ul>
 </p>  
-<p><a href="{% url 'fplan-uvp-create' planid=fplan.id %}">Neue UP erstellen</a></p>
+<p><a class="btn btn-success" role="button" href="{% url 'fplan-uvp-create' planid=fplan.id %}">Neue UP erstellen</a></p>
 {% render_table table %}
 <p>Anzahl: {{ fplan_uvp_list.count }}</p>
 {% endblock %}

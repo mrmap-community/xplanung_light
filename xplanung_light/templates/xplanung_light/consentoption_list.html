@@ -7,7 +7,7 @@
 {% block content %}
 {% load django_bootstrap5 %}
 <h4>Zustimmungsoptionen</h4>
-<p><a href="{% url 'consentoption-create' %}">Zustimmungsoption anlegen</a></p>
+<p><a class="btn btn-success" role="button" href="{% url 'consentoption-create' %}">Zustimmungsoption anlegen</a></p>
 {% render_table table %}
 <p>Anzahl: {{ object_list.count }}</p>
 {% endblock %}

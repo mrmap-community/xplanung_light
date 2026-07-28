@@ -7,7 +7,7 @@
 {% block content %}
 {% if user.is_superuser %}
 {% else %}
-<p><a href="{% url 'requestforrole-create' %}">Neuen Antrag anlegen</a></p>
+<p><a class="btn btn-success" role="button" href="{% url 'requestforrole-create' %}">Neuen Antrag anlegen</a></p>
 {% endif %}
 Aktuelle Anträge auf Rollenzuweisungen
 {% render_table table %}

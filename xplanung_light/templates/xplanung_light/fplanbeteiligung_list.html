@@ -10,7 +10,7 @@
         {% for gemeinde in fplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
     </ul>
 </p>  
-<p><a href="{% url 'fplanbeteiligung-create' planid=fplan.id %}">Neue Beteiligung erstellen</a></p>
+<p><a class="btn btn-success" role="button" href="{% url 'fplanbeteiligung-create' planid=fplan.id %}">Neue Beteiligung erstellen</a></p>
 {% render_table table %}
 <p>Anzahl: {{ fplanbeteiligung_list.count }}</p>
 {% endblock %}

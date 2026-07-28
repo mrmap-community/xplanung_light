@@ -117,25 +117,23 @@ function map_init_basic (map, options) {
 <!-- add boostrap form css - if wished -->
 {% load django_bootstrap5 %}
 <form method="get" action="">
-    <fieldset>
-        <legend>Filter</legend>
-        {{ filter.form.as_p }}
-        <button type="submit" class="btn btn-primary">Filter anwenden</button> <a class="btn btn-primary" role="button" href="{% url 'fplan-public-list' %}">Filter zurücksetzen</a>
-    </fieldset>
-    <fieldset>
-        {# Dropdown für Ergebnisse pro Seite #}
-        <div>
-            <label for="per_page">Treffer pro Seite:</label>
-            <select name="per_page" onchange="this.form.submit()">
-                {% for val in per_page_options %}
-                <option value="{{ val }}" {% if request.GET.per_page == val|stringformat:"i" %}selected{% endif %}>
-                    {{ val }}
-                </option>    
-                {% endfor %}
-            </select>
-        </div>
-    </fieldset>
+    <legend>Filter</legend>
+    {{ filter.form.as_p }}
+    <button type="submit" class="btn btn-primary">Filter anwenden</button> <a class="btn btn-primary" role="button" href="{% url 'fplan-public-list' %}">Filter zurücksetzen</a>
+    <br>
+    {# Dropdown für Ergebnisse pro Seite #}
+    <label for="per_page">Treffer pro Seite:</label>
+    <div>
+        <select name="per_page" onchange="this.form.submit()">
+            {% for val in per_page_options %}
+            <option value="{{ val }}" {% if request.GET.per_page == val|stringformat:"i" %}selected{% endif %}>
+                {{ val }}
+            </option>    
+            {% endfor %}
+        </select>
+    </div>
 </form>
+<hr>
 <!-- https://stackoverflow.com/questions/44572682/dynamically-set-per-page-in-django-tables2 -->
  <div class="table-info">
     <p>
