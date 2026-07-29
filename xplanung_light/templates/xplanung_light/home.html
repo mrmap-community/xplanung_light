@@ -8,21 +8,20 @@ Home
 <style>
     .card-title {text-align:center; font-weight: bold;}
 </style>
-
 <div class="row row-cols-1 row-cols-md-3 g-4">
-  {% if user.is_authenticated %}
   <div class="col">
     <div class="card h-100">
       <img src="..." class="card-img-top" alt="...">
       <div class="card-body">
-        <h5 class="card-title">Gebietskörperschaften<br>{{ orga_info.objects_with_public_plans }}</h5>
+        <h5 class="card-title">Gebietskörperschaften<br><a href="{%url 'organization-publishing-list-public' %}">{{ orga_info.objects_with_public_plans }}</a></h5>
         <p class="card-text">Gebietskörperschaften, die aktuell Bebauungs- und Flächennutzungspläne publizieren.</p>
       </div>
       <div class="card-footer">
-        <small class="text-muted">Registrierte Organisationen: <a href="{%url 'organization-list' %}">{{ orga_info.all_objects }}</a></small>
+        <small class="text-muted">Registrierte Organisationen: {% if user.is_authenticated %}<a href="{%url 'organization-list' %}">{% endif %}{{ orga_info.all_objects }}{% if user.is_authenticated %}{% endif %}</a></small>
       </div>
     </div>
-  </div>
+  </div>  
+  {% if user.is_authenticated %}
   <div class="col">
     <div class="card h-100">
       <img src="..." class="card-img-top" alt="...">

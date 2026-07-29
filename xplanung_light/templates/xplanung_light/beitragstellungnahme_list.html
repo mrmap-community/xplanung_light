@@ -36,7 +36,7 @@
 </ul>
 {% endif %}
 </div>
-<p><a href="{% url 'beitragstellungnahme-create' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id beitragid=beitrag.id %}">Neue Stellungnahme anlegen</a></p>
+<p><a class="btn btn-success" role="button" href="{% url 'beitragstellungnahme-create' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id beitragid=beitrag.id %}">Neue Stellungnahme anlegen</a></p>
 {# <p><a href="{% url 'beteiligungbeitrag-list-pdf' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id%}">PDF-Export</a></p> #}
 {% render_table table %}
 {% if plantyp == 'bplan' %}

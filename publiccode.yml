@@ -1,0 +1,58 @@
+publiccodeYmlVersion: "0.4"    # Version des publiccode.yml-Formats 
+categories:
+  - geographic-information-systems
+  - data-collection
+name: "XPlanung-light"    # Name ihres Projekts
+url: "https://github.com/mrmap-community/xplanung_light/"    # URL zu Ihrem Projekt (es muss sich um eine URL zu einem Projekt, nicht zu einer Gruppe handeln)
+softwareVersion: "0.2.0"    # Version ihrer Software
+platforms:    # Unterstützte Plattformen. Mögliche Angaben: web, windows, mac, linux, ios, android
+  - linux
+developmentStatus: development    # Entwicklungsstatus (Mögliche Angaben: concept, development, beta, stable, obsolete)
+softwareType: "standalone/web"    # Typ (Mögliche Angaben: standalone/backend, standalone/desktop, standalone/iot, standalone/mobile, standalone/web, standalone/other, addon, library, configurationFiles)
+releaseDate: "2026-07-29"    # Veröffentlichungsdatum ihrer Software
+description:
+  de:
+    documentation: |-
+      https://mrmap-community.github.io/xplanung_light/
+    features:
+      - "Organisations-Registry"
+      - "Verwaltung von BPlan- und FPlan-Objekten"
+      - "Verwaltung beliebiger Anlagen"
+      - "Erfassung von Imformationen zu durchgeführten UVPs (Umsetzung der Berichtspflichten gem. EU UVP-Richtlinie (2014/52/EU))"
+      - "Verwaltung von Informationen zu durchgeführten Beteiligungsverfahren"
+      - "Online-Beteiligungsmodul für Bürger und TOEB"
+      - "Planauskunft für einzelne Gebietskörperschaften"
+      - "Online-Stellungnahmen (ohne Notwendigkeit einer vorherigen Registrierung)"
+      - "Import XPlan-GML/zip (6.0, 5.1, ...)"
+      - "Export XPlan-GML/zip (6.0)"
+      - "Historisierung von XPlan-Objekten und AdministrativeOrganisation"
+      - "GDI-DE / INSPIRE konforme WMS/WFS Schnittstellen powered by Mapserver"
+      - "ISO19139 Metadaten Export"
+    genericName: xplanung-light
+    longDescription: |-
+      Einfache Webanwendung zur Verwaltung und Publikation von Bauleitplänen gem. §1 Abs. (2) BauGB. Die Modellierung
+      der Planinformation basiert auf dem deutschen Standard XPlanung. Die Anwendung basiert ausschließlich auf
+      bewährten lizenzkostenfreien OpenSource-Softwarekomponenten und steht unter MIT-Lizenz. Die vorhandenen
+      Schnittstellen setzen zum einen den Beschlusses 2017/37 des IT-Planungsrat um, zum anderen werden die Vorgaben
+      der EU-INSPIRE-Richtlinie (2007/2/EG), sowie der HVD-Verordnung (2023/138) eingehalten. Die Anwendung wird im Rahmen
+      der Zusammenarbeit der Geodateninfrastrukturen von Hessen, Rheinland-Pfalz und dem Saarland entwickelt.
+      Neben der Verwaltung der Pläne werden auch Beteiligungsverfahren (Öffentlichkeit und TOEB) abgebildet. 
+      [Prototyp Rheinland-Pfalz](https://xplanung.geoportal.rlp.de) 
+    shortDescription: |-
+      XPlanung-light ist eine freie Open Source Software, die Kommunen helfen soll ihre Bauleitpläne auf sehr einfache
+      Art und Weise digital zu verwalten.
+legal:
+  license: MIT    # Die Open-Source-Lizenz ihrer Software 
+  repoOwner: MrMap Community (HE, RP, SL), Germany
+maintenance: # Unterschiede, je nach type, siehe https://yml.publiccode.tools/schema.core.html#section-maintenance
+   type: "community"    # Art der Betreuung der Software (Mögliche Angaben: internal, contract, community, none)
+   contacts:    # Auflistung von Kontakten, welche ihre Software betreuen
+    - name: "Armin Retterath"
+      email: "armin.retterath@vermkv.rlp.de"
+      affiliation: "Zentrale Stelle Geodateninfrastruktur Rheinland-Pfalz"     
+usedBy:
+  - Zentrale Stelle Geodateninfrastruktur Rheinland-Pfalz, Koblenz, Germany 
+localisation:
+  localisationReady: true #auch false möglich
+  availableLanguages: # Unterstützte Sprachen (gemäß IETF BCP 47 language tag)
+    - de
