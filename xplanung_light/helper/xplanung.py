@@ -30,11 +30,11 @@ class XPlanung():
         self.context_file = context_file
         self.context_file_bytesio = BytesIO(self.context_file.read())
         #print("type context-file: " + str(type(self.context_file)))
-        if self.context_file.content_type == 'application/zip':
+        if self.context_file.content_type == 'application/zip' or self.context_file.content_type == 'application/x-zip-compressed':
             file_like_object = self.context_file_bytesio
             zipfile_ob = ZipFile(file_like_object)
             # TODO:django exportiert gml file in zip als 'text/plain' - sollte besser 'application/gml' sein!
-            allowed_gml_mimetypes = ('application/gml', 'text/xml', 'text/plain')
+            allowed_gml_mimetypes = ('application/octet-stream', 'application/gml', 'text/xml', 'text/plain')
             # Über einzelne Dateien iterieren
             for file in zipfile_ob.infolist():
                 print(file.filename)
