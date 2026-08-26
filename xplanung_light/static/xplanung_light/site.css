@@ -49,3 +49,7 @@
     height: 38px !important; /* Single Select */
 }
 
+.metadata_attributes {
+    color: grey;
+    font-style: italic;
+}

@@ -263,5 +263,11 @@
 ></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.js"></script>
 <!-- https://simpleisbetterthancomplex.com/tutorial/2018/11/28/advanced-form-rendering-with-django-crispy-forms.html -->
+{% if letzte_aenderung_am %}
+<div><p style="color:grey;font-size:11px;">Letzte Änderung: <b>{{ letzte_aenderung_am }}</b>, durch <b>{{ bearbeitet_von }}</b></p></div>
+<hr>
+Anlagen (<a href="{% url 'bplanattachment-list' planid=object.id %}">{{ object.count_attachments }}</a>) | Beteiligungen (<a href="{% url 'bplanbeteiligung-list' planid=object.id %}">{{ object.count_beteiligungen }}</a>) | UVPs (<a href="{% url 'uvp-list' planid=object.id %}">{{ object.count_uvps }}</a>)
+<hr>
+{% endif %}
 {% crispy form %}
 {% endblock %}

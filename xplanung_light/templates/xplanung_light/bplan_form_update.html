@@ -45,6 +45,7 @@
         window['leafletmapid_geltungsbereich-map'].fitBounds([[ bbox[1], bbox[0] ], [bbox[3], bbox[2]]]);
     }
 </script>
+    <div>Letzte Änderung: {{ object.letzte_aenderung_am }}</div>
     <form method="post" class="geocoding-form">{% csrf_token %}
         {{ form.as_p }}
         <input type="submit" value="Aktualisieren">

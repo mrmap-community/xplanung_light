@@ -5,7 +5,7 @@
 {% load render_table from django_tables2 %}
 {% load django_bootstrap5 %}
 {% block content %}
-<p>UPs zum Flächennutzungsplan <b>{{ fplan.name }}</b> der Kommune(n):<br>
+<p>UPs zum Flächennutzungsplan <b><a href="{% url 'fplan-update' pk=fplan.id %}">{{ fplan.name }}</a></b> der Kommune(n):<br>
     <ul>
         {% for gemeinde in fplan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
     </ul>

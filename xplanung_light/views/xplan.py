@@ -194,7 +194,33 @@ class XPlanUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
                         return object
             raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
         return object  
-      
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.annotate(
+                    count_attachments=Count('attachments', distinct=True)
+                ).annotate(
+                    count_beteiligungen=Count('beteiligungen', distinct=True)
+                ).annotate(
+                    count_uvps=Count('uvps', distinct=True)
+                )
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Den letzten Eintrag aus der Historie für dieses Objekt abfragen
+        # self.object wird von der CBV automatisch bereitgestellt
+        latest_history = self.object.history.order_by('-history_date').first()
+        #latest_history = self.object.history.most_recent()
+        if latest_history:
+            # Daten separat in den Kontext packen
+            context['letzte_aenderung_am'] = latest_history.history_date
+            context['bearbeitet_von'] = latest_history.history_user
+        else:
+            context['letzte_aenderung_am'] = None
+            context['bearbeitet_von'] = None
+            
+        return context
 
 class XPlanDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     """
