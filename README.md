@@ -120,6 +120,26 @@ REQUESTS_PROXIES = {
     'http': 'http://{proxy_host}:{proxy_port}',
     'https': 'http://{proxy_host}:{proxy_port}',
 }
+# Wenn Fehler im Filesystem protokolliert werden sollen
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "file": {
+            "level": "DEBUG",
+            "class": "logging.FileHandler",
+            "filename": "/tmp/django_error.log",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["file"],
+            "level": "ERROR",
+            "propagate": True,
+        },
+    },
+} 
+
 ``` 
 
 [Weiter Informationen 1](https://medium.com/@thehackadda/separate-your-development-and-production-settings-for-a-django-project-60ef3c718eb5)
@@ -148,7 +168,7 @@ sudo -u postgres psql -p 5432 -d xplanung_light -c "CREATE EXTENSION postgis;"
 sudo -u postgres psql -p 5432 -c "ALTER DATABASE xplanung_light OWNER TO geodjango;"
 ```
 
-### Anpassung der settings.py
+### Anpassung der settings.py bzw. dev.py oder prod.py
 
 ```python
 """

@@ -27,6 +27,25 @@ Produktivbetrieb
 
 .. _Gunicorn: https://gunicorn.org/
 
+.. note::
+
+   Restart erfordert **zwei** Befehle:
+
+   .. code-block:: shell
+      :linenos:
+
+      sudo systemctl daemon-reload
+      sudo systemctl restart gunicorn
+
+.. note::
+
+   Ausgabe der Fehlermeldungen:
+
+   .. code-block:: shell
+      :linenos:
+
+      sudo journalctl -u gunicorn
+
 **nginx (Reverse Proxy)**
 
 `Nginx`_ läuft als Reverse Proxy und verteilt die Anfragen für die statischen Inhalte und das aktive Framework. Installation als deb-Paket.
@@ -40,5 +59,6 @@ Produktivbetrieb
 * https://serverfault.com/questions/1166209/apache2-forward-gunicorn-socket-error
 * https://medium.com/building-the-system/gunicorn-3-means-of-concurrency-efbb547674b7
 * https://serverfault.com/questions/517596/static-file-permissions-with-nginx-gunicorn-and-django
+* https://codingnomads.com/django-debug-gunicorn-service
 
 
