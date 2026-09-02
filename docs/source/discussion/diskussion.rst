@@ -41,7 +41,9 @@ Der Mapserver löst die Infomationen auf und wendet die Styles direkt auf die je
 Beispielplan: https://opendata-duisburg.de/sites/default/files/780%20Alt-Hamborn.gml
 
 Lokale Ablage der SLDs aus der GDI-DE-Registry
+
 .. code-block:: shell
+    
    wget -r https://repository.gdi-de.org/style/de.xleitstelle.xplanung/
 
 .. note::
