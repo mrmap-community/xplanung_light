@@ -43,3 +43,9 @@ Willkommen zur Dokumentation des XPlanung-light Projekts
 
    operation/produktivbetrieb
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Diskussion
+
+   discussion/diskussion
+
