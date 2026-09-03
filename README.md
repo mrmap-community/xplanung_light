@@ -60,7 +60,7 @@ python3 manage.py createsuperuser
 python3 manage.py runserver
 ```
 
-# Installation unter Debian 13
+# Installation unter Debian 13 (WIP - Funktionen müssen noch getestet werden!)
 
 Als root
 
@@ -123,7 +123,7 @@ python3 manage.py createsuperuser
 python3 manage.py runserver
 ```
 
-# Initialies Befüllen der Gebietskörperschaften
+# Initiales Befüllen der Gebietskörperschaften
 
 Zur Erstellung von Plänen muss mindestens eine **AdministrativeOrganization** (XPlan Objekt: XP_Gemeinde) existieren.
 Die Gebietskörperschaften von RLP lassen sich über einen django-admin-Befehl importieren (Dauer ~10min - es werden dabei auch die Gebietsgrenzen über OGC API Features Schnittstellen ergänzt), sie können aber auch über das Admin-Backend händisch angelegt werden.
