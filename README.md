@@ -60,6 +60,71 @@ python3 manage.py createsuperuser
 python3 manage.py runserver
 ```
 
+# Installation unter Debian 13
+
+Als root
+
+```shell
+apt install binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite python3-mapscript python3.13-venv python3-dev libpq-dev build-essential
+```
+
+Als normaler Nutzer
+
+Vorbereitung
+```shell
+git clone https://github.com/mrmap-community/xplanung_light.git
+cd xplanung_light/
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements_deb13.txt
+```
+
+Kopieren der System so-Datei in venv Umgebung
+```shell
+cd .venv/lib64/python3.13/site-packages/mapscript
+cp /usr/lib/python3/dist-packages/mapscript/_mapscript.cpython-313-x86_64-linux-gnu.so _mapscript.so
+cd ../../../../../
+```
+
+Konfiguration der settings (dev)
+**komserv/settings/dev.py**
+```python
+DEBUG = True
+
+ALLOWED_HOSTS = []
+
+# Geocoder BKG
+BKG_GEOCODER_CONFIG = {
+    'base_url': 'https://sg.geodatenzentrum.de/gdz_geokodierung__',
+    'api_key': '{api-key}',
+}
+
+REQUESTS_PROXIES = {
+    'http': 'http://{proxy_ip}:{proxy_port}',
+    'https': 'http://{proxy_ip}:{proxy_port}',
+}
+
+```
+Setzen der Umgebungsvariablen
+**komserv/.my_xplanung_light_env.json**
+```json
+{
+    "ENV_NAME": "dev"
+}
+```
+
+Django Initialisierung
+```shell
+python3 manage.py shell -c "import django;django.db.connection.cursor().execute('SELECT InitSpatialMetaData(1);')";
+python3 manage.py migrate
+python3 manage.py collectstatic
+python3 manage.py createsuperuser
+python3 manage.py runserver
+```
+
+# Initialies Befüllen der Gebietskörperschaften
+
 Zur Erstellung von Plänen muss mindestens eine **AdministrativeOrganization** (XPlan Objekt: XP_Gemeinde) existieren.
 Die Gebietskörperschaften von RLP lassen sich über einen django-admin-Befehl importieren (Dauer ~10min - es werden dabei auch die Gebietsgrenzen über OGC API Features Schnittstellen ergänzt), sie können aber auch über das Admin-Backend händisch angelegt werden.
 
@@ -79,7 +144,7 @@ Der Prozess kann mehrfach gestartet werden. Das **AdministrativeOrganization**-m
 
 # Konfiguration
 
-Die Konfiguration der Anwendung erfolgt unter Django grundsätzlich in der settings.py. Um einfacher zwischen **dev** und **prod** wechseln zu können, gibt es verschiedene Möglichkeiten. Wir nutzen eine einfache versteckte json-Datei, die im Projektordner (komserv) liegt: .my_xplanung_light_env.json
+Die Konfiguration der Anwendung erfolgt unter Django grundsätzlich in der settings.py. Um einfacher zwischen **dev** und **prod** wechseln zu können, gibt es verschiedene Möglichkeiten. Wir nutzen eine einfache versteckte json-Datei, die im Projektordner (komserv) liegt: .my_xplanung_light_env.json - siehe Installation Debian 13.
 
 
 ```json

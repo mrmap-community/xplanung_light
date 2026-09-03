@@ -7,6 +7,8 @@ Produktivbetrieb
 
 * `Debian`_ 12:
 
+* `Debian`_ 13:
+
 .. _Debian: https://www.debian.org/index.de.html
 
 **Datenbank**
