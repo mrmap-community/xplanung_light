@@ -11,7 +11,6 @@ requests
 openpyxl
 mappyfile
 mapscript==8.4.0
-slugify
 python-magic
 django-select2
 django-autocomplete-light
