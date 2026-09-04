@@ -1,0 +1,227 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="de" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diskussion / Offene Punkte &mdash; XPlanung-light  Dokumentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=245627df"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../_static/translations.js?v=9bf55d28"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Stichwortverzeichnis" href="../genindex.html" />
+    <link rel="search" title="Suche" href="../search.html" />
+    <link rel="prev" title="Produktivbetrieb" href="../operation/produktivbetrieb.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            XPlanung-light
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Dokumentation durchsuchen" aria-label="Dokumentation durchsuchen" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Einführung</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/overview.html">Übersicht</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/bauleitplanung.html">Bauleitplanung</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../introduction/xplanung.html">XPlanung</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Dokumentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../documentation/nutzermanagement.html">Nutzerverwaltung</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation/organisationsmanagement.html">Organisationsdaten</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation/planmanagement.html">Planverwaltung</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation/beteiligungen.html">Beteiligungen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation/schnittstellen.html">Schnittstellen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../documentation/admin.html">Administration</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Entwicklung</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../development/entwicklung.html">Entwicklung</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../development/entwicklung.html#datenmodell">Datenmodell</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Installation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation/installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Betrieb</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operation/produktivbetrieb.html">Produktivbetrieb</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Diskussion</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Diskussion / Offene Punkte</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#rendering-der-vollvektoriellen-plane">Rendering der vollvektoriellen Pläne</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#hintergrundinformationen">Hintergrundinformationen</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#umsetzung-mit-mapserver">Umsetzung mit mapserver</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#konfiguration">Konfiguration</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#darstellung-des-mapserver-wms-in-qgis">Darstellung des Mapserver WMS in QGIS</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#varianten">Varianten</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">XPlanung-light</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Diskussion / Offene Punkte</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/discussion/diskussion.rst.txt" rel="nofollow"> Quelltext anzeigen</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="diskussion-offene-punkte">
+<h1>Diskussion / Offene Punkte<a class="headerlink" href="#diskussion-offene-punkte" title="Link to this heading"></a></h1>
+<section id="rendering-der-vollvektoriellen-plane">
+<h2>Rendering der vollvektoriellen Pläne<a class="headerlink" href="#rendering-der-vollvektoriellen-plane" title="Link to this heading"></a></h2>
+<section id="hintergrundinformationen">
+<h3>Hintergrundinformationen<a class="headerlink" href="#hintergrundinformationen" title="Link to this heading"></a></h3>
+<p>Aktuell werden vollvektorielle Pläne nicht visualisiert. Um diese Pläne halbwegs ordentlich
+darstellen zu können, muss man eine einheitliche Zeichenvorschrift haben.
+Diese liegt derzeit nicht vor.</p>
+<p>Im XPlanBox-Projekt gibt es SE-Dateien, die vom Deegree-Server genutzt werden, um die
+Zeichenvorschrift abzubilden:
+<a class="reference external" href="https://gitlab.opencode.de/diplanung/ozgxplanung/-/tree/main/xplan-webservices/xplan-webservices-workspaces/src/main/workspace/styles/xplansyn/default?ref_type=heads">https://gitlab.opencode.de/diplanung/ozgxplanung/-/tree/main/xplan-webservices/xplan-webservices-workspaces/src/main/workspace/styles/xplansyn/default?ref_type=heads</a></p>
+<p>Das QGIS-Plugin XPlanReader benutzt hierzu qml-Files:
+<a class="reference external" href="https://github.com/kreis-viersen/xplan-reader/tree/main/styles">https://github.com/kreis-viersen/xplan-reader/tree/main/styles</a></p>
+<p>Das ist alles noch <strong>WIP</strong>.</p>
+<p>In der GDI-DE-Registry findet sich ein Verzeichnis mit SLD-Dateien aus dem Jahr 2024:
+<a class="reference external" href="https://repository.gdi-de.org/style/de.xleitstelle.xplanung/">https://repository.gdi-de.org/style/de.xleitstelle.xplanung/</a></p>
+<p>Auch diese stellen nur einen kleinen Teil der benötigten standardisierten Styles zur Verfügung.</p>
+</section>
+<section id="umsetzung-mit-mapserver">
+<h3>Umsetzung mit mapserver<a class="headerlink" href="#umsetzung-mit-mapserver" title="Link to this heading"></a></h3>
+<section id="konfiguration">
+<h4>Konfiguration<a class="headerlink" href="#konfiguration" title="Link to this heading"></a></h4>
+<p>Im optimalen Fall kann man die GML-Dateien direkt mit einer Rendering-Engine visualisieren.
+Bei XPlanung-light bietet sich hierzu die Nutzung des integrierten Mapserver an.
+Ab der Version 8.2 kann man in den mapfiles Pfade zu SLD-Dateien und Symbolen angeben.
+Der Mapserver löst die Infomationen auf und wendet die Styles direkt auf die jeweiligen Layer an.</p>
+<p>Beispielplan: <a class="reference external" href="https://opendata-duisburg.de/sites/default/files/780%20Alt-Hamborn.gml">https://opendata-duisburg.de/sites/default/files/780%20Alt-Hamborn.gml</a></p>
+<p>Lokale Ablage der SLDs aus der GDI-DE-Registry</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>wget<span class="w"> </span>-r<span class="w"> </span>https://repository.gdi-de.org/style/de.xleitstelle.xplanung/
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Bemerkung</p>
+<p>Auszug aus einem mapfile mit SLD-Referenz:</p>
+<div class="highlight-cfg notranslate"><div class="highlight"><pre><span></span><span class="w">  </span><span class="c1">#</span>
+<span class="w">  </span><span class="na">LAYER</span>
+<span class="w">    </span><span class="na">NAME &quot;BP_StrassenVerkehrsFlaeche&quot;</span>
+<span class="w">    </span><span class="na">TYPE POLYGON</span>
+<span class="w">    </span><span class="na">CONNECTIONTYPE OGR</span>
+<span class="w">    </span><span class="na">CONNECTION &quot;/opt/mapserver/data/780_Alt-Hamborn.gml&quot;</span>
+<span class="w">    </span><span class="na">DATA &quot;BP_StrassenVerkehrsFlaeche&quot;</span>
+<span class="w">    </span><span class="na">METADATA</span>
+<span class="w">        </span><span class="na">WMS_TITLE       &quot;BP_StrassenVerkehrsFlaeche&quot;</span>
+<span class="w">        </span><span class="na">WMS_SRS         &quot;EPSG</span><span class="o">:</span><span class="s">25832&quot;</span>
+<span class="w">        </span><span class="na">WMS_ABSTRACT    &quot;Testpolygon&quot;</span>
+<span class="w">        </span><span class="na">&quot;wms_extent&quot;    &quot;344972.646 5706529.6654 345513.2002 5706833.653&quot;</span>
+<span class="w">    </span><span class="na">END</span>
+<span class="w">    </span><span class="na">VALIDATION</span>
+<span class="w">        </span><span class="na">&quot;sld_external_graphic&quot; &quot;^/opt/mapserver/data/repository.gdi-de.org/style/de.xleitstelle.xplanung/svg/home/user/mapserver/symbols/[a-zA-Z0-9_\-\.]+\.(png|jpg|svg)$&quot;</span>
+<span class="w">    </span><span class="na">END</span>
+<span class="w">    </span><span class="na">PROJECTION</span>
+<span class="w">        </span><span class="na">&quot;init</span><span class="o">=</span><span class="s">epsg:25832&quot;</span>
+<span class="w">    </span><span class="na">END</span>
+<span class="w">        </span><span class="na">STYLEITEM &quot;sld</span><span class="o">:</span><span class="s">///opt/mapserver/data/repository.gdi-de.org/style/de.xleitstelle.xplanung/index.sld&quot;</span>
+<span class="w">    </span><span class="na">CLASS</span>
+<span class="w">        </span><span class="na">NAME &quot;BP_StrassenVerkehrsFlaeche&quot;</span>
+<span class="w">        </span><span class="na">STYLE</span>
+<span class="w">            </span><span class="na">OUTLINECOLOR 0 255 0</span>
+<span class="w">            </span><span class="na">WIDTH 2</span>
+<span class="w">        </span><span class="na">END</span>
+<span class="w">    </span><span class="na">END</span>
+<span class="na">END</span>
+<span class="c1">#</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="darstellung-des-mapserver-wms-in-qgis">
+<h4>Darstellung des Mapserver WMS in QGIS<a class="headerlink" href="#darstellung-des-mapserver-wms-in-qgis" title="Link to this heading"></a></h4>
+<img alt="../_images/xplan_wms_mapserver_sld.png" src="../_images/xplan_wms_mapserver_sld.png" />
+</section>
+<section id="varianten">
+<h4>Varianten<a class="headerlink" href="#varianten" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Transformation der xml-Files aus dem XPlanBox-Projekt oder aus den qml-Files des XPlan-Reader nach SLD - Nutzung von <strong>Geostyler-cli</strong>: <a class="reference external" href="https://github.com/geostyler/geostyler-cli">https://github.com/geostyler/geostyler-cli</a></p></li>
+<li><p>Definition eigener Styles für die jeweiligen Layer - das sind sehr viele ;-)</p></li>
+</ul>
+</section>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../operation/produktivbetrieb.html" class="btn btn-neutral float-left" title="Produktivbetrieb" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Zurück</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, GDI-RP.</p>
+  </div>
+
+  Erstellt mit <a href="https://www.sphinx-doc.org/">Sphinx</a> mit einem
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    bereitgestellt von <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
