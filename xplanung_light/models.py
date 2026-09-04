@@ -10,7 +10,7 @@ from django.contrib.gis.gdal.raster.source import GDALRaster
 from django.contrib.gis.gdal import SpatialReference
 from django.core.files import File
 from django.core.files.base import ContentFile
-import slugify
+from django.utils.text import slugify
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from io import BytesIO
 # Um gewisse Auszeichnungen zu unterstützen, nutzen wir eine formset Erweiterung - ab 2.0 liegt sie woanders
