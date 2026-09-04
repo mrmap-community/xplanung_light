@@ -9,7 +9,7 @@ from django.db import connection
 """
 Klassen für die Generierung und Bearbeitung von Mapserver-Konfigurationsdateien (mapfiles) 
 Der Generator lädt templates aus dem mapserver/mapfile_templates Ordner. Diese werden dann programmatisch angepasst.
-TODO: Weitere Filter hinzufügen - insbesondere Inkrafttretensdatm bzw. Wirksamkeitsdatum!
+TODO: Weitere Filter hinzufügen - insbesondere Inkrafttretens- bzw. Wirksamkeitsdatum!
 """
 
 class MapfileGenerator():
@@ -69,12 +69,23 @@ class MapfileGenerator():
             "ows_contactelectronicmailaddress"  ""
         """
         # Berechnen des Extents aller Pläne - TODO: hier ggf. ein Aggregat aus BPlan und FPlan generieren!
-        union_queryset = bplaene.annotate(
+        union_queryset_bplaene = bplaene.annotate(
             union_geom=Func(F('geltungsbereich'), function='ST_Union')
         ).values('union_geom')
-        for item in union_queryset:
-            ogr_geom = item['union_geom']
+        for item in union_queryset_bplaene:
+            ogr_geom_bplaene = item['union_geom']
+        union_queryset_fplaene = fplaene.annotate(
+            union_geom=Func(F('geltungsbereich'), function='ST_Union')
+        ).values('union_geom')
+        for item in union_queryset_fplaene:
+            ogr_geom_fplaene = item['union_geom']
+        # If both are valid, merge them
+        if ogr_geom_bplaene and ogr_geom_fplaene:
+            ogr_geom = ogr_geom_bplaene.union(ogr_geom_fplaene)
+        else:
+            ogr_geom = ogr_geom_bplaene or ogr_geom_fplaene
         map["web"]["metadata"]["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
+        map["extent"] = map["web"]["metadata"]["ows_extent"]
         """
         Einlesen der Templates
         """
@@ -183,7 +194,7 @@ class MapfileGenerator():
             metadata = layer_from_template["metadata"].copy()
             metadata["ows_title"] = "Umringe der Flächennutzungspläne von " + orga.name
             metadata["ows_abstract"] = "Umringe der Flächennutzungspläne von "  + orga.name + " - Abstract"
-            metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
+            metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom_fplaene), srs=4326).extent])
             metadata["wms_group_title"] = "Flächennutzungspläne"
             # TODO Metadatengenerator für "Alle BPläne der Kommune X"
             metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + "umring" + "/")
@@ -282,7 +293,7 @@ class MapfileGenerator():
             metadata = layer_from_template["metadata"].copy()
             metadata["ows_title"] = "Umringe der Bebauungspläne von " + orga.name
             metadata["ows_abstract"] = "Umringe der Bebauungspläne von "  + orga.name + " - Abstract"
-            metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
+            metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom_bplaene), srs=4326).extent])
             # TODO Metadatengenerator für "Alle BPläne der Kommune X"
             metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + "umring" + "/")
             umring_layer["metadata"] = metadata

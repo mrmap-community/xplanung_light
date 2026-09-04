@@ -32,6 +32,7 @@ MAP
             "wms_contactfacsimiletelephone" "1111"
             "wms_contactvoicetelephone" "1111"
             "wms_enable_request" "*"
+            "wms_allow_getmap_without_styles"   "true"
         END
     END
     SYMBOLSET 'xplanung_light/mapserver/symbols/symbols.sym'
