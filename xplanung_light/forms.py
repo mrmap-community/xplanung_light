@@ -281,6 +281,7 @@ class UvpForm(forms.ModelForm):
         #        }
         #)
         self.fields['uvp_beginn_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -288,6 +289,7 @@ class UvpForm(forms.ModelForm):
                 }
         )
         self.fields['uvp_ende_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -358,6 +360,7 @@ class FPlanUvpForm(forms.ModelForm):
         self.fields['uvp_ende_datum'].help_text = "Datum des Beginns der Umweltprüfung"
 
         self.fields['uvp_beginn_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -365,6 +368,7 @@ class FPlanUvpForm(forms.ModelForm):
                 }
         )
         self.fields['uvp_ende_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -558,6 +562,7 @@ class BPlanCreateForm(ModelForm):
         # Validation Problem: https://github.com/django-crispy-forms/django-crispy-forms/issues/623
         # https://stackoverflow.com/questions/64581369/django-crispy-forms-validation-error-in-template
         self.fields['aufstellungsbeschluss_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -565,6 +570,7 @@ class BPlanCreateForm(ModelForm):
                 }
         )
         self.fields['satzungsbeschluss_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -572,6 +578,7 @@ class BPlanCreateForm(ModelForm):
                 }
         )
         self.fields['rechtsverordnungs_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -579,20 +586,23 @@ class BPlanCreateForm(ModelForm):
                 }
         )
         self.fields['ausfertigungs_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['inkrafttretens_datum'].widget = forms.DateInput(          
+        self.fields['inkrafttretens_datum'].widget = forms.DateInput(    
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['untergangs_datum'].widget = forms.DateInput(          
+        self.fields['untergangs_datum'].widget = forms.DateInput(    
+            format='%Y-%m-%d',  
             attrs={
                 'type': 'date',
                 'min': '1960-01-01',
@@ -748,6 +758,7 @@ class BPlanUpdateForm(ModelForm):
         # https://stackoverflow.com/questions/64581369/django-crispy-forms-validation-error-in-template
         # Datumsfelder
         self.fields['aufstellungsbeschluss_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -756,6 +767,7 @@ class BPlanUpdateForm(ModelForm):
                 }
         )
         self.fields['satzungsbeschluss_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -763,6 +775,7 @@ class BPlanUpdateForm(ModelForm):
                 }
         )
         self.fields['rechtsverordnungs_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -770,20 +783,23 @@ class BPlanUpdateForm(ModelForm):
                 }
         )
         self.fields['ausfertigungs_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['inkrafttretens_datum'].widget = forms.DateInput(          
+        self.fields['inkrafttretens_datum'].widget = forms.DateInput( 
+            format='%Y-%m-%d',   
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['untergangs_datum'].widget = forms.DateInput(          
+        self.fields['untergangs_datum'].widget = forms.DateInput(  
+            format='%Y-%m-%d',    
             attrs={
                 'type': 'date',
                 'min': '1960-01-01',
@@ -905,6 +921,7 @@ class FPlanCreateForm(ModelForm):
         # Validation Problem: https://github.com/django-crispy-forms/django-crispy-forms/issues/623
         # https://stackoverflow.com/questions/64581369/django-crispy-forms-validation-error-in-template
         self.fields['aufstellungsbeschluss_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -912,6 +929,7 @@ class FPlanCreateForm(ModelForm):
                 }
         )
         self.fields['planbeschluss_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -919,13 +937,15 @@ class FPlanCreateForm(ModelForm):
                 }
         )
         self.fields['wirksamkeits_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['untergangs_datum'].widget = forms.DateInput(          
+        self.fields['untergangs_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',   
             attrs={
                 'type': 'date',
                 'min': '1960-01-01',
@@ -1052,6 +1072,7 @@ class FPlanUpdateForm(ModelForm):
         # https://stackoverflow.com/questions/64581369/django-crispy-forms-validation-error-in-template
         # Datumsfelder
         self.fields['aufstellungsbeschluss_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
@@ -1060,20 +1081,23 @@ class FPlanUpdateForm(ModelForm):
                 }
         )
         self.fields['planbeschluss_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['wirksamkeits_datum'].widget = forms.DateInput(          
+        self.fields['wirksamkeits_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',       
             attrs={
                 'type': 'date',
                 'min': '1960-01-01',
                 'max': str(timezone.now().date()),
                 }
         )
-        self.fields['untergangs_datum'].widget = forms.DateInput(          
+        self.fields['untergangs_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',     
             attrs={
                 'type': 'date',
                 'min': '1960-01-01',
@@ -2179,7 +2203,7 @@ class BPlanBeteiligungBeitragGenericForm(ModelForm):
         widgets = {
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
             'bplan_beteiligung': HiddenInput(),
-            'eingangsdatum': widgets.DateInput(attrs={'type': 'date', 'pattern': r'\d{4}-\d{2}-\d{2}'}),
+            'eingangsdatum': widgets.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'pattern': r'\d{4}-\d{2}-\d{2}'}),
         }
 
 
@@ -2207,7 +2231,7 @@ class FPlanBeteiligungBeitragGenericForm(ModelForm):
         fields = ['typ', 'eingangsdatum', 'name', 'email', 'titel', 'beschreibung', 'approved']
         widgets = {
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
-            'eingangsdatum': widgets.DateInput(attrs={'type': 'date', 'pattern': r'\d{4}-\d{2}-\d{2}'}),
+            'eingangsdatum': widgets.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'pattern': r'\d{4}-\d{2}-\d{2}'}),
             #'approved': HiddenInput(),
         }
 

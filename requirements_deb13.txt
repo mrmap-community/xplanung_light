@@ -26,4 +26,4 @@ clamd
 django-clamd
 psycopg2
 reportlab
-pydantic==2.12.5
+pydantic
