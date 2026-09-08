@@ -198,9 +198,17 @@ def xplan_html(request, pk:int):
     else:
         fplan_filter = []
     if bplan_filter == [] and fplan_filter == []:
-        return render(request, 'xplanung_light/empty_feature_info.html')
+        response = render(request, 'xplanung_light/empty_feature_info.html')
+        response.headers['Access-Control-Allow-Origin'] = "*"
+        response.headers['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
+        # TODO: Allow integration in website of contact for administrative unit
+        return response
     else:
-        return render(request, 'xplanung_light/xplan_list_html.html', {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
+        response = render(request, 'xplanung_light/xplan_list_html.html', {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
+        response.headers['Access-Control-Allow-Origin'] = "*"
+        response.headers['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
+        # TODO: Allow integration in website of contact for administrative unit
+        return response
     
 
 
