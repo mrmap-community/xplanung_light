@@ -4,6 +4,7 @@ from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz,
 from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz, BPlanBeteiligungBeitrag, FPlanBeteiligungBeitrag, RequestForRole
 from .models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme 
 from .models import ConsentOption, BPlanBeteiligungToebNotification, FPlanBeteiligungToebNotification
+from .models import BPlanBeteiligungBeitragAnhang, FPlanBeteiligungBeitragAnhang
 from django.urls import reverse
 from django.utils.html import format_html
 from django.contrib.gis.gdal import OGRGeometry
@@ -105,6 +106,80 @@ class FPlanSpezExterneReferenzTable(tables.Table):
         fields = ( "id", "public", "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
 
 
+class BPlanBeteiligungBeitragAnhangTable(tables.Table):
+    """
+    Tabelle zur Anzeige der Anlagen eines Beteiligungsbeitrags. Hier kann der Sachbearbeiter eine geschwärzte Version hinzufügen.
+    """
+    attachment = tables.LinkColumn(
+        "beteiligung-beitrag-attachment-download-orig",
+        verbose_name = A('Datei'),
+        args = ["bplan", A('pk')],
+        orderable=False,
+        empty_values=()
+    )
+    name = tables.Column(verbose_name="Name/Bezeichnung")
+    typ = tables.Column(verbose_name="Art des Dokuments")
+    #redacted_document_id = tables.Column(verbose_name="Geschwärztes Dokument ID")
+    #has_redacted_version = tables.TemplateColumn(verbose_name="",  template_code=u"""{% if record.has_redacted_version == True %}<i class="fa-regular fa-eye-slash"></i>{% endif %}""")
+    redacted_document = tables.columns.TemplateColumn(verbose_name = "Geschwärzte Version", template_code=u"""{% if record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-detail' plantyp=plantyp generic_id=record.redacted_document_generic_id %}">Anzeigen</a>{% endif %}
+    {% if record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-delete' plantyp=plantyp generic_id=record.redacted_document_generic_id %}">Löschen</a>{% endif %}
+    {% if not record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-create' plantyp=plantyp anhang_generic_id=record.generic_id %}">Anlegen</a>{% endif %}
+    """)
+
+    class Meta:
+        model = BPlanBeteiligungBeitragAnhang
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ( "id", "name", "typ", "attachment")#, "has_redacted_version", "redacted_document_id")
+
+
+class FPlanBeteiligungBeitragAnhangTable(BPlanBeteiligungBeitragAnhangTable):
+
+    attachment = tables.LinkColumn(
+        "beteiligung-beitrag-attachment-download-orig",
+        verbose_name = A('Datei'),
+        args = ["fplan", A('pk')],
+        orderable=False,
+        empty_values=()
+    )
+
+    class Meta(BPlanBeteiligungBeitragAnhangTable.Meta):
+        model = FPlanBeteiligungBeitragAnhang
+
+
+class BPlanBeteiligungBeitragAnhangTable2(tables.Table):
+    """
+    Tabelle zur Anzeige der Anlagen eines Beteiligungsbeitrags. Hier kann der Sachbearbeiter eine geschwärzte Version hinzufügen.
+
+    """
+    #edit = tables.LinkColumn('bplanattachment-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
+    #                     orderable=False, empty_values=())
+    #delete = tables.LinkColumn('bplanattachment-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')], \
+    #                     orderable=False, empty_values=())
+    # add redacted version
+    # delete redacted version
+    # show redacted version
+
+    attachment = tables.Column(verbose_name="Anlage", orderable=False)
+    #download = tables.LinkColumn('bplanattachment-download', verbose_name='', text='Download', args=[A('pk')], \
+    #                     orderable=False, empty_values=())
+    name = tables.Column(verbose_name="Name/Bezeichnung")
+    typ = tables.Column(verbose_name="Art des Dokuments")
+    redacted_document_id = tables.Column(verbose_name="Geschwärztes Dokument ID")
+    redacted_document = tables.columns.TemplateColumn(verbose_name = "Geschwärztes Dokument", template_code=u"""{% if record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-detail' plantyp=plantyp planid=plan.id beteiligungid=beteiligungid beitragid=beitragid anhangid=record.id pk=record.redacted_document_id %}">Anzeigen</a>{% endif %}
+    {% if record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-delete' plantyp=plantyp planid=plan.id beteiligungid=beteiligungid beitragid=beitragid anhangid=record.id pk=record.redacted_document_id %}">Löschen</a>{% endif %}
+    {% if not record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-create' plantyp=plantyp planid=plan.id beteiligungid=beteiligungid beitragid=beitragid anhangid=record.id %}">Anlegen</a>{% endif %}
+    """)
+
+    class Meta:
+        model = BPlanBeteiligungBeitragAnhang
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ( "id", "name", "typ", "attachment", "has_redacted_version", "redacted_document_id")
+
+
+class FPlanBeteiligungBeitragAnhangTable2(BPlanBeteiligungBeitragAnhangTable):
+    pass
+
+
 class BeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
     end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
@@ -112,7 +187,7 @@ class BeteiligungenTable(tables.Table):
     progress = tables.columns.TemplateColumn(template_code=u"""<div class="progress">
         <div class="progress-bar" role="progressbar" style="width: {% widthratio record.days_passed record.days_total 100 %}%" aria-valuenow="{{ record.days_passed }}" aria-valuemin="0" aria-valuemax="{{ record.days_total }}">{{ record.days_left }}</div>
     </div>""", verbose_name="Tage bis Fristablauf", orderable=False)
-    xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
+    xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan" %}<a href="{% url 'bplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
     typ = tables.Column(verbose_name='Typ des Verfahrens')
     plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
     gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
@@ -308,14 +383,16 @@ class BPlanBeteiligungBeitragTable(tables.Table):
     )
     
     count_stellungnahmen = tables.LinkColumn('beitragstellungnahme-list', verbose_name='Stellungnahmen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], empty_values=())
-    attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "bplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
+    #attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "bplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
+    count_attachments = tables.LinkColumn('beteiligungbeitraganhang-list', verbose_name='Anlagen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], \
+                         orderable=False, empty_values=())
     delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], \
                          orderable=False, empty_values=())
     
     class Meta:
         model = BPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("id", "last_changed", "eingangsdatum", "titel", "typ", "toeb", "name", "email", "approved", "withdrawn", "attachments", "count_stellungnahmen", "edit", "delete")
+        fields = ("id", "last_changed", "eingangsdatum", "titel", "typ", "toeb", "name", "email", "approved", "withdrawn", "count_attachments", "count_stellungnahmen", "edit", "delete")
 
 
 class FPlanBeteiligungBeitragTable(tables.Table):
@@ -332,14 +409,16 @@ class FPlanBeteiligungBeitragTable(tables.Table):
         template_code='''{% if record.typ == '1000' %}{% else %}<a href="{% url 'beteiligungbeitrag-generic-update' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id pk=record.id %}">Bearbeiten</a>{% endif %}''',
     )
     count_stellungnahmen = tables.LinkColumn('beitragstellungnahme-list', verbose_name='Stellungnahmen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], empty_values=())
-    attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "fplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
+    #attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "fplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
+    count_attachments = tables.LinkColumn('beteiligungbeitraganhang-list', verbose_name='Anlagen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], \
+                             orderable=False, empty_values=())
     delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], \
                          orderable=False, empty_values=())
     
     class Meta:
         model = FPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("id", "last_changed", "eingangsdatum", "titel", "typ", "name", "email", "approved", "withdrawn", "attachments", "count_stellungnahmen", "delete")
+        fields = ("id", "last_changed", "eingangsdatum", "titel", "typ", "name", "email", "approved", "withdrawn", "count_attachments", "count_stellungnahmen", "delete")
 
 
 class BPlanBeitragStellungnahmeTable(tables.Table):

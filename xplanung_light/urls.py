@@ -9,6 +9,8 @@ from xplanung_light.views.beteiligung import BeteiligungenListView, Beteiligunge
 from xplanung_light.views.requestforrole import RequestForRoleCreateView, RequestForRoleListView, RequestForRoleDeleteView, RequestForRoleAdminListView
 from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragCreateView, BeteiligungBeitragListView, BeteiligungBeitragDeleteView, BeteiligungBeitragDetailView
 from xplanung_light.views.beteiligungbeitrag import BeteiligungBeitragGenericCreateView, BeteiligungBeitragGenericUpdateView, BeteiligungBeitragToebCreateView, BeteiligungBeitragToebUpdateView, BeteiligungBeitragToebDeleteView
+from xplanung_light.views.beteiligungbeitraganhang import BeteiligungBeitragAnhangListView
+from xplanung_light.views.beteiligungbeitraganhangredacted import BeteiligungBeitragAnhangRedactedCreateView, BeteiligungBeitragAnhangRedactedDetailView, BeteiligungBeitragAnhangRedactedDeleteView
 from xplanung_light.views.beitragstellungnahme import XPlanBeitragStellungnahmeCreateView, XPlanBeitragStellungnahmeUpdateView, BeitragStellungnahmeListView, XPlanBeitragStellungnahmeDeleteView
 from xplanung_light.views.fplan import FPlanDetailXPlanLightView, FPlanDetailXPlanLightZipView
 from xplanung_light.views.bplan import BPlanDetailXPlanLightView, BPlanDetailXPlanLightZipView
@@ -98,9 +100,26 @@ urlpatterns = [
     # Authentifizierung für guest
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/authenticate$', views.beitrag_authenticate, name="beteiligungbeitrag-authenticate"),
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/detail$', views.beitrag_detail, name="gastbeteiligungbeitrag-detail"),
-    # Anlagen zu den Beiträgen
+    # Anlagen zu den Beiträgen / geschwärzte Version priorisiert
     re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitragattachment/(?P<pk>\d+)/$', views.get_beteiligung_beitrag_attachment, name="beteiligung-beitrag-attachment-download"),
+    # Anlagen zu den Beiträgen / original Version priorisiert
+    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitragattachment_orig/(?P<pk>\d+)/$', views.get_beteiligung_beitrag_attachment_orig, name="beteiligung-beitrag-attachment-download-orig"),
+    # Detailseite zum Beteiligungsbeitrag
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/$', BeteiligungBeitragDetailView.as_view(), name="beteiligungbeitrag-detail"),
+
+    # Anlagenliste für den Sachbearbeiter um geschwärzte Dokumente beizufügen
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/anhang/$', BeteiligungBeitragAnhangListView.as_view(), name="beteiligungbeitraganhang-list"),
+
+    #re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/anhang/(?P<anhangid>\d+)/redacted/create/$', BeteiligungBeitragAnhangRedactedCreateView.as_view(), name="beteiligungbeitraganhangredacted-create"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitraganhang/(?P<anhang_generic_id>[0-9a-f-]{36})/redacted/create/$', BeteiligungBeitragAnhangRedactedCreateView.as_view(), name="beteiligungbeitraganhangredacted-create"),
+
+    #re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/anhang/(?P<anhangid>\d+)/redacted/(?P<pk>\d+)/detail/$', BeteiligungBeitragAnhangRedactedDetailView.as_view(), name="beteiligungbeitraganhangredacted-detail"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitraganhang/redacted/(?P<generic_id>[0-9a-f-]{36})/detail/$', BeteiligungBeitragAnhangRedactedDetailView.as_view(), name="beteiligungbeitraganhangredacted-detail"),
+
+    #re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/anhang/(?P<anhangid>\d+)/redacted/(?P<pk>\d+)/delete/$', BeteiligungBeitragAnhangRedactedDeleteView.as_view(), name="beteiligungbeitraganhangredacted-delete"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitraganhang/redacted/(?P<generic_id>[0-9a-f-]{36})/delete/$', BeteiligungBeitragAnhangRedactedDeleteView.as_view(), name="beteiligungbeitraganhangredacted-delete"),
+
+    
     # PDF Dokument mit einer Liste der Beiträge
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/pdf/$', BeteiligungPdfView.as_view(), name="beteiligungbeitrag-list-pdf"),
     # URLs für die Stellungnahmen der Gebietskörperschaften zu den Beiträgen

@@ -1,0 +1,20 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% bootstrap_css %}
+{% block title %}
+    Geschwärzte Variante einer Anlage
+{% endblock %}
+{% block content %}
+    <p>{% if plantyp == 'bplan' %}Bebauungsplan{% endif %}{% if plantyp == 'fplan' %}Flächennutzungsplan{% endif %} <b>{{ plan.name }}</b> der Kommune(n):<br>
+        <ul>
+            {% for gemeinde in plan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
+        </ul>
+    </p>
+    <p>Dokument: {{ anhang.name }} ({{ anhang.id }})</p>
+    <form action="" method="POST" class="anhangredacted-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.media }}
+        {% bootstrap_form form %}
+        <input type="submit" class="save btn btn-primary" value="Speichern">
+    </form>
+{% endblock %}

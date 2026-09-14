@@ -1,0 +1,17 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+{% bootstrap_css %}
+{% block title %}
+    Geschwärzte Variante einer Anlage
+{% endblock %}
+{% block content %}
+    <p>{% if plantyp == 'bplan' %}Bebauungsplan{% endif %}{% if plantyp == 'fplan' %}Flächennutzungsplan{% endif %} <b>{{ plan.name }}</b> der Kommune(n):<br>
+        <ul>
+            {% for gemeinde in plan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
+        </ul>
+    </p>
+    <p><b>Original Dokument:</b> <a href="{% url 'beteiligung-beitrag-attachment-download-orig' plantyp=plantyp pk=anhang.id %}">{{ anhang.attachment }} ({{ anhang.id }})</a></p>
+    <p><b>Geschwärzte Variante:</b> <a href="{% url 'beteiligung-beitrag-attachment-download' plantyp=plantyp pk=anhang.id %}">{{ object.attachment }} ({{ object.id }})</a></p>
+    <hr>
+    <div><p style="color:grey;font-size:11px;">Letzte Änderung: <b>{{ letzte_aenderung_am }}</b>, durch <b>{{ bearbeitet_von }}</b></p></div>
+{% endblock %}

@@ -159,7 +159,7 @@ class XPlanRelationsDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, DeleteVie
                 gemeinden = object.bplan.gemeinde.all()
             if self.reference_model_name_lower == 'fplan':  
                 # TODO alter to fplan
-                gemeinden = object.bplan.gemeinde.all()
+                gemeinden = object.fplan.gemeinde.all()
             for gemeinde in gemeinden:
                 user_is_admin = False
                 for user in gemeinde.admin_orga_users.all():

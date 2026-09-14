@@ -128,7 +128,7 @@ def get_fplan_attachment(request, pk):
     else:
         return HttpResponse("Object not found", status=404)
 
-def get_beteiligung_beitrag_attachment(request, **kwargs):
+def get_beteiligung_beitrag_attachment(request, priorize_redacted=True, **kwargs):
     """
     Auslieferung der Anlagen aus den Stellungnahmen
     
@@ -169,7 +169,11 @@ def get_beteiligung_beitrag_attachment(request, **kwargs):
     if access_allowed:
         if attachment:
             if os.path.exists(attachment.attachment.file.name):
-                response = FileResponse(attachment.attachment)
+                if priorize_redacted == True:
+                    if attachment.redacted_version:
+                        response = FileResponse(attachment.redacted_version.attachment)
+                else:
+                    response = FileResponse(attachment.attachment)
                 return response
             else:
                 return HttpResponse("File not found", status=404) 
@@ -177,6 +181,9 @@ def get_beteiligung_beitrag_attachment(request, **kwargs):
             return HttpResponse("Object not found", status=404)
     else:
         return HttpResponse("Forbidden", status=403)
+
+def get_beteiligung_beitrag_attachment_orig(request, **kwargs):
+    return get_beteiligung_beitrag_attachment(request, priorize_redacted=False, **kwargs)
 
 def xplan_html(request, pk:int):
     orga = AdministrativeOrganization.objects.get(pk=pk)

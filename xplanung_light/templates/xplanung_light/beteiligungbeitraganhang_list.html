@@ -1,0 +1,18 @@
+{% extends "xplanung_light/layout.html" %}
+{% block title %}
+    Anlagen zum Beteiligungsbeitrag x des Plans y
+{% endblock %}
+{% load render_table from django_tables2 %}
+{% load django_bootstrap5 %}
+{% block content %}
+<h3>Anlagen zum Beteiligungsbeitrag</h3>
+<p>{% if plantyp == 'bplan' %}Bebauungsplan <a href="{% url 'bplan-update' pk=plan.id %}"><b>{{ plan.name }}</b></a>{% endif %}{% if plantyp == 'fplan' %}Flächennutzungsplan <a href="{% url 'fplan-update' pk=plan.id %}"><b>{{ plan.name }}</b></a>{% endif %} der Kommune(n):<br>
+    <ul>
+        {% for gemeinde in plan.gemeinde.all %}<li>{{ gemeinde }}</li>{% endfor %}
+    </ul>
+</p>
+<p><u>Beteiligungsverfahren:</u> <a href="{% url 'beteiligungbeitrag-list' plantyp=plantyp planid=plan.id beteiligungid=beteiligungid %}">{{ beteiligungbeitraganhang_list.first.beitrag.beteiligung.id }}</a> - <b>{{ beteiligungbeitraganhang_list.first.beitrag.beteiligung.get_typ_display }}</b> vom {{ beteiligungbeitraganhang_list.first.beitrag.beteiligung.start_datum }} bis {{ beteiligungbeitraganhang_list.first.beitrag.beteiligung.end_datum }}</p>
+<p><u>Beitrag:</u> {{ beteiligungbeitraganhang_list.first.beitrag.id }} - von <b>{{ beteiligungbeitraganhang_list.first.beitrag.name }} ({{ beteiligungbeitraganhang_list.first.beitrag.email }})</b>, vom <i>{{ beteiligungbeitraganhang_list.first.beitrag.eingangsdatum }}</i> via <b>{{ beteiligungbeitraganhang_list.first.beitrag.get_typ_display }}</b></p>
+{% render_table table %}
+<p>Anzahl: {{ beteiligungbeitraganhang_list.count }}</p>
+{% endblock %}

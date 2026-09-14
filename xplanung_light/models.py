@@ -1013,6 +1013,10 @@ class BPlanBeteiligung(XPlanBeteiligung):
     assigned_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Zugewiesene TOEBs", help_text="Zugewiesene TOEBs", related_name="bplan_beteiligungen")
     history = HistoricalRecords(m2m_fields=[assigned_toebs])
 
+    @property
+    def plan(self):
+        return self.bplan
+
 
 class FPlanBeteiligung(XPlanBeteiligung):
 
@@ -1020,6 +1024,10 @@ class FPlanBeteiligung(XPlanBeteiligung):
     # Nur benötigt bei Trägerbeteiligung
     assigned_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Zugewiesene TOEBs", help_text="Zugewiesene TOEBs", related_name="fplan_beteiligungen")
     history = HistoricalRecords(m2m_fields=[assigned_toebs])
+
+    @property
+    def plan(self):
+        return self.fplan
 
 """
 Hier kommen die Modelle für die Benachrichtigungen zu den Beteiligungsverfahren
@@ -1119,6 +1127,13 @@ class BPlanBeteiligungBeitrag(BeteiligungBeitrag):
                 })
     """
 
+    """
+    Einheitlicher property-name vereinfacht später viele Prüfungen in den Views
+    """
+    @property
+    def beteiligung(self):
+        return self.bplan_beteiligung
+
 class BPlanBeteiligungBeitragAnhang(BeteiligungBeitragAnhang):   
 
     beitrag = HistoricForeignKey(BPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zum Beitrag / Kommentar", help_text="Dateianhänge zum Beitrag / Kommentar", related_name="attachments")
@@ -1141,6 +1156,13 @@ class FPlanBeteiligungBeitrag(BeteiligungBeitrag):
                 })
     """
 
+    """
+    Einheitlicher property-name vereinfacht später viele Prüfungen in den Views
+    """
+    @property
+    def beteiligung(self):
+        return self.fplan_beteiligung
+    
 class FPlanBeteiligungBeitragAnhang(BeteiligungBeitragAnhang):   
 
     beitrag = HistoricForeignKey(FPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zum Beitrag / Kommentar", help_text="Dateianhänge zum Beitrag / Kommentar", related_name="attachments")
@@ -1485,4 +1507,43 @@ class Consent(models.Model):
     expires_on =  models.DateField(null=False, blank=False, verbose_name="Ablauf der Einwilligung") # Wird ausgefüllt, wenn validity_period gesetzt war
     #vsign - ip
     #vhash - hash
-    
+
+
+class AbstractRedactedDocument(GenericMetadata):
+    """
+    Gemeinsame Basis für geschwärzte/anonymisierte Versionen von Anhängen.
+    Konkrete Subklassen ergänzen jeweils den OneToOneField zum Original-Anhang.
+    """
+    attachment = models.FileField(
+        null=False, blank=False, max_length=1024, upload_to='uploads',
+        verbose_name="Geschwärzte Version des Dokuments",
+        validators=[validate_file_infection],
+    )
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return f"Geschwärzte Version von {self.anhang}"
+
+
+class RedactedBPlanBeteiligungBeitragAnhang(AbstractRedactedDocument):
+    anhang = models.OneToOneField(
+        BPlanBeteiligungBeitragAnhang, on_delete=models.CASCADE,
+        related_name="redacted_version", verbose_name="Anhang",
+    )
+    history = HistoricalRecords()
+
+
+class RedactedFPlanBeteiligungBeitragAnhang(AbstractRedactedDocument):
+    anhang = models.OneToOneField(
+        FPlanBeteiligungBeitragAnhang, on_delete=models.CASCADE,
+        related_name="redacted_version", verbose_name="Anhang",
+    )
+    history = HistoricalRecords()
+"""
+anhang = FPlanBeteiligungBeitragAnhang.objects.get(pk=1)
+if hasattr(anhang, 'redacted_version'):
+    anhang.redacted_version.attachment
+    anhang.redacted_version.history.all()
+"""

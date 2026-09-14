@@ -88,7 +88,11 @@ class BeteiligungBeitragListView(ExtentUserOrgaInfo, SingleTableView):
                     count_stellungnahmen=Count(
                         'stellungnahmen', distinct=True
                     )
-        )
+                ).annotate(
+                    count_attachments=Count(
+                        'attachments', distinct=True
+                    )
+                )
         plan = self.reference_model.objects.get(pk=self.kwargs['planid'])
         # check ob Nutzer admin einer der Gemeinden des BPlans ist
         if self.request.user.is_superuser == False:
