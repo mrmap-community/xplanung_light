@@ -32,6 +32,7 @@ from pathlib import Path
 from django.core.exceptions import PermissionDenied
 import uuid
 import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as defused_ET
 from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -40,7 +41,7 @@ from xplanung_light.views.user import ExtentUserOrgaInfo
 
 def qualify_gml_geometry(gml_from_db:str):
     ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
-    root = ET.fromstring("<?xml version='1.0' encoding='UTF-8'?><snippet xmlns:gml='http://www.opengis.net/gml/3.2'>" + gml_from_db + "</snippet>")
+    root = defused_ET.fromstring("<?xml version='1.0' encoding='UTF-8'?><snippet xmlns:gml='http://www.opengis.net/gml/3.2'>" + gml_from_db + "</snippet>")
     ns = {
         'gml': 'http://www.opengis.net/gml/3.2',
     }

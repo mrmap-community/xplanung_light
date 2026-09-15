@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.db.models import Subquery, OuterRef, Q
 import io
 import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as defused_ET
 from django.http import FileResponse, HttpResponse
 # https://medium.com/an-engineer-a-reader-a-guy/django-test-fixture-setup-setupclass-and-setuptestdata-72b6d944cdef
 
@@ -78,7 +79,7 @@ class InitialDataIntegrity(TestCase):
         #print(response.content)
         # Parse Capabilities und extrahiere Layer
         ET.register_namespace("wms", "http://www.opengis.net/wms")
-        root = ET.fromstring(response.content.decode('utf-8'))
+        root = defused_ET.fromstring(response.content.decode('utf-8'))
         # check for version
         """
         <WMS_Capabilities version="1.3.0"

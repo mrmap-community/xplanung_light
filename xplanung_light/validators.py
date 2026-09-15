@@ -1,5 +1,6 @@
 from django import forms
 import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as defused_ET
 from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.models import AdministrativeOrganization
 from django.contrib.gis.gdal.raster.source import GDALRaster
@@ -226,7 +227,7 @@ def bplan_content_validator(xplan_file):
     #validation_error_messages.append('test')
     try:
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
-        root = ET.fromstring(xml_string)
+        root = defused_ET.fromstring(xml_string)
         root_element_name = root.tag.__str__()
         supported_element_names = ["{http://www.xplanung.de/xplangml/6/0}XPlanAuszug", "{http://www.xplanung.de/xplangml/5/4}XPlanAuszug", "{http://www.xplanung.de/xplangml/5/1}XPlanAuszug"]
         if root_element_name not in supported_element_names:

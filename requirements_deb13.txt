@@ -26,3 +26,4 @@ django-clamd
 psycopg2
 reportlab
 pydantic
+defusedxml

@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as defused_ET
 from django import forms
 from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
 from django.contrib.gis.gdal import OGRGeometry
@@ -53,7 +54,7 @@ class XPlanung():
 
     def get_orgas(self):
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
-        root = ET.fromstring(self.xml_string)
+        root = defused_ET.fromstring(self.xml_string)
         # check for version
         #<xplan:XPlanAuszug xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="GML_080e46d4-9a9f-4f1d-8f3b-f17f79228417">
         ns = {
@@ -82,7 +83,7 @@ class XPlanung():
     def import_plan(self, overwrite=False, plan_typ='bplan'):
         # for exporting gml with right namespace
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
-        root = ET.fromstring(self.xml_string)
+        root = defused_ET.fromstring(self.xml_string)
         if plan_typ == 'bplan':
             path_element = 'xplan:BP_Plan'
         if plan_typ == 'fplan':
@@ -221,7 +222,7 @@ class XPlanung():
     def import_plan_archiv(self, overwrite=False, plan_typ='bplan'):
         # for exporting gml with right namespace
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
-        root = ET.fromstring(self.xml_string)
+        root = defused_ET.fromstring(self.xml_string)
         # check for version
         #<xplan:XPlanAuszug xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="GML_080e46d4-9a9f-4f1d-8f3b-f17f79228417">
         ns = {
@@ -408,7 +409,7 @@ class XPlanung():
         ET.register_namespace("xsd", "http://www.w3.org/2001/XMLSchema")
         ET.register_namespace("wfs", "http://www.opengis.net/wfs")
         #print(bplan.xplan_gml)
-        root = ET.fromstring(str(bplan.xplan_gml))
+        root = defused_ET.fromstring(str(bplan.xplan_gml))
         # check for version
         #<xplan:XPlanAuszug xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="GML_080e46d4-9a9f-4f1d-8f3b-f17f79228417">
         ns = {
@@ -559,7 +560,7 @@ class XPlanung():
         ET.register_namespace("xsd", "http://www.w3.org/2001/XMLSchema")
         ET.register_namespace("wfs", "http://www.opengis.net/wfs")
         #print(bplan.xplan_gml)
-        root = ET.fromstring(str(fplan.xplan_gml))
+        root = defused_ET.fromstring(str(fplan.xplan_gml))
         # check for version
         #<xplan:XPlanAuszug xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="GML_080e46d4-9a9f-4f1d-8f3b-f17f79228417">
         ns = {

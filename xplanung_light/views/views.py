@@ -12,12 +12,12 @@ from xplanung_light.models import AdminOrgaUser, ConsentOption
 from xplanung_light.models import RequestForRole
 import uuid
 import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as defused_ET
 from django.urls import reverse
 from xplanung_light.helper.xplanung import XPlanung
 from django.contrib import messages
 from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanImportArchivForm, FPlanImportForm, FPlanImportArchivForm
 from xplanung_light.forms import RequestForRoleRefuseForm, RequestForRoleConfirmForm
-
 from xplanung_light.filter import BPlanIdFilter, FPlanIdFilter
 from django.http import HttpResponse
 import mapscript
@@ -28,7 +28,6 @@ from django.core.cache import cache
 from django.conf import settings
 from django.http import FileResponse
 import os
-import xml.etree.ElementTree as ET
 from xplanung_light.views.bplan import BPlanDetailView, BPlanListViewHtml
 from xplanung_light.views import views
 from django.utils import timezone
@@ -644,7 +643,7 @@ def ows(request, pk:int):
     # Einfaches Parsen der GML-Rückgabe des Mapservers um die IDs der zurückgelieferten Objekte abzugreifen
     if is_featureinfo and is_featureinfo_format_html:
         #print(result.decode('utf-8'))
-        root = ET.fromstring(result.decode('utf-8'))
+        root = defused_ET.fromstring(result.decode('utf-8'))
         # Auslesen der BPläne für FPläne noch zu erweitern bzw. anzupassen.
         bplan_ids = root.findall("./BPlan." + orga.ls + orga.ks + orga.gs + ".0_layer//id", None)
         bplan_id_list = []

@@ -844,6 +844,7 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
                                              ('ALIGN', (4,1), (4,-1), 'RIGHT'), 
                                              ('FONTSIZE', (0,1), (-1,-1), 8),
                                              ])))
+        #story.append(Paragraph("Legende", styles['Heading4']))
         story.append(PageBreak())
         # Beiträge anfügen - eine Seite pro Beitrag - nochmal iterieren
         i = 0
@@ -920,6 +921,7 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
                                              ('VALIGN', (0,1), (-1,-1), 'TOP'), # whole table 
                                              ('FONTSIZE', (0,1), (-1,-1), 8),
                                              ])))           
+        story.append(Paragraph("Legende TBD", styles['Heading4']))
         story.append(PageBreak())
         # https://stackoverflow.com/questions/3448365/pdf-image-in-pdf-document-using-reportlab-python
         # https://gis.stackexchange.com/questions/185289/arcpy-creating-multi-page-table-pdf-with-reportlab-pypdf2
