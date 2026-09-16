@@ -651,7 +651,7 @@ class XPlanDetailXPlanLightView(XPlanDetailView):
                 context['ref_scan'] = None
         # TODO: Überschreiben des xplan gml mit neuen Inhalten - Anlagen, Datumswerten, ...
         if context[self.model_name_lower].xplan_gml:
-            print("Ausgabe des gespeicherten/hochgeladenen GML - danach Überschreiben mit Inhalten aus der Datenbank")
+            #print("Ausgabe des gespeicherten/hochgeladenen GML - danach Überschreiben mit Inhalten aus der Datenbank")
             if self.model_name_lower == 'bplan':
                 context[self.model_name_lower].xplan_gml = XPlanung.proxy_bplan_gml(bplan_id=context[self.model_name_lower].id)
             if self.model_name_lower == 'fplan':

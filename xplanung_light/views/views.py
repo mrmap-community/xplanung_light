@@ -264,6 +264,12 @@ def ows_beteiligungen(request):
     """
     OWS für die laufenden Beteiligungsverfahren, hier müssen wir zwischen Spatialite und PostGIS unterscheiden!
     """
+    if connection.vendor == "sqlite":
+        #"db.sqlite3"
+        connection_string = str(connection.settings_dict['NAME'])
+    if connection.vendor == "postgresql":
+        #'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
+        connection_string = 'host=' + str(connection.settings_dict['HOST']) + ' dbname=' + str(connection.settings_dict['NAME']) + ' user=' + str(connection.settings_dict['USER']) + ' password=' + str(connection.settings_dict['PASSWORD']) + ' port='+ str(connection.settings_dict['PORT'])
     qs = parse_qs(request.META['QUERY_STRING'])
     req =  mapscript.OWSRequest()
     # TODO - auch POST unterstützen!
@@ -327,18 +333,10 @@ def ows_beteiligungen(request):
            datastring_point = "geom from (" + datastring_point + ") as foo using unique plan_id using srid=25832"
         #map_file_string = map_file_string.replace('<datastring>', str(offengelegte_plaene.query).replace('CAST (AsEWKB(', '').replace(') AS BLOB)', ''))
         map_file_string = map_file_string.replace('<datastring_polygon>', datastring_polygon).replace('<datastring_point>', datastring_point)
-        if connection.vendor == "sqlite":
-            map_file_string = map_file_string.replace('<connection_type>', 'OGR').replace('<connection>', "db.sqlite3")
-        if connection.vendor == "postgresql":
-            map_file_string = map_file_string.replace('<connection_type>', 'POSTGIS').replace('<connection>', 'host=' + str(settings.DATABASES['default']['HOST']) +
-                                                                                               ' dbname=' + str(settings.DATABASES['default']['NAME']) +
-                                                                                               ' user=' + str(settings.DATABASES['default']['USER']) +
-                                                                                               ' password=' + str(settings.DATABASES['default']['PASSWORD']) +
-                                                                                               ' port='+ str(settings.DATABASES['default']['PORT']))
+        map_file_string = map_file_string.replace('<connection_type>', 'OGR').replace('<connection>', connection_string)
         #print(map_file_string)
     # Switch für verschiedene Mapserver Versionen
     # Erstellen einer Grundkonfigurationsdatei für Mapserver > 8.0.0
-
     mapserver_version = mapscript.msGetVersionInt()
     if mapserver_version >= 80000:
         # 1. Wir erstellen eine temporäre Dummy-Konfiguration auf der Festplatte
@@ -354,8 +352,7 @@ def ows_beteiligungen(request):
         except OSError:
             pass
     else:
-        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
-    
+        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")    
     mapscript.msIO_installStdoutToBuffer()
     dispatch_status = map_obj.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:

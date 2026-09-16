@@ -6,6 +6,7 @@ import os
 from django.conf import settings
 from django.db import connection
 
+
 """
 Klassen für die Generierung und Bearbeitung von Mapserver-Konfigurationsdateien (mapfiles) 
 Der Generator lädt templates aus dem mapserver/mapfile_templates Ordner. Diese werden dann programmatisch angepasst.
@@ -16,13 +17,19 @@ class MapfileGenerator():
 
     """
     https://github.com/geographika/mappyfile
-    TODOs:
-    * use database selection from settings.py instead hardcodes db.sqlite3
     """
     def generate_mapfile(self, admin_orga_pk:int, ows_uri:str, metadata_uri:str):
         orga = AdministrativeOrganization.objects.get(pk=admin_orga_pk)
         bplaene = BPlan.objects.filter(gemeinde=admin_orga_pk, public=True)
         fplaene = FPlan.objects.filter(gemeinde=admin_orga_pk, public=True)
+        # Datenbank Verbindung vorbereiten
+        if connection.vendor == "sqlite":
+            #"db.sqlite3"
+            connection_string = str(connection.settings_dict['NAME'])
+        if connection.vendor == "postgresql":
+            #'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
+            connection_string = 'host=' + str(connection.settings_dict['HOST']) + ' dbname=' + str(connection.settings_dict['NAME']) + ' user=' + str(connection.settings_dict['USER']) + ' password=' + str(connection.settings_dict['PASSWORD']) + ' port='+ str(connection.settings_dict['PORT'])
+        #print("Mapserver connection_string: " + connection_string)
         # Map Objekt Template
         current_dir = os.path.dirname(__file__)
         map = mappyfile.open(os.path.join(current_dir, "../mapserver/mapfile_templates/map_obj.map"))
@@ -174,11 +181,11 @@ class MapfileGenerator():
                 layer["metadata"] = metadata
                 if connection.vendor == "sqlite":
                     layer["connectiontype"] = "OGR"
-                    layer["connection"] = "db.sqlite3"
+                    layer["connection"] = connection_string
                     layer["data"] = "select geltungsbereich, id from xplanung_light_fplan where public = true"
                 if connection.vendor == "postgresql":
                     layer["connectiontype"] = "POSTGIS"
-                    layer["connection"] = 'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
+                    layer["connection"] = connection_string
                     layer["data"] = "geltungsbereich from (select geltungsbereich, id from xplanung_light_fplan where public = true) as foo using unique id using srid=25832"
                 layer["filter"] = "( '[id]' = '" + str(fplan.pk) + "' )"
                 layer["classes"] = []
@@ -203,11 +210,11 @@ class MapfileGenerator():
             #umring_layer["filter"] = None
             if connection.vendor == "sqlite":
                 umring_layer["connectiontype"] = "OGR"
-                umring_layer["connection"] = "db.sqlite3"
+                umring_layer["connection"] = connection_string
                 umring_layer["data"] = "SELECT fplan.* FROM xplanung_light_fplan fplan INNER JOIN xplanung_light_fplan_gemeinde gemeinde ON fplan.id = gemeinde.fplan_id WHERE public=true AND gemeinde.administrativeorganization_id = " + str(orga.pk)
             if connection.vendor == "postgresql":
                 umring_layer["connectiontype"] = "POSTGIS"
-                umring_layer["connection"] = 'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
+                umring_layer["connection"] = connection_string
                 umring_layer["data"] = "geltungsbereich from (SELECT fplan.* FROM xplanung_light_fplan fplan INNER JOIN xplanung_light_fplan_gemeinde gemeinde ON fplan.id = gemeinde.fplan_id WHERE public=true AND gemeinde.administrativeorganization_id = " + str(orga.pk) + ") as foo using unique id using srid=25832"
             #umring_layer["data"] = "SELECT fplan.* FROM xplanung_light_fplan fplan INNER JOIN xplanung_light_fplan_gemeinde gemeinde ON fplan.id = gemeinde.fplan_id WHERE public=true AND gemeinde.administrativeorganization_id = " + str(orga.pk)
             # TODO: add active Filter when it will be available
@@ -272,11 +279,11 @@ class MapfileGenerator():
                 layer["metadata"] = metadata
                 if connection.vendor == "sqlite":
                     layer["connectiontype"] = "OGR"
-                    layer["connection"] = "db.sqlite3"
+                    layer["connection"] = connection_string
                     layer["data"] = "select geltungsbereich, id from xplanung_light_bplan where public = true"
                 if connection.vendor == "postgresql":
                     layer["connectiontype"] = "POSTGIS"
-                    layer["connection"] = 'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
+                    layer["connection"] = connection_string
                     layer["data"] = "geltungsbereich from (select geltungsbereich, id from xplanung_light_bplan where public = true) as foo using unique id using srid=25832"
                 #print(layer['data'])
                 layer["filter"] = "( '[id]' = '" + str(bplan.pk) + "' )"
@@ -301,11 +308,11 @@ class MapfileGenerator():
             #umring_layer["filter"] = None
             if connection.vendor == "sqlite":
                 umring_layer["connectiontype"] = "OGR"
-                umring_layer["connection"] = "db.sqlite3"
+                umring_layer["connection"] = connection_string
                 umring_layer["data"] = "SELECT bplan.* FROM xplanung_light_bplan bplan INNER JOIN xplanung_light_bplan_gemeinde gemeinde ON bplan.id = gemeinde.bplan_id WHERE public = true AND gemeinde.administrativeorganization_id = " + str(orga.pk)
             if connection.vendor == "postgresql":
                 umring_layer["connectiontype"] = "POSTGIS"
-                umring_layer["connection"] = 'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
+                umring_layer["connection"] = connection_string
                 umring_layer["data"] = "geltungsbereich from (SELECT bplan.* FROM xplanung_light_bplan bplan INNER JOIN xplanung_light_bplan_gemeinde gemeinde ON bplan.id = gemeinde.bplan_id WHERE public = true AND gemeinde.administrativeorganization_id = " + str(orga.pk) + ") as foo using unique id using srid=25832"
             # TODO: add active Filter when it will be available
             umring_layer["classes"] = []

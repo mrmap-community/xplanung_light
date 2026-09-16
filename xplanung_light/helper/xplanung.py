@@ -393,7 +393,7 @@ class XPlanung():
         return True
     
     def proxy_bplan_gml(bplan_id):
-        print("proxy_bplan_gml")
+        #print("proxy_bplan_gml")
         bplan = BPlan.objects.get(pk=bplan_id)
         if bplan.xplan_gml_version == '6.0':
             xplan_namespace = 'http://www.xplanung.de/xplangml/6/0'
@@ -430,7 +430,7 @@ class XPlanung():
         # add referenzen
         index = list(bplan_element).index(geltungsbereich)
         for attachment in bplan.attachments.all():
-            print(attachment.name)
+            #print(attachment.name)
             externe_referenz = ET.Element('xplan:externeReferenz')
             xp_spez_externe_referenz = ET.SubElement(externe_referenz, 'xplan:XP_SpezExterneReferenz')
             #xplan_art = ET.SubElement(xp_spez_externe_referenz, 'xplan:art')
@@ -506,17 +506,17 @@ class XPlanung():
                 if type(element).__name__ == 'Element':
                     last_found_element_name = key
                 if value['managed'] and value['multiValue'] == False:
-                    if element.text:
-                        print("Element *" + key + "* gefunden ;-) ")
+                    #if element.text:
+                        #print("Element *" + key + "* gefunden ;-) ")
                     if str(getattr(bplan, value['name'])) != 'None':
                         if value['overwrite'] == True:
                             if value['type'] == "string":
                                 element.text = str(getattr(bplan, value['name']))
                             if value['type'] == "boolean":
                                 element.text = str(getattr(bplan, value['name'])).lower()
-                            print("Element *" + key + " überschrieben!")
+                            #print("Element *" + key + " überschrieben!")
             except:
-                print("Element *" + key + "* nicht gefunden!")
+                #print("Element *" + key + "* nicht gefunden!")
                 if value and value['managed'] and value['multiValue'] == False and value['type'] == "string":
                     last_element_index = list(bplan_element).index(bplan_element.find("xplan:" + last_found_element_name, ns))
                     # Füge neues Element hinter dem letzten bekannten ein
@@ -529,7 +529,7 @@ class XPlanung():
                             new_element.text = str(getattr(bplan, value['name'])).lower()
                         bplan_element.insert(last_element_index + 1, new_element)
                         last_found_element_name = key
-                        print("Element *" + key + ' eingefügt!')
+                        #print("Element *" + key + ' eingefügt!')
         #print(datetime.datetime.now())
         """
         <xplan:externeReferenz>
@@ -544,7 +544,7 @@ class XPlanung():
         return str(ET.tostring(root), 'utf-8')
     
     def proxy_fplan_gml(plan_id):
-        print("proxy_fplan_gml")
+        #print("proxy_fplan_gml")
         fplan = FPlan.objects.get(pk=plan_id)
         if fplan.xplan_gml_version == '6.0':
             xplan_namespace = 'http://www.xplanung.de/xplangml/6/0'
@@ -581,7 +581,7 @@ class XPlanung():
         # add referenzen
         index = list(fplan_element).index(geltungsbereich)
         for attachment in fplan.attachments.all():
-            print(attachment.name)
+            #print(attachment.name)
             externe_referenz = ET.Element('xplan:externeReferenz')
             xp_spez_externe_referenz = ET.SubElement(externe_referenz, 'xplan:XP_SpezExterneReferenz')
             #xplan_art = ET.SubElement(xp_spez_externe_referenz, 'xplan:art')
@@ -658,17 +658,17 @@ class XPlanung():
                 if type(element).__name__ == 'Element':
                     last_found_element_name = key
                 if value['managed'] and value['multiValue'] == False:
-                    if element.text:
-                        print("Element *" + key + "* gefunden ;-) ")
+                    #if element.text:
+                        #print("Element *" + key + "* gefunden ;-) ")
                     if str(getattr(fplan, value['name'])) != 'None':
                         if value['overwrite'] == True:
                             if value['type'] == "string":
                                 element.text = str(getattr(fplan, value['name']))
                             if value['type'] == "boolean":
                                 element.text = str(getattr(fplan, value['name'])).lower()
-                            print("Element *" + key + " überschrieben!")
+                            #print("Element *" + key + " überschrieben!")
             except:
-                print("Element *" + key + "* nicht gefunden!")
+                #print("Element *" + key + "* nicht gefunden!")
                 if value and value['managed'] and value['multiValue'] == False and value['type'] == "string":
                     last_element_index = list(fplan_element).index(fplan_element.find("xplan:" + last_found_element_name, ns))
                     # Füge neues Element hinter dem letzten bekannten ein
@@ -681,7 +681,7 @@ class XPlanung():
                             new_element.text = str(getattr(fplan, value['name'])).lower()
                         fplan_element.insert(last_element_index + 1, new_element)
                         last_found_element_name = key
-                        print("Element *" + key + ' eingefügt!')
+                        #print("Element *" + key + ' eingefügt!')
         #print(datetime.datetime.now())
         """
         <xplan:externeReferenz>
