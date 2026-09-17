@@ -31,6 +31,7 @@ from django.contrib.auth.forms import PasswordResetForm
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Avg, F, Q
 from django.contrib import messages
+from django.conf import settings
 
 #from django.db.models import CharField
 #from formset.utils import FormMixin
@@ -1980,7 +1981,7 @@ class BPlanBeteiligungBeitragAnhangForm(ModelForm):
     attachment = fields.FileField(
         label="Anhang",
         widget=UploadedFileInput(attrs={
-            'max-size': 1024 * 1024,
+            'max-size': settings.XPLANUNG_LIGHT_CONFIG['limits']['upload_file_size_limits']['other'],
         }),
         help_text="Please do not upload files larger than 1MB",
         required=True,
@@ -2018,7 +2019,7 @@ class FPlanBeteiligungBeitragAnhangForm(ModelForm):
     attachment = fields.FileField(
         label="Anhang",
         widget=UploadedFileInput(attrs={
-            'max-size': 1024 * 1024,
+            'max-size': settings.XPLANUNG_LIGHT_CONFIG['limits']['upload_file_size_limits']['other'],
         }),
         help_text="Please do not upload files larger than 1MB",
         required=True,

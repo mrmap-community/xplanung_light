@@ -38,6 +38,7 @@ from django.utils import timezone
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.views.user import ExtentUserOrgaInfo
+from xplanung_light.views.mixins import GemeindeAdminRequiredMixin
 
 def qualify_gml_geometry(gml_from_db:str):
     ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
@@ -125,7 +126,7 @@ class XPlanCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
         return super().form_valid(form)
     
 
-class XPlanUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+class XPlanUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     """
     Editieren eines XPlan-Datensatzes.
     """
@@ -172,6 +173,55 @@ class XPlanUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
         return context
 
     def form_valid(self, form):
+        if not self.request.user.is_superuser:
+            # Der Nutzer darf nur Gemeinden hinzufügen,
+            # für die er selbst Admin ist.
+            for gemeinde in form.cleaned_data['gemeinde']:
+                user_is_admin = gemeinde.admin_orga_users.filter(
+                    user=self.request.user,
+                    is_admin=True
+                ).exists()
+                if not user_is_admin:
+                    # Diese Gemeinde war bereits dem Plan zugewiesen
+                    # und darf vom Nutzer nicht verändert werden.
+                    if gemeinde in self.object.gemeinde.all():
+                        form.add_error(
+                            "gemeinde",
+                            "Die Gemeinde *{}* darf nicht geändert werden, "
+                            "da Sie dort kein Administrator sind.".format(gemeinde)
+                        )
+                    else:
+                        # Neue Gemeinde darf nur hinzugefügt werden,
+                        # wenn der Nutzer dort Admin ist.
+                        form.add_error(
+                            "gemeinde",
+                            "Die Gemeinde *{}* darf nicht hinzugefügt werden, "
+                            "da Sie dort kein Administrator sind.".format(gemeinde)
+                        )
+                    return self.form_invalid(form)
+            # Prüfen, ob bestehende Gemeinden entfernt wurden,
+            # für die der Nutzer kein Admin ist.
+            current_gemeinden = set(self.object.gemeinde.all())
+            submitted_gemeinden = set(form.cleaned_data['gemeinde'])
+            for gemeinde in current_gemeinden - submitted_gemeinden:
+                user_is_admin = gemeinde.admin_orga_users.filter(
+                    user=self.request.user,
+                    is_admin=True
+                ).exists()
+                if not user_is_admin:
+                    form.add_error(
+                        "gemeinde",
+                        "Die Gemeinde *{}* darf nicht entfernt werden, "
+                        "da Sie dort kein Administrator sind.".format(gemeinde)
+                    )
+                    return self.form_invalid(form)
+        self.success_message = (
+            "Plan *" + form.cleaned_data['name'] + "* aktualisiert!"
+        )
+        return super().form_valid(form)
+
+    """
+    def form_valid(self, form):
         if self.request.user.is_superuser == False:
             # Überprüfen, ob der jeweilige Nutzer auch als Administrator eine der Gemeinden eingetragen ist
             for gemeinde in form.cleaned_data['gemeinde']:
@@ -185,7 +235,14 @@ class XPlanUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
                     return super().form_invalid(form)
         self.success_message = "Plan *" + form.cleaned_data['name'] + "* aktualisiert!" 
         return super().form_valid(form)
+    """
     
+    def get_object(self, queryset=None):
+        object = super().get_object(queryset)
+        self.check_gemeinde_admin(object)
+        return object
+    
+    """
     def get_object(self):
         object = super().get_object()
         if self.request.user.is_superuser == False:
@@ -195,6 +252,7 @@ class XPlanUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
                         return object
             raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
         return object  
+    """
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -223,7 +281,7 @@ class XPlanUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
             
         return context
 
-class XPlanDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixin, DeleteView):
+class XPlanDeleteView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     """
     Löschen eines XPlan-Datensatzes.
     """
@@ -231,6 +289,23 @@ class XPlanDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
     model_name_lower = str(model._meta.model_name).lower()
     success_message = "Plan wurde gelöscht!"
 
+
+    def form_valid(self, form):
+        self.object = self.get_object()
+        success_url = self.get_success_url()
+
+        name = self.object.name
+        self.object.delete()
+
+        messages.add_message(
+            self.request,
+            messages.SUCCESS,
+            f"Plan {name} wurde gelöscht!"
+        )
+
+        return HttpResponseRedirect(success_url)
+
+    """
     def form_valid(self, form):
         success_url = self.get_success_url()
         if self.request.user.is_superuser == False:
@@ -248,7 +323,14 @@ class XPlanDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
         self.object.delete()
         messages.add_message(self.request, messages.SUCCESS, "Plan " + self.object.name + " wurde gelöscht!")
         return HttpResponseRedirect(success_url)
+    """
 
+    def get_object(self, queryset=None):
+        object = super().get_object(queryset)
+        self.check_gemeinde_all_admin(object)
+        return object
+
+    """
     def get_object(self):
         object = super().get_object()
         if self.request.user.is_superuser == False:
@@ -262,6 +344,7 @@ class XPlanDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixi
             if all(user_orga_admin) == False:
                 raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
         return object
+    """
 
     def get_success_url(self):
         return reverse_lazy(self.model_name_lower+ "-list")

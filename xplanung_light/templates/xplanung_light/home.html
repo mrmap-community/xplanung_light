@@ -12,7 +12,7 @@ Home
 <div class="row row-cols-1 row-cols-md-3 g-4">
   <div class="col">
     <div class="card h-100">
-      <img src="..." class="card-img-top" alt="...">
+      <img src="/static/xplanung_light/beispiel_gebietskoerperschaften.png" class="card-img-top" alt="...">
       <div class="card-body">
         <h5 class="card-title">Gebietskörperschaften<br><a href="{% url 'organization-publishing-list-public' %}">{{ orga_info.objects_with_public_plans }}</a></h5>
         <p class="card-text">Gebietskörperschaften, die aktuell Bebauungs- und Flächennutzungspläne publizieren.</p>
@@ -25,7 +25,7 @@ Home
   {% if user.is_authenticated %}
   <div class="col">
     <div class="card h-100">
-      <img src="..." class="card-img-top" alt="...">
+      <img src="/static/xplanung_light/beispiel_meine_bplaene.png" class="card-img-top" alt="...">
       <div class="card-body">
         <h5 class="card-title">Meine Bebauungspläne<br><a href="{% url 'bplan-list' %}?is_public=on">{{ bplan_info.public_objects }}</a></h5>
         <p class="card-text">Zahl meiner über die Plattform publizierten Bebauungspläne.</p>
@@ -37,7 +37,7 @@ Home
   </div>
   <div class="col">
     <div class="card h-100">
-      <img src="..." class="card-img-top" alt="...">
+      <img src="/static/xplanung_light/beispiel_meine_fnp.png" class="card-img-top" alt="...">
       <div class="card-body">
         <h5 class="card-title">Meine Flächennutzungspläne<br><a href="{% url 'fplan-list' %}?is_public=on">{{ fplan_info.public_objects }}</a></h5>
         <p class="card-text">Zahl meiner über die Plattform publizierten Flächennutzungspläne.</p>

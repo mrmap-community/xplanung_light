@@ -64,10 +64,40 @@ class GemeindeAdminRequiredMixin:
     def check_gemeinde_admin(self, plan):
         if self.request.user.is_superuser:
             return
-        is_admin = any(
-            orga_user.user == self.request.user and orga_user.is_admin
-            for gemeinde in plan.gemeinde.all()
-            for orga_user in gemeinde.admin_orga_users.all()
-        )
+        is_admin = plan.gemeinde.filter(
+            admin_orga_users__user=self.request.user,
+            admin_orga_users__is_admin=True,
+        ).exists()
         if not is_admin:
-            raise PermissionDenied("Nutzer hat keine Berechtigungen auf die angefragten Objekte!")
+            raise PermissionDenied(
+                "Nutzer hat keine Berechtigungen auf die angefragten Objekte!"
+            )
+
+
+#class GemeindenAllAdminRequiredMixin:
+    """
+    Prüft, ob request.user Superuser ist oder Admin aller Gemeinden des
+    übergebenen Plans. Wirft PermissionDenied statt False/None zurückzugeben,
+    damit die aufrufende View sich nicht mehr um den Kontrollfluss kümmern muss.
+    """
+
+    def check_gemeinde_all_admin(self, plan):
+        """User muss Admin aller dem Plan zugewiesenen Gemeinden sein."""
+        if self.request.user.is_superuser:
+            return
+        gemeinden = plan.gemeinde.all()
+        # Ein Plan ohne zugewiesene Gemeinde sollte nicht versehentlich
+        # durch all([]) als berechtigt gelten.
+        if not gemeinden.exists():
+            raise PermissionDenied(
+                "Dem Plan sind keine Gemeinden zugewiesen."
+            )
+        admin_count = gemeinden.filter(
+            admin_orga_users__user=self.request.user,
+            admin_orga_users__is_admin=True,
+        ).distinct().count()
+        gemeinde_count = gemeinden.count()
+        if admin_count != gemeinde_count:
+            raise PermissionDenied(
+                "Nutzer muss Administrator aller zugewiesenen Gemeinden sein."
+            )

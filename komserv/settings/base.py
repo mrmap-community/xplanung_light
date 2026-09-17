@@ -278,6 +278,21 @@ XPLANUNG_LIGHT_CONFIG = {
         {"name": "likarp", "title": "Liegenschaftskarte RP", "url": "https://geo5.service24.rlp.de/wms/liegenschaften_rp.fcgi?", "attribution": "Lizenz ...", "layer_name": "Flurstueck"},
         #{"name": "topplusfarbegrau", "title": "TopPlus Grau", "url": "https://sgx.geodatenzentrum.de/wms_topplus_open?", "attribution": "Lizenz ...", "layer_name": "web_grau"},   
     ],
+    'limits': {
+        'upload_file_size_limits': {
+            'zip': 15_000_000,
+            'pdf': 10_000_000,
+            'tiff': 120_000_000,
+            'other': 10_000_000,
+        },
+        'max_files_in_zip': 40,
+        'max_uncompressed_zip_size': 200_000_000,
+        'max_uncompressed_file_size': 120_000_000,
+        # zusätzlich für GML
+        'max_gml_size': 50_000_000,
+        'max_gml_elements': 500_000,
+        'max_gml_vertices': 1_000_000,
+    },
 }
 
 CLAMD_SOCKET = '/var/run/clamav/clamd.ctl'
