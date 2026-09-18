@@ -1283,7 +1283,7 @@ class BPlanBeteiligungBeitrag(BeteiligungBeitrag):
     def clean(self):
         super().clean()
         if self.typ in ['1000', '2000'] and not self.toeb:
-            if self.email == '' or self.email == None:
+            if not self.email:
                 raise ValidationError({
                     'email': 'Bei einer Einreichung über das Online-Formular oder per E-Mail, muss die E-Mail Adresse angegeben werden!',
                 })
@@ -1316,7 +1316,7 @@ class FPlanBeteiligungBeitrag(BeteiligungBeitrag):
     def clean(self):
         super().clean()
         if self.typ in ['1000', '2000'] and not self.toeb:
-            if self.email == '' or self.email == None:
+            if not self.email:
                 raise ValidationError({
                     'email': 'Bei einer Einreichung über das Online-Formular oder per E-Mail, muss die E-Mail Adresse angegeben werden!',
                 })

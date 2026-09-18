@@ -504,8 +504,8 @@ class BPlanBeitragStellungnahmeTable(tables.Table):
 
 
 """
-Tabellen für die TOEB-Notifications 
-BPlanBeteiligungToebNotificationTable, FPlanBeteiligungToebNotificationTable, 
+Tabellen für die TOEB-Notifications
+BPlanBeteiligungToebNotificationTable, FPlanBeteiligungToebNotificationTable,
 """
 
 
@@ -612,7 +612,7 @@ class BPlanTable(tables.Table):
     last_changed = tables.Column(verbose_name="Letzte Änderung")
     public = tables.Column(verbose_name="Öffentlich")
     """
-    Aus Tabelle rausgenommen, 
+    Aus Tabelle rausgenommen,
     xplan_gml_export = tables.LinkColumn('bplan-export-xplan-raster-6', verbose_name='XPlan-GML', text='Exportieren', args=[A('pk')], \
                          orderable=False, empty_values=())
     xplan_zip_export = tables.LinkColumn('bplan-export-xplan-raster-6-zip', verbose_name='XPlan-ZIP', text='Exportieren', args=[A('pk')], \
@@ -707,12 +707,9 @@ class BPlanPublicTable(tables.Table):
         verbose_name="XPlanung Hochgeladen", accessor='xplan_gml', empty_values=())
 
     def render_xplangml(self, value, record):
-        if value == None:
-            return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
         if value:
             return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
-        else:
-            return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
+        return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
 
     def render_name(self, value, record):
         if value:

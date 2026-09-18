@@ -380,7 +380,7 @@ def ows_bplan_overview(request, pk: int, plan_typ='bplan'):
         wgs84_extent = geometry.extent
         # print(wgs84_extent)
         # Nutzung des Proxy, wenn in settings definiert - da verhält sich gunicorn wohl anders als runserver im Debug
-        if not settings.REQUESTS_PROXIES == None and 'http' in settings.REQUESTS_PROXIES.keys():
+        if settings.REQUESTS_PROXIES and 'http' in settings.REQUESTS_PROXIES.keys():
             # print('proxy set')
             # Get host, port
             proxy = urlsplit(settings.REQUESTS_PROXIES['http'])
