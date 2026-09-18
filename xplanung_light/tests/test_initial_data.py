@@ -32,7 +32,7 @@ class InitialDataIntegrity(TestCase):
                 'fplan.json',
                 'admin_orga_user.json',
                ]
-    
+
     @classmethod
     def setUpTestData(cls):
         #print("setUpTestData: Run once to set up non-modified data for all class methods.")
@@ -64,7 +64,7 @@ class InitialDataIntegrity(TestCase):
         if not user.is_superuser:
             test = False
         self.assertTrue(test)
-    
+
     def test_if_xplangml_export_and_import_works(self):
         """
         Check ob ein der XPlan-GML Export für einen speziellen Plan (4318) sich wieder als BPlan importieren lässt.
@@ -84,7 +84,7 @@ class InitialDataIntegrity(TestCase):
         # Umwandlung in ein file-like object (Bytes)
         file_like_bytes = io.BytesIO(response.content)
         # Content-Type direkt als Attribut anhängen, weil die Importfunktion für Uploads geschrieben ist
-        file_like_bytes.content_type = response.headers.get('Content-Type', 'application/gml')
+        file_like_bytes.content_type = response.get('Content-Type', 'application/gml')
         xplan = XPlanung(file_like_bytes)
         bplan = xplan.import_plan(overwrite=True, plan_typ='bplan')
         if bplan:
@@ -96,7 +96,7 @@ class InitialDataIntegrity(TestCase):
             timestamp_after = bplan_second[0].last_changed
         #print(str(timestamp_before) + " - " + str(timestamp_after))
         self.assertFalse(timestamp_before == timestamp_after)
-        
+
     def test_if_wms_capabilities_is_created(self):
         """
         Test ob status = 200 für WMS-Capabilities über mapserver. Außerdem wird die Zahl der Layer für die Organisation geprüft - soll 8.

@@ -240,8 +240,8 @@ class XplanHtmlTests(TestCase):
                 r = self.call(self.orga.pk, **params)
                 self.assertEqual(r.status_code, 200)
                 self.assertIn(b"frame-ancestors",
-                              r.headers["Content-Security-Policy"].encode())
-                self.assertEqual(r.headers["Access-Control-Allow-Origin"], "*")
+                              r["Content-Security-Policy"].encode())
+                self.assertEqual(r["Access-Control-Allow-Origin"], "*")
 
     def test_ids_with_and_without_orga_filter(self):
         """

@@ -208,15 +208,14 @@ def xplan_html(request, pk: int):
         fplan_filter = []
     if bplan_filter == [] and fplan_filter == []:
         response = render(request, 'xplanung_light/empty_feature_info.html')
-        response.headers['Access-Control-Allow-Origin'] = "*"
-        response.headers['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
+        response['Access-Control-Allow-Origin'] = "*"
+        response['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
         # TODO: Allow integration in website of contact for administrative unit
         return response
     else:
-        response = render(request, 'xplanung_light/xplan_list_html.html',
-                          {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
-        response.headers['Access-Control-Allow-Origin'] = "*"
-        response.headers['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
+        response = render(request, 'xplanung_light/xplan_list_html.html', {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
+        response['Access-Control-Allow-Origin'] = "*"
+        response['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
         # TODO: Allow integration in website of contact for administrative unit
         return response
 
@@ -260,36 +259,36 @@ def ows_beteiligungen(request):
         # print(str(connection.vendor))
         if connection.vendor == "sqlite":
             # print('sqlite used')
-            datastring_point = """select st_centroid(geltungsbereich), xplanung_light_bplan.id as plan_id from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
-                        xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
+            datastring_point = """select st_centroid(geltungsbereich), xplanung_light_bplan.id as plan_id from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on
+                        xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true
                         and bekanntmachung_datum <= date() and end_datum >= date()
-                        union 
-                        select st_centroid(geltungsbereich), xplanung_light_fplan.id as plan_id from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on 
+                        union
+                        select st_centroid(geltungsbereich), xplanung_light_fplan.id as plan_id from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on
                         xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
                         and bekanntmachung_datum <= date() and end_datum >= date()
             """
-            datastring_polygon = """select geltungsbereich, xplanung_light_bplan.id as plan_id, 'BPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
-                        xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
+            datastring_polygon = """select geltungsbereich, xplanung_light_bplan.id as plan_id, 'BPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on
+                        xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true
                         and bekanntmachung_datum <= date() and end_datum >= date()
-                        union 
-                        select geltungsbereich, xplanung_light_fplan.id as plan_id, 'FPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on 
+                        union
+                        select geltungsbereich, xplanung_light_fplan.id as plan_id, 'FPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on
                         xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
                         and bekanntmachung_datum <= date() and end_datum >= date()
             """
         if connection.vendor == "postgresql":
-            datastring_point = """select st_centroid(geltungsbereich) as geom, xplanung_light_bplan.id as plan_id from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
-                        xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
+            datastring_point = """select st_centroid(geltungsbereich) as geom, xplanung_light_bplan.id as plan_id from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on
+                        xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true
                         and bekanntmachung_datum <= now() and end_datum >= now()
-                        union 
-                        select st_centroid(geltungsbereich) as geom, xplanung_light_fplan.id as plan_id from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on 
+                        union
+                        select st_centroid(geltungsbereich) as geom, xplanung_light_fplan.id as plan_id from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on
                         xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
                         and bekanntmachung_datum <= now() and end_datum >= now()
             """
-            datastring_polygon = """select geltungsbereich as geom, xplanung_light_bplan.id as plan_id, 'BPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
-                        xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
+            datastring_polygon = """select geltungsbereich as geom, xplanung_light_bplan.id as plan_id, 'BPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on
+                        xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true
                         and bekanntmachung_datum <= now() and end_datum >= now()
-                        union 
-                        select geltungsbereich as geom, xplanung_light_fplan.id as plan_id, 'FPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on 
+                        union
+                        select geltungsbereich as geom, xplanung_light_fplan.id as plan_id, 'FPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on
                         xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
                         and bekanntmachung_datum <= now() and end_datum >= now()
             """
@@ -347,9 +346,9 @@ def ows_beteiligungen(request):
                         ('Content-Length', str(len(result)))]
     assert int(response_headers[1][1]) > 0
     http_response = HttpResponse(result)
-    http_response.headers['Content-Type'] = content_type
-    http_response.headers['Content-Length'] = str(len(result))
-    http_response.headers['Access-Control-Allow-Origin'] = "*"
+    http_response['Content-Type'] = content_type
+    http_response['Content-Length'] = str(len(result))
+    http_response['Access-Control-Allow-Origin'] = "*"
     return http_response
 
 
@@ -424,8 +423,8 @@ def ows_bplan_overview(request, pk: int, plan_typ='bplan'):
                         ('Content-Length', str(len(result)))]
     assert int(response_headers[1][1]) > 0
     http_response = HttpResponse(result)
-    http_response.headers['Content-Type'] = content_type
-    http_response.headers['Content-Length'] = str(len(result))
+    http_response['Content-Type'] = content_type
+    http_response['Content-Length'] = str(len(result))
     return http_response
 
 
@@ -473,7 +472,7 @@ def ows(request, pk: int):
     qs = parse_qs(request.META['QUERY_STRING'])
     """
     Check ob eine GetFeatureInfo Anfrage gestellt wird. Falls das der Fall ist, greifen wir ein und grabben die IDs der zurückgelieferten Pläne heraus.
-    ausgeliefert wird dann eine eigene HTML-Seite ;-) ...  
+    ausgeliefert wird dann eine eigene HTML-Seite ;-) ...
     """
     is_featureinfo = False
     is_featureinfo_format_html = False
@@ -587,10 +586,10 @@ def ows(request, pk: int):
                         ('Content-Length', str(len(result)))]
     assert int(response_headers[1][1]) > 0
     http_response = HttpResponse(result)
-    http_response.headers['Content-Type'] = content_type
-    http_response.headers['Content-Length'] = str(len(result))
+    http_response['Content-Type'] = content_type
+    http_response['Content-Length'] = str(len(result))
     # Setzen der CORS Header, um allen Web-Clients die Nutzung des Webservice zu erlauben
-    http_response.headers['Access-Control-Allow-Origin'] = "*"
+    http_response['Access-Control-Allow-Origin'] = "*"
     return http_response
 
 
@@ -610,7 +609,7 @@ def ows_all_orgas_xplan(request, plantyp: str):
     qs = parse_qs(request.META['QUERY_STRING'])
     """
     Check ob eine GetFeatureInfo Anfrage gestellt wird. Falls das der Fall ist, greifen wir ein und grabben die IDs der zurückgelieferten Pläne heraus.
-    ausgeliefert wird dann eine eigene HTML-Seite ;-) ...  
+    ausgeliefert wird dann eine eigene HTML-Seite ;-) ...
     """
     is_featureinfo = False
     is_featureinfo_format_html = False
@@ -723,10 +722,10 @@ def ows_all_orgas_xplan(request, plantyp: str):
                         ('Content-Length', str(len(result)))]
     assert int(response_headers[1][1]) > 0
     http_response = HttpResponse(result)
-    http_response.headers['Content-Type'] = content_type
-    http_response.headers['Content-Length'] = str(len(result))
+    http_response['Content-Type'] = content_type
+    http_response['Content-Length'] = str(len(result))
     # Setzen der CORS Header, um allen Web-Clients die Nutzung des Webservice zu erlauben
-    http_response.headers['Access-Control-Allow-Origin'] = "*"
+    http_response['Access-Control-Allow-Origin'] = "*"
     return http_response
 
 
@@ -1476,7 +1475,7 @@ def beitrag_authenticate(request, **kwargs):
 
 def beitrag_detail(request, **kwargs):
     """
-    View für die Detailseite des Beitrags zum Beteiligungsverfahren. Der View dient in erster Linie für die Gast-Nutzer und 
+    View für die Detailseite des Beitrags zum Beteiligungsverfahren. Der View dient in erster Linie für die Gast-Nutzer und
     wird im Gegensatz zum View für die admins per generic_id aufgerufen.
 
     :param request: Description
