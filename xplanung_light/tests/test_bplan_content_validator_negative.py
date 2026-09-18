@@ -82,12 +82,14 @@ class BPlanContentValidatorNegativ(TestCase):
     # --- Vorprüfungen (vor dem XML-Parsing) --------------------------------
 
     def test_falscher_content_type_wird_abgelehnt(self):
+        # Vorprüfung noch vor dem XML-Parsing: falscher Content-Type -> sofortige Ablehnung.
         messages = self._get_messages(
             build_gml(), content_type='application/pdf',
         )
         self.assertEqual(messages, ["Es handelt sich nicht um eine GML-Datei!"])
 
     def test_ungueltige_utf8_bytes_werden_abgelehnt(self):
+        # Kaputte Bytes statt gültigem UTF-8 -> eigener Decode-Fehlerpfad.
         upload_file = SimpleUploadedFile(
             'testplan.gml', b'\xff\xfe kaputte Bytes', content_type='text/xml',
         )
@@ -101,6 +103,7 @@ class BPlanContentValidatorNegativ(TestCase):
     # --- Root-Element / Namespace ------------------------------------------
 
     def test_nicht_unterstuetzter_namespace_wird_abgelehnt(self):
+        # Falscher xplan-Namespace (z.B. altes XPlan 4.0) muss abgelehnt werden.
         messages = self._get_messages(
             build_gml(namespace='http://www.xplanung.de/xplangml/4/0')
         )
@@ -109,6 +112,7 @@ class BPlanContentValidatorNegativ(TestCase):
         self.assertIn('XPlanAuszug', messages[0])
 
     def test_falsches_root_element_wird_abgelehnt(self):
+        # Analog, aber mit falschem Element-Namen statt falschem Namespace.
         messages = self._get_messages(build_gml(root_tag='EtwasAnderes'))
         self.assertEqual(len(messages), 1)
         self.assertIn('wird nicht unterstützt', messages[0])
@@ -116,12 +120,14 @@ class BPlanContentValidatorNegativ(TestCase):
     # --- Pflichtfeld gemeinde (korrekt behandelter Fall) --------------------
 
     def test_fehlende_gemeinde_wird_mit_konkreter_meldung_abgelehnt(self):
+        # Kein xplan:gemeinde-Block im GML -> spezifische Pflichtfeld-Meldung.
         messages = self._get_messages(build_gml(gemeinden=()))
         self.assertEqual(len(messages), 1)
         self.assertIn('gemeinde', messages[0])
         self.assertIn('keine Pflichtelemente', messages[0])
 
     def test_unbekannte_ags_wird_abgelehnt(self):
+        # AGS-Format ok, aber keine passende AdministrativeOrganization in der DB.
         messages = self._get_messages(
             build_gml(gemeinden=(('99999999', 'Nicht existente Gemeinde'),))
         )
@@ -130,6 +136,7 @@ class BPlanContentValidatorNegativ(TestCase):
         self.assertIn('Datenbank gefunden', messages[0])
 
     def test_gemeindename_stimmt_nicht_mit_datenbank_ueberein(self):
+        # AGS existiert, aber der im GML angegebene Gemeindename passt nicht dazu.
         messages = self._get_messages(
             build_gml(gemeinden=((GUELTIGE_AGS, 'Falscher Gemeindename'),))
         )
@@ -139,6 +146,7 @@ class BPlanContentValidatorNegativ(TestCase):
     # --- Geltungsbereich (korrekt behandelter Fall) -------------------------
 
     def test_fehlender_geltungsbereich_wird_mit_konkreter_meldung_abgelehnt(self):
+        # Kein raeumlicherGeltungsbereich im GML -> eigene, klare Fehlermeldung.
         messages = self._get_messages(build_gml(include_geltungsbereich=False))
         self.assertEqual(messages, ["Geltungsbereich nicht gefunden!"])
 

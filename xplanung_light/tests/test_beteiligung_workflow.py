@@ -88,12 +88,14 @@ class BeteiligungBeitragWorkflow(TestCase):
     # --- Gemeinde-Admin ---------------------------------------------------
 
     def test_gemeinde_admin_can_activate_beitrag(self):
+        # Gemeinde-Admin darf einen Beitrag jederzeit freischalten (approved=True).
         self.client.force_login(self.gemeinde_admin)
         response = self.client.get(self._url('activate'))
         self.assertEqual(response.status_code, 302)
         self.assertTrue(self._reload().approved)
 
     def test_withdraw_and_reactivate_roundtrip(self):
+        # Zurückziehen setzt withdrawn=True, Reaktivieren setzt es wieder zurück.
         self.client.force_login(self.gemeinde_admin)
 
         self.client.get(self._url('withdraw'))
@@ -126,6 +128,7 @@ class BeteiligungBeitragWorkflow(TestCase):
         self.assertTrue(self._reload().approved)
 
     def test_anonymous_with_authenticated_session_can_withdraw(self):
+        # Gleicher Fall wie bei activate, hier für den Rückzug der Stellungnahme.
         self._put_beitrag_in_session()
         self.client.get(self._url('withdraw'))
         self.assertTrue(self._reload().withdrawn)

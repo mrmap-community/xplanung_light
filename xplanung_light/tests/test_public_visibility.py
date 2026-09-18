@@ -24,6 +24,8 @@ class BPlanPublicVisibility(TestCase):
         self.client = Client()
 
     def test_public_list_contains_only_public_plans(self):
+        # Die öffentliche Liste darf exakt der Menge der public=True-Pläne
+        # entsprechen - kein zusätzlicher, kein fehlender Plan.
         response = self.client.get(reverse('bplan-public-list'))
         self.assertEqual(response.status_code, 200)
 
@@ -51,6 +53,7 @@ class BPlanPublicVisibility(TestCase):
         self.assertNotContains(response, non_public_plan.name)
 
     def test_internal_list_requires_login(self):
+        # Anonymer Zugriff auf die interne Liste muss auf den Login umleiten.
         response = self.client.get(reverse('bplan-list'))
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login/', response.url)

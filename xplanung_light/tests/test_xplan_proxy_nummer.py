@@ -114,6 +114,8 @@ class XPlanProxyNummerUeberschreiben(TestCase):
     # --- Tests ------------------------------------------------------------
 
     def test_geaenderte_nummer_wird_im_gml_ausgeliefert(self):
+        # Kernfall: DB-Nummer ändern, Original-GML muss beim Export
+        # mit der neuen Nummer überschrieben werden.
         plan = self._import_gml('Testplan Proxy Nummer', nummer='100')
         self.assertEqual(plan.nummer, '100')
 

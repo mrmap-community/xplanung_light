@@ -40,6 +40,7 @@ class BPlanZipExport(TestCase):
         return zipfile.ZipFile(io.BytesIO(content))
 
     def test_zip_is_readable_and_contains_exactly_one_gml(self):
+        # ZIP muss unbeschädigt sein und darf genau eine .gml-Datei enthalten.
         zip_file = self._get_zip()
         # testzip() liefert den Namen der ersten defekten Datei, sonst None
         self.assertIsNone(zip_file.testzip())
@@ -47,6 +48,7 @@ class BPlanZipExport(TestCase):
         self.assertEqual(gml_files, ['xplan.gml'])
 
     def test_exported_gml_has_supported_root_element(self):
+        # Wurzelelement muss im XPlan-6.0-Namespace liegen.
         zip_file = self._get_zip()
         root = ET.fromstring(zip_file.read('xplan.gml').decode('utf-8'))
         self.assertEqual(

@@ -140,6 +140,8 @@ class UmringLayerGetFeatureInfo(TransactionTestCase):
         return point.x, point.y
 
     def test_featureinfo_on_plan_returns_wellformed_html(self):
+        # Treffer mitten im Plan: die zurückgegebene HTML-Seite muss
+        # wohlgeformt sein (kein abgeschnittenes/kaputtes Template).
         lon, lat = self._point_in_plan()
         response = self._getfeatureinfo(lon, lat)
 
@@ -152,6 +154,7 @@ class UmringLayerGetFeatureInfo(TransactionTestCase):
         self.assertEqual(errors, [], "HTML der FeatureInfo ist nicht wohlgeformt: %s" % errors)
 
     def test_featureinfo_on_plan_contains_the_plan(self):
+        # Der Plan-Name muss tatsächlich im HTML auftauchen, nicht nur eine leere Seite.
         lon, lat = self._point_in_plan()
         response = self._getfeatureinfo(lon, lat)
         self.assertContains(response, self.plan.name)

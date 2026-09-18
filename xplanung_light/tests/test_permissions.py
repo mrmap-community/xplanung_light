@@ -1,5 +1,12 @@
-from datetime import date
+"""Berechtigungs- und IDOR-Regressionstests für xplanung_light.
 
+Die Tests prüfen drei zentrale Sicherheitsbereiche:
+1. Zugriffsschutz für nicht angemeldete und nicht berechtigte Benutzer,
+2. korrekte Gemeinde-Administratorrechte beim Bearbeiten und Löschen,
+3. Schutz vor dem Kombinieren fremder Objekt-IDs über manipulierte URLs
+   (IDOR bzw. Überschreitung der Plan-/Objektgrenze).
+"""
+from datetime import date, timedelta
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -14,6 +21,7 @@ from xplanung_light.models import (
 
 
 class PermissionTestBase(TestCase):
+    """Gemeinsame Testgrundlage mit Fixtures, Testbenutzern und Testobjekten."""
     fixtures = [
         "user.json",
         "administrative_organization.json",
@@ -27,6 +35,7 @@ class PermissionTestBase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
+        """Legt die gemeinsamen Testobjekte aus den Fixtures und den fremden Testbenutzer an."""
         cls.gemeinde_admin = User.objects.get(username="admin_stadt_neustadt")
         cls.fremder_user = User.objects.create_user(
             username="fremder_user",
@@ -36,10 +45,14 @@ class PermissionTestBase(TestCase):
         cls.gemeinde = AdministrativeOrganization.objects.get(pk=cls.ORGA_PK)
 
     def setUp(self):
+        """Erzeugt für jeden Test einen frischen Django-Testclient."""
         self.client = Client()
 
     @staticmethod
     def make_gemeinde(name, gs):
+        """Erzeugt eine zusätzliche Gemeinde, die für Rechte- und Mehrgemeindetests
+        verwendet wird.
+        """
         return AdministrativeOrganization.objects.create(
             name=name,
             type=AdministrativeOrganization.COM,
@@ -50,6 +63,7 @@ class PermissionTestBase(TestCase):
 
     @staticmethod
     def make_admin(user, gemeinde):
+        """Verknüpft einen Benutzer als Administrator mit einer Gemeinde."""
         return AdminOrgaUser.objects.create(
             organization=gemeinde,
             user=user,
@@ -59,6 +73,7 @@ class PermissionTestBase(TestCase):
 
     @staticmethod
     def make_bplan(name, gemeinde):
+        """Erzeugt einen zweiten Bebauungsplan und weist ihn der angegebenen Gemeinde zu."""
         fixture_plan = BPlan.objects.get(pk=PermissionTestBase.PLAN_PK)
         plan = BPlan.objects.create(
             name=name,
@@ -69,7 +84,54 @@ class PermissionTestBase(TestCase):
         plan.gemeinde.add(gemeinde)
         return plan
 
+    @staticmethod
+    def make_beteiligung(plan):
+        """Erzeugt eine Auslegungs-Beteiligung (mit Online-Beitrag möglich) für den
+        angegebenen Plan, mit einem zeitlich gültigen Testzeitraum relativ zu heute.
+
+        Für Tests, die stattdessen eine TOEB-Beteiligung ohne Online-Beitrag
+        benötigen, siehe make_toeb_beteiligung() weiter unten.
+        """
+        heute = date.today()
+
+        return BPlanBeteiligung.objects.create(
+            bplan=plan,
+            bekanntmachung_datum=heute - timedelta(days=14),
+            start_datum=heute - timedelta(days=7),
+            end_datum=heute + timedelta(days=7),
+            typ=BPlanBeteiligung.AUSLEGUNG,
+            allow_online_beitrag=True,
+        )
+
+    @staticmethod
+    def make_toeb_beteiligung(plan):
+        """Erzeugt eine TOEB-Beteiligung (Träger öffentlicher Belange, kein
+        Online-Beitrag) für den angegebenen Plan, mit festen Testdaten.
+
+        Eigenständige Methode statt einer gleichnamigen, überschreibenden
+        Variante von make_beteiligung() - vorher gab es in
+        XPlanRelationPermissions eine make_beteiligung()-Override mit
+        abweichenden Werten (TOEB statt AUSLEGUNG, feste statt relative
+        Daten, allow_online_beitrag=False), die den Basis-Helper stillschweigend
+        verdeckt hat. Das war leicht zu übersehen und führte in den
+        Erweiterungsdateien (test_permissions_extented_with_additions.py)
+        bereits zu einer eigenen, erneut duplizierten Kopie derselben
+        TOEB-Variante. Mit einem eigenen Namen kann dieselbe Methode jetzt
+        überall wiederverwendet werden, ohne die Basisklasse zu verdecken.
+        """
+        return BPlanBeteiligung.objects.create(
+            bplan=plan,
+            typ=BPlanBeteiligung.TOEB,
+            bekanntmachung_datum=date(2026, 1, 1),
+            start_datum=date(2026, 1, 2),
+            end_datum=date(2026, 1, 31),
+            allow_online_beitrag=False,
+        )
+
     def plan_update_data(self, plan, gemeinden, *, name=None):
+        """Baut die POST-Daten für das Bearbeiten eines Plans einschließlich seiner
+        Gemeinde-Zuweisungen.
+        """
         return {
             "name": name or plan.name,
             "nummer": plan.nummer,
@@ -92,6 +154,9 @@ class BPlanPermissions(PermissionTestBase):
     """
 
     def test_anonymous_user_is_redirected_to_login_on_update(self):
+        """Prüft, dass ein nicht angemeldeter Benutzer beim Aufruf der Planbearbeitung
+        zum Login umgeleitet wird.
+        """
         response = self.client.get(
             reverse("bplan-update", args=[self.PLAN_PK])
         )
@@ -99,6 +164,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertIn("/accounts/login/", response.url)
 
     def test_foreign_user_cannot_update_plan(self):
+        """Prüft, dass ein angemeldeter Benutzer ohne passende Gemeinde-Adminrechte den
+        Plan nicht bearbeiten darf.
+        """
         self.client.force_login(self.fremder_user)
         response = self.client.get(
             reverse("bplan-update", args=[self.PLAN_PK])
@@ -106,6 +174,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 403)
 
     def test_foreign_user_cannot_update_plan_via_direct_post(self):
+        """Prüft, dass die Berechtigungsprüfung auch bei einem direkten POST nicht
+        umgangen werden kann.
+        """
         self.client.force_login(self.fremder_user)
         response = self.client.post(
             reverse("bplan-update", args=[self.PLAN_PK]),
@@ -114,6 +185,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 403)
 
     def test_gemeinde_admin_can_open_update_form(self):
+        """Prüft, dass ein berechtigter Gemeinde-Administrator das Bearbeitungsformular
+        öffnen darf.
+        """
         self.client.force_login(self.gemeinde_admin)
         response = self.client.get(
             reverse("bplan-update", args=[self.PLAN_PK])
@@ -121,6 +195,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 200)
 
     def test_gemeinde_admin_can_update_plan_without_changing_gemeinden(self):
+        """Prüft eine normale Planänderung, bei der die bestehende Gemeinde-Zuweisung
+        unverändert bleibt.
+        """
         self.client.force_login(self.gemeinde_admin)
         old_name = self.plan.name
 
@@ -139,6 +216,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertEqual(list(self.plan.gemeinde.values_list("pk", flat=True)), [self.gemeinde.pk])
 
     def test_admin_cannot_add_gemeinde_without_admin_role(self):
+        """Prüft, dass ein Benutzer keine Gemeinde hinzufügen kann, für die er selbst
+        keine Adminrechte besitzt.
+        """
         fremde_gemeinde = self.make_gemeinde("Nicht eigene Gemeinde", 991)
         self.client.force_login(self.gemeinde_admin)
 
@@ -162,6 +242,7 @@ class BPlanPermissions(PermissionTestBase):
         self.assertIn(response.status_code, {200, 302})
 
     def test_admin_can_add_gemeinde_for_which_user_is_admin(self):
+        """Prüft, dass ein Benutzer eine Gemeinde hinzufügen darf, in der er Administrator ist."""
         neue_gemeinde = self.make_gemeinde("Eigene zweite Gemeinde", 992)
         self.make_admin(self.gemeinde_admin, neue_gemeinde)
         self.client.force_login(self.gemeinde_admin)
@@ -182,6 +263,7 @@ class BPlanPermissions(PermissionTestBase):
         )
 
     def test_admin_cannot_remove_gemeinde_for_which_user_is_not_admin(self):
+        """Prüft, dass ein Benutzer eine fremde Gemeinde nicht aus dem Plan entfernen kann."""
         fremde_gemeinde = self.make_gemeinde("Fremde Gemeinde", 993)
         self.plan.gemeinde.add(fremde_gemeinde)
         self.client.force_login(self.gemeinde_admin)
@@ -202,6 +284,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertIn(response.status_code, {200, 302})
 
     def test_anonymous_user_cannot_delete_plan(self):
+        """Prüft den Login-Schutz beim Löschen eines Plans und stellt sicher, dass der
+        Plan erhalten bleibt.
+        """
         response = self.client.post(
             reverse("bplan-delete", args=[self.PLAN_PK])
         )
@@ -210,6 +295,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertTrue(BPlan.objects.filter(pk=self.PLAN_PK).exists())
 
     def test_admin_of_only_one_of_two_gemeinden_cannot_delete_plan(self):
+        """Prüft die All-Admin-Regel: Bei mehreren Plan-Gemeinden reicht die Adminrolle
+        nur in einer Gemeinde nicht aus.
+        """
         fremde_gemeinde = self.make_gemeinde("Zweite Gemeinde", 994)
         self.plan.gemeinde.add(fremde_gemeinde)
         self.client.force_login(self.gemeinde_admin)
@@ -222,6 +310,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertTrue(BPlan.objects.filter(pk=self.PLAN_PK).exists())
 
     def test_admin_of_all_gemeinden_can_delete_plan(self):
+        """Prüft, dass ein Benutzer den Plan löschen darf, wenn er in allen
+        zugewiesenen Gemeinden Administrator ist.
+        """
         zweite_gemeinde = self.make_gemeinde("Zweite Admin-Gemeinde", 995)
         self.plan.gemeinde.add(zweite_gemeinde)
         self.make_admin(self.gemeinde_admin, zweite_gemeinde)
@@ -246,17 +337,10 @@ class XPlanRelationPermissions(PermissionTestBase):
     - Delete verlangt Admin-Rechte für alle dem Plan zugewiesenen Gemeinden.
     """
 
-    def make_beteiligung(self, plan):
-        return BPlanBeteiligung.objects.create(
-            bplan=plan,
-            typ=BPlanBeteiligung.TOEB,
-            bekanntmachung_datum=date(2026, 1, 1),
-            start_datum=date(2026, 1, 2),
-            end_datum=date(2026, 1, 31),
-            allow_online_beitrag=False,
-        )
-
     def test_foreign_user_cannot_create_relation_via_direct_post(self):
+        """Prüft, dass eine Relation nicht per direktem POST ohne passende
+        Gemeinde-Adminrechte angelegt werden kann.
+        """
         self.client.force_login(self.fremder_user)
 
         response = self.client.post(
@@ -270,6 +354,7 @@ class XPlanRelationPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 403)
 
     def test_gemeinde_admin_can_open_relation_create_form(self):
+        """Prüft, dass ein berechtigter Gemeinde-Administrator das Relationsformular öffnen darf."""
         self.client.force_login(self.gemeinde_admin)
 
         response = self.client.get(
@@ -282,7 +367,8 @@ class XPlanRelationPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 200)
 
     def test_foreign_user_cannot_update_relation(self):
-        beteiligung = self.make_beteiligung(self.plan)
+        """Prüft, dass ein fremder Benutzer eine bestehende Relation nicht bearbeiten kann."""
+        beteiligung = self.make_toeb_beteiligung(self.plan)
         self.client.force_login(self.fremder_user)
 
         response = self.client.get(
@@ -298,7 +384,10 @@ class XPlanRelationPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 403)
 
     def test_gemeinde_admin_can_open_relation_update_form(self):
-        beteiligung = self.make_beteiligung(self.plan)
+        """Prüft, dass ein berechtigter Gemeinde-Administrator das Relationsformular
+        zur Bearbeitung öffnen darf.
+        """
+        beteiligung = self.make_toeb_beteiligung(self.plan)
         self.client.force_login(self.gemeinde_admin)
 
         response = self.client.get(
@@ -314,8 +403,11 @@ class XPlanRelationPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 200)
 
     def test_relation_update_cannot_cross_plan_boundary(self):
+        """Prüft, dass Plan-ID und Objekt-ID nicht aus unterschiedlichen Plänen
+        kombiniert werden können.
+        """
         other_plan = self.make_bplan("Anderer Testplan", self.gemeinde)
-        beteiligung = self.make_beteiligung(other_plan)
+        beteiligung = self.make_toeb_beteiligung(other_plan)
         self.client.force_login(self.gemeinde_admin)
 
         response = self.client.get(
@@ -331,7 +423,8 @@ class XPlanRelationPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 404)
 
     def test_foreign_user_cannot_delete_relation(self):
-        beteiligung = self.make_beteiligung(self.plan)
+        """Prüft, dass ein fremder Benutzer eine Relation nicht löschen kann."""
+        beteiligung = self.make_toeb_beteiligung(self.plan)
         self.client.force_login(self.fremder_user)
 
         response = self.client.post(
@@ -350,8 +443,11 @@ class XPlanRelationPermissions(PermissionTestBase):
         )
 
     def test_relation_delete_cannot_cross_plan_boundary(self):
+        """Prüft, dass beim Löschen einer Relation kein Objekt aus einem anderen Plan
+        über eine manipulierte URL erreicht wird.
+        """
         other_plan = self.make_bplan("Anderer Testplan", self.gemeinde)
-        beteiligung = self.make_beteiligung(other_plan)
+        beteiligung = self.make_toeb_beteiligung(other_plan)
         self.client.force_login(self.gemeinde_admin)
 
         response = self.client.post(
@@ -370,6 +466,7 @@ class XPlanRelationPermissions(PermissionTestBase):
         )
 
     def test_foreign_user_cannot_create_attachment_via_direct_post(self):
+        """Prüft den Berechtigungsschutz beim direkten POST zum Anlegen eines Plan-Anhangs."""
         self.client.force_login(self.fremder_user)
 
         response = self.client.post(
@@ -383,6 +480,9 @@ class XPlanRelationPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 403)
 
     def test_attachment_update_cannot_cross_plan_boundary(self):
+        """Prüft, dass ein Anhang aus einem anderen Plan nicht über eine fremde Plan-ID
+        bearbeitet werden kann.
+        """
         other_plan = self.make_bplan("Anderer Attachment-Plan", self.gemeinde)
         attachment = BPlanSpezExterneReferenz.objects.create(
             bplan=other_plan,
@@ -404,6 +504,9 @@ class XPlanRelationPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 404)
 
     def test_attachment_delete_cannot_cross_plan_boundary(self):
+        """Prüft, dass ein Anhang aus einem anderen Plan nicht über eine fremde Plan-ID
+        gelöscht werden kann.
+        """
         other_plan = self.make_bplan("Anderer Attachment-Delete-Plan", self.gemeinde)
         attachment = BPlanSpezExterneReferenz.objects.create(
             bplan=other_plan,
@@ -428,9 +531,12 @@ class XPlanRelationPermissions(PermissionTestBase):
         )
 
     def test_admin_of_only_one_plan_gemeinde_cannot_delete_relation(self):
+        """Prüft, dass das Löschen einer generischen XPlan-Relation die Adminrechte für
+        alle Plan-Gemeinden erfordert.
+        """
         zweite_gemeinde = self.make_gemeinde("Zweite Gemeinde", 996)
         self.plan.gemeinde.add(zweite_gemeinde)
-        beteiligung = self.make_beteiligung(self.plan)
+        beteiligung = self.make_toeb_beteiligung(self.plan)
         self.client.force_login(self.gemeinde_admin)
 
         response = self.client.post(
@@ -449,10 +555,13 @@ class XPlanRelationPermissions(PermissionTestBase):
         )
 
     def test_admin_of_all_plan_gemeinden_can_delete_relation(self):
+        """Prüft, dass die Relation gelöscht werden darf, wenn der Benutzer in allen
+        Plan-Gemeinden Administrator ist.
+        """
         zweite_gemeinde = self.make_gemeinde("Zweite Admin-Gemeinde", 997)
         self.plan.gemeinde.add(zweite_gemeinde)
         self.make_admin(self.gemeinde_admin, zweite_gemeinde)
-        beteiligung = self.make_beteiligung(self.plan)
+        beteiligung = self.make_toeb_beteiligung(self.plan)
         self.client.force_login(self.gemeinde_admin)
 
         response = self.client.post(

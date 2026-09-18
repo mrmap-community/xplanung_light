@@ -26,6 +26,44 @@ from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 from formset.views import FormViewMixin
 from xplanung_light.views.user import ExtentUserOrgaInfo
+from django.shortcuts import get_object_or_404
+from xplanung_light.views.mixins import GemeindeAdminRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+class BeitragStellungnahmeScopeMixin(GemeindeAdminRequiredMixin): #(GemeindeAdminRequiredMixin):
+
+    def resolve_scope(self):
+        self.plan = get_object_or_404(
+            self.reference_model,
+            pk=self.planid,
+        )
+        self.check_gemeinde_admin(self.plan)
+
+        if self.plantyp == "bplan":
+            self.beteiligung = get_object_or_404(
+                BPlanBeteiligung,
+                pk=self.beteiligungid,
+                bplan=self.plan,
+            )
+            self.beitrag = get_object_or_404(
+                BPlanBeteiligungBeitrag,
+                pk=self.beitragid,
+                bplan_beteiligung=self.beteiligung,
+            )
+        elif self.plantyp == "fplan":
+            self.beteiligung = get_object_or_404(
+                FPlanBeteiligung,
+                pk=self.beteiligungid,
+                fplan=self.plan,
+            )
+            self.beitrag = get_object_or_404(
+                FPlanBeteiligungBeitrag,
+                pk=self.beitragid,
+                fplan_beteiligung=self.beteiligung,
+            )
+        else:
+            raise PermissionDenied("Unbekannter Plantyp.")
+
 
 class XPlanBeitragStellungnahmeCreateView(ExtentUserOrgaInfo, CreateView):
     """
@@ -35,7 +73,7 @@ class XPlanBeitragStellungnahmeCreateView(ExtentUserOrgaInfo, CreateView):
     #form_class = BPlanCreateForm
 
 
-class BeitragStellungnahmeListView(ExtentUserOrgaInfo, SingleTableView):
+class BeitragStellungnahmeListView(BeitragStellungnahmeScopeMixin, ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableView):
     """
     ListView zur Anzeige der BeitragStellungnahme-Records. Hier Die Klasse entscheidet je nach URL, um welchen Plantyp es sich handelt.
 
@@ -55,17 +93,50 @@ class BeitragStellungnahmeListView(ExtentUserOrgaInfo, SingleTableView):
             self.beteiligung = BPlanBeteiligung
             self.parent_model = BPlanBeteiligungBeitrag
             self.reference_model = BPlan
-        if self.kwargs.get('plantyp') == 'fplan':
+        elif self.kwargs.get('plantyp') == 'fplan':
             self.model = FPlanBeitragStellungnahme
             self.beteiligung = FPlanBeteiligung
             self.parent_model = FPlanBeteiligungBeitrag
             self.table_class = FPlanBeitragStellungnahmeTable
             self.reference_model = FPlan
-        self.planid = self.kwargs.get('planid') 
+        else:
+            raise PermissionDenied("Unbekannter Plantyp.")
+        
+        self.planid = kwargs['planid']
+        self.beitragid = kwargs['beitragid']
+        self.beteiligungid = kwargs['beteiligungid']
+
+        self.resolve_scope()
+        """
+        self.plan = get_object_or_404(
+            self.reference_model,
+            pk=self.planid,
+        )
+        self.check_gemeinde_admin(self.plan)
+        if self.plantyp == 'bplan':
+            self.beteiligung = get_object_or_404(
+                BPlanBeteiligung,
+                pk=self.beteiligungid,
+                bplan=self.plan,
+            )
+            self.beitrag = get_object_or_404(
+                BPlanBeteiligungBeitrag,
+                pk=self.beitragid,
+                bplan_beteiligung=self.beteiligung,
+            )
+        else:
+            self.beteiligung = get_object_or_404(
+                FPlanBeteiligung,
+                pk=self.beteiligungid,
+                fplan=self.plan,
+            )
+            self.beitrag = get_object_or_404(
+                FPlanBeteiligungBeitrag,
+                pk=self.beitragid,
+                fplan_beteiligung=self.beteiligung,
+            )
+        """
         self.template_name = 'xplanung_light/beitragstellungnahme_list.html'
-        #TODO: Anpassen für FPlan
-        self.beitragid = kwargs.get('beitragid')
-        self.beteiligungid = kwargs.get('beteiligungid')
         # Debugausgabe
         #print(f"Typ: {self.plantyp}")
         return super().dispatch(request, *args, **kwargs)
@@ -77,29 +148,12 @@ class BeitragStellungnahmeListView(ExtentUserOrgaInfo, SingleTableView):
         :param self: Description
         :param kwargs: Description
         """
-        qs = super().get_queryset().annotate(
+        qs = super().get_queryset().filter(beitrag=self.beitrag).annotate(
                     last_changed=Subquery(
                         self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
                     )
-                )
-        plan = self.reference_model.objects.get(pk=self.kwargs['planid'])
-        # check ob Nutzer admin einer der Gemeinden des BPlans ist
-        if self.request.user.is_superuser == False:
-            for gemeinde in plan.gemeinde.all():
-                for user in gemeinde.admin_orga_users.all():
-                    if user.user == self.request.user and user.is_admin:   
-                        # Zugriff wird erteilt
-                        if self.plantyp == 'bplan':                    
-                            return qs.filter(beitrag_id=self.kwargs['beitragid']).order_by('-last_changed')
-                        if self.plantyp == 'fplan':                    
-                            return qs.filter(beitrag_id=self.kwargs['beitragid']).order_by('-last_changed')
-            raise PermissionDenied("Nutzer hat keine Berechtigungen auf die angeforderten Objekte!")
-        else:
-            if self.plantyp == 'bplan': 
-                return qs.filter(beitrag_id=self.kwargs['beitragid']).order_by('-last_changed')
-            if self.plantyp == 'fplan': 
-                return qs.filter(beitrag_id=self.kwargs['beitragid']).order_by('-last_changed')
-
+                ).order_by('-last_changed')
+        return qs
 
     def get_context_data(self, **kwargs):
         """
@@ -111,16 +165,16 @@ class BeitragStellungnahmeListView(ExtentUserOrgaInfo, SingleTableView):
         #planid = self.kwargs['planid']
         #beteiligungid = self.kwargs['beteiligungid']
         context = super().get_context_data(**kwargs)
-        context["plan"] = self.reference_model.objects.get(pk=self.planid)
+        context["plan"] = self.plan
         context["plantyp"] = self.plantyp
-        context["beteiligung"] = self.beteiligung.objects.get(pk=self.beteiligungid)
-        context["beitrag"] = self.parent_model.objects.get(pk=self.beitragid)
+        context["beteiligung"] = self.beteiligung
+        context["beitrag"] = self.beitrag
         # Für oie Legende benötigen wir die TagList
         context['tags_dict'] = self.model.TAGS_DICT
         return context
 
 
-class XPlanBeitragStellungnahmeCreateView(FormViewMixin, XPlanRelationsCreateView):
+class XPlanBeitragStellungnahmeCreateView(BeitragStellungnahmeScopeMixin, FormViewMixin, XPlanRelationsCreateView):
     """
     Klasse zum Anlegen einer Stellungnahme zu einem Beteiligungsbeitrag. Die Klasse nutzt django-formset um 
     auch Richtext-Beschreibungen zu ermöglichen. Sie erbt von der Standard XPlanRelations Klasse um die Berechtigungen 
@@ -157,12 +211,19 @@ class XPlanBeitragStellungnahmeCreateView(FormViewMixin, XPlanRelationsCreateVie
         self.beteiligungid = kwargs.get('beteiligungid')
         # Debugausgabe
         #print(f"Typ: {self.plantyp}")
+
+        self.resolve_scope()
+
         return super().dispatch(request, *args, **kwargs)
     
     def get_initial(self):
         initial = super().get_initial()
         initial['beitrag'] = self.beitragid
         return initial
+    
+    def form_valid(self, form):
+        form.instance.beitrag = self.beitrag
+        return super().form_valid(form)
     
     def get_context_data(self, **kwargs):
         """
@@ -183,7 +244,7 @@ class XPlanBeitragStellungnahmeCreateView(FormViewMixin, XPlanRelationsCreateVie
         return reverse_lazy(self.list_url_name, kwargs={'planid': self.kwargs['planid'], 'plantyp': self.plantyp, 'beteiligungid': self.beteiligungid, 'beitragid': self.beitragid})
 
 
-class XPlanBeitragStellungnahmeUpdateView(FormViewMixin, XPlanRelationsUpdateView):
+class XPlanBeitragStellungnahmeUpdateView(BeitragStellungnahmeScopeMixin,FormViewMixin, XPlanRelationsUpdateView):
     """
     Klasse zum Anlegen einer Stellungnahme zu einem Beteiligungsbeitrag. Die Klasse nutzt django-formset um 
     auch Richtext-Beschreibungen zu ermöglichen. Sie erbt von der Standard XPlanRelations Klasse um die Berechtigungen 
@@ -217,8 +278,29 @@ class XPlanBeitragStellungnahmeUpdateView(FormViewMixin, XPlanRelationsUpdateVie
         self.template_name = 'xplanung_light/beitragstellungnahme_form.html'
         self.beitragid = kwargs.get('beitragid')
         self.beteiligungid = kwargs.get('beteiligungid')
+
+        self.resolve_scope()
+
         return super().dispatch(request, *args, **kwargs)
     
+    def form_valid(self, form):
+        form.instance.beitrag = self.beitrag
+        return super().form_valid(form)
+    
+    """
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            pk=self.kwargs["pk"],
+            beitrag=self.beitrag,
+        )
+    """   
+
+    def get_queryset(self):
+        return self.model.objects.filter(
+            pk=self.kwargs["pk"],
+            beitrag=self.beitrag,
+        )
+
     def get_initial(self):
         initial = super().get_initial()
         initial['beitrag'] = self.beitragid
@@ -243,7 +325,7 @@ class XPlanBeitragStellungnahmeUpdateView(FormViewMixin, XPlanRelationsUpdateVie
         return reverse_lazy(self.list_url_name, kwargs={'planid': self.kwargs['planid'], 'plantyp': self.plantyp, 'beteiligungid': self.beteiligungid, 'beitragid': self.beitragid})
 
 
-class XPlanBeitragStellungnahmeDeleteView(XPlanRelationsDeleteView):
+class XPlanBeitragStellungnahmeDeleteView(BeitragStellungnahmeScopeMixin, XPlanRelationsDeleteView):
     """
     Klasse zum Löschen einer Stellungnhme zu einem Beteiligungsbeitrag
     """
@@ -265,10 +347,21 @@ class XPlanBeitragStellungnahmeDeleteView(XPlanRelationsDeleteView):
             self.model = FPlanBeitragStellungnahme
             self.parent_model = FPlanBeteiligungBeitrag
             self.reference_model = FPlan
+
         self.planid = self.kwargs.get('planid') 
         self.beitragid = kwargs.get('beitragid')
         self.beteiligungid = kwargs.get('beteiligungid')
+        self.resolve_scope()
         return super().dispatch(request, *args, **kwargs)
+
+    def get_object(self, queryset=None):
+        obj = get_object_or_404(
+            self.model,
+            pk=self.kwargs["pk"],
+            beitrag=self.beitrag,
+        )
+        self.check_gemeinde_admin(self.plan)
+        return obj
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

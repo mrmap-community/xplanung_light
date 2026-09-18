@@ -11,6 +11,9 @@ import defusedxml.ElementTree as defused_ET
 from django.http import FileResponse, HttpResponse
 # https://medium.com/an-engineer-a-reader-a-guy/django-test-fixture-setup-setupclass-and-setuptestdata-72b6d944cdef
 
+# Grundlegende Sanity-Checks auf den Fixtures: Superuser korrekt angelegt,
+# GML-Export/Import-Roundtrip funktioniert, WMS-Capabilities liefern die
+# erwartete Layer-Anzahl.
 class InitialDataIntegrity(TestCase):
     fixtures = ['user.json',
                 'administrative_organization.json',
@@ -29,6 +32,8 @@ class InitialDataIntegrity(TestCase):
         pass
 
     def test_if_superuser_name_is_admin_and_id_is_1(self):
+        # Setzt voraus, dass die user.json-Fixture einen Superuser mit
+        # pk=1 und Username 'admin' enthält.
         # Check ob superuser die id 1 hat und ob der Nutzername admin ist
         test = True
         user = User.objects.get(pk=1)

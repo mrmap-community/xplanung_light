@@ -88,6 +88,7 @@ class BeitragAuthenticate(TestCase):
     # --- Erfolgsfall --------------------------------------------------
 
     def test_richtige_email_setzt_generic_id_in_session_und_leitet_weiter(self):
+        # Erfolgsfall: richtige E-Mail -> Session gesetzt + Redirect auf die Detailseite.
         response = self._post(self.RICHTIGE_EMAIL)
 
         self.assertEqual(
@@ -121,6 +122,7 @@ class BeitragAuthenticate(TestCase):
     # --- Fehlerfall -----------------------------------------------------
 
     def test_falsche_email_setzt_keine_session_und_zeigt_fehlermeldung(self):
+        # Negativfall: falsche E-Mail -> keine Session, Formular wird mit Fehlermeldung neu angezeigt.
         response = self._post(self.FALSCHE_EMAIL)
 
         self.assertNotIn('beitrag_generic_id', self.client.session)

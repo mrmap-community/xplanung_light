@@ -32,6 +32,8 @@ from django.db import transaction
 from xplanung_light.views.user import ExtentUserOrgaInfo
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
+from xplanung_light.views.mixins import GemeindeAdminRequiredMixin
+
 
 class XPlanBeteiligungBeitragCreateView(ExtentUserOrgaInfo, CreateView):
     """
@@ -65,10 +67,10 @@ class BeteiligungBeitragListView(ExtentUserOrgaInfo, SingleTableView):
             self.parent_model = FPlanBeteiligung
             self.table_class = FPlanBeteiligungBeitragTable
             self.reference_model = FPlan
+        
         self.planid = self.kwargs.get('planid') 
+        self.beteiligungid = self.kwargs.get('beteiligungid')
         self.template_name = 'xplanung_light/beteiligungbeitrag_list.html'
-        #TODO: Anpassen für FPlan
-        self.beteiligungid = kwargs.get('beteiligungid')
         # Debugausgabe
         #print(f"Typ: {self.plantyp}")
         return super().dispatch(request, *args, **kwargs)
@@ -93,7 +95,12 @@ class BeteiligungBeitragListView(ExtentUserOrgaInfo, SingleTableView):
                         'attachments', distinct=True
                     )
                 )
-        plan = self.reference_model.objects.get(pk=self.kwargs['planid'])
+        plan = get_object_or_404(
+            self.reference_model,
+            pk=self.planid,
+        )
+        #plan = self.reference_model.objects.get(pk=self.kwargs['planid'])
+        """
         # check ob Nutzer admin einer der Gemeinden des BPlans ist
         if self.request.user.is_superuser == False:
             for gemeinde in plan.gemeinde.all():
@@ -110,9 +117,65 @@ class BeteiligungBeitragListView(ExtentUserOrgaInfo, SingleTableView):
                 return qs.filter(bplan_beteiligung_id=self.kwargs['beteiligungid']).order_by('-last_changed')
             if self.plantyp == 'fplan': 
                 return qs.filter(fplan_beteiligung_id=self.kwargs['beteiligungid']).order_by('-last_changed')
+        """
+        # bestehende Berechtigungsprüfung
+        if not self.request.user.is_superuser:
+            is_admin = plan.gemeinde.filter(
+                admin_orga_users__user=self.request.user,
+                admin_orga_users__is_admin=True,
+            ).exists()
 
+            if not is_admin:
+                raise PermissionDenied(
+                    "Nutzer hat keine Berechtigungen auf die angefragten Objekte!"
+                )
+
+        # GANZ WICHTIG:
+        # Beteiligung MUSS zum angefragten Plan gehören.
+        if self.plantyp == "bplan":
+            beteiligung = get_object_or_404(
+                self.parent_model,
+                pk=self.beteiligungid,
+                bplan=plan,
+            )
+            return qs.filter(
+                bplan_beteiligung=beteiligung
+            ).order_by("-last_changed")
+
+        if self.plantyp == "fplan":
+            beteiligung = get_object_or_404(
+                self.parent_model,
+                pk=self.beteiligungid,
+                fplan=plan,
+            )
+            return qs.filter(
+                fplan_beteiligung=beteiligung
+            ).order_by("-last_changed")
+
+        raise PermissionDenied("Unbekannter Plantyp.")        
 
     def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["plan"] = get_object_or_404(
+            self.reference_model,
+            pk=self.planid,
+        )
+        context["plantyp"] = self.plantyp
+        if self.plantyp == "bplan":
+            context["beteiligung"] = get_object_or_404(
+                self.parent_model,
+                pk=self.beteiligungid,
+                bplan=context["plan"],
+            )
+        elif self.plantyp == "fplan":
+            context["beteiligung"] = get_object_or_404(
+                self.parent_model,
+                pk=self.beteiligungid,
+                fplan=context["plan"],
+            )
+        return context
+
+    def get_context_data2(self, **kwargs):
         """
         Docstring for get_context_data
         
@@ -128,7 +191,7 @@ class BeteiligungBeitragListView(ExtentUserOrgaInfo, SingleTableView):
         return context
 
 
-class BeteiligungBeitragDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
+class BeteiligungBeitragDeleteView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
     """
     Löschen eines BeteiligungsBeitrag-Records.
 
@@ -141,44 +204,56 @@ class BeteiligungBeitragDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, Dele
     def dispatch(self, request, *args, **kwargs):
         # Hier sind die Parameter aus der re_path verfügbar
         self.plantyp = kwargs.get('plantyp')
+        self.planid = self.kwargs.get('planid') 
+        self.beteiligungid = kwargs.get('beteiligungid')
+        self.template_name = 'xplanung_light/beteiligungbeitrag_confirm_delete.html'
+
         if self.kwargs.get('plantyp') == 'bplan':
             self.model = BPlanBeteiligungBeitrag
             self.reference_model = BPlan
-        if self.kwargs.get('plantyp') == 'fplan':
+        elif self.kwargs.get('plantyp') == 'fplan':
             self.model = FPlanBeteiligungBeitrag
             self.reference_model = FPlan
-        self.planid = self.kwargs.get('planid') 
-        self.template_name = 'xplanung_light/beteiligungbeitrag_confirm_delete.html'
-        #TODO: Anpassen für FPlan
-        self.beteiligungid = kwargs.get('beteiligungid')
+        else:
+            raise PermissionDenied("Unbekannter Plantyp.")
+        # Plan ziehen
+        self.plan = get_object_or_404(
+            self.reference_model,
+            pk=self.planid,
+        )
+        self.check_gemeinde_admin(self.plan)
         # Debugausgabe
-        print(f"Typ: {self.plantyp}")
+        #print(f"Typ: {self.plantyp}")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self, **kwargs):
         """
-        Docstring for get_queryset
+        Hier wird der Beitrag mit Angabe des Plans und der Beteiligung gezogen 
         
         :param self: Description
         :param kwargs: Description
         """
         qs = super().get_queryset()
-        plan = self.reference_model.objects.get(pk=self.kwargs['planid'])
-        # check ob Nutzer admin einer der Gemeinden des BPlans ist
-        if self.request.user.is_superuser == False:
-            for gemeinde in plan.gemeinde.all():
-                for user in gemeinde.admin_orga_users.all():
-                    if user.user == self.request.user and user.is_admin:   
-                        # Zugriff wird erteilt 
-                        if self.plantyp == 'bplan':                    
-                            return qs.filter(bplan_beteiligung_id=self.kwargs['beteiligungid'])
-            raise PermissionDenied("Nutzer hat keine Berechtigungen auf die angeforderten Objekte!")
-        else:
-            if self.plantyp == 'bplan':  
-                return qs.filter(bplan_beteiligung_id=self.kwargs['beteiligungid'])
+        if self.plantyp == "bplan":
+            return qs.filter(
+                bplan_beteiligung__bplan_id=self.planid,
+                bplan_beteiligung_id=self.beteiligungid,
+            )
+        if self.plantyp == "fplan":
+            return qs.filter(
+                fplan_beteiligung__fplan_id=self.planid,
+                fplan_beteiligung_id=self.beteiligungid,
+            )
+        raise PermissionDenied("Unbekannter Plantyp.")
 
     def form_valid(self, form):
-        self.success_url = reverse_lazy('beteiligungbeitrag-list', kwargs={'plantyp': self.plantyp, 'planid': self.kwargs['planid'], 'beteiligungid': self.kwargs['beteiligungid']})
+        self.success_url = reverse_lazy('beteiligungbeitrag-list',
+                                         kwargs={
+                                            'plantyp': self.plantyp,
+                                            'planid': self.planid,
+                                            'beteiligungid': self.beteiligungid,
+                                        },
+        )
         return super().form_valid(form)
 
     
@@ -330,7 +405,7 @@ class BeteiligungBeitragCreateView(ExtentUserOrgaInfo, EditCollectionView):
         return result
     
 
-class BeteiligungBeitragGenericCreateView(ExtentUserOrgaInfo, FormCollectionView):
+class BeteiligungBeitragGenericCreateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, FormCollectionView):
     """
     Der generische CreateView ist für die Sachbearbeiter gedacht und dient zur Erfassung der Beiträge die
     nicht über das Online-Formular erfasst wurden. 
@@ -373,19 +448,40 @@ class BeteiligungBeitragGenericCreateView(ExtentUserOrgaInfo, FormCollectionView
         """
         self.beteiligung_pk = kwargs.get('beteiligungid')
         self.plantyp = kwargs.get('plantyp')
-        if self.kwargs.get('plantyp') == 'bplan':
+
+        if self.plantyp == 'bplan':
             self.model = BPlanBeteiligungBeitrag
             self.model_parent = BPlanBeteiligung
             self.planmodel = BPlan
             self.reference_model_name_lower = 'bplan'
             self.collection_class = BPlanBeteiligungBeitragGenericCollection
-        if self.kwargs.get('plantyp') == 'fplan':
+        elif self.plantyp == 'fplan':
             self.model = FPlanBeteiligungBeitrag
             self.model_parent = FPlanBeteiligung
             self.planmodel = FPlan
             self.reference_model_name_lower = 'fplan'
             self.collection_class = FPlanBeteiligungBeitragGenericCollection
+        else:
+            raise PermissionDenied("Unbekannter Plantyp.")
         self.planid = kwargs.get('planid')
+        self.plan = get_object_or_404(
+            self.planmodel,
+            pk=self.planid,
+        )
+        # Berechtigungsprüfung
+        self.check_gemeinde_admin(self.plan)
+        if self.plantyp == 'bplan':
+            self.beteiligung = get_object_or_404(
+                self.model_parent,
+                pk=self.beteiligung_pk,
+                bplan=self.plan,
+            )
+        else:
+            self.beteiligung = get_object_or_404(
+                self.model_parent,
+                pk=self.beteiligung_pk,
+                fplan=self.plan,
+            )
         return super().dispatch(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
@@ -397,30 +493,13 @@ class BeteiligungBeitragGenericCreateView(ExtentUserOrgaInfo, FormCollectionView
         :param kwargs: Description
         """
         context = super().get_context_data(**kwargs)
-        context["plantyp"] = self.kwargs['plantyp']
-        plan = self.planmodel.objects.get(pk=self.kwargs['planid'])
-        context["plan"] = plan
-        #debug
-        #print("get_context_data: plan name: " + plan.name)
-        beteiligung = None
-        try:
-            beteiligung = self.model_parent.objects.get(pk=self.kwargs['beteiligungid'])
-        except:
-            pass
-        context["beteiligung"] = beteiligung
+        context["plantyp"] = self.plantyp
+        context["plan"] = self.plan
+        context["beteiligung"] = self.beteiligung
         # Extra Context - hier wird definiert, ob create oder update aufgerufen wurde
         context['extra_context'] = self.extra_context
-        # Berechtigungsprüfung
-        # check ob Nutzer admin einer der Gemeinden des BPlans ist
-        if self.request.user.is_superuser == False:
-            for gemeinde in plan.gemeinde.all():
-                for user in gemeinde.admin_orga_users.all():
-                    if user.user == self.request.user and user.is_admin:                        
-                         context[self.reference_model_name_lower] = plan
-                         return context
-            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
         # Übergabe des Planobjekts - warum unter bplan/fplan - kann ggf. raus
-        context[self.reference_model_name_lower] = plan
+        context[self.reference_model_name_lower] = self.plan
         return context
     
     # Zum testen, was als json übetragen wird
@@ -450,6 +529,10 @@ class BeteiligungBeitragGenericCreateView(ExtentUserOrgaInfo, FormCollectionView
                 beitrag_form.instance._state.adding = True
             beitrag_instance = beitrag_form.save(commit=False)
             # Überschrieben der beteiligungsid (zur Sicherheit - hier braucht man eine instanz, keine id!):
+            if self.plantyp == 'bplan':
+                beitrag_instance.bplan_beteiligung = self.beteiligung
+            else:
+                beitrag_instance.fplan_beteiligung = self.beteiligung
             #setattr(beitrag_instance, self.plantyp + '_beteiligung', parent_pk)
             # beitrag_instance.parent_id = parent_pk 
             beitrag_instance.save()
@@ -480,7 +563,7 @@ class BeteiligungBeitragGenericCreateView(ExtentUserOrgaInfo, FormCollectionView
             return super().form_collection_valid(form_collection)
 
 
-class BeteiligungBeitragGenericUpdateView(ExtentUserOrgaInfo, EditCollectionView):
+class BeteiligungBeitragGenericUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, EditCollectionView):
     """
     Der generische CreateView ist für die Sachbearbeiter gedacht und dient zur Erfassung der Beiträge die
     nicht über das Online-Formular erfasst wurden. pk ist in Url vorhanden.
@@ -522,6 +605,24 @@ class BeteiligungBeitragGenericUpdateView(ExtentUserOrgaInfo, EditCollectionView
         self.planid = kwargs.get('planid')
         self.beteiligung_pk = kwargs.get('beteiligungid')
         self.pk = kwargs.get('pk')
+        self.plan = get_object_or_404(
+            self.planmodel,
+            pk=self.planid,
+        )
+        # Berechtigungsprüfung
+        self.check_gemeinde_admin(self.plan)
+        if self.plantyp == 'bplan':
+            self.beteiligung = get_object_or_404(
+                self.beteiligung_model,
+                pk=self.beteiligung_pk,
+                bplan=self.plan,
+            )
+        else:
+            self.beteiligung = get_object_or_404(
+                self.beteiligung_model,
+                pk=self.beteiligung_pk,
+                fplan=self.plan,
+            )
         return super().dispatch(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
@@ -544,17 +645,27 @@ class BeteiligungBeitragGenericUpdateView(ExtentUserOrgaInfo, EditCollectionView
         context["beteiligung"] = beteiligung
         #context["beitrag"] = self.get_object()
         context['extra_context'] = self.extra_context
-        # check ob Nutzer admin einer der Gemeinden des BPlans ist
-        if self.request.user.is_superuser == False:
-            for gemeinde in plan.gemeinde.all():
-                for user in gemeinde.admin_orga_users.all():
-                    if user.user == self.request.user and user.is_admin:                        
-                         context[self.reference_model_name_lower] = plan
-                         return context
-            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
         context[self.reference_model_name_lower] = plan
         return context
     
+    def get_queryset(self):
+        qs = super().get_queryset()
+
+        if self.plantyp == "bplan":
+            return qs.filter(
+                pk=self.kwargs["pk"],
+                bplan_beteiligung_id=self.kwargs["beteiligungid"],
+                bplan_beteiligung__bplan_id=self.kwargs["planid"],
+            )
+
+        if self.plantyp == "fplan":
+            return qs.filter(
+                pk=self.kwargs["pk"],
+                fplan_beteiligung_id=self.kwargs["beteiligungid"],
+                fplan_beteiligung__fplan_id=self.kwargs["planid"],
+            )
+
+        raise PermissionDenied("Unbekannter Plantyp.")
     # Zum testen, was als json übetragen wird
     """
     def post(self, request, *args, **kwargs):
