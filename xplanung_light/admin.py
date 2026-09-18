@@ -1,11 +1,12 @@
 from django.contrib import admin
-from leaflet.admin import LeafletGeoAdmin
-from xplanung_light.models import BPlan, AdministrativeOrganization, License, ContactOrganization, Uvp, ConsentOption, BPlanBeteiligung
-from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
+from leaflet.admin import LeafletGeoAdmin
+from simple_history.admin import SimpleHistoryAdmin
 
-from xplanung_light.models import UserProfile
+from xplanung_light.models import (AdministrativeOrganization, BPlan, BPlanBeteiligung, ConsentOption,
+                                   ContactOrganization, License, UserProfile, Uvp)
+
 # from formset.admin import ModelAdmin - erst in späteren Versionen verfügbar
 # https://django-organizations.readthedocs.io/en/latest/cookbook.html#extending-the-base-admin-classes
 """
@@ -25,14 +26,8 @@ BaseUserAdmin.list_display += ('last_login',)
 
 
 class RichtextAdmin(SimpleHistoryAdmin):
-    """
-    Herausnehmen der Richtext Felder - hierfür benötigen wir spezielle django-formset forms
-    """
-
-    def get_form(self, request, obj=None, **kwargs):
-        self.exclude = []
-        self.exclude.append('beschreibung')
-        return super().get_form(request, obj, **kwargs)
+    # Herausnehmen der Richtext Felder - hierfür benötigen wir spezielle django-formset forms
+    exclude = ["beschreibung"]
 
 
 admin.site.register(BPlanBeteiligung, RichtextAdmin)
