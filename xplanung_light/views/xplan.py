@@ -38,7 +38,7 @@ from django.utils import timezone
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.views.user import ExtentUserOrgaInfo
-from xplanung_light.views.mixins import GemeindeAdminRequiredMixin
+from xplanung_light.views.mixins import GemeindeAdminRequiredMixin, PublicOrGemeindeAdminRequiredMixin
 
 def qualify_gml_geometry(gml_from_db:str):
     ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
@@ -611,7 +611,7 @@ class XPlanListViewHtml(FilterView, ListView):
     filterset_class = BPlanFilterHtml
 
 
-class XPlanDetailView(DetailView):
+class XPlanDetailView(PublicOrGemeindeAdminRequiredMixin, DetailView):
     model = BPlan
     model_name_lower = str(model._meta.model_name).lower()
     
@@ -757,6 +757,10 @@ class XPlanDetailXPlanLightZipView(XPlanDetailView):
     """
     def dispatch(self, *args, **kwargs):
         response = super().dispatch(*args, **kwargs)
+        # The parent mixin may terminate the request with an authentication
+        # or permission response. Do not try to build the ZIP in that case.
+        if response.status_code != 200:
+            return response
         response['Content-type'] = "application/zip"  # setzen des headers
         if self.model_name_lower == 'bplan':
             class test(XPlanDetailXPlanLightView):

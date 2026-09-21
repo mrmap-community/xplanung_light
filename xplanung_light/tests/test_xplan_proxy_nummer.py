@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from xplanung_light.helper.xplanung import XPlanung
@@ -73,6 +74,12 @@ class XPlanProxyNummerUeberschreiben(TestCase):
 
     def setUp(self):
         self.client = Client()
+        # Die importierten Testpläne sind standardmäßig privat. Verwende den
+        # in den Fixtures angelegten Gemeinde-Admin direkt, damit der Test
+        # nicht von der konfigurierten Passwort-Hashing-/Auth-Backend-
+        # Konfiguration abhängt.
+        user = get_user_model().objects.get(username='admin_stadt_neustadt')
+        self.client.force_login(user)
 
     # --- Hilfsfunktionen --------------------------------------------------
 

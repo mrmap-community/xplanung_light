@@ -50,82 +50,65 @@ import tempfile
 from urllib.parse import urlsplit
 #from django.utils.timezone import datetime
 
-def get_bplan_attachment(request, pk):
-    # Nur admins der Gebietskörperschaften oder superuser
-    gemeinden = AdministrativeOrganization.objects.filter(bplan__attachments__in=[pk])
-    access_allowed = False
-    # Prüfung, ob Plan public ist, nur dann wird auch der Zugriff auf die Anlagen freigegeben
-    bplan_public = BPlan.objects.filter(attachments__in=[pk], public=True).exists()
+def _is_plan_admin(request, plan):
+    """Return whether the current user may access a private plan resource."""
     if request.user.is_superuser:
-        access_allowed = True
-    else:
-        # Prüfung für Orga-Admins
-        for gemeinde in gemeinden:
-            for user in gemeinde.admin_orga_users.all():
-                if user.user == request.user and user.is_admin:   
-                    # Zugriff wird erteilt                     
-                    access_allowed = True
-                    break
-            if access_allowed:
-                break
-        # Prüfung für anonymous und user, die keine admins sind
-        if not access_allowed:
-            attachment_public = BPlanSpezExterneReferenz.objects.filter(pk=pk, public=True).exists()
-            if bplan_public and attachment_public:
-                access_allowed = True
-    if not access_allowed:
-        return HttpResponse("401 Unauthorized", status=401) 
+        return True
+    if not request.user.is_authenticated:
+        return False
+    return plan.gemeinde.filter(
+        admin_orga_users__user=request.user,
+        admin_orga_users__is_admin=True,
+    ).exists()
+
+
+def get_bplan_attachment(request, pk):
     try:
-        attachment = BPlanSpezExterneReferenz.objects.get(pk=pk)
+        attachment = BPlanSpezExterneReferenz.objects.select_related().get(pk=pk)
     except BPlanSpezExterneReferenz.DoesNotExist:
-        attachment = None
-    if attachment:
-        if os.path.exists(attachment.attachment.file.name):
-            response = FileResponse(attachment.attachment)
-            return response
-        else:
-           return HttpResponse("File not found", status=404) 
-    else:
         return HttpResponse("Object not found", status=404)
 
-def get_fplan_attachment(request, pk):
-    # Nur admins der Gebietskörperschaften oder superuser
-    gemeinden = AdministrativeOrganization.objects.filter(fplan__attachments__in=[pk])
-    access_allowed = False
-    # Prüfung, ob Plan public ist, nur dann wird auch der Zugriff auf die Anlagen freigegeben
-    fplan_public = FPlan.objects.filter(attachments__in=[pk], public=True).exists()
-    if request.user.is_superuser:
-        access_allowed = True
-    else:
-        # Prüfung für Orga-Admins
-        for gemeinde in gemeinden:
-            for user in gemeinde.admin_orga_users.all():
-                if user.user == request.user and user.is_admin:   
-                    # Zugriff wird erteilt                     
-                    access_allowed = True
-                    break
-            if access_allowed:
-                break
-        # Prüfung für anonymous user
-        if not access_allowed:
-            attachment_public = FPlanSpezExterneReferenz.objects.filter(pk=pk, public=True).exists()
-            if fplan_public and attachment_public:
-                access_allowed = True
-    if not access_allowed:
-        return HttpResponse("401 Unauthorized", status=401) 
+    plan = attachment.bplan
+    # Public access requires BOTH a public plan and a public attachment.
+    # Private attachments are available only to plan administrators.
+    if not (plan.public and attachment.public) and not _is_plan_admin(request, plan):
+        if not request.user.is_authenticated:
+            return HttpResponse("Unauthorized", status=401)
+        return HttpResponse("Forbidden", status=403)
+
+    if not attachment.attachment:
+        return HttpResponse("File not found", status=404)
     try:
-        attachment = FPlanSpezExterneReferenz.objects.get(pk=pk)
+        if not os.path.exists(attachment.attachment.path):
+            return HttpResponse("File not found", status=404)
+        return FileResponse(attachment.attachment.open("rb"))
+    except (FileNotFoundError, ValueError):
+        return HttpResponse("File not found", status=404)
+
+
+def get_fplan_attachment(request, pk):
+    try:
+        attachment = FPlanSpezExterneReferenz.objects.select_related().get(pk=pk)
     except FPlanSpezExterneReferenz.DoesNotExist:
-        attachment = None
-    #print(str(attachment))
-    if attachment:
-        if os.path.exists(attachment.attachment.file.name):
-            response = FileResponse(attachment.attachment)
-            return response
-        else:
-           return HttpResponse("File not found", status=404) 
-    else:
         return HttpResponse("Object not found", status=404)
+
+    plan = attachment.fplan
+    # Public access requires BOTH a public plan and a public attachment.
+    # Private attachments are available only to plan administrators.
+    if not (plan.public and attachment.public) and not _is_plan_admin(request, plan):
+        if not request.user.is_authenticated:
+            return HttpResponse("Unauthorized", status=401)
+        return HttpResponse("Forbidden", status=403)
+
+    if not attachment.attachment:
+        return HttpResponse("File not found", status=404)
+    try:
+        if not os.path.exists(attachment.attachment.path):
+            return HttpResponse("File not found", status=404)
+        return FileResponse(attachment.attachment.open("rb"))
+    except (FileNotFoundError, ValueError):
+        return HttpResponse("File not found", status=404)
+
 
 def get_beteiligung_beitrag_attachment(request, priorize_redacted=True, **kwargs):
     """
