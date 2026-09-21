@@ -1,0 +1,12 @@
+[run]
+# Schließt Verzeichnisse bereits bei der Aufzeichnung aus
+omit =
+    .venv/*
+    */migrations/*
+    */tests/*
+    manage.py
+
+[html]
+# Zielordner für den HTML-Bericht
+directory = htmlcov
+

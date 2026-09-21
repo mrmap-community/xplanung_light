@@ -18,6 +18,13 @@ jobs:
         run: |
           cd docs
           make html
+      # NEU: Holt den HTML-Bericht aus dem Test-Workflow ab
+      - name: Download Coverage-Artefakt
+        uses: actions/download-artifact@v4
+        continue-on-error: true # Verhindert, dass die Doku bricht, falls die Tests fehlschlagen/kein Artefakt existiert
+        with:
+          name: django-coverage-report
+          path: docs/build/html/coverage # Legt es direkt im Zielordner ab          
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}

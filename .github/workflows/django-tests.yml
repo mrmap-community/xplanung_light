@@ -23,7 +23,7 @@ jobs:
       run: |
         python -m venv .venv
         source .venv/bin/activate
-        pip install --upgrade pip setuptools wheel
+        pip install --upgrade pip setuptools wheel coverage
         
         # 1. Entfernt mapscript aus den requirements, damit pip nichts zerstört
         sed -i '/mapscript/d' requirements.txt
@@ -40,12 +40,22 @@ jobs:
         SO_FILE=$(find /usr/lib/python3/dist-packages/mapscript -name "_mapscript*.so" | head -n 1)
         cp $SO_FILE .venv/lib/python3.12/site-packages/mapscript/_mapscript.so
 
-    - name: SpatiaLite initialisieren & Tests ausführen
+    - name: SpatiaLite initialisieren & Tests  mit Coverage ausführen
       env:
         SPATIALITE_LIBRARY_PATH: 'mod_spatialite.so'
         DJANGO_ENV_NAME: test
       run: |
         source .venv/bin/activate
         python manage.py shell -c "import django; django.db.connection.cursor().execute('SELECT InitSpatialMetaData(1);')"
-        python manage.py test
+        coverage run manage.py test
+        coverage html
+
+    - name: Coverage-Bericht als temporäres Artefakt hochladen
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: django-coverage-report
+        path: htmlcov/
+        retention-days: 1 # 1 Tag reicht völlig, da der Doku-Workflow es sofort abholt
+       
 
