@@ -169,8 +169,10 @@ def get_beteiligung_beitrag_attachment(request, priorize_redacted=True, **kwargs
         if attachment:
             if os.path.exists(attachment.attachment.file.name):
                 if priorize_redacted == True:
-                    if attachment.redacted_version:
+                    if hasattr(attachment, 'redacted_version'):
                         response = FileResponse(attachment.redacted_version.attachment)
+                    else:
+                        response = FileResponse(attachment.attachment)
                 else:
                     response = FileResponse(attachment.attachment)
                 return response
@@ -760,6 +762,10 @@ def bplan_import(request):
             # TODO check ob user admin einer der Gemeinden den Plans ist!
             if request.user.is_superuser == False:
                 orgas = xplanung.get_orgas()
+                if orgas == []:
+                    messages.error(request, 'Im GML konnte keine Organisation gefunden werden - prüfen sie die Datei oder wenden sie sich an den Administrator!')
+                    form = BPlanImportForm()
+                    return render(request, "xplanung_light/bplan_import.html", {"form": form})
                 user_orga_admin = []
                 for gemeinde in orgas:
                     user_is_admin = False
@@ -767,7 +773,7 @@ def bplan_import(request):
                         if user.user == request.user and user.is_admin:
                             user_is_admin = True 
                     user_orga_admin.append(user_is_admin)
-                if all(user_orga_admin) == False:
+                if all(user_orga_admin) == False or user_orga_admin == []:
                     messages.error(request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
                     form = BPlanImportForm()
                     return render(request, "xplanung_light/bplan_import.html", {"form": form})
@@ -808,6 +814,10 @@ def fplan_import(request):
             # TODO check ob user admin einer der Gemeinden den Plans ist!
             if request.user.is_superuser == False:
                 orgas = xplanung.get_orgas()
+                if orgas == []:
+                    messages.error(request, 'Im GML konnte keine Organisation gefunden werden - prüfen sie die Datei oder wenden sie sich an den Administrator!')
+                    form = FPlanImportForm()
+                    return render(request, "xplanung_light/fplan_import.html", {"form": form})
                 user_orga_admin = []
                 for gemeinde in orgas:
                     user_is_admin = False
@@ -815,7 +825,7 @@ def fplan_import(request):
                         if user.user == request.user and user.is_admin:
                             user_is_admin = True 
                     user_orga_admin.append(user_is_admin)
-                if all(user_orga_admin) == False:
+                if all(user_orga_admin) == False or user_orga_admin == []:
                     messages.error(request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
                     form = FPlanImportForm()
                     return render(request, "xplanung_light/fplan_import.html", {"form": form})

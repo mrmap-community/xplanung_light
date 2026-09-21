@@ -67,6 +67,7 @@ class XPlanung():
         }
         # Auslesen der Gemeinden
         gemeinden = root.findall("gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde", ns)
+        gemeinden += root.findall("gml:featureMember/xplan:FP_Plan/xplan:gemeinde/xplan:XP_Gemeinde", ns)
         orgas = []
         # Problem: Funktioniert nicht für Verbandsgemeinden! - Die dürfen nicht in Liste auftauchen!
         for gemeinde in gemeinden:

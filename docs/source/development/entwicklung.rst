@@ -43,7 +43,7 @@ Testabdeckung
    # Generierung HTML-Variante
    coverage html
 
-Den aktuellen Testbericht finden Sie unter `Code Coverage <./coverage/index.html>`_.
+Den aktuellen Testbericht finden Sie unter `Code Coverage <../coverage/index.html>`_.
 
 *********************
 Django Security Check
