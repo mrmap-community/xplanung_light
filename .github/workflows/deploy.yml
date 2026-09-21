@@ -1,0 +1,66 @@
+name: Deploy static content to Pages
+
+on:
+  workflow_run:
+    workflows: ["Django CI (XPlanung Light)"]
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    
+    # Führt den Job nur aus, wenn die Tests erfolgreich waren UND der Branch "master" heißt
+    if: |
+      (github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch') &&
+      (github.event.workflow_run.head_branch == 'master' || github.event_name == 'workflow_dispatch')
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Sphinx Abhängigkeiten installieren
+        run: |
+          pip install sphinx sphinx_rtd_theme myst_parser
+
+      - name: Sphinx Dokumentation bauen
+        run: |
+          cd docs
+          make html
+
+      - name: Download Coverage-Artefakt
+        uses: actions/download-artifact@v4
+        with:
+          name: django-coverage-report
+          path: docs/build/html/coverage
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs/build/html'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
