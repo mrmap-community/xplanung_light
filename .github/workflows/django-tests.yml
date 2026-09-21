@@ -1,6 +1,11 @@
 name: Django CI (XPlanung Light)
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
 
 jobs:
   test:
