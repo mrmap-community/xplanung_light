@@ -8,19 +8,35 @@ from xplanung_light.models import (
     BPlan,
     BPlanBeteiligung,
     BPlanBeteiligungBeitrag,
+    FPlan,
+    FPlanBeteiligung,
+    FPlanBeteiligungBeitrag,
 )
 
 
-class BeteiligungBeitragWorkflow(TestCase):
+class _BeteiligungBeitragWorkflowMixin:
     """
-    Statuswechsel einer Stellungnahme (approved / withdrawn) inkl. der
-    Berechtigungslogik aus beitrag_activate(), beitrag_withdraw() und
-    beitrag_reactivate().
+    Gemeinsamer Testkörper für Statuswechsel einer Stellungnahme (approved /
+    withdrawn) inkl. der Berechtigungslogik aus beitrag_activate(),
+    beitrag_withdraw() und beitrag_reactivate().
+
+    WICHTIG: Dieses Mixin erbt bewusst NICHT von TestCase, sondern wird von
+    den konkreten Klassen unten (BeteiligungBeitragWorkflow für BPlan,
+    FPlanBeteiligungBeitragWorkflow für FPlan) zusammen mit TestCase geerbt.
+    Würde dieses Mixin selbst von TestCase erben, würde Django es trotz
+    fehlender PLANTYP/PLAN_MODEL-Konfiguration als eigene Testklasse
+    einsammeln und mit einem AttributeError in setUpTestData zum Absturz
+    bringen.
 
     Drei Rollen werden unterschieden:
     * Gemeinde-Admin / Superuser -> darf immer, Redirect auf die Beitragsliste
     * Gast mit generic_id in der Session -> darf, bekommt die Detailseite
     * alle anderen -> Redirect auf die Authentifizierung, Status bleibt unverändert
+
+    Die Views (beitrag_activate/_withdraw/_reactivate/_authenticate) sind für
+    bplan und fplan dieselbe Funktion, die intern anhand von kwargs['plantyp']
+    zwischen BPlanBeteiligungBeitrag und FPlanBeteiligungBeitrag verzweigt -
+    deshalb wird hier dieselbe Testlogik für beide Plantypen durchlaufen.
     """
 
     fixtures = ['user.json',
@@ -30,46 +46,54 @@ class BeteiligungBeitragWorkflow(TestCase):
                 'admin_orga_user.json',
                 ]
 
-    PLAN_PK = 4318
+    # Von den konkreten Unterklassen zu setzen:
+    PLANTYP = None
+    PLAN_MODEL = None
+    BETEILIGUNG_MODEL = None
+    BEITRAG_MODEL = None
+    PLAN_PK = None
+    PLAN_FK_FIELD = None  # 'bplan' bzw. 'fplan' auf dem Beteiligung-Modell
+    BETEILIGUNG_FK_FIELD = None  # 'bplan_beteiligung' bzw. 'fplan_beteiligung'
+
     GAST_EMAIL = 'gast@example.org'
 
     @classmethod
     def setUpTestData(cls):
         cls.gemeinde_admin = User.objects.get(username='admin_stadt_neustadt')
         cls.fremder_user = User.objects.create_user(
-            username='fremder_user', password='nicht-relevant',
+            username='fremder_user_' + cls.PLANTYP, password='nicht-relevant',
         )
-        cls.plan = BPlan.objects.get(pk=cls.PLAN_PK)
+        cls.plan = cls.PLAN_MODEL.objects.get(pk=cls.PLAN_PK)
         heute = datetime.date.today()
-        cls.beteiligung = BPlanBeteiligung.objects.create(
-            bplan=cls.plan,
+        cls.beteiligung = cls.BETEILIGUNG_MODEL.objects.create(
             bekanntmachung_datum=heute - datetime.timedelta(days=14),
             start_datum=heute - datetime.timedelta(days=7),
             end_datum=heute + datetime.timedelta(days=7),
-            typ=BPlanBeteiligung.AUSLEGUNG,
+            typ=cls.BETEILIGUNG_MODEL.AUSLEGUNG,
             allow_online_beitrag=True,
+            **{cls.PLAN_FK_FIELD: cls.plan},
         )
 
     def setUp(self):
         self.client = Client()
         # Für jeden Test ein frischer, noch nicht bestätigter Beitrag
-        self.beitrag = BPlanBeteiligungBeitrag.objects.create(
-            bplan_beteiligung=self.beteiligung,
+        self.beitrag = self.BEITRAG_MODEL.objects.create(
             titel='Einwendung zur Erschließung',
             beschreibung='Die Zufahrt ist aus meiner Sicht zu schmal.',
-            typ=BPlanBeteiligungBeitrag.ONLINE,
+            typ=self.BEITRAG_MODEL.ONLINE,
             name='Erika Mustermann',
             email=self.GAST_EMAIL,
             eingangsdatum=datetime.date.today(),
             approved=False,
             withdrawn=False,
+            **{self.BETEILIGUNG_FK_FIELD: self.beteiligung},
         )
 
     def _url(self, action):
         return reverse(
             'beteiligungbeitrag-' + action,
             kwargs={
-                'plantyp': 'bplan',
+                'plantyp': self.PLANTYP,
                 'planid': self.PLAN_PK,
                 'beteiligungid': self.beteiligung.pk,
                 'generic_id': str(self.beitrag.generic_id),
@@ -77,7 +101,7 @@ class BeteiligungBeitragWorkflow(TestCase):
         )
 
     def _reload(self):
-        return BPlanBeteiligungBeitrag.objects.get(pk=self.beitrag.pk)
+        return self.BEITRAG_MODEL.objects.get(pk=self.beitrag.pk)
 
     def _put_beitrag_in_session(self):
         """Simuliert die erfolgreiche Gast-Authentifizierung per E-Mail."""
@@ -111,7 +135,7 @@ class BeteiligungBeitragWorkflow(TestCase):
         self.assertRedirects(
             response,
             reverse('beteiligungbeitrag-authenticate', kwargs={
-                'plantyp': 'bplan',
+                'plantyp': self.PLANTYP,
                 'planid': self.PLAN_PK,
                 'beteiligungid': self.beteiligung.pk,
                 'generic_id': str(self.beitrag.generic_id),
@@ -135,13 +159,13 @@ class BeteiligungBeitragWorkflow(TestCase):
 
     def test_session_of_other_beitrag_does_not_grant_access(self):
         """Eine fremde generic_id in der Session darf keinen Zugriff öffnen."""
-        fremder_beitrag = BPlanBeteiligungBeitrag.objects.create(
-            bplan_beteiligung=self.beteiligung,
+        fremder_beitrag = self.BEITRAG_MODEL.objects.create(
             titel='Anderer Beitrag',
             beschreibung='Text',
-            typ=BPlanBeteiligungBeitrag.ONLINE,
+            typ=self.BEITRAG_MODEL.ONLINE,
             email='jemand.anderes@example.org',
             eingangsdatum=datetime.date.today(),
+            **{self.BETEILIGUNG_FK_FIELD: self.beteiligung},
         )
         session = self.client.session
         session['beitrag_generic_id'] = str(fremder_beitrag.generic_id)
@@ -160,3 +184,27 @@ class BeteiligungBeitragWorkflow(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn('authenticate', response.url)
         self.assertFalse(self._reload().approved)
+
+
+class BeteiligungBeitragWorkflow(_BeteiligungBeitragWorkflowMixin, TestCase):
+    """BPlan-Variante - unveränderte Werte gegenüber der ursprünglichen Fassung."""
+    PLANTYP = 'bplan'
+    PLAN_MODEL = BPlan
+    BETEILIGUNG_MODEL = BPlanBeteiligung
+    BEITRAG_MODEL = BPlanBeteiligungBeitrag
+    PLAN_PK = 4318
+    PLAN_FK_FIELD = 'bplan'
+    BETEILIGUNG_FK_FIELD = 'bplan_beteiligung'
+
+
+class FPlanBeteiligungBeitragWorkflow(_BeteiligungBeitragWorkflowMixin, TestCase):
+    """FPlan-Variante - prüft dieselbe Logik für den Flächennutzungsplan-Zweig
+    der plantyp-Verzweigung in beitrag_activate()/_withdraw()/_reactivate().
+    """
+    PLANTYP = 'fplan'
+    PLAN_MODEL = FPlan
+    BETEILIGUNG_MODEL = FPlanBeteiligung
+    BEITRAG_MODEL = FPlanBeteiligungBeitrag
+    PLAN_PK = 631
+    PLAN_FK_FIELD = 'fplan'
+    BETEILIGUNG_FK_FIELD = 'fplan_beteiligung'

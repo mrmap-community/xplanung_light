@@ -5,12 +5,25 @@ from django.urls import reverse
 
 from captcha.models import CaptchaStore
 
-from xplanung_light.models import BPlan, BPlanBeteiligung, BPlanBeteiligungBeitrag
+from xplanung_light.models import (
+    BPlan,
+    BPlanBeteiligung,
+    BPlanBeteiligungBeitrag,
+    FPlan,
+    FPlanBeteiligung,
+    FPlanBeteiligungBeitrag,
+)
 
 
-class BeitragAuthenticate(TestCase):
+class _BeitragAuthenticateMixin:
     """
     Gast-Authentifizierung über beitrag_authenticate().
+
+    WICHTIG: Dieses Mixin erbt bewusst NICHT von TestCase - siehe die
+    ausführliche Begründung in test_beteiligung_workflow.py. Würde es selbst
+    von TestCase erben, würde Django es trotz fehlender PLANTYP/PLAN_MODEL-
+    Konfiguration als eigene Testklasse einsammeln und in setUpTestData
+    abstürzen lassen.
 
     Ein Gast, der seine Stellungnahme später bearbeiten will (aktivieren,
     zurückziehen), muss sich über die bei der Einreichung angegebene
@@ -37,38 +50,46 @@ class BeitragAuthenticate(TestCase):
                 'admin_orga_user.json',
                 ]
 
-    PLAN_PK = 4318
+    # Von den konkreten Unterklassen zu setzen:
+    PLANTYP = None
+    PLAN_MODEL = None
+    BETEILIGUNG_MODEL = None
+    BEITRAG_MODEL = None
+    PLAN_PK = None
+    PLAN_FK_FIELD = None
+    BETEILIGUNG_FK_FIELD = None
+
     RICHTIGE_EMAIL = 'gast@example.org'
     FALSCHE_EMAIL = 'jemand.anderes@example.org'
 
     @classmethod
     def setUpTestData(cls):
-        cls.plan = BPlan.objects.get(pk=cls.PLAN_PK)
+        cls.plan = cls.PLAN_MODEL.objects.get(pk=cls.PLAN_PK)
         heute = datetime.date.today()
-        cls.beteiligung = BPlanBeteiligung.objects.create(
-            bplan=cls.plan,
+        cls.beteiligung = cls.BETEILIGUNG_MODEL.objects.create(
             bekanntmachung_datum=heute - datetime.timedelta(days=14),
             start_datum=heute - datetime.timedelta(days=7),
             end_datum=heute + datetime.timedelta(days=7),
-            typ=BPlanBeteiligung.AUSLEGUNG,
+            typ=cls.BETEILIGUNG_MODEL.AUSLEGUNG,
             allow_online_beitrag=True,
+            **{cls.PLAN_FK_FIELD: cls.plan},
         )
 
     def setUp(self):
         self.client = Client()
-        self.beitrag = BPlanBeteiligungBeitrag.objects.create(
-            bplan_beteiligung=self.beteiligung,
+        self.beitrag = self.BEITRAG_MODEL.objects.create(
             titel='Einwendung zur Erschließung',
             beschreibung='Die Zufahrt ist aus meiner Sicht zu schmal.',
-            typ=BPlanBeteiligungBeitrag.ONLINE,
+            typ=self.BEITRAG_MODEL.ONLINE,
             name='Erika Mustermann',
             email=self.RICHTIGE_EMAIL,
             eingangsdatum=datetime.date.today(),
+            **{self.BETEILIGUNG_FK_FIELD: self.beteiligung},
         )
 
     def _url(self):
         return reverse('beteiligungbeitrag-authenticate', kwargs={
-            'plantyp': 'bplan',
+            'plantyp': self.PLANTYP,
             'planid': self.PLAN_PK,
             'beteiligungid': self.beteiligung.pk,
             'generic_id': str(self.beitrag.generic_id),
@@ -98,7 +119,7 @@ class BeitragAuthenticate(TestCase):
         self.assertRedirects(
             response,
             reverse('gastbeteiligungbeitrag-detail', kwargs={
-                'plantyp': 'bplan',
+                'plantyp': self.PLANTYP,
                 'planid': self.PLAN_PK,
                 'beteiligungid': self.beteiligung.pk,
                 'generic_id': str(self.beitrag.generic_id),
@@ -111,7 +132,7 @@ class BeitragAuthenticate(TestCase):
         self._post(self.RICHTIGE_EMAIL)
         detail_response = self.client.get(
             reverse('gastbeteiligungbeitrag-detail', kwargs={
-                'plantyp': 'bplan',
+                'plantyp': self.PLANTYP,
                 'planid': self.PLAN_PK,
                 'beteiligungid': self.beteiligung.pk,
                 'generic_id': str(self.beitrag.generic_id),
@@ -140,14 +161,14 @@ class BeitragAuthenticate(TestCase):
         """
         self._post(self.FALSCHE_EMAIL)
         response = self.client.get(reverse('beteiligungbeitrag-activate', kwargs={
-            'plantyp': 'bplan',
+            'plantyp': self.PLANTYP,
             'planid': self.PLAN_PK,
             'beteiligungid': self.beteiligung.pk,
             'generic_id': str(self.beitrag.generic_id),
         }))
         self.assertEqual(response.status_code, 302)
         self.assertIn('authenticate', response.url)
-        self.assertFalse(BPlanBeteiligungBeitrag.objects.get(pk=self.beitrag.pk).approved)
+        self.assertFalse(self.BEITRAG_MODEL.objects.get(pk=self.beitrag.pk).approved)
 
     def test_email_ohne_gross_klein_schreibung_wird_nicht_gleichgesetzt(self):
         """
@@ -158,3 +179,27 @@ class BeitragAuthenticate(TestCase):
         response = self._post(self.RICHTIGE_EMAIL.upper())
         self.assertNotIn('beitrag_generic_id', self.client.session)
         self.assertEqual(response.status_code, 200)
+
+
+class BeitragAuthenticate(_BeitragAuthenticateMixin, TestCase):
+    """BPlan-Variante - unveränderte Werte gegenüber der ursprünglichen Fassung."""
+    PLANTYP = 'bplan'
+    PLAN_MODEL = BPlan
+    BETEILIGUNG_MODEL = BPlanBeteiligung
+    BEITRAG_MODEL = BPlanBeteiligungBeitrag
+    PLAN_PK = 4318
+    PLAN_FK_FIELD = 'bplan'
+    BETEILIGUNG_FK_FIELD = 'bplan_beteiligung'
+
+
+class FPlanBeitragAuthenticate(_BeitragAuthenticateMixin, TestCase):
+    """FPlan-Variante - prüft dieselbe Gast-Authentifizierung für den
+    Flächennutzungsplan-Zweig von beitrag_authenticate().
+    """
+    PLANTYP = 'fplan'
+    PLAN_MODEL = FPlan
+    BETEILIGUNG_MODEL = FPlanBeteiligung
+    BEITRAG_MODEL = FPlanBeteiligungBeitrag
+    PLAN_PK = 631
+    PLAN_FK_FIELD = 'fplan'
+    BETEILIGUNG_FK_FIELD = 'fplan_beteiligung'

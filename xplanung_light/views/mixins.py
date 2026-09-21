@@ -62,6 +62,8 @@ class GemeindeAdminRequiredMixin:
     """
 
     def check_gemeinde_admin(self, plan):
+        if not self.request.user.is_authenticated:
+            raise PermissionDenied("Nutzer ist nicht angemeldet!")
         if self.request.user.is_superuser:
             return
         is_admin = plan.gemeinde.filter(
@@ -73,16 +75,14 @@ class GemeindeAdminRequiredMixin:
                 "Nutzer hat keine Berechtigungen auf die angefragten Objekte!"
             )
 
-
-#class GemeindenAllAdminRequiredMixin:
-    """
-    Prüft, ob request.user Superuser ist oder Admin aller Gemeinden des
-    übergebenen Plans. Wirft PermissionDenied statt False/None zurückzugeben,
-    damit die aufrufende View sich nicht mehr um den Kontrollfluss kümmern muss.
-    """
-
     def check_gemeinde_all_admin(self, plan):
-        """User muss Admin aller dem Plan zugewiesenen Gemeinden sein."""
+        """
+        Prüft, ob request.user Superuser ist oder Admin aller Gemeinden des
+        übergebenen Plans. Wirft PermissionDenied statt False/None zurückzugeben,
+        damit die aufrufende View sich nicht mehr um den Kontrollfluss kümmern muss.
+        """
+        if not self.request.user.is_authenticated:
+            raise PermissionDenied("Nutzer ist nicht angemeldet!")
         if self.request.user.is_superuser:
             return
         gemeinden = plan.gemeinde.all()

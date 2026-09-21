@@ -29,6 +29,8 @@ class BeteiligungBeitragAnhangRedactedCreateView(
         # Muss aber VOR super().dispatch() gesetzt werden, weil get_form()/
         # get_context_data() während dieses Aufrufs self.anhang brauchen.
         self.model = self.redacted_model
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)  # LoginRequiredMixin übernimmt
         self.anhang = get_object_or_404(self.anhang_model, generic_id=kwargs['anhang_generic_id'])
         self.check_gemeinde_admin(self.anhang.beitrag.beteiligung.plan)
         return super().dispatch(request, *args, **kwargs)

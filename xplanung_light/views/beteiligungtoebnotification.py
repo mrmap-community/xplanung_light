@@ -27,6 +27,8 @@ from django.db import transaction
 from xplanung_light.views.user import ExtentUserOrgaInfo
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.utils import timezone
+from django.contrib.auth.mixins import LoginRequiredMixin
+from xplanung_light.views.mixins import GemeindeAdminRequiredMixin
 
 class BeteiligungToebNotificationListView(ExtentUserOrgaInfo, SingleTableView):
     """
@@ -108,7 +110,7 @@ class BeteiligungToebNotificationListView(ExtentUserOrgaInfo, SingleTableView):
         return context
 
     
-class BeteiligungToebNotificationCreateView(ExtentUserOrgaInfo, CreateView):
+class BeteiligungToebNotificationCreateView(LoginRequiredMixin, GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, CreateView):
     """
     View für Abbildung des kombinierten Fomulars über django-formsets EditCollectionView - das Formular ist nur für die Öffentlichkeit gedacht
     https://django-formset.fly.dev/model-collections/
@@ -126,6 +128,17 @@ class BeteiligungToebNotificationCreateView(ExtentUserOrgaInfo, CreateView):
 
     def dispatch(self, request, *args, **kwargs):
         # Hier sind die Parameter aus der re_path verfügbar:
+        # WICHTIG: dieser Block liest nur URL-Kwargs und setzt Attribute -
+        # er macht KEINEN DB-Zugriff und ruft KEINE Berechtigungsprüfung
+        # auf. Genau das ist Voraussetzung dafür, dass er gefahrlos vor
+        # super().dispatch() laufen darf: LoginRequiredMixin greift erst in
+        # super().dispatch(), und GemeindeAdminRequiredMixin.check_gemeinde_admin()
+        # wird bewusst NICHT hier, sondern erst in get_form_kwargs() aufgerufen -
+        # also garantiert nach dem Login-Check. (Siehe die Anmerkungen zu
+        # BeteiligungBeitragAnhangRedactedCreateView.dispatch() für ein
+        # Beispiel, wie diese Reihenfolge schiefgehen kann, wenn eine
+        # Berechtigungsprüfung direkt in dispatch() vor super().dispatch()
+        # steht.)
         self.plantyp = kwargs.get('plantyp')
         if self.kwargs.get('plantyp') == 'bplan':
             self.model = BPlanBeteiligungToebNotification
@@ -153,6 +166,10 @@ class BeteiligungToebNotificationCreateView(ExtentUserOrgaInfo, CreateView):
     #    return qs
 
     def get_form_kwargs(self):
+        # get_form_kwargs() wird von Django sowohl für GET (Formular
+        # anzeigen) als auch POST (Formular verarbeiten) aufgerufen - die
+        # Berechtigungsprüfung hier deckt also beide Fälle ab, nicht nur
+        # den POST.
         kwargs = super().get_form_kwargs()
         beteiligungmodel = (
             BPlanBeteiligung if self.plantyp == 'bplan' else FPlanBeteiligung
@@ -161,6 +178,8 @@ class BeteiligungToebNotificationCreateView(ExtentUserOrgaInfo, CreateView):
             beteiligungmodel,
             pk=self.beteiligungid
         )
+        plan = get_object_or_404(self.planmodel, pk=self.planid)
+        self.check_gemeinde_admin(plan)
         if not (kwargs['beteiligung'].bekanntmachung_datum <= timezone.now().date() and kwargs['beteiligung'].end_datum >= timezone.now().date()):
             raise PermissionDenied("Benachrichtigungen außerhalb des Zeitrahmens sind nicht möglich!")
         return kwargs
@@ -241,5 +260,3 @@ class BeteiligungToebNotificationCreateView(ExtentUserOrgaInfo, CreateView):
         weitergeleitet.
         """
         return reverse_lazy("beteiligungnotification-list", kwargs={'plantyp': self.plantyp, 'planid': self.planid, 'beteiligungid': self.beteiligungid})
-    
-
