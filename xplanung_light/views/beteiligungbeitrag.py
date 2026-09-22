@@ -291,7 +291,7 @@ class BeteiligungBeitragCreateView(ExtentUserOrgaInfo, EditCollectionView):
         self.planid = kwargs.get('planid')
         self.beteiligung_pk = kwargs.get('pk')
         return super().dispatch(request, *args, **kwargs)
-
+        
     def get_initial(self):
         """
         Überschreiben der Initialisierung um einen Zusatzparameter abzufangen, der erlaubt mitzubekommen, über welche Gebietskörperschaft das 
@@ -353,6 +353,7 @@ class BeteiligungBeitragCreateView(ExtentUserOrgaInfo, EditCollectionView):
     
     def form_collection_valid(self, form_collection):
         beitrag_form = form_collection.valid_holders.get('beitrag')
+        
         # Überschreiben des Eingangsdatums - zur Sicherheit - wird auch als Hidden Field geschickt
         if beitrag_form:
             beitrag_form.instance.eingangsdatum = date.today()

@@ -1,0 +1,178 @@
+import json
+from django.test import TestCase
+from django.urls import reverse
+from django.contrib.auth import get_user_model
+from django.contrib.gis.geos import GEOSGeometry
+from django.utils import timezone
+from datetime import timedelta, date
+from xplanung_light.models import (
+    BPlan, 
+    FPlan, 
+    BPlanBeteiligung, 
+    FPlanBeteiligung, 
+    BPlanBeteiligungBeitrag, 
+    FPlanBeteiligungBeitrag,
+    AdministrativeOrganization,
+    AdminOrgaUser,
+    ToebUnit
+)
+
+User = get_user_model()
+
+class BeteiligungBeitragToebCreateViewTests(TestCase):
+
+    def setUp(self):
+        # 1. Dummy-Polygon & Fristen
+        dummy_polygon = GEOSGeometry('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))')
+        heute = timezone.now().date()
+        morgen = heute + timedelta(days=1)
+        in_einem_monat = heute + timedelta(days=30)
+
+        # 2. Organisationen (Kommune und eine separate Behörde)
+        self.kommune = AdministrativeOrganization.objects.create(name="Stadt Musterstadt")
+        self.behoerde = AdministrativeOrganization.objects.create(name="Kreis-Umweltamt")
+
+        # 3. User anlegen (Ein gültiger TÖB-Reporter und ein unbefugter User)
+        self.toeb_reporter_user = User.objects.create_user(
+            username="reporter_conni", 
+            email="conni@behoerde.de", 
+            password="password123"
+        )
+        self.stranger_user = User.objects.create_user(username="stranger_joe", password="password123")
+
+        # 4. Rollen verknüpfen: Conni gehört zur Behörde und ist TÖB-Reporter
+        AdminOrgaUser.objects.create(
+            organization=self.behoerde,
+            user=self.toeb_reporter_user,
+            is_toeb_reporter=True
+        )
+
+        # 5. TÖB-Einheit (Fachstelle) der Behörde zuweisen
+        from xplanung_light.forms import ToebUnitCreateForm
+        theme_choices = ToebUnitCreateForm().fields['theme'].choices
+        valid_theme = theme_choices if theme_choices else ''
+        
+        self.toeb_unit = ToebUnit.objects.create(
+            organization=self.behoerde,
+            name="Fachbereich Wasserrecht",
+            theme=valid_theme,
+            public=True
+        )
+
+        # 6. BPlan & Beteiligungsverfahren aufsetzen
+        self.bplan = BPlan.objects.create(name="BPlan Industriegebiet", geltungsbereich=dummy_polygon)
+        self.bplan.gemeinde.add(self.kommune)
+        self.bplan_beteiligung = BPlanBeteiligung.objects.create(
+            bplan=self.bplan, bekanntmachung_datum=heute, start_datum=morgen, end_datum=in_einem_monat
+        )
+
+        # 7. FPlan & Beteiligungsverfahren aufsetzen
+        self.fplan = FPlan.objects.create(name="FPlan Windkraft", geltungsbereich=dummy_polygon)
+        self.fplan.gemeinde.add(self.kommune)
+        self.fplan_beteiligung = FPlanBeteiligung.objects.create(
+            fplan=self.fplan, bekanntmachung_datum=heute, start_datum=morgen, end_datum=in_einem_monat
+        )
+
+    def test_create_toeb_beitrag_for_bplan_success(self):
+        """Ein berechtigter TÖB-Reporter kann eine Stellungnahme zum BPlan abgeben."""
+        self.client.login(username="reporter_conni", password="password123")
+        
+        url = reverse("beteiligungbeitrag-toeb-create", kwargs={
+            "plantyp": "bplan",
+            "planid": self.bplan.id,
+            "beteiligungid": self.bplan_beteiligung.id,
+            "toeb_id": self.toeb_unit.id
+        })
+
+        # KORREKTUR: Die TÖB-Kollektion ist flach verschachtelt. 
+        # Es gibt keine Root-Ebene 'bplan_beteiligung', die Felder liegen direkt im Formular-Key.
+        formset_dict = {
+            "id": "",  # Entspricht dem versteckten ID-Feld der Collection auf Root-Ebene
+            "bplan_beteiligung": self.bplan_beteiligung.id,
+            "bplan_beteiligung_id": self.bplan_beteiligung.id,
+            "beitrag": {
+                "titel": "Stellungnahme zum Grundwasserschutz",
+                "beschreibung": "<p>Aus Sicht der Wasserbehörde bestehen Bedenken wegen Altlasten.</p>",
+                "email": "conni@behoerde.de",
+                "bplan_beteiligung": self.bplan_beteiligung.id
+            },
+            "attachments": []
+        }
+
+        response = self.client.post(
+            url,
+            data=json.dumps(formset_dict),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json"
+        )
+
+        if response.status_code == 422 and hasattr(response, 'content'):
+            print("\n--- DETILLIERTER TÖB-FORMSET-ERROR (BPLAN) ---")
+            print(response.content.decode())
+
+        self.assertEqual(response.status_code, 200)
+
+        # DB-Verifikation
+        neuer_beitrag = BPlanBeteiligungBeitrag.objects.get(titel="Stellungnahme zum Grundwasserschutz")
+        self.assertEqual(neuer_beitrag.toeb, self.toeb_unit)
+        self.assertEqual(neuer_beitrag.email, "conni@behoerde.de")
+        self.assertTrue(neuer_beitrag.approved)
+
+    def test_create_toeb_beitrag_for_fplan_success(self):
+        """Ein berechtigter TÖB-Reporter kann eine Stellungnahme zum FPlan abgeben."""
+        self.client.login(username="reporter_conni", password="password123")
+        
+        url = reverse("beteiligungbeitrag-toeb-create", kwargs={
+            "plantyp": "fplan",
+            "planid": self.fplan.id,
+            "beteiligungid": self.fplan_beteiligung.id,
+            "toeb_id": self.toeb_unit.id
+        })
+
+        # KORREKTUR: Analog flach für FPlan-Kollektion
+        formset_dict = {
+            "id": "",
+            "fplan_beteiligung": self.fplan_beteiligung.id,
+            "fplan_beteiligung_id": self.fplan_beteiligung.id,
+            "beitrag": {
+                "titel": "Stellungnahme FPlan Windkraft",
+                "beschreibung": "<p>Einhaltung der Abstände zu Wasserschutzzonen beachten.</p>",
+                "email": "conni@behoerde.de",
+                "fplan_beteiligung": self.fplan_beteiligung.id
+            },
+            "attachments": []
+        }
+
+        response = self.client.post(
+            url,
+            data=json.dumps(formset_dict),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json"
+        )
+
+        if response.status_code == 422 and hasattr(response, 'content'):
+            print("\n--- DETILLIERTER TÖB-FORMSET-ERROR (FPLAN) ---")
+            print(response.content.decode())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            FPlanBeteiligungBeitrag.objects.filter(titel="Stellungnahme FPlan Windkraft").exists()
+        )
+
+    def test_create_toeb_beitrag_denied_for_unauthorized_user(self):
+        """Ein angemeldeter User ohne korrekte TÖB-Reporter-Rolle wird mit HTTP 403 abgewiesen."""
+        self.client.login(username="stranger_joe", password="password123")
+        
+        url = reverse("beteiligungbeitrag-toeb-create", kwargs={
+            "plantyp": "bplan",
+            "planid": self.bplan.id,
+            "beteiligungid": self.bplan_beteiligung.id,
+            "toeb_id": self.toeb_unit.id
+        })
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+

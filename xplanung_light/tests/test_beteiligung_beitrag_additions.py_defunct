@@ -1,0 +1,198 @@
+import json
+from django.test import TestCase, override_settings
+from django.urls import reverse
+from django.contrib.gis.geos import GEOSGeometry
+from django.utils import timezone
+from datetime import timedelta
+from xplanung_light.models import (
+    BPlan, 
+    FPlan, 
+    BPlanBeteiligung, 
+    FPlanBeteiligung, 
+    BPlanBeteiligungBeitrag, 
+    FPlanBeteiligungBeitrag
+)
+
+@override_settings(CAPTCHA_TEST_MODE=True)
+class BeteiligungBeitragCreateViewTests(TestCase):
+
+    def setUp(self):
+        # 1. Dummy-Polygon für GeoDjango NOT NULL Constraints
+        dummy_polygon = GEOSGeometry('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))')
+        
+        # 2. Datumsangaben für die laut XPlanBeteiligung zwingend erforderlichen Felder
+        heute = timezone.now().date()
+        morgen = heute + timedelta(days=1)
+        in_einem_monat = heute + timedelta(days=30)
+
+        # 3. BPlan erstellen
+        self.bplan = BPlan.objects.create(
+            name="BPlan Testgebiet Nord",
+            geltungsbereich=dummy_polygon
+        )
+        
+        # 4. BPlanBeteiligung erstellen
+        self.beteiligung_bplan = BPlanBeteiligung.objects.create(
+            bplan=self.bplan,
+            bekanntmachung_datum=heute,
+            start_datum=morgen,
+            end_datum=in_einem_monat
+        )
+        
+        # 5. FPlan erstellen
+        self.fplan = FPlan.objects.create(
+            name="FPlan Gesamtstadt",
+            geltungsbereich=dummy_polygon
+        )
+        
+        # 6. FPlanBeteiligung erstellen
+        self.fplan_beteiligung = FPlanBeteiligung.objects.create(
+            fplan=self.fplan,
+            bekanntmachung_datum=heute,
+            start_datum=morgen,
+            end_datum=in_einem_monat
+        )
+
+    def test_create_beitrag_for_bplan_with_captcha_success(self):
+        """Prüft das erfolgreiche Absenden eines Beitrags für einen BPlan über django-formset."""
+        url = reverse("beteiligungbeitrag-create", kwargs={
+            "plantyp": "bplan",
+            "planid": self.bplan.id,
+            "pk": self.beteiligung_bplan.id
+        })
+        
+        # Das native JSON-Format, das django-formset Collections auf Root-Ebene erwarten
+        formset_dict = {
+            "bplan_beteiligung": {
+                "id": self.beteiligung_bplan.id
+            },
+            "beitrag": [
+                {
+                    "beitrag": {
+                        "titel": "Einwand zum Lärmschutz im BPlan",
+                        "beschreibung": "<p>Es fehlen Schallschutzwände an der Bahnlinie.</p>",
+                        "name": "Max Mustermann",
+                        "email": "max@example.com",
+                        "typ": 1000,
+                        "eingangsdatum": str(timezone.now().date())
+                    },
+                    "attachments": []
+                }
+            ],
+            "captcha": {
+                "consent": True,
+                "captcha_0": "passed_challenge",
+                "captcha_1": "PASSED"
+            }
+        }
+        
+        # KORREKTUR: Daten werden als reiner JSON-String übergeben, um request.body direkt zu füllen
+        response = self.client.post(
+            url, 
+            data=json.dumps(formset_dict),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json"
+        )
+        
+        if response.status_code == 422 and hasattr(response, 'content'):
+            print("\n--- DETILLIERTER FORMSET-ERROR (BPLAN) ---")
+            print(response.content.decode())
+            
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            BPlanBeteiligungBeitrag.objects.filter(titel="Einwand zum Lärmschutz im BPlan").exists()
+        )
+
+    def test_create_beitrag_for_fplan_with_captcha_success(self):
+        """Erwischt den ungetesteten fplan-Zweig in der View-Logik."""
+        url = reverse("beteiligungbeitrag-create", kwargs={
+            "plantyp": "fplan",
+            "planid": self.fplan.id,
+            "pk": self.fplan_beteiligung.id
+        })
+        
+        formset_dict = {
+            "fplan_beteiligung": {
+                "id": self.fplan_beteiligung.id
+            },
+            "beitrag": [
+                {
+                    "beitrag": {
+                        "titel": "Einwand zur Grünfläche im FPlan",
+                        "beschreibung": "<p>Die Frischluftschneise sollte geschützt werden.</p>",
+                        "name": "Max Mustermann",
+                        "email": "max@example.com",
+                        "typ": 1000,
+                        "eingangsdatum": str(timezone.now().date())
+                    },
+                    "attachments": []
+                }
+            ],
+            "captcha": {
+                "consent": True,
+                "captcha_0": "passed_challenge",
+                "captcha_1": "PASSED"
+            }
+        }
+        
+        response = self.client.post(
+            url, 
+            data=json.dumps(formset_dict),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json"
+        )
+        
+        if response.status_code == 422 and hasattr(response, 'content'):
+            print("\n--- DETILLIERTER FORMSET-ERROR (FPLAN) ---")
+            print(response.content.decode())
+            
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            FPlanBeteiligungBeitrag.objects.filter(titel="Einwand zur Grünfläche im FPlan").exists()
+        )
+
+    def test_create_beitrag_fails_with_invalid_captcha(self):
+        """Stellt sicher, dass die Formularvalidierung fehlschlägt, wenn das Captcha falsch ist."""
+        url = reverse("beteiligungbeitrag-create", kwargs={
+            "plantyp": "bplan",
+            "planid": self.bplan.id,
+            "pk": self.beteiligung_bplan.id
+        })
+        
+        formset_dict = {
+            "bplan_beteiligung": {
+                "id": self.beteiligung_bplan.id
+            },
+            "beitrag": [
+                {
+                    "beitrag": {
+                        "titel": "Spam Versuch",
+                        "beschreibung": "Automatisierter Spam.",
+                        "name": "Spammer",
+                        "email": "spam@example.com",
+                        "typ": 1000,
+                        "eingangsdatum": str(timezone.now().date())
+                    },
+                    "attachments": []
+                }
+            ],
+            "captcha": {
+                "consent": True,
+                "captcha_0": "bad_challenge",
+                "captcha_1": "FALSCHE_EINGABE"
+            }
+        }
+        
+        response = self.client.post(
+            url, 
+            data=json.dumps(formset_dict),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json"
+        )
+        self.assertEqual(response.status_code, 422)
+
+
+
