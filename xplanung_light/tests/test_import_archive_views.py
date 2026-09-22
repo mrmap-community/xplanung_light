@@ -20,8 +20,8 @@ class XPlanImportArchiveViewTests(TestCase):
         # 2. Superuser für den administrativen Upload deklarieren
         self.admin_user = User.objects.create_superuser(username="archive_admin", password="password123")
 
-        # KORREKTUR: Namespace-URI und AGS-Tag präzise geschlossen
-        self.gml_content = (
+        # KORREKTUR: XML-Wurzel und Tags syntaktisch absolut präzise geschlossen
+        self.valid_gml_content = (
             b'<?xml version="1.0" encoding="UTF-8"?>'
             b'<xplan:XPlanAuszug xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:xsi="http://w3.org" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://gdi-de.org" gml:id="GML_4f156414-9dff-404f-bb29-c053df45b384">'
             b'  <gml:boundedBy><gml:Envelope srsName="EPSG:25832"><gml:lowerCorner>567015.8040 5937951.7580</gml:lowerCorner><gml:upperCorner>567582.8240 5938562.2710</gml:upperCorner></gml:Envelope></gml:boundedBy>'
@@ -43,12 +43,12 @@ class XPlanImportArchiveViewTests(TestCase):
         # 4. In-Memory-ZIP-Archiv für BPlan erzeugen
         self.bplan_zip_buffer = io.BytesIO()
         with zipfile.ZipFile(self.bplan_zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            zip_file.writestr("plan.gml", self.gml_content)
+            zip_file.writestr("plan.gml", self.valid_gml_content)
         self.bplan_zip_buffer.seek(0)
 
         # 5. In-Memory-ZIP-Archiv für FPlan erzeugen
         self.fplan_zip_buffer = io.BytesIO()
-        fplan_content = self.gml_content.replace(b'xplan:BP_Plan', b'xplan:FP_Plan')
+        fplan_content = self.valid_gml_content.replace(b'xplan:BP_Plan', b'xplan:FP_Plan')
         with zipfile.ZipFile(self.fplan_zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             zip_file.writestr("plan.gml", fplan_content)
         self.fplan_zip_buffer.seek(0)
