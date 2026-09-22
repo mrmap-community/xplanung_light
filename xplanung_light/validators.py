@@ -270,7 +270,7 @@ def bplan_content_validator(xplan_file):
         if xplan_file.content_type not in ('application/octet-stream', 'application/gml', 'text/xml', 'text/plain', 'application/gml+xml'):
             validation_error_messages.append("Es handelt sich nicht um eine GML-Datei!")
             raise forms.ValidationError(validation_error_messages)
-        size = xplan_file
+        size = xplan_file.size
     if size > limits["max_gml_size"]:
         raise forms.ValidationError(
             "Die GML-Datei überschreitet die maximale Größe (> " + str(limits["max_gml_size"] / 1_000_000) + "MB)."
