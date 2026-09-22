@@ -18,19 +18,29 @@ class XPlanImportViewTests(TestCase):
         # 2. Superuser anlegen
         self.admin_user = User.objects.create_superuser(username="import_admin", password="password123")
 
-        # KORREKTUR: Wurzel-Tag exakt nach deiner bereitgestellten Spezifikation deklariert
+        # KORREKTUR: Verwendung des mathematisch perfekten Quadrats (schließt absolut sauber).
+        # Dadurch wird verhindert, dass das echte Importskript im CI-Runner wegen einer leeren GIS-Fläche abstürzt!
+        geometrie_quadrat = (
+            b'<gml:Polygon srsName="EPSG:25832" gml:id="GML_geltungsbereich">'
+            b'  <gml:exterior>'
+            b'    <gml:LinearRing>'
+            b'      <gml:posList>430000.000 5470000.000 430200.000 5470000.000 430200.000 5470200.000 430000.000 5470200.000 430000.000 5470000.000</gml:posList>'
+            b'    </gml:LinearRing>'
+            b'  </gml:exterior>'
+            b'</gml:Polygon>'
+        )
+
+        # Vollständiger valider XPlanung 6.0 XML-String mit sauberen Namespaces
         self.valid_gml_content = (
             b'<?xml version="1.0" encoding="UTF-8"?>'
-            b'<xplan:XPlanAuszug xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.xplanung.de/xplangml/6/0 http://repository.gdi-de.org/schemas/de.xleitstelle.xplanung/6.0/XPlanung-Operationen.xsd" gml:id="GML_4f156414-9dff-404f-bb29-c053df45b384">'
+            b'<xplan:XPlanAuszug xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xplan="http://www.xplanung.de/xplangml/6/0" xmlns:xsi="http://w3.org" xsi:schemaLocation="http://xplanung.de http://gdi-de.org" gml:id="GML_4f156414-9dff-404f-bb29-c053df45b384">'
             b'  <gml:boundedBy><gml:Envelope srsName="EPSG:25832"><gml:lowerCorner>567015.8040 5937951.7580</gml:lowerCorner><gml:upperCorner>567582.8240 5938562.2710</gml:upperCorner></gml:Envelope></gml:boundedBy>'
             b'  <gml:featureMember>'
-            b'    <xplan:BP_Plan gml:id="GML_5b2f5374-fbe6-4ffd-be95-06a257dc5c91">'
+            b'    <xplan:BP_Plan gml:id="GML_testplan">'
             b'      <gml:boundedBy><gml:Envelope srsName="EPSG:25832"><gml:lowerCorner>436104.85390563804 5463436.092545369</gml:lowerCorner><gml:upperCorner>436570.32736793294 5463774.156689</gml:upperCorner></gml:Envelope></gml:boundedBy>'
             b'      <xplan:name>Andergasse - Kaesgasse</xplan:name>'
             b'      <xplan:nummer>156</xplan:nummer><xplan:erstellungsMassstab>1000</xplan:erstellungsMassstab>'
-            b'      <xplan:raeumlicherGeltungsbereich>'
-            b'        <gml:MultiSurface srsName="EPSG:25832" gml:id="GML_1"><gml:surfaceMember><gml:Polygon gml:id="GML_2"><gml:exterior><gml:LinearRing><gml:posList srsDimension="2">436104.85390564 5463751.69231124 436124.64358817 5463681.09740405 436104.85390564 5463751.69231124</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon></gml:surfaceMember></gml:MultiSurface>'
-            b'      </xplan:raeumlicherGeltungsbereich>'
+            b'      <xplan:raeumlicherGeltungsbereich>' + geometrie_quadrat + b'</xplan:raeumlicherGeltungsbereich>'
             b'      <xplan:gemeinde><xplan:XP_Gemeinde><xplan:ags>07316000</xplan:ags><xplan:gemeindeName>Neustadt an der Weinstra\xc3\x9fe, kreisfreie Stadt</xplan:gemeindeName></xplan:XP_Gemeinde></xplan:gemeinde>'
             b'      <xplan:planArt>10000</xplan:planArt><xplan:rechtsstand>5000</xplan:rechtsstand>'
             b'    </xplan:BP_Plan>'
