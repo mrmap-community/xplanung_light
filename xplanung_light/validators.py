@@ -11,7 +11,7 @@ from zipfile import ZipFile
 import re
 from django.conf import settings
 from django.core.exceptions import ValidationError
-import io
+import sys
 
 def namespace(element):
     m = re.match(r'\{.*\}', element.tag)
@@ -73,12 +73,12 @@ def geotiff_raster_validator(geotiff_file):
     # check srid and extent
     try: 
         srid = raster.srs.srid
-        print(srid)
+        #print(srid)
     except:
         validation_error_messages.append("Datenquelle beinhaltet keine Informationen zum Koordinatenreferenzsystem!")
     try: 
         extent = raster.extent
-        print(extent)
+        #print(extent)
     except:
         validation_error_messages.append("Datenquelle beinhaltet keine räumliche Ausdehnung!")
     # check extent - should cover extent of geltungsbereich 
@@ -213,25 +213,25 @@ def fplan_upload_file_validator(xplan_file):
                 )
         # Über einzelne Dateien iterieren
         for file in infos:
-            print(file.filename)
+            #print(file.filename)
             file_bytes = zipfile_ob.read(file.filename)
             file_file = BytesIO(file_bytes)
             # check MimeType
             mime_type = magic.from_buffer(file_file.read(2048), mime=True)
             file_file.seek(0)
-            print(mime_type)
+            #print(mime_type)
             if mime_type not in allowed_mimetypes:
                 validation_error_messages.append("ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
             # check unkomprimierte Dateigröße 
             size = file.file_size
-            print(size)
+            #print(size)
             if size > limits['max_uncompressed_file_size']:
                 validation_error_messages.append("Einzelne unkomprimierte Dateigröße übersteigt " + str(limits['max_uncompressed_file_size'] / 1_000_000) + "MB!")
             # TODO: ggf. Virenscanner über Datei laufen lassen!
             # check GML-Datei
             if file.filename.endswith('.gml') and mime_type in allowed_gml_mimetypes:
                 gml_files = gml_files + 1
-                print("some gml file found")
+                #print("some gml file found")
                 fplan_content_validator(file_file)
         if gml_files == 0:
             validation_error_messages.append("ZIP-Archiv beinhaltet keine GML-Datei!")
@@ -265,14 +265,16 @@ def bplan_content_validator(xplan_file):
         if mime_type not in ('application/octet-stream', 'application/gml', 'text/xml', 'text/plain', 'application/gml+xml'):
             validation_error_messages.append("ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
             raise forms.ValidationError(validation_error_messages)
+        size = sys.getsizeof(xplan_file.getvalue())
     else:
         if xplan_file.content_type not in ('application/octet-stream', 'application/gml', 'text/xml', 'text/plain', 'application/gml+xml'):
             validation_error_messages.append("Es handelt sich nicht um eine GML-Datei!")
             raise forms.ValidationError(validation_error_messages)
-    #if xplan_file.size > limits["max_gml_size"]:
-    #    raise forms.ValidationError(
-    #        "Die GML-Datei überschreitet die maximale Größe (> " + str(limits["max_gml_size"] / 1_000_000) + "MB)."
-    #    )
+        size = xplan_file
+    if size > limits["max_gml_size"]:
+        raise forms.ValidationError(
+            "Die GML-Datei überschreitet die maximale Größe (> " + str(limits["max_gml_size"] / 1_000_000) + "MB)."
+        )
     try:
         xml_string = xplan_file.read().decode('UTF-8')
     except:
@@ -395,15 +397,17 @@ def fplan_content_validator(xplan_file):
         if mime_type not in ('application/octet-stream', 'application/gml', 'text/xml', 'text/plain', 'application/gml+xml'):
             validation_error_messages.append("ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
             raise forms.ValidationError(validation_error_messages)
+        size = sys.getsizeof(xplan_file.getvalue())
     else:
         #print("contenttype of gml in zip: " + xplan_file.content_type)
         if xplan_file.content_type not in ('application/octet-stream', 'application/gml', 'text/xml', 'text/plain', 'application/gml+xml'):
             validation_error_messages.append("Es handelt sich nicht um eine GML-Datei!")
             raise forms.ValidationError(validation_error_messages)
-    #if xplan_file.size > limits["max_gml_size"]:
-    #    raise forms.ValidationError(
-    #        "Die GML-Datei überschreitet die maximale Größe (> " + str(limits["max_gml_size"] / 1_000_000) + "MB)."
-    #    )
+        size = xplan_file.size
+    if size > limits["max_gml_size"]:
+        raise forms.ValidationError(
+            "Die GML-Datei überschreitet die maximale Größe (> " + str(limits["max_gml_size"] / 1_000_000) + "MB)."
+        )
     xml_string = xplan_file.read().decode('UTF-8')
     #validation_error_messages.append('test')
     try:
