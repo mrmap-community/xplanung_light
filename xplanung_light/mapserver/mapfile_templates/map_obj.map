@@ -6,6 +6,11 @@ MAP
     UNITS       METERS
     IMAGECOLOR  255 255 255
     #FONTSET     "/data/umn/fonts/fonts.txt"
+    #SYMBOLSET   
+    SYMBOL
+        NAME 'schraffur'
+        TYPE HATCH
+    END 
     OUTPUTFORMAT
         NAME            "SHAPEZIP"
         DRIVER          "OGR/ESRI Shapefile"

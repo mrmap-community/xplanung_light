@@ -1,0 +1,324 @@
+        CLASS
+			NAME 'einfacher Bebauungsplan'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 10000)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 0 0 255
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 0 0 255
+				SIZE 8
+				OUTLINECOLOR 0 0 255
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END 
+		CLASS
+			NAME 'qualifizierter Bebauungsplan'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 10001)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 0 0 139
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 0 0 139
+				SIZE 8
+				OUTLINECOLOR 0 0 139
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END
+		CLASS
+			NAME 'Bebauungsplan nach Paragraph 13'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 2000)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 0 255 0
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 0 255 0
+				SIZE 8
+				OUTLINECOLOR 0 255 0
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END
+		CLASS
+			NAME 'vorhabenbezogener Bebauungsplan'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 3000)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 166 166 166
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 166 166 166
+				SIZE 8
+				OUTLINECOLOR 166 166 166
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END
+		CLASS
+			NAME 'vorhabenbezogener Bebauungsplan'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 4000)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 130 110 255
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 130 110 255
+				SIZE 8
+				OUTLINECOLOR 130 110 255
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END
+		CLASS
+			NAME 'Klarstellungssatzung'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 40000)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 0 0
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 0 0
+				SIZE 8
+				OUTLINECOLOR 255 0 0
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END
+		CLASS
+			NAME 'Entwicklungssatzung'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 40001)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 170 80
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 170 80
+				SIZE 8
+				OUTLINECOLOR 255 170 80
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END
+		CLASS
+			NAME 'Ergaenzungssatzung'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 40002)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 170 180
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 170 180
+				SIZE 8
+				OUTLINECOLOR 255 170 180
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END
+		CLASS
+			NAME 'Aussenbereichssatzung'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 5000)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 140 90 0
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 140 90 0
+				SIZE 8
+				OUTLINECOLOR 140 90 0
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END
+		CLASS
+			NAME 'Bebauungsplan Innenentwicklung'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 6000)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 255 0
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 255 0
+				SIZE 8
+				OUTLINECOLOR 255 255 0
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END
+		CLASS
+			NAME 'oertliche Bauvorschrift'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 7000)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 155 255 155
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 155 255 155
+				SIZE 8
+				OUTLINECOLOR 155 255 155
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END
+		CLASS
+			NAME 'BPlan - sonstiges'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 9999)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 255 0 255
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 255 0 255
+				SIZE 8
+				OUTLINECOLOR 255 0 255
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END

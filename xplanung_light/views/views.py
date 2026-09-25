@@ -170,7 +170,10 @@ def get_beteiligung_beitrag_attachment_orig(request, **kwargs):
     return get_beteiligung_beitrag_attachment(request, priorize_redacted=False, **kwargs)
 
 def xplan_html(request, pk:int):
-    orga = AdministrativeOrganization.objects.get(pk=pk)
+    if pk:
+        orga = AdministrativeOrganization.objects.get(pk=pk)
+    else:
+        orga = None
     #bplan_list = BPlan.objects.filter(gemeinde=orga)
     #print(bplaene)
     #print(request.GET)
@@ -178,14 +181,20 @@ def xplan_html(request, pk:int):
         if len(request.GET['bplan_id__in']) == 0:
             bplan_filter = []
         else:
-            bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.filter(gemeinde=orga))
+            if orga:
+                bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.filter(gemeinde=orga))
+            else:
+                bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.all())
     else:
         bplan_filter = []
     if 'fplan_id__in' in request.GET.keys():    
         if len(request.GET['fplan_id__in']) == 0:
             fplan_filter = []
         else:
-            fplan_filter = FPlanIdFilter(request.GET, queryset=FPlan.objects.filter(gemeinde=orga))
+            if orga:
+                fplan_filter = FPlanIdFilter(request.GET, queryset=FPlan.objects.filter(gemeinde=orga))
+            else:
+                fplan_filter = FPlanIdFilter(request.GET, queryset=FPlan.objects.all())
     else:
         fplan_filter = []
     if bplan_filter == [] and fplan_filter == []:
@@ -653,6 +662,141 @@ def ows(request, pk:int):
         else:
             request.GET['fplan_id__in'] = ''     
         return views.xplan_html(pk=pk, request=request)
+    # [('Content-Type', 'application/vnd.ogc.wms_xml; charset=UTF-8'), ('Content-Length', '11385')]
+    response_headers = [('Content-Type', content_type),
+                        ('Content-Length', str(len(result)))]
+    assert int(response_headers[1][1]) > 0
+    http_response = HttpResponse(result)
+    http_response.headers['Content-Type'] = content_type
+    http_response.headers['Content-Length'] = str(len(result))
+    # Setzen der CORS Header, um allen Web-Clients die Nutzung des Webservice zu erlauben
+    http_response.headers['Access-Control-Allow-Origin'] = "*"
+    return http_response
+
+def ows_all_orgas(request):
+    """
+    OWS Proxy für den Mapserver, der per mapscript aufgerufen wird. Beim GetFeatureInfo wird in den Prozess eingegriffen und die HTML-Anzeige der Django Anwendung
+    zurückgeliefert.
+    """
+    #orga = AdministrativeOrganization.objects.get(pk=pk)
+    req =  mapscript.OWSRequest()
+    """
+    req.setParameter( 'SERVICE', 'WMS' )
+    req.setParameter( 'VERSION', '1.1.0' )
+    req.setParameter( 'REQUEST', 'GetCapabilities' )
+    """
+    #print(request.META['QUERY_STRING'])
+    qs = parse_qs(request.META['QUERY_STRING'])
+    """
+    Check ob eine GetFeatureInfo Anfrage gestellt wird. Falls das der Fall ist, greifen wir ein und grabben die IDs der zurückgelieferten Pläne heraus.
+    ausgeliefert wird dann eine eigene HTML-Seite ;-) ...  
+    """
+    is_featureinfo = False
+    is_featureinfo_format_html = False
+    for k, v in qs.items():
+        if v[0].lower() == 'getfeatureinfo':
+            is_featureinfo = True
+        if k.lower() == 'info_format':
+            if v[0] == 'text/html':
+                is_featureinfo_format_html = True
+    for k, v in qs.items():
+        if is_featureinfo and k.lower() == 'info_format' and is_featureinfo_format_html:
+            v[0] = 'application/vnd.ogc.gml'
+        req.setParameter(k, ','.join(v))
+    #print(req)
+    # test wfs http://127.0.0.1:8000/organization/1/ows/?REQUEST=GetFeature&VERSION=1.1.0&SERVICE=wfs&typename=BPlan.0723507001.12
+    ## first variant - fast - 0.07 seconds
+    #map = mapscript.mapObj( '/home/armin/devel/django/komserv2/test.map' )
+    ## alternative approach - read from file into string and then from string with special path - also fast - 0.1 seconds
+    #with open('/home/armin/devel/django/komserv2/test.map') as file:
+        #map_file_string = file.read()
+    #map = mapscript.msLoadMapFromString(map_file_string, '/home/armin/devel/django/komserv2/')
+    ## next alternative - slowest - 1.1 seconds
+    #mapfile = mappyfile.open("/home/armin/devel/django/komserv2/test.map")
+    #map = mapscript.msLoadMapFromString(mappyfile.dumps(mapfile), '/home/armin/devel/django/komserv2/')
+    ## next alternative - load from dynamically generated mapfile ;-)
+    mapfile_generator = MapfileGenerator()
+    """
+    Der Link auf die ISO-Metadaten pro Layer muss als absolute URL übergeben werden
+    """
+    if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
+        metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000})).replace('http://', 'https://')
+    else:
+        metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000}))
+    # Mapfile wird zunächst für x Sekunden gecached, da der Bau und das Parsen über mappyfile sehr langsam ist
+    if cache.get("mapfile_all_orgas"):
+        cache.touch("mapfile_all_orgas", 10)
+        mapfile = cache.get("mapfile_all_orgas")
+    else:
+        if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
+            mapfile = mapfile_generator.generate_mapfile_all_orgas(request.build_absolute_uri(reverse('bauleitplanung-map')), metadata_uri).replace('http://', 'https://')
+        else:
+            mapfile = mapfile_generator.generate_mapfile_all_orgas(request.build_absolute_uri(reverse('bauleitplanung-map')), metadata_uri)
+        cache.set("mapfile_all_orgas", mapfile, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
+    #print(mapfile)
+    # 2. Den Aufruf versionsabhängig steuern
+    mapserver_version = mapscript.msGetVersionInt()
+    if mapserver_version >= 80000:
+        # 1. Wir erstellen eine temporäre Dummy-Konfiguration auf der Festplatte
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.conf') as tmp:
+            tmp.write("CONFIG\nEND")
+            tmp_path = tmp.name
+        # 2. MapServer mitteilen, wo die globale Konfiguration liegt
+        os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
+        mapserverConfig = mapscript.configObj()
+        map_obj = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", mapserverConfig)
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass 
+    else:
+        map_obj = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
+    mapscript.msIO_installStdoutToBuffer()
+    dispatch_status = map_obj.OWSDispatch(req)
+    if dispatch_status != mapscript.MS_SUCCESS:
+        if dispatch_status == mapscript.MS_DONE:
+            return HttpResponse("No valid OWS Request!")
+        if dispatch_status == mapscript.MS_FAILURE:
+            return HttpResponse("No valid OWS Request not successfully processed!")
+    content_type = mapscript.msIO_stripStdoutBufferContentType()
+    mapscript.msIO_stripStdoutBufferContentHeaders()
+    result = mapscript.msIO_getStdoutBufferBytes()
+    """
+    Check ob eine GetFeatureInfo-Anfrage gestellt wurde und ob als Rückgabeformat html gesetzt wurde.
+    In diesem Fall greifen wir in den Prozess ein und liefern das Ergebnis in Form eines Django-Views zurück.
+    Damit haben wir alle Möglichkeiten eine pragmatische Anzeige der Informationen zu generieren.
+    """
+    # Einfaches Parsen der GML-Rückgabe des Mapservers um die IDs der zurückgelieferten Objekte abzugreifen
+    if is_featureinfo and is_featureinfo_format_html:
+        #print(result.decode('utf-8'))
+        root = defused_ET.fromstring(result.decode('utf-8'))
+        # Auslesen der BPläne für FPläne noch zu erweitern bzw. anzupassen.
+        bplan_ids = root.findall("./bplan_layer//id", None)
+        bplan_id_list = []
+        for id in bplan_ids:
+            bplan_id_list.append(int(id.text))
+        bplan_id_list_unique = list(dict.fromkeys(bplan_id_list))
+        #print(bplan_id_list_unique)
+        fplan_ids = root.findall("./fplan_layer//id", None)
+        fplan_id_list = []
+        for fplan_id in fplan_ids:
+            fplan_id_list.append(int(fplan_id.text))
+        fplan_id_list_unique = list(dict.fromkeys(fplan_id_list))
+        #print(fplan_id_list_unique)
+        # https://stackoverflow.com/questions/45188800/how-can-i-set-query-parameter-dynamically-to-request-get-in-django
+        if not request.GET._mutable:
+            request.GET._mutable = True
+            # TODO: Ggf. löschen aller vorherigen GET-Parameter
+        # Setzen der ID-Filter-Parameter
+        if len(bplan_id_list_unique) > 0:
+            request.GET['bplan_id__in'] = (',').join(str(v) for v in bplan_id_list_unique)
+        else:
+            request.GET['bplan_id__in'] = ''
+        if len(fplan_id_list_unique) > 0:
+            request.GET['fplan_id__in'] = (',').join(str(v) for v in fplan_id_list_unique)   
+        else:
+            request.GET['fplan_id__in'] = ''     
+        return views.xplan_html(pk=None, request=request)
     # [('Content-Type', 'application/vnd.ogc.wms_xml; charset=UTF-8'), ('Content-Length', '11385')]
     response_headers = [('Content-Type', content_type),
                         ('Content-Length', str(len(result)))]

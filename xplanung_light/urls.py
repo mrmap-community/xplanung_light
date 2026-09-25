@@ -231,6 +231,9 @@ urlpatterns = [
     # Offenlagen / Beteiligungen
     # WMS 
     path("beteiligungen/map/", views.ows_beteiligungen, name="beteiligungen-map"),
+    #path("bauleitplanung/map/", views.ows_geltend, name="bauleitplanung-map"),
+    # Alle Pläne
+    path("bauleitplanung/map/", views.ows_all_orgas, name="bauleitplanung-map"),
     #path("beteiligungen/", views.beteiligungen, name="beteiligungen"),
     # Liste aller aktuellen Beteiligungsverfahren
     path("beteiligungen/", BeteiligungenListView.as_view(), name="beteiligungen"),

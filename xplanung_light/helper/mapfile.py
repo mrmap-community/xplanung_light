@@ -1,6 +1,7 @@
 import mappyfile
 from xplanung_light.models import AdministrativeOrganization, BPlan, FPlan
 from django.contrib.gis.gdal import OGRGeometry, SpatialReference
+from django.utils.timezone import datetime
 from django.db.models import F, Func
 import os
 from django.conf import settings
@@ -19,6 +20,9 @@ class MapfileGenerator():
     https://github.com/geographika/mappyfile
     """
     def generate_mapfile(self, admin_orga_pk:int, ows_uri:str, metadata_uri:str):
+        """
+        Die Funktion generiert einen Mapfile für die jeweils angefragte Gebietskörperschaft.
+        """
         orga = AdministrativeOrganization.objects.get(pk=admin_orga_pk)
         bplaene = BPlan.objects.filter(gemeinde=admin_orga_pk, public=True)
         fplaene = FPlan.objects.filter(gemeinde=admin_orga_pk, public=True)
@@ -320,3 +324,166 @@ class MapfileGenerator():
             map["layers"].append(umring_layer)
             #print(mappyfile.dumps(map))
             return mappyfile.dumps(map, quote="'")
+
+
+    def generate_mapfile_all_orgas(self, ows_uri:str, metadata_uri:str):
+        """
+        Funktion erstellt den Mapfile für die Publikation aller Bauleitpläne der Instanz
+        Hier gibt es nur die Umringlayer ab einem bestimmten Maßstab und ggf. jeweils einen Clusterlayer für die Übersicht
+
+        """
+        bplaene = BPlan.objects.filter(public=True, inkrafttretens_datum__lte=datetime.now())
+        fplaene = FPlan.objects.filter(public=True, wirksamkeits_datum__lte=datetime.now())
+        # Datenbank Verbindung vorbereiten
+        if connection.vendor == "sqlite":
+            #"db.sqlite3"
+            connection_string = str(connection.settings_dict['NAME'])
+        if connection.vendor == "postgresql":
+            #'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
+            connection_string = 'host=' + str(connection.settings_dict['HOST']) + ' dbname=' + str(connection.settings_dict['NAME']) + ' user=' + str(connection.settings_dict['USER']) + ' password=' + str(connection.settings_dict['PASSWORD']) + ' port='+ str(connection.settings_dict['PORT'])
+        #print("Mapserver connection_string: " + connection_string)
+        # Map Objekt Template
+        current_dir = os.path.dirname(__file__)
+        map = mappyfile.open(os.path.join(current_dir, "../mapserver/mapfile_templates/map_obj.map"))
+        map["name"] = "OWS"
+        """
+        Anpassen der Metadaten auf Service Level
+        """
+        map["web"]["metadata"]["ows_name"] = "xplan"
+        map["web"]["metadata"]["ows_title"] = "Kommunale Pläne"
+        map["web"]["metadata"]["ows_abstract"] = "Kommunale Pläne - Abstract"
+        map["web"]["metadata"]["ows_onlineresource"] = ows_uri
+        # Übernahme der Kontaktinformationen aus den Settings - diese weden für eine Instanz definiert und beziehen sich auf den technischen Service Provider
+        map["web"]["metadata"]["ows_contactorganization"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['organization_name']
+        map["web"]["metadata"]["ows_contactvoicetelephone"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone']
+        map["web"]["metadata"]["ows_contactelectronicmailaddress"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email']
+        map["web"]["metadata"]["ows_contactperson"] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['person_name']
+        map["web"]["metadata"]["ows_keywordlist"] = ','.join(settings.XPLANUNG_LIGHT_CONFIG['metadata_keywords'])
+        # TODO - ggf. weitere Felder hinzufügen
+        map["web"]["metadata"]["ows_accessconstraints"] = "None"
+        map["web"]["metadata"]["ows_fees"] = "None"         
+        # Mögliche weitere Metadaten
+        """
+            "ows_addresstype"                   "postal"
+            "ows_contactorganization"           "Gemeinde/Stadt Aach"
+            "ows_contactperson"                 ""
+            "ows_address"                       ""
+            "ows_city"                          ""
+            "ows_stateorprovince"               "DE-RP"
+            "ows_postcode"                      ""
+            "ows_country"                       "DE"
+            "ows_contactvoicetelephone"         ""
+            "ows_contactfacsimiletelephone"     ""
+            "ows_contactelectronicmailaddress"  ""
+        """
+        """
+        Berechnen des Extents aller Pläne - TODO: hier ggf. ein Aggregat aus BPlan und FPlan generieren.
+        Die Gechwindigkeit kann später problematisch werden - dann sollten die fixen Werte aus den settings
+        genutzt werden !
+        """
+        union_queryset_bplaene = bplaene.annotate(
+            union_geom=Func(F('geltungsbereich'), function='ST_Union')
+        ).values('union_geom')
+        for item in union_queryset_bplaene:
+            ogr_geom_bplaene = item['union_geom']
+        union_queryset_fplaene = fplaene.annotate(
+            union_geom=Func(F('geltungsbereich'), function='ST_Union')
+        ).values('union_geom')
+        for item in union_queryset_fplaene:
+            ogr_geom_fplaene = item['union_geom']
+        # If both are valid, merge them
+        if ogr_geom_bplaene and ogr_geom_fplaene:
+            ogr_geom = ogr_geom_bplaene.union(ogr_geom_fplaene)
+        else:
+            ogr_geom = ogr_geom_bplaene or ogr_geom_fplaene
+        map["web"]["metadata"]["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
+        map["extent"] = map["web"]["metadata"]["ows_extent"]
+        """
+        Einlesen der Templates
+        """
+        # Layer Objekt Template / Vektor
+        with open(os.path.join(current_dir, "../mapserver/mapfile_templates/layer_obj_all_orgas.map")) as file:
+            layer_file_string = file.read()
+        layer_from_template = mappyfile.loads(layer_file_string)
+        # Klassen Objekt Template (FPlan)
+        with open(os.path.join(current_dir, "../mapserver/mapfile_templates/class_fplan_obj_multi.map")) as file:
+            class_file_fplan_string = file.read()
+        # Klassen Objekt Template (BPlan)
+        with open(os.path.join(current_dir, "../mapserver/mapfile_templates/class_bplan_obj_multi.map")) as file:
+            class_file_bplan_string = file.read()
+        class_fplan_from_template = mappyfile.loads(class_file_fplan_string) 
+        class_bplan_from_template = mappyfile.loads(class_file_bplan_string) 
+
+        #print((class_fplan_from_template)) # ist Liste von Mapfile Klassen
+
+
+        layer_fplan_class = class_fplan_from_template.copy()
+        layer_bplan_class = class_bplan_from_template.copy()
+        # Initialisierung des Layer Arrays
+        map['layers'] = []
+        """
+        Beginn mit Flächennutzungsplänen
+        """
+        # Umring Layer hinzufügen
+        umring_layer = layer_from_template.copy()
+        umring_layer["name"] = "fplan"
+        #umring_layer["group"] = "FPlan." + orga.ags
+        metadata = layer_from_template["metadata"].copy()
+        metadata["ows_title"] = "Flächennutzungspläne"
+        metadata["ows_abstract"] = "Flächennutzungspläne - Abstract"
+        metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom_fplaene), srs=4326).extent])
+        #metadata["wms_group_title"] = "Flächennutzungspläne"
+        # TODO Metadatengenerator für "Alle BPläne der Kommune X"
+        metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + "umring" + "/")
+        umring_layer["metadata"] = metadata
+        #umring_layer["filter"] = "( '[gemeinde_id]' = '" + str(orga.pk) + "' )"
+        #umring_layer["filter"] = None
+        if connection.vendor == "sqlite":
+            umring_layer["connectiontype"] = "OGR"
+            umring_layer["connection"] = connection_string
+            umring_layer["data"] = "SELECT fplan.* FROM xplanung_light_fplan fplan WHERE public=true AND  wirksamkeits_datum <= date()" 
+        if connection.vendor == "postgresql":
+            umring_layer["connectiontype"] = "POSTGIS"
+            umring_layer["connection"] = connection_string
+            umring_layer["data"] = "geltungsbereich from (SELECT fplan.* FROM xplanung_light_fplan fplan WHERE public=true AND wirksamkeits_datum <= now()) as foo using unique id using srid=25832"
+        #umring_layer["data"] = "SELECT fplan.* FROM xplanung_light_fplan fplan INNER JOIN xplanung_light_fplan_gemeinde gemeinde ON fplan.id = gemeinde.fplan_id WHERE public=true AND gemeinde.administrativeorganization_id = " + str(orga.pk)
+        # TODO: add active Filter when it will be available
+        umring_layer["classes"] = []
+        # Neu - wenn mehrere Klassen angegeben worden sind
+        for single_layer_class in layer_fplan_class:
+            umring_layer["classes"].append(single_layer_class)
+        #umring_layer["classes"].append(layer_fplan_class)
+        map["layers"].append(umring_layer)
+        """
+        Es folgen die Bebauungspläne
+        """
+        # Umring Layer hinzufügen
+        umring_layer = layer_from_template.copy()
+        umring_layer["name"] = "bplan"
+        #umring_layer["group"] = "bplan" + orga.ags
+        metadata = layer_from_template["metadata"].copy()
+        metadata["ows_title"] = "Bebauungspläne"
+        metadata["ows_abstract"] = "Bebauungspläne - Abstract"
+        metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom_bplaene), srs=4326).extent])
+        # TODO Metadatengenerator für "Alle BPläne der Kommune X"
+        metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + "umring" + "/")
+        umring_layer["metadata"] = metadata
+        #umring_layer["filter"] = None
+        if connection.vendor == "sqlite":
+            umring_layer["connectiontype"] = "OGR"
+            umring_layer["connection"] = connection_string
+            umring_layer["data"] = "SELECT bplan.* FROM xplanung_light_bplan bplan WHERE public = true AND inkrafttretens_datum <= date() "
+        if connection.vendor == "postgresql":
+            umring_layer["connectiontype"] = "POSTGIS"
+            umring_layer["connection"] = connection_string
+            umring_layer["data"] = "geltungsbereich from (SELECT bplan.* FROM xplanung_light_bplan bplan WHERE public = true AND  inkrafttretens_datum <= now()) as foo using unique id using srid=25832"
+        # TODO: add active Filter when it will be available
+        umring_layer["classes"] = []
+        # Neu - wenn mehrere Klassen angegeben worden sind
+        for single_layer_class in layer_bplan_class:
+            umring_layer["classes"].append(single_layer_class)
+        #umring_layer["classes"].append(layer_bplan_class)
+        #umring_layer["classes"].append(layer_bplan_class)
+        map["layers"].append(umring_layer)
+        #print(mappyfile.dumps(map))
+        return mappyfile.dumps(map, quote="'")
