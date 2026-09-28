@@ -27,6 +27,7 @@ LAYER
    	    DATA 		"select geltungsbereich, id from xplanung_light_bplan where public = true"
    	    #FILTER 		('[id]' = '10')
    	    PROCESSING 	"CLOSE_CONNECTION=DEFER" # for maximum performance
+        MAXSCALE 50000
         PROJECTION
             "init=epsg:4326"
         END

@@ -1,0 +1,60 @@
+    # Layer für die Clusterdarstellung - ist default, d.h. immer aktiv und kann nicht ausgeschaltet werden
+    # Im Capabilities-Dokument nicht vorhanden
+    LAYER
+        NAME "bauleitplanung_cluster"
+        TYPE POINT
+        CONNECTIONTYPE "<connection_type>"
+        CONNECTION 	"<connection>"
+        DATA "<datastring_point>"
+        #STATUS DEFAULT
+        METADATA
+            "ows_title" "Bauleitplanung Cluster"
+            "ows_srs" "EPSG:25832 EPSG:4326 EPSG:31466 EPSG:31467 EPSG:3857"
+            'ows_extent'         '6 48 9 52'
+            'ows_keywordlist' 'cluster'
+            'ows_abstract' 'cluster abstract'
+            #'ows_enable_request' '!GetCapabilities'
+            'ows_enable_request' '*'
+            'ows_encoding' 'UTF-8'
+        END
+        PROJECTION
+            "init=epsg:4326"
+        END
+        MAXSCALEDENOM "100000000"
+        MINSCALEDENOM "1"
+        CLUSTER
+            MAXDISTANCE 20
+            REGION "ellipse"
+        END
+        #MINSCALEDENOM 1
+        #MAXSCALEDENOM 1000000000
+        LABELITEM "Cluster_FeatureCount"
+        CLASSITEM "Cluster_FeatureCount"
+        CLASS
+            NAME 'Flächennutzungsplan Punktobjekt'
+            STYLE
+                SYMBOL 'punkt'
+                SIZE 30
+                COLOR 163 198 117
+            END
+            STYLE
+                SYMBOL 'punkt'
+                SIZE 25 #[Cluster:FeatureCount]
+                COLOR 110 170 40
+            END
+            LABEL
+                ANTIALIAS true
+                ENCODING 'UTF8'
+                TYPE truetype
+                #FONT tahomabold
+                SIZE 9
+                COLOR 50 50 50
+                OUTLINECOLOR 255 255 254
+                ALIGN CENTER
+                PRIORITY 10
+                BUFFER 1
+                PARTIALS TRUE
+                POSITION cc
+            END
+        END
+    END

@@ -71,6 +71,7 @@ class BeteiligungViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # 2. Organisationsspezifische Liste
+        self.client.login(username="beteiligung_admin", password="password123")
         url_orga = reverse("organization-beteiligungen-list", kwargs={"pk": self.orga.id})
         response_orga = self.client.get(url_orga)
         self.assertEqual(response_orga.status_code, 200)

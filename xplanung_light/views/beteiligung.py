@@ -210,9 +210,21 @@ class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
         #rest_tage=ExtractDay(timezone.now().date() - F('end_datum')), gesamt_tage=ExtractDay(F('start_datum') - F('end_datum')), 
 
 
-        beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), xplan_id=F('bplan__id'), gemeinden=organization_json_aggregation())
+        beteiligungen_bplaene = BPlanBeteiligung.objects.filter(
+            end_datum__gte=timezone.now()
+            ).filter(
+                bekanntmachung_datum__lte=timezone.now(), bplan__public=True
+                ).distinct().annotate(
+                    xplan_name=F('bplan__name'), plantyp=Value('BPlan'), xplan_id=F('bplan__id'), gemeinden=organization_json_aggregation()
+                    )
         #beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), gemeinden=JsonGroupArray('fplan__gemeinde__name'))
-        beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), gemeinden=organization_json_aggregation(plantyp='fplan'))
+        beteiligungen_fplaene = FPlanBeteiligung.objects.filter(
+            end_datum__gte=timezone.now()
+            ).filter(
+                bekanntmachung_datum__lte=timezone.now(), fplan__public=True
+                ).distinct().annotate(
+                    xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), gemeinden=organization_json_aggregation(plantyp='fplan')
+                    )
 
         if not self.request.user.is_superuser and not self.request.user.is_anonymous:
             beteiligungen_bplaene = beteiligungen_bplaene.filter(bplan__gemeinde__admin_orga_users__user=self.request.user, bplan__gemeinde__admin_orga_users__is_admin=True)
@@ -227,17 +239,41 @@ class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
         return beteiligungen_plaene  
     
 
-class BeteiligungenOrgaListView(BeteiligungenListView):
+class BeteiligungenOrgaListView(LoginRequiredMixin, BeteiligungenListView):
+    """
+    Klasse für die Darstellung einer Liste aller Beteiligungsverfahren einer Gebietskörperschaft
+    
+    """
     template_name = "xplanung_light/organization_beteiligungen.html"
     table_class = BeteiligungenOrgaTable
     # Dynamic Forms with HTMX
     # https://www.youtube.com/watch?v=XdZoYmLkQ4w
 
+    # dispatch - check user is admin for organization or superuser
+    def dispatch(self, request, *args, **kwargs):
+        if not self.request.user.is_authenticated:
+            # Fall wird vom LoginRequiredMixin gesteuert
+            return super().dispatch(request, *args, **kwargs)
+        if self.request.user.is_superuser:
+            # superuser darf alles
+            return super().dispatch(request, *args, **kwargs)
+        # Prüfung auf Admin-Rolle des angemeldeten Nutzers zur angefragten Organisation
+        is_admin = AdministrativeOrganization.objects.filter(pk=kwargs['pk']).filter(
+            admin_orga_users__user=self.request.user,
+            admin_orga_users__is_admin=True,
+        ).exists()
+        if not is_admin:
+            # 403
+            raise PermissionDenied(
+                "Nutzer hat keine Berechtigungen auf die angefragten Objekte!"
+            )
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
-        if 'pk' in self.kwargs.keys():
-            print("Got pk: " + str(self.kwargs['pk']))
+        #if 'pk' in self.kwargs.keys():
+        #    print("Got pk: " + str(self.kwargs['pk']))
         #self.publisher = get_object_or_404(Publisher, name=self.kwargs["publisher"])
-        
+        # 403 wenn user nicht admin ist!
         beteiligungen_bplaene = BPlanBeteiligung.objects.filter(
             bplan__gemeinde__id=self.kwargs['pk']
         ).filter(
@@ -264,7 +300,14 @@ class BeteiligungenOrgaListView(BeteiligungenListView):
         #).annotate(
         #    count_comments=Count('comments', distinct=True)
         #)    
-
+        if not self.request.user.is_superuser and not self.request.user.is_anonymous:
+            beteiligungen_bplaene = beteiligungen_bplaene.filter(
+                bplan__gemeinde__admin_orga_users__user=self.request.user, bplan__gemeinde__admin_orga_users__is_admin=True
+                )
+            beteiligungen_fplaene = beteiligungen_fplaene.filter(
+                fplan__gemeinde__admin_orga_users__user=self.request.user, fplan__gemeinde__admin_orga_users__is_admin=True
+                )
+                
         # https://pythonguides.com/union-operation-on-models-django/
         beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
         """

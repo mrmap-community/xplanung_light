@@ -1,0 +1,27 @@
+		CLASS
+			NAME 'Flaechennutzungsplan'
+			GROUP "default"
+ 			EXPRESSION ([planart] = 10000)
+			STYLE
+				WIDTH 3
+				OUTLINECOLOR 0 0 255
+			END
+			STYLE
+				WIDTH 1
+				SYMBOL 'schraffur'
+				ANGLE 315
+				COLOR 0 0 255
+				SIZE 8
+				OUTLINECOLOR 0 0 255
+			END
+   			LABEL
+     				COLOR 5 10 90
+     				FONT "verdana"
+     				TYPE truetype
+     				SIZE 10
+     				MINSCALEDENOM 0
+     				MAXSCALEDENOM 50000
+     				POSITION AUTO
+     				PARTIALS FALSE
+   			END
+		END	

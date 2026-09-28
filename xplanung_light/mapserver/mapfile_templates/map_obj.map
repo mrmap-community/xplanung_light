@@ -11,6 +11,12 @@ MAP
         NAME 'schraffur'
         TYPE HATCH
     END 
+    SYMBOL
+        NAME 'punkt'
+        TYPE ELLIPSE
+        POINTS 1 1 END
+        FILLED true
+    END
     OUTPUTFORMAT
         NAME            "SHAPEZIP"
         DRIVER          "OGR/ESRI Shapefile"

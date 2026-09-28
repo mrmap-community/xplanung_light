@@ -590,7 +590,7 @@ def ows(request, pk:int):
         metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000}))
     # Mapfile wird zunächst für x Sekunden gecached, da der Bau und das Parsen über mappyfile sehr langsam ist
     if cache.get("mapfile_" + orga.ags):
-        cache.touch("mapfile_" + orga.ags, 10)
+        cache.touch("mapfile_" + orga.ags, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
         mapfile = cache.get("mapfile_" + orga.ags)
     else:
         if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
@@ -673,7 +673,8 @@ def ows(request, pk:int):
     http_response.headers['Access-Control-Allow-Origin'] = "*"
     return http_response
 
-def ows_all_orgas(request):
+def ows_all_orgas_xplan(request, plantyp='fplan'):
+    #print(plantyp)
     """
     OWS Proxy für den Mapserver, der per mapscript aufgerufen wird. Beim GetFeatureInfo wird in den Prozess eingegriffen und die HTML-Anzeige der Django Anwendung
     zurückgeliefert.
@@ -718,21 +719,22 @@ def ows_all_orgas(request):
     mapfile_generator = MapfileGenerator()
     """
     Der Link auf die ISO-Metadaten pro Layer muss als absolute URL übergeben werden
+    TODO - anzupassen für die Layer aller Pläne
     """
     if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
         metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000})).replace('http://', 'https://')
     else:
         metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000}))
     # Mapfile wird zunächst für x Sekunden gecached, da der Bau und das Parsen über mappyfile sehr langsam ist
-    if cache.get("mapfile_all_orgas"):
-        cache.touch("mapfile_all_orgas", 10)
-        mapfile = cache.get("mapfile_all_orgas")
+    if cache.get("mapfile_all_orgas_" + plantyp):
+        cache.touch("mapfile_all_orgas_" + plantyp, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
+        mapfile = cache.get("mapfile_all_orgas_" + plantyp)
     else:
         if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
-            mapfile = mapfile_generator.generate_mapfile_all_orgas(request.build_absolute_uri(reverse('bauleitplanung-map')), metadata_uri).replace('http://', 'https://')
+            mapfile = mapfile_generator.generate_mapfile_all_orgas_xplan(request.build_absolute_uri(reverse('plan-map', kwargs={'plantyp': plantyp})), metadata_uri, plantyp=plantyp).replace('http://', 'https://')
         else:
-            mapfile = mapfile_generator.generate_mapfile_all_orgas(request.build_absolute_uri(reverse('bauleitplanung-map')), metadata_uri)
-        cache.set("mapfile_all_orgas", mapfile, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
+            mapfile = mapfile_generator.generate_mapfile_all_orgas_xplan(request.build_absolute_uri(reverse('plan-map', kwargs={'plantyp': plantyp})), metadata_uri, plantyp=plantyp)
+        cache.set("mapfile_all_orgas_" + plantyp, mapfile, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
     #print(mapfile)
     # 2. Den Aufruf versionsabhängig steuern
     mapserver_version = mapscript.msGetVersionInt()
@@ -1177,7 +1179,7 @@ def bauleitplanung_orga_html(request, pk:int):
     bplaene = BPlan.objects.filter(public=True, gemeinde__id=pk, inkrafttretens_datum__lte=timezone.now())
     fplaene = FPlan.objects.filter(public=True, gemeinde__id=pk, wirksamkeits_datum__lte=timezone.now())
     beteiligungen_bplaene = BPlanBeteiligung.objects.distinct().filter(
-            bplan__gemeinde__id=pk
+            bplan__gemeinde__id=pk, bplan__public=True
         ).filter(
             end_datum__gte=timezone.now(),
             bekanntmachung_datum__lte=timezone.now()
@@ -1192,7 +1194,7 @@ def bauleitplanung_orga_html(request, pk:int):
             confirmed_comments=Count('comments', distinct=True, filter=Q(comments__approved=True, comments__withdrawn=False))
         ).distinct()
     beteiligungen_fplaene = FPlanBeteiligung.objects.filter(
-            fplan__gemeinde__id=pk
+            fplan__gemeinde__id=pk, fplan__public=True
         ).filter(
             end_datum__gte=timezone.now(),
             bekanntmachung_datum__lte=timezone.now()

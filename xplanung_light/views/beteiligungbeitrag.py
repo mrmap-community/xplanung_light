@@ -835,7 +835,7 @@ class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, F
             return super().form_collection_valid(form_collection)
 
 
-class BeteiligungBeitragToebUpdateView(ExtentUserOrgaInfo, EditCollectionView):
+class BeteiligungBeitragToebUpdateView(LoginRequiredMixin, ExtentUserOrgaInfo, EditCollectionView):
     """
     Der generische UpdateView ist für die Sachbearbeiter gedacht und dient zur Erfassung der Beiträge die
     nicht über das Online-Formular erfasst wurden. pk ist in Url vorhanden.
@@ -857,7 +857,23 @@ class BeteiligungBeitragToebUpdateView(ExtentUserOrgaInfo, EditCollectionView):
         """
         self.success_url = reverse('toebbeteiligungen-list')
         return super().get_initial()
-
+    """
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)  # LoginRequiredMixin übernimmt
+        if not request.user.is_superuser:
+            toeb_orga = ToebUnit.objects.filter(id=self.object.toeb.id).values('organization')
+            is_reporter = AdminOrgaUser.objects.filter(
+                organization=toeb_orga[0]['organization'],
+                user=request.user,
+                is_toeb_reporter=True,
+            ).exists()
+            if not is_reporter:
+                raise PermissionDenied("Nutzer ist kein TÖB-Sachbearbeiter für diese Stelle!")
+        return super().dispatch(request, *args, **kwargs)
+    """
+    
     def dispatch(self, request, *args, **kwargs):
         # Hier sind die Parameter aus der re_path verfügbar:
         self.plantyp = kwargs.get('plantyp')
@@ -877,8 +893,21 @@ class BeteiligungBeitragToebUpdateView(ExtentUserOrgaInfo, EditCollectionView):
         self.planid = kwargs.get('planid')
         self.beteiligung_pk = kwargs.get('beteiligungid')
         self.pk = kwargs.get('pk')
-        return super().dispatch(request, *args, **kwargs)
+        self.object = self.get_object()
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)  # LoginRequiredMixin übernimmt
+        if not request.user.is_superuser:
+            toeb_orga = ToebUnit.objects.filter(id=self.object.toeb.id).values('organization')
+            is_reporter = AdminOrgaUser.objects.filter(
+                organization=toeb_orga[0]['organization'],
+                user=request.user,
+                is_toeb_reporter=True,
+            ).exists()
+            if not is_reporter:
+                raise PermissionDenied("Nutzer ist kein TÖB-Sachbearbeiter für diese Stelle!")
+        return super().dispatch(request, *args, **kwargs)        
     
+
     def get_context_data(self, **kwargs):
         """
         get_context_data wird überschrieben, weil wir die Stellungnahmen nur für Pläne ermöglichen, für die

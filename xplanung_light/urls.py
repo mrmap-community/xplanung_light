@@ -222,7 +222,6 @@ urlpatterns = [
     path("requestforrole/<int:pk>/confirm/", views.RequestForRoleConfirm.as_view(), name="requestforrole-confirm"),
     # RequestForRoleRefuse
     path("requestforrole/<int:pk>/refuse/", views.RequestForRoleRefuse.as_view(), name="requestforrole-refuse"),
-
     # Verwaltung von Zustimmungsoptionen - nur für superuser
     path("consentoption/create/", ConsentOptionCreateView.as_view(extra_context={'create': True}), name="consentoption-create"),
     path("consentoption/", ConsentOptionListView.as_view(), name="consentoption-list"),
@@ -231,9 +230,8 @@ urlpatterns = [
     # Offenlagen / Beteiligungen
     # WMS 
     path("beteiligungen/map/", views.ows_beteiligungen, name="beteiligungen-map"),
-    #path("bauleitplanung/map/", views.ows_geltend, name="bauleitplanung-map"),
     # Alle Pläne
-    path("bauleitplanung/map/", views.ows_all_orgas, name="bauleitplanung-map"),
+    re_path(r'^(?P<plantyp>fplan|bplan)/map/$', views.ows_all_orgas_xplan, name="plan-map"),
     #path("beteiligungen/", views.beteiligungen, name="beteiligungen"),
     # Liste aller aktuellen Beteiligungsverfahren
     path("beteiligungen/", BeteiligungenListView.as_view(), name="beteiligungen"),
