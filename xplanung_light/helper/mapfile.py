@@ -443,7 +443,7 @@ class MapfileGenerator():
         if connection.vendor == "postgresql":
             umring_layer["connectiontype"] = "POSTGIS"
             umring_layer["connection"] = connection_string
-            umring_layer["data"] = "geltungsbereich from (SELECT * FROM xplanung_light_" + plantyp + "fplan WHERE public=true AND " + date_name_part + "_datum <= now()) as foo using unique id using srid=25832"
+            umring_layer["data"] = "geltungsbereich from (select geltungsbereich, id FROM xplanung_light_" + plantyp + " WHERE public=true AND " + date_name_part + "_datum <= now()) as foo using unique id using srid=25832"
         # Sichtbarkeitsmaßstäbe definieren
         umring_layer["maxscaledenom"] = 50000
         umring_layer["minscaledenom"] = 1
@@ -488,7 +488,7 @@ class MapfileGenerator():
         if connection.vendor == "postgresql":
             cluster_layer["connectiontype"] = "POSTGIS"
             cluster_layer["connection"] = connection_string
-            cluster_layer["data"] = "SELECT st_centroid(geltungsbereich) as geltungsbereich, id, \"" + plantyp + "\" as type FROM xplanung_light_" + plantyp + " WHERE public = true AND " + date_name_part + "_datum <= now()"
+            cluster_layer["data"] = "geltungsbereich from (select st_centroid(geltungsbereich) as geltungsbereich, id, \"" + plantyp + "\" as type FROM xplanung_light_" + plantyp + " WHERE public = true AND " + date_name_part + "_datum <= now()) as foo unique id using srid=25832"
         map["layers"].append(cluster_layer)
         #print(mappyfile.dumps(map))
         return mappyfile.dumps(map, quote="'")
