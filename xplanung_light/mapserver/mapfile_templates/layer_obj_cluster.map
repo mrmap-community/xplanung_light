@@ -20,6 +20,7 @@
         PROJECTION
             "init=epsg:4326"
         END
+        #DEBUG 5
         MAXSCALEDENOM "100000000"
         MINSCALEDENOM "1"
         CLUSTER

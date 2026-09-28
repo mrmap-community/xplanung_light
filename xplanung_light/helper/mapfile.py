@@ -432,7 +432,7 @@ class MapfileGenerator():
         if plantyp=='bplan':
             metadata["ows_title"] = "Bebauungspläne Geltungsbereiche"
             metadata["ows_abstract"] = "Bebauungspläne Geltungsbereiche - Abstract"
-        metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom_plaene), srs=4326).extent])
+        metadata["ows_extent"] = " ".join([str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
         metadata["ows_metadataurl_href"] = metadata_uri.replace("/1000000/", "/" + "umring" + "/")
         # Metadaten an Umring Layer anfügen
         umring_layer["metadata"] = metadata
@@ -440,10 +440,11 @@ class MapfileGenerator():
             umring_layer["connectiontype"] = "OGR"
             umring_layer["connection"] = connection_string
             umring_layer["data"] = "SELECT * FROM xplanung_light_" + plantyp + " WHERE public=true AND " + date_name_part + "_datum <= date()" 
+        #print("geltungsbereich from (select geltungsbereich, id FROM xplanung_light_" + plantyp + " WHERE public=true AND " + date_name_part + "_datum <= now()) as foo using unique id using srid=25832")
         if connection.vendor == "postgresql":
             umring_layer["connectiontype"] = "POSTGIS"
             umring_layer["connection"] = connection_string
-            umring_layer["data"] = "geltungsbereich from (select geltungsbereich, id FROM xplanung_light_" + plantyp + " WHERE public=true AND " + date_name_part + "_datum <= now()) as foo using unique id using srid=25832"
+            umring_layer["data"] = "geltungsbereich from (select geltungsbereich, id, planart FROM xplanung_light_" + plantyp + " WHERE public=true AND " + date_name_part + "_datum <= now()) foo using unique id using srid=25832"
         # Sichtbarkeitsmaßstäbe definieren
         umring_layer["maxscaledenom"] = 50000
         umring_layer["minscaledenom"] = 1
@@ -484,13 +485,13 @@ class MapfileGenerator():
         if connection.vendor == "sqlite":
             cluster_layer["connectiontype"] = "OGR"
             cluster_layer["connection"] = connection_string
-            cluster_layer["data"] = "SELECT st_centroid(geltungsbereich) as geom, id, \"" + plantyp + "fplan\" as type FROM xplanung_light_" + plantyp + " WHERE public=true AND " + date_name_part + "_datum <= date()"
+            cluster_layer["data"] = "SELECT st_centroid(geltungsbereich) as geom, id, \"" + plantyp + "\" as type, planart FROM xplanung_light_" + plantyp + " WHERE public=true AND " + date_name_part + "_datum <= date()"
         if connection.vendor == "postgresql":
             cluster_layer["connectiontype"] = "POSTGIS"
             cluster_layer["connection"] = connection_string
-            cluster_layer["data"] = "geltungsbereich from (select st_centroid(geltungsbereich) as geltungsbereich, id, \"" + plantyp + "\" as type FROM xplanung_light_" + plantyp + " WHERE public = true AND " + date_name_part + "_datum <= now()) as foo unique id using srid=25832"
+            cluster_layer["data"] = "geltungsbereich from (select st_centroid(geltungsbereich) AS geltungsbereich, id, planart FROM xplanung_light_" + plantyp + " WHERE public = true AND " + date_name_part + "_datum <= now()) foo using unique id using srid=25832"
         map["layers"].append(cluster_layer)
-        #print(mappyfile.dumps(map))
+        print(mappyfile.dumps(map))
         return mappyfile.dumps(map, quote="'")
 
     

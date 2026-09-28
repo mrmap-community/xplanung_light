@@ -6,7 +6,8 @@ MAP
     UNITS       METERS
     IMAGECOLOR  255 255 255
     #FONTSET     "/data/umn/fonts/fonts.txt"
-    #SYMBOLSET   
+    #SYMBOLSET 
+    #CONFIG "MS_ERRORFILE" "/tmp/ms_error.txt"
     SYMBOL
         NAME 'schraffur'
         TYPE HATCH
