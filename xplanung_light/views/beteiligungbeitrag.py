@@ -1102,8 +1102,8 @@ class BeteiligungBeitragDetailView(ExtentUserOrgaInfo, DetailView):
         self.planid = kwargs.get('planid')
         self.beteiligung_pk = kwargs.get('pk')
         # Debugausgabe
-        print("BeteiligungBeitragDetailView - dispatch")
-        print(f"Typ: {self.plantyp}, ID: {self.planid}")
+        #print("BeteiligungBeitragDetailView - dispatch")
+        #print(f"Typ: {self.plantyp}, ID: {self.planid}")
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -1127,13 +1127,15 @@ class BeteiligungBeitragDetailView(ExtentUserOrgaInfo, DetailView):
         # TODO - andere Views für edit und delete erstellen! - Per generic_id und vorheriger Authentifizierung
         #print(str(qs.get(pk=self.kwargs['pk']).generic_id))
         if 'beitrag_generic_id' in self.request.session.keys():
-            print("session['beitrag_generic_id']: " + self.request.session['beitrag_generic_id'])
+            pass
+            #print("session['beitrag_generic_id']: " + self.request.session['beitrag_generic_id'])
         else:
-            print("session['beitrag_generic_id'] not defined!")
+            #print("session['beitrag_generic_id'] not defined!")
+            pass
         if self.request.user.is_anonymous:
             if 'beitrag_generic_id' in self.request.session.keys():
                 if self.request.session['beitrag_generic_id'] == str(qs.get(pk=self.kwargs['pk']).generic_id):
-                    print('beitrag id steht in session!')
+                    #print('beitrag id steht in session!')
                     access_allowed = True
         if not access_allowed:
             #return redirect("bplanbeteiligungbeitrag-authenticate", planid=self.kwargs['planid'], beteiligungid=self.kwargs['beteiligungid'], generic_id=str(qs.get(pk=self.kwargs['pk']).generic_id))

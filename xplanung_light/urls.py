@@ -175,8 +175,6 @@ urlpatterns = [
     # Organisationen
     # WMS / WFS pro Organisation
     path("organization/<int:pk>/ows/", views.ows, name="ows"),
-    # Laufende Beteiligungsverfahren für Gebietskörperschaft
-    #path("organization/<int:pk>/beteiligungen/", views.ows, name="orga-beteiligungen-list"),
     # Pfad für Verbandsgemeinden - zur Generierung der Liste/Karte der Gebietsköperschaften
     path("organization/<int:pk>/childs_map/", views.childs_map, name="childs-map"),
     # Pfad für Liste der Verbandsgemeinden

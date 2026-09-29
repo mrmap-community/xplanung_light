@@ -1645,7 +1645,7 @@ class BPlanBeteiligungForm(FormMixin, ModelForm):
                 bplan_beteiligung=self.instance.pk
             ).exists()
             if hat_beitraege:
-                print('Deaktivieren spezieller Felder wenn schon Beteiligungsbeiträge vorhanden sind')
+                #print('Deaktivieren spezieller Felder wenn schon Beteiligungsbeiträge vorhanden sind')
                 # Problem - cache? - Deaktivierung des Dualselectors erfolgt erst bei refresh ... - strange
                 # TODO klären warum?
                 #self.fields['assigned_toebs'].disabled = True
@@ -1749,7 +1749,7 @@ class FPlanBeteiligungForm(FormMixin, ModelForm):
                 fplan_beteiligung=self.instance.pk
             ).exists()
             if hat_beitraege:
-                print('Deaktivieren spezieller Felder wenn schon Beteiligungsbeiträge vorhanden sind')
+                #print('Deaktivieren spezieller Felder wenn schon Beteiligungsbeiträge vorhanden sind')
                 # Problem - cache? - Deaktivierung des Dualselectors erfolgt erst bei refresh ... - strange
                 # TODO klären warum?
                 #self.fields['assigned_toebs'].disabled = True

@@ -64,7 +64,6 @@ def _is_plan_admin(request, plan):
         admin_orga_users__is_admin=True,
     ).exists()
 
-
 def get_bplan_attachment(request, pk):
     try:
         attachment = BPlanSpezExterneReferenz.objects.select_related().get(pk=pk)
@@ -88,7 +87,6 @@ def get_bplan_attachment(request, pk):
     except (FileNotFoundError, ValueError):
         return HttpResponse("File not found", status=404)
 
-
 def get_fplan_attachment(request, pk):
     try:
         attachment = FPlanSpezExterneReferenz.objects.select_related().get(pk=pk)
@@ -111,7 +109,6 @@ def get_fplan_attachment(request, pk):
         return FileResponse(attachment.attachment.open("rb"))
     except (FileNotFoundError, ValueError):
         return HttpResponse("File not found", status=404)
-
 
 def get_beteiligung_beitrag_attachment(request, priorize_redacted=True, **kwargs):
     """
@@ -145,7 +142,7 @@ def get_beteiligung_beitrag_attachment(request, priorize_redacted=True, **kwargs
     if request.user.is_anonymous:
         if 'beitrag_generic_id' in request.session.keys():
             if request.session['beitrag_generic_id'] == str(beitrag.generic_id):
-                print('beitrag id steht in session - activate ...!')
+                #print('beitrag id steht in session - activate ...!')
                 access_allowed = True
             else:
                 return HttpResponse("401 Unauthorized", status=401) 
@@ -214,15 +211,6 @@ def xplan_html(request, pk:int):
         response.headers['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
         # TODO: Allow integration in website of contact for administrative unit
         return response
-    
-
-
-def beteiligungen(request):
-
-    beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('bplan__name')).annotate(gemeinden=F('bplan__gemeinde__name')).annotate(plantyp=Value('BPlan'))
-    beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('fplan__name')).annotate(gemeinden=F('fplan__gemeinde__name')).annotate(plantyp=Value('FPlan'))    
-    beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
-    return render(request, 'xplanung_light/beteiligungen.html', {'beteiligungen': beteiligungen_plaene})
 
 def ows_beteiligungen(request):
     """
@@ -721,8 +709,6 @@ def childs_map(request, pk:int):
         # https://dakdeniz.medium.com/increase-django-geojson-serialization-performance-7cd8cb66e366
         #ortsgemeinden = AdministrativeOrganization.objects.filter(ls=orga.ls, ks=orga.ks, vs=orga.vs). exclude(gs='000').annotate(geojson=AsGeoJSON('geometry'))
         ortsgemeinden = AdministrativeOrganization.objects.filter(ls=orga.ls, ks=orga.ks, vs=orga.vs). exclude(gs='000')
-
-        
         #print(len(ortsgemeinden))
         #for ortsgemeinde in ortsgemeinden:
         #    print(ortsgemeinde.name + " - " + ortsgemeinde.gs)
@@ -734,8 +720,6 @@ def childs_map(request, pk:int):
             serialize("geojson", ortsgemeinden, fields=["id", "name"], geometry_field='geometry')
         )
         """
-        
-
         # Alternativ alle features in eine Collection überführen 
         featurecollection = {}
         featurecollection['type'] = "FeatureCollection"
@@ -760,7 +744,6 @@ def childs_map(request, pk:int):
             featurecollection['features'].append(feature)
         geojson = featurecollection
         
-
     """
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1188,7 +1171,7 @@ def beitrag_activate(request, **kwargs):
     if request.user.is_anonymous:
         if 'beitrag_generic_id' in request.session.keys():
             if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
-                print('beitrag id steht in session - activate ...!')
+                #print('beitrag id steht in session - activate ...!')
                 access_allowed = True
     if not access_allowed:
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
@@ -1245,7 +1228,7 @@ def beitrag_withdraw(request, **kwargs):
     if request.user.is_anonymous:
         if 'beitrag_generic_id' in request.session.keys():
             if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
-                print('beitrag id steht in session - activate ...!')
+                #print('beitrag id steht in session - activate ...!')
                 access_allowed = True
     if not access_allowed:
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
@@ -1303,7 +1286,7 @@ def beitrag_reactivate(request, **kwargs):
     if request.user.is_anonymous:
         if 'beitrag_generic_id' in request.session.keys():
             if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
-                print('beitrag id steht in session - reactivate ...!')
+                #print('beitrag id steht in session - reactivate ...!')
                 access_allowed = True
     if not access_allowed:
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
@@ -1412,7 +1395,7 @@ def beitrag_detail(request, **kwargs):
     if request.user.is_anonymous:
         if 'beitrag_generic_id' in request.session.keys():
             if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
-                print('beitrag id steht in session!')
+                #print('beitrag id steht in session!')
                 access_allowed = True
     if not access_allowed:
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren

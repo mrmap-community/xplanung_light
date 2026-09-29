@@ -146,6 +146,18 @@ class OwsViewTests(TestCase):
             with self.subTest(name=name):
                 r = self.client.get(reverse(name, kwargs={"pk": 999999}), GETCAP)
                 self.assertEqual(r.status_code, 404)
+
+    def test_overview_dispatch_errors_and_mapserver_7(self):
+        fplan = FPlan.objects.create(name="FPlan Test", geltungsbereich=self.bplan.geltungsbereich)
+        for name, pk in (("bplan-overview-map", self.bplan.id), ("fplan-overview-map", fplan.id)):
+            url = reverse(name, kwargs={"pk": pk})
+            for status, text in ((1, "No valid OWS Request!"), (2, "not successfully processed")):
+                with self.subTest(name=name, status=status):
+                    fake_mapscript(self.ms, dispatch=status)
+                    self.assertContains(self.client.get(url, GETCAP), text)
+            with self.subTest(name=name, version=7):
+                fake_mapscript(self.ms, version=70000)
+                self.assertEqual(self.client.get(url, GETCAP).status_code, 200)
     """    
     def test_fplan_overview_direct_call(self):
         fplan = FPlan.objects.create(name="FPlan Test", geltungsbereich=self.bplan.geltungsbereich)

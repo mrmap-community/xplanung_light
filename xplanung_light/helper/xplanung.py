@@ -26,7 +26,7 @@ class XPlanung():
         return m.group(0) if m else ''
 
     def __init__(self, context_file):
-        """Constructor method
+        """Constructor method ...
         """
         self.context_file = context_file
         self.context_file_bytesio = BytesIO(self.context_file.read())
@@ -38,15 +38,15 @@ class XPlanung():
             allowed_gml_mimetypes = ('application/octet-stream', 'application/gml', 'text/xml', 'text/plain')
             # Über einzelne Dateien iterieren
             for file in zipfile_ob.infolist():
-                print(file.filename)
+                #print(file.filename)
                 file_bytes = zipfile_ob.read(file.filename)
                 file_file = BytesIO(file_bytes)
                 # check MimeType
                 mime_type = magic.from_buffer(file_file.read(2048), mime=True)
                 file_file.seek(0)
-                print(mime_type)
+                #print(mime_type)
                 if file.filename.endswith('.gml') and mime_type in allowed_gml_mimetypes:
-                    print("helper/xplanung.py init: read gml from zip archive")
+                    #print("helper/xplanung.py init: read gml from zip archive")
                     self.xml_string = file_file.read().decode('UTF-8')
         else:
             #print("helper/xplanung.py init: read directly from gml")
@@ -344,7 +344,7 @@ class XPlanung():
         plan.xplan_gml_version = "6.0"
         try:
             plan.save()
-            print("Plan ID (inserted): " + str(plan.id))
+            #print("Plan ID (inserted): " + str(plan.id))
             self.sync_referenzen(plan, referenzen, ns, plan_typ)
         except:
             raise forms.ValidationError("Fehler beim Abspeichern des neuen Plan-Objekts!")
