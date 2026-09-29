@@ -473,6 +473,7 @@ class MapfileGenerator():
             metadata_cluster["ows_abstract"] = "Bebauungspläne Punkt Cluster - Abstract"
             cluster_layer["name"] = "bplan_cluster" 
             cluster_class = cluster_layer["classes"][0]
+            cluster_class['name'] = "Bebauungsplan Punktobjekt"
             # Erster Style (Äußerer Kreis: COLOR 163 198 117)
             style_1_color = cluster_class["styles"][0]["color"]
             # Zweiter Style (Innerer Kreis: COLOR 110 170 40)
@@ -491,7 +492,7 @@ class MapfileGenerator():
             cluster_layer["connection"] = connection_string
             cluster_layer["data"] = "geltungsbereich from (select st_centroid(geltungsbereich) AS geltungsbereich, id, planart FROM xplanung_light_" + plantyp + " WHERE public = true AND " + date_name_part + "_datum <= now()) foo using unique id using srid=25832"
         map["layers"].append(cluster_layer)
-        print(mappyfile.dumps(map))
+        #print(mappyfile.dumps(map))
         return mappyfile.dumps(map, quote="'")
 
     

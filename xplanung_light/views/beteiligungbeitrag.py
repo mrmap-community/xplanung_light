@@ -736,6 +736,36 @@ class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, F
             self.toeb_id = kwargs.get('toeb_id')
         else:
             self.toeb_id = None
+        # Absicherung
+        if not request.user.is_authenticated:
+            # Den Rest macht LoginRequiredMixin
+            return super().dispatch(request, *args, **kwargs)
+        # Ziehen des Plans
+        plan = get_object_or_404(self.planmodel, pk=self.planid)
+        # Sicheres Filtern des Beteiligungsobjektes
+        if self.plantyp == "bplan":
+            get_object_or_404(
+                BPlanBeteiligung,
+                pk=self.beteiligung_pk,
+                bplan=plan,
+            )
+        elif self.plantyp == "fplan":
+            get_object_or_404(
+                FPlanBeteiligung,
+                pk=self.beteiligung_pk,
+                fplan=plan,
+            )
+        else:
+            raise PermissionDenied("Unbekannter Plantyp.")
+        # Superuser darf alles ändern, sonst nur ein User mit der Rolle is_toeb_reporter
+        if not request.user.is_superuser:
+            toeb_unit = get_object_or_404(ToebUnit, pk=self.toeb_id)
+            if not AdminOrgaUser.objects.filter(
+                organization=toeb_unit.organization,
+                user=request.user,
+                is_toeb_reporter=True,
+            ).exists():
+                raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")        
         return super().dispatch(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
@@ -889,7 +919,6 @@ class BeteiligungBeitragToebUpdateView(LoginRequiredMixin, ExtentUserOrgaInfo, E
             self.planmodel = FPlan
             self.reference_model_name_lower = 'fplan'
             self.collection_class = FPlanBeteiligungBeitragToebCollection
-        #TODO: Anpassen für FPlan
         self.planid = kwargs.get('planid')
         self.beteiligung_pk = kwargs.get('beteiligungid')
         self.pk = kwargs.get('pk')
@@ -938,6 +967,20 @@ class BeteiligungBeitragToebUpdateView(LoginRequiredMixin, ExtentUserOrgaInfo, E
         context[self.reference_model_name_lower] = plan
         return context
     
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.plantyp=='bplan':
+            return qs.filter(pk=self.kwargs["pk"],
+                        bplan_beteiligung_id=self.kwargs["beteiligungid"],
+                        bplan_beteiligung__bplan_id=self.kwargs["planid"],
+                    )
+        if self.plantyp=='fplan':
+            return qs.filter(pk=self.kwargs["pk"],
+                        fplan_beteiligung_id=self.kwargs["beteiligungid"],
+                        fplan_beteiligung__fplan_id=self.kwargs["planid"],
+                    )
+        raise PermissionDenied("Unbekannter Plantyp.")
+    
     """
     # Scheint bei händischer Überschreibung zu Problemen mit den Anhängen zu kommen - daher erst mal zurückgestellt
     # die EMail kann ja auch über die History abgegriffen werden
@@ -982,8 +1025,22 @@ class BeteiligungBeitragToebDeleteView(ExtentUserOrgaInfo, UserPassesTestMixin, 
         #TODO: Anpassen für FPlan
         self.beteiligungid = kwargs.get('beteiligungid')
         # Debugausgabe
-        print(f"Typ: {self.plantyp}")
+        #print(f"Typ: {self.plantyp}")
         return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.plantyp=='bplan':
+            return qs.filter(pk=self.kwargs["pk"],
+                        bplan_beteiligung_id=self.kwargs["beteiligungid"],
+                        bplan_beteiligung__bplan_id=self.kwargs["planid"],
+                    )
+        if self.plantyp=='fplan':
+            return qs.filter(pk=self.kwargs["pk"],
+                        fplan_beteiligung_id=self.kwargs["beteiligungid"],
+                        fplan_beteiligung__fplan_id=self.kwargs["planid"],
+                    )
+        raise PermissionDenied("Unbekannter Plantyp.")
     
     def test_func(self):
         """
