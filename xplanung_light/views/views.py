@@ -21,6 +21,7 @@ from xplanung_light.forms import RequestForRoleRefuseForm, RequestForRoleConfirm
 from xplanung_light.filter import BPlanIdFilter, FPlanIdFilter
 from django.http import HttpResponse
 import mapscript
+from django.shortcuts import get_object_or_404
 from urllib.parse import parse_qs
 from xplanung_light.helper.mapfile import MapfileGenerator
 # for caching mapfiles ;-)
@@ -48,6 +49,8 @@ from django.core.mail import EmailMultiAlternatives
 from django.core.exceptions import ValidationError
 import tempfile
 from urllib.parse import urlsplit
+from django.contrib.auth.mixins import LoginRequiredMixin
+
 #from django.utils.timezone import datetime
 
 def _is_plan_admin(request, plan):
@@ -119,11 +122,13 @@ def get_beteiligung_beitrag_attachment(request, priorize_redacted=True, **kwargs
     """
     gemeinden = None
     if kwargs['plantyp'] == 'bplan':
-        beitrag = BPlanBeteiligungBeitrag.objects.get(attachments__in=[kwargs['pk']])
+        #beitrag = BPlanBeteiligungBeitrag.objects.get(attachments__in=[kwargs['pk']])
+        beitrag = get_object_or_404(BPlanBeteiligungBeitrag, attachments__in=[kwargs['pk']])
         gemeinden = AdministrativeOrganization.objects.filter(bplan__beteiligungen__comments__attachments__in=[kwargs['pk']])
         attachment_model = BPlanBeteiligungBeitragAnhang
     if kwargs['plantyp'] == 'fplan':
-        beitrag = FPlanBeteiligungBeitrag.objects.get(attachments__in=[kwargs['pk']])
+        beitrag = get_object_or_404(FPlanBeteiligungBeitrag, attachments__in=[kwargs['pk']])
+        #beitrag = FPlanBeteiligungBeitrag.objects.get(attachments__in=[kwargs['pk']])
         gemeinden = AdministrativeOrganization.objects.filter(fplan__beteiligungen__comments__attachments__in=[kwargs['pk']])
         attachment_model = FPlanBeteiligungBeitragAnhang
     # Nur admins der Gebietskörperschaften oder superuser
@@ -217,42 +222,7 @@ def beteiligungen(request):
     beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('bplan__name')).annotate(gemeinden=F('bplan__gemeinde__name')).annotate(plantyp=Value('BPlan'))
     beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('fplan__name')).annotate(gemeinden=F('fplan__gemeinde__name')).annotate(plantyp=Value('FPlan'))    
     beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
-    
     return render(request, 'xplanung_light/beteiligungen.html', {'beteiligungen': beteiligungen_plaene})
-    
-    for offenlage in beteiligungen_plaene:
-        print(str(offenlage.end_datum) + ": " +offenlage.xplan_name + " - " + offenlage.gemeinden)
-
-
-    orga_beteiligungen_bplaene = AdministrativeOrganization.objects.filter(bplan__beteiligungen__bekanntmachung_datum__lte=timezone.now()).filter(bplan__beteiligungen__end_datum__gte=timezone.now()).only('id', 'name').annotate(xplan_name=F('bplan__name'))
-    orga_beteiligungen_fplaene = AdministrativeOrganization.objects.filter(fplan__beteiligungen__bekanntmachung_datum__lte=timezone.now()).filter(fplan__beteiligungen__end_datum__gte=timezone.now()).only('id', 'name').annotate(xplan_name=F('fplan__name'))
-
-    orga_beteiligungen_plaene = orga_beteiligungen_bplaene.union(orga_beteiligungen_fplaene)
-                                                                 
-    for offenlage in orga_beteiligungen_plaene:
-        print("Gemeinde: " + offenlage.name + " - Plan: " + offenlage.xplan_name)
-
-    offengelegte_bplaene = BPlan.objects.filter(beteiligungen__end_datum__gte=timezone.now()).filter(beteiligungen__bekanntmachung_datum__lte=timezone.now()).only('geltungsbereich', 'name','id').annotate(sum_offenlage=Count('beteiligungen'))
-    offengelegte_fplaene = FPlan.objects.filter(beteiligungen__end_datum__gte=timezone.now()).filter(beteiligungen__bekanntmachung_datum__lte=timezone.now()).only('geltungsbereich', 'name','id').annotate(sum_offenlage=Count('beteiligungen'))
-    
-    
-    offengelegte_plaene = offengelegte_bplaene.union(offengelegte_fplaene)
-    
-    
-    print(offengelegte_plaene.query)
-    print(len(offengelegte_plaene))
-    
-    for offenlage in offengelegte_plaene:
-        print(offenlage.name + ": " + str(offenlage.sum_offenlage))
-
-    # Über Gebietskörperschaften
-    offenlagen_bplan = AdministrativeOrganization.objects.filter(bplan__beteiligungen__bekanntmachung_datum__lte=timezone.now()).filter(bplan__beteiligungen__end_datum__gte=timezone.now()).only('name')
-    #for offenlage in offenlagen_bplan:
-    print(offenlagen_bplan.query)
-    #    print(offenlage['n_bplan'])
-    #print(offenlagen_bplan)
-    #print(offengelegte_plaene.query)
-    print(len(offengelegte_plaene))
 
 def ows_beteiligungen(request):
     """
@@ -816,6 +786,8 @@ def vg_list(request):
 
 def childs_map(request, pk:int):
     orga = AdministrativeOrganization.objects.get(pk=pk)
+    ortsgemeinden = AdministrativeOrganization.objects.none()
+    geojson = {"type": "FeatureCollection", "features": []}
     if orga.gs == '000' and not orga.vs == '00':
         print("Verbandsgemeinde gefunden!")
         # alle Gemeinden der VG laden
@@ -966,7 +938,7 @@ def fplan_import(request):
                 # https://amgcomputing.blogspot.com/2015/11/django-form-confirm-before-saving.html
                 # reload form
                 form = FPlanImportForm()
-                return render(request, "xplanung_light/bplan_import.html", {"form": form})
+                return render(request, "xplanung_light/fplan_import.html", {"form": form})
             else:
                 if overwrite:
                     messages.success(request, 'Flächennutzungsplan wurde erfolgreich aktualisiert!')
@@ -995,6 +967,10 @@ def bplan_import_archiv(request):
             if request.user.is_superuser == False:
                 orgas = xplanung.get_orgas()
                 user_orga_admin = []
+                if orgas == []:
+                    messages.error(request, 'Im GML konnte keine Organisation gefunden werden - prüfen sie die Datei oder wenden sie sich an den Administrator!')
+                    form = BPlanImportArchivForm()
+                    return render(request, "xplanung_light/bplan_import_archiv.html", {"form": form})
                 for gemeinde in orgas:
                     user_is_admin = False
                     for user in gemeinde.admin_orga_users.all():
@@ -1003,8 +979,8 @@ def bplan_import_archiv(request):
                     user_orga_admin.append(user_is_admin)
                 if all(user_orga_admin) == False:
                     messages.error(request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
-                    form = BPlanImportForm()
-                    return render(request, "xplanung_light/bplan_import.html", {"form": form})
+                    form = BPlanImportArchivForm()
+                    return render(request, "xplanung_light/bplan_import_archiv.html", {"form": form})
             bplan_created = xplanung.import_plan_archiv(overwrite=overwrite, plan_typ='bplan')
             if bplan_created == False:
                 messages.error(request, 'Bebauungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
@@ -1041,6 +1017,10 @@ def fplan_import_archiv(request):
             if request.user.is_superuser == False:
                 orgas = xplanung.get_orgas()
                 user_orga_admin = []
+                if orgas == []:
+                    messages.error(request, 'Im GML konnte keine Organisation gefunden werden - prüfen sie die Datei oder wenden sie sich an den Administrator!')
+                    form = FPlanImportArchivForm()
+                    return render(request, "xplanung_light/fplan_import_archiv.html", {"form": form})
                 for gemeinde in orgas:
                     user_is_admin = False
                     for user in gemeinde.admin_orga_users.all():
@@ -1049,8 +1029,8 @@ def fplan_import_archiv(request):
                     user_orga_admin.append(user_is_admin)
                 if all(user_orga_admin) == False:
                     messages.error(request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
-                    form = FPlanImportForm()
-                    return render(request, "xplanung_light/fplan_import.html", {"form": form})
+                    form = FPlanImportArchivForm()
+                    return render(request, "xplanung_light/fplan_import_archiv.html", {"form": form})
             plan_created = xplanung.import_plan_archiv(overwrite=overwrite, plan_typ='fplan')
             if plan_created == False:
                 messages.error(request, 'Flächennutzungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
@@ -1237,7 +1217,7 @@ def register(request):
     else:
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            form.save()
+            #form.save()
             user = form.save()
             login(request, user)
             return redirect('home')
@@ -1438,7 +1418,9 @@ def beitrag_authenticate(request, **kwargs):
     if kwargs['plantyp'] == 'fplan':
         beitrag_model = FPlanBeteiligungBeitrag
     beitrag = beitrag_model.objects.get(generic_id=kwargs['generic_id'])
-    gast_beitrag_authenticate_form = GastBeitragAuthenticateForm(request.POST)
+    gast_beitrag_authenticate_form = GastBeitragAuthenticateForm(
+        request.POST if request.method == "POST" else None
+        )
     if request.method =="POST":
         if gast_beitrag_authenticate_form.is_valid():
             if beitrag.email == gast_beitrag_authenticate_form.cleaned_data['email']:
@@ -1519,7 +1501,7 @@ def beitrag_detail(request, **kwargs):
         context['plan'] = beitrag.fplan_beteiligung.fplan
     return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
 
-class RequestForRoleConfirm(FormView):
+class RequestForRoleConfirm(LoginRequiredMixin, FormView):
     form_class = RequestForRoleConfirmForm
     template_name = "xplanung_light/requestforrole_form_confirm.html"
     success_url = reverse_lazy("requestforrole-admin-list")
@@ -1567,7 +1549,7 @@ class RequestForRoleConfirm(FormView):
             if request.role == "TR":
                 obj.is_toeb_reporter = True
             obj.save()
-        organizations.append(organization)
+            organizations.append(organization)
         request.editing_note = form.cleaned_data['editing_note']
         request.delete_reason = 'c'
         request.save()
@@ -1593,7 +1575,7 @@ class RequestForRoleConfirm(FormView):
         return super().form_valid(form)
 
 
-class RequestForRoleRefuse(FormView):
+class RequestForRoleRefuse(LoginRequiredMixin, FormView):
     form_class = RequestForRoleRefuseForm
     template_name = "xplanung_light/requestforrole_form_refuse.html"
     success_url = reverse_lazy("requestforrole-admin-list")

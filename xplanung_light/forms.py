@@ -2142,7 +2142,7 @@ Für FPläne
 """
 class FPlanBeteiligungCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
-    bplan_beteiligung = FPlanBeteiligungFormFormset()
+    fplan_beteiligung = FPlanBeteiligungFormFormset()
     beitrag = FPlanBeteiligungBeitragCollection()
     captcha = CaptchaForm()
 
@@ -2185,17 +2185,14 @@ class BPlanBeteiligungBeitragGenericForm(ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-
         eingangsdatum = cleaned_data.get('eingangsdatum')
         bplan_beteiligung = cleaned_data.get('bplan_beteiligung')
-
         if eingangsdatum and bplan_beteiligung:
             if eingangsdatum > bplan_beteiligung.end_datum:
                 self.add_error(
                     'eingangsdatum',
                     "Der Beitrag darf nicht nach Ablauf der Frist eingegangen sein!"
                 )
-
         return cleaned_data
 
     class Meta:
@@ -2226,6 +2223,18 @@ class FPlanBeteiligungBeitragGenericForm(ModelForm):
         if commit:
             instance.save()
         return instance
+
+    def clean(self):
+        cleaned_data = super().clean()
+        eingangsdatum = cleaned_data.get('eingangsdatum')
+        fplan_beteiligung = cleaned_data.get('fplan_beteiligung')
+        if eingangsdatum and fplan_beteiligung:
+            if eingangsdatum > fplan_beteiligung.end_datum:
+                self.add_error(
+                    'eingangsdatum',
+                    "Der Beitrag darf nicht nach Ablauf der Frist eingegangen sein!"
+                )
+        return cleaned_data
 
     class Meta:
         model = FPlanBeteiligungBeitrag

@@ -198,7 +198,7 @@ class ImportArchivViewFormAndTemplate(TestCase):
         )
         self.client.force_login(self.fremder_user)
 
-    def test_permission_denied_branch_uses_wrong_form_and_template(self):
+    def test_permission_denied_branch_uses_archiv_form_and_template(self):
         upload = zip_upload({'plan.gml': make_bplan_gml('Archiv Permission Test')})
 
         response = self.client.post(reverse('bplan-import-archiv'), data={
@@ -208,7 +208,7 @@ class ImportArchivViewFormAndTemplate(TestCase):
         self.assertEqual(response.status_code, 200)  # kein Redirect, Formular wird neu gezeigt
         self.assertFalse(BPlan.objects.filter(name='Archiv Permission Test').exists())
 
-        # Erwartetes (fehlerhaftes) Verhalten: form/Template gehören zur
-        # Einzel-GML-Import-Variante statt zur Archiv-Variante.
-        self.assertEqual(type(response.context['form']).__name__, 'BPlanImportForm')
-        self.assertIn('xplanung_light/bplan_import.html', [t.name for t in response.templates])
+        # Erwartetes  Verhalten: form/Template gehören wirklich zur
+        # GML-Archiv-Import-Variante und nicht zur GML-Import Variante.
+        self.assertEqual(type(response.context['form']).__name__, 'BPlanImportArchivForm')
+        self.assertIn('xplanung_light/bplan_import_archiv.html', [t.name for t in response.templates])

@@ -5,7 +5,8 @@ from django.core import mail
 from django.template.loader import render_to_string as real_render_to_string
 from django.test import Client, TestCase
 from django.urls import reverse
-
+from django.http import response
+from django.conf import settings
 from xplanung_light.models import (
     AdministrativeOrganization,
     AdminOrgaUser,
@@ -116,38 +117,24 @@ class RequestForRoleWorkflow(TestCase):
         """
         return self.client.post(url, data={'editing_note': editing_note})
 
-    # --- Größter Befund: fehlende Zugriffskontrolle -----------------------
-
-    def test_anonymous_post_to_confirm_crashes(self):
-        """
-        Dokumentiert den Absturz statt eines sauberen 302/403. Ein
-        AnonymousUser kann nicht als FK-Wert in
-        AdminOrgaUser.objects.filter(user=...) verwendet werden.
-        editing_note MUSS hier nicht-leer sein, sonst scheitert schon die
-        normale Formularvalidierung (422) und form_valid() - und damit der
-        eigentlich zu testende Absturz - wird nie erreicht.
-        """
+    def test_anonymous_post_to_confirm_redirects_to_login(self):
         req = self._make_request()
-        with self.assertRaises(TypeError):
-            self._post(self._confirm_url(req))
+        r = self._post(self._confirm_url(req))            # den assertRaises-Block ersetzen
+        self.assertEqual(r.status_code, 302)
+        self.assertIn(settings.LOGIN_URL, r["Location"])  # dasselbe für refuse
 
-    def test_anonymous_post_to_refuse_crashes(self):
+    def test_anonymous_get_of_pending_request_redirects_to_login(self):
         req = self._make_request()
-        with self.assertRaises(TypeError):
-            self._post(self._refuse_url(req))
+        r = self.client.get(self._confirm_url(req)) 
+        self.assertEqual(r.status_code, 302)       # war 200
 
     def test_anonymous_user_can_view_pending_request_details_via_get(self):
         """
-        Informationsleck: GET ist von der fehlenden Zugriffskontrolle nicht
-        betroffen (get_context_data() greift nicht auf request.user zu),
-        zeigt aber Details eines fremden Antrags an, für die es keinerlei
-        Berechtigung braucht. GET läuft normal über TemplateResponseMixin,
-        das JSON-Protokoll von formset.views.FormView betrifft nur POST.
+        Test ob man an die pending request als anonymous per POST rankommt. Ist jetzt dicht..
         """
         req = self._make_request()
         response = self.client.get(self._confirm_url(req))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['anfrage'], req)
+        self.assertEqual(response.status_code, 302)
 
     # --- Bestätigung: Happy Path + Rollen-Restriktionen --------------------
 
@@ -219,12 +206,9 @@ class RequestForRoleWorkflow(TestCase):
 
     def test_confirmation_email_only_mentions_last_organization_when_multiple_requested(self):
         """
-        Dokumentiert den im Klassen-Docstring beschriebenen Bug:
-        organizations.append(organization) sitzt außerhalb der for-Schleife
-        in RequestForRoleConfirm.form_valid(). Bei mehreren beantragten
-        Organisationen landet nur die zuletzt iterierte in der Mail - hier
+        Bei mehreren beantragten Organisationen landen beide in der Mail - hier
         über ein Mock von render_to_string nachgewiesen, unabhängig davon,
-        in welcher Reihenfolge die DB die Organisationen zurückgibt.
+        in welcher Reihenfolge die DB die Organisationen zurückgibt. 2 sind vorgegeben.
         """
         req = self._make_request(
             role=RequestForRole.TOEBREPORTER, organizations=[self.gemeinde_a, self.gemeinde_b],
@@ -245,8 +229,8 @@ class RequestForRoleWorkflow(TestCase):
         self.assertEqual(len(html_calls), 1)
         organizations_im_kontext = html_calls[0].kwargs['context']['organizations']
         self.assertEqual(
-            len(organizations_im_kontext), 1,
-            "Erwarteter (fehlerhafter) IST-Zustand: nur eine von zwei "
+            len(organizations_im_kontext), 2,
+            "Erwarteter IST-Zustand: zwei "
             "beantragten Organisationen landet im Mail-Kontext.",
         )
 
