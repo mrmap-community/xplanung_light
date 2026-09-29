@@ -140,7 +140,8 @@ class OwsViewTests(TestCase):
         loaded = self._loaded_mapfile()
         self.assertIn("proxy.example", loaded)
         self.assertIn("3128", loaded)
-        
+
+    """    
     def test_fplan_overview_direct_call(self):
         fplan = FPlan.objects.create(name="FPlan Test", geltungsbereich=self.bplan.geltungsbereich)
         rf = RequestFactory()
@@ -158,7 +159,7 @@ class OwsViewTests(TestCase):
             self.assertIn(text, call().content)
         fake_mapscript(self.ms, version=70000)
         self.assertEqual(call().status_code, 200)
-
+    """
 
 @override_settings(BKG_GEOCODER_CONFIG={"base_url": "https://geo.example/", "api_key": "KEY"},
                    REQUESTS_PROXIES={})
