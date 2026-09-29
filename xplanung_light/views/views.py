@@ -340,10 +340,7 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
     """
     WMS für die Detailanzeige der Lage eines einzelnen Plans
     """
-    if plan_typ == 'bplan':
-        plan = BPlan.objects.get(pk=pk)
-    if plan_typ == 'fplan':  
-        plan = FPlan.objects.get(pk=pk)
+    plan = get_object_or_404(FPlan if plan_typ == 'fplan' else BPlan, pk=pk)
     qs = parse_qs(request.META['QUERY_STRING'])
     req =  mapscript.OWSRequest()
     for k, v in qs.items():
@@ -355,8 +352,7 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
         if plan_typ == 'bplan':
             map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('bplan-overview-map', kwargs={"pk": pk})))
         if plan_typ == 'fplan':
-            #TODO define uri with name fplan-overvie-map
-            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('bplan-overview-map', kwargs={"pk": pk})))
+            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('fplan-overview-map', kwargs={"pk": pk})))
         # Überschreiben der Punkte des Features:
         wkt = str(plan.geltungsbereich)
         map_file_string = map_file_string.replace('<wkt>', wkt.replace('SRID=4326;',''))
@@ -419,76 +415,7 @@ def ows_fplan_overview(request, pk:int, plan_typ='fplan'):
     """
     WMS für die Detailanzeige der Lage eines einzelnen Plans
     """
-    if plan_typ == 'bplan':
-        plan = BPlan.objects.get(pk=pk)
-    if plan_typ == 'fplan':  
-        plan = FPlan.objects.get(pk=pk)
-    qs = parse_qs(request.META['QUERY_STRING'])
-    req =  mapscript.OWSRequest()
-    for k, v in qs.items():
-        req.setParameter(k, ','.join(v))
-    map_file_string = ''
-    with open(os.path.join(str(settings.BASE_DIR), "xplanung_light/mapserver/mapfiles/overview.map")) as file:
-        map_file_string = file.read()
-        # Überschreiben der Online Resource
-        if plan_typ == 'bplan':
-            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('bplan-overview-map', kwargs={"pk": pk})))
-        if plan_typ == 'fplan':
-            #TODO define uri with name fplan-overvie-map
-            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('bplan-overview-map', kwargs={"pk": pk})))
-        # Überschreiben der Punkte des Features:
-        wkt = str(plan.geltungsbereich)
-        map_file_string = map_file_string.replace('<wkt>', wkt.replace('SRID=4326;',''))
-        geometry = OGRGeometry(str(plan.geltungsbereich), srs=4326)
-        wgs84_extent = geometry.extent
-        #print(wgs84_extent)
-        # Nutzung des Proxy, wenn in settings definiert - da verhält sich gunicorn wohl anders als runserver im Debug
-        if 'http' in settings.REQUESTS_PROXIES.keys():
-            #print('proxy set')
-            # Get host, port
-            proxy = urlsplit(settings.REQUESTS_PROXIES['http'])
-            map_file_string = map_file_string.replace('<proxy_host>', proxy.hostname)
-            map_file_string = map_file_string.replace('<proxy_port>', str(proxy.port))
-        else:
-            #print('proxy not set')
-            # Löschen der Proxy-Konfigurationseinträge
-            map_file_string = map_file_string.replace('"wms_proxy_host" "<proxy_host>"', '')
-            map_file_string = map_file_string.replace('"wms_proxy_port" "<proxy_port>"', '')
-            map_file_string = map_file_string.replace('"wms_proxy_type" "http"', '')
-    # 2. Den Aufruf versionsabhängig steuern
-    mapserver_version = mapscript.msGetVersionInt()
-    if mapserver_version >= 80000:
-        # 1. Wir erstellen eine temporäre Dummy-Konfiguration auf der Festplatte
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.conf') as tmp:
-            tmp.write("CONFIG\nEND")
-            tmp_path = tmp.name
-        # 2. MapServer mitteilen, wo die globale Konfiguration liegt
-        os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
-        mapserverConfig = mapscript.configObj()
-        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
-    else:
-        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/") 
-    mapscript.msIO_installStdoutToBuffer()
-    dispatch_status = map_obj.OWSDispatch(req)
-    if dispatch_status != mapscript.MS_SUCCESS:
-        if dispatch_status == mapscript.MS_DONE:
-            return HttpResponse("No valid OWS Request!")
-        if dispatch_status == mapscript.MS_FAILURE:
-            return HttpResponse("No valid OWS Request not successfully processed!")
-    content_type = mapscript.msIO_stripStdoutBufferContentType()
-    mapscript.msIO_stripStdoutBufferContentHeaders()
-    result = mapscript.msIO_getStdoutBufferBytes()
-    response_headers = [('Content-Type', content_type),
-                        ('Content-Length', str(len(result)))]
-    assert int(response_headers[1][1]) > 0
-    http_response = HttpResponse(result)
-    http_response.headers['Content-Type'] = content_type
-    http_response.headers['Content-Length'] = str(len(result))
-    return http_response
+    return ows_bplan_overview(request, pk, plan_typ='fplan')
 
 def geocodeBkg(request):
     """

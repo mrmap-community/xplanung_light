@@ -141,6 +141,11 @@ class OwsViewTests(TestCase):
         self.assertIn("proxy.example", loaded)
         self.assertIn("3128", loaded)
 
+    def test_overview_unknown_plan_is_404(self):
+        for name in ("bplan-overview-map", "fplan-overview-map"):
+            with self.subTest(name=name):
+                r = self.client.get(reverse(name, kwargs={"pk": 999999}), GETCAP)
+                self.assertEqual(r.status_code, 404)
     """    
     def test_fplan_overview_direct_call(self):
         fplan = FPlan.objects.create(name="FPlan Test", geltungsbereich=self.bplan.geltungsbereich)

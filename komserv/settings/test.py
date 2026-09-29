@@ -14,3 +14,4 @@ DATABASES = {
         'TEST': {'NAME': str(BASE_DIR / 'test_db.sqlite3')},
     }
 }
+REQUESTS_PROXIES = None
