@@ -24,7 +24,10 @@ from xplanung_light.models import (
 )
 from captcha.models import CaptchaStore
 import os
-
+from django.contrib.auth.models import AnonymousUser
+from xplanung_light.views.beteiligungbeitrag import is_toeb_editor
+from django.conf import settings
+from django.core import mail
 
 User = get_user_model()
 _MEDIA = tempfile.mkdtemp()
@@ -67,7 +70,7 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.bplan = BPlan.objects.create(name="BPlan Windpark", geltungsbereich=dummy_polygon)
         self.bplan.gemeinde.add(self.kommune)
         self.bplan_beteiligung = BPlanBeteiligung.objects.create(
-            bplan=self.bplan, typ="1000", bekanntmachung_datum=self.gestern, start_datum=self.gestern, end_datum=self.in_einem_monat
+            bplan=self.bplan, typ="1000", bekanntmachung_datum=self.gestern, start_datum=self.gestern, end_datum=self.in_einem_monat, allow_online_beitrag=True
         )
         self.bplan_beteiligung.assigned_toebs.add(self.toeb_unit)
         self.bplan_token = uuid.uuid4()
@@ -81,7 +84,7 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.fplan = FPlan.objects.create(name="FPlan Windkraft", geltungsbereich=dummy_polygon)
         self.fplan.gemeinde.add(self.kommune)
         self.fplan_beteiligung = FPlanBeteiligung.objects.create(
-            fplan=self.fplan, typ="1000", bekanntmachung_datum=self.gestern, start_datum=self.gestern, end_datum=self.in_einem_monat
+            fplan=self.fplan, typ="1000", bekanntmachung_datum=self.gestern, start_datum=self.gestern, end_datum=self.in_einem_monat, allow_online_beitrag=True
         )
         self.fplan_beteiligung.assigned_toebs.add(self.toeb_unit)
         self.fplan_token = uuid.uuid4()
@@ -455,3 +458,292 @@ class BeteiligungBeitragUltimateTests(TestCase):
         url = reverse("beteiligung-beitrag-attachment-download-orig",
                       kwargs={"plantyp": "bplan", "pk": self.bplan_anhang.pk})
         self.assertEqual(self.client.get(url).status_code, 404)
+
+    def _toeb_url(self, name, plantyp="bplan", **extra):
+        plan, bet = ((self.bplan, self.bplan_beteiligung) if plantyp == "bplan"
+                     else (self.fplan, self.fplan_beteiligung))
+        return reverse(name, kwargs={"plantyp": plantyp, "planid": plan.id,
+                                     "beteiligungid": bet.id, **extra})
+
+    # --- TÖB: Erfolgspfad mit DB-Prüfung -------------------------------------
+    def test_toeb_create_persists_beitrag_for_both_plantypes(self):
+        self.client.login(username="reporter_master", password="password123")
+        for plantyp, bet, model in (("bplan", self.bplan_beteiligung, BPlanBeteiligungBeitrag),
+                                    ("fplan", self.fplan_beteiligung, FPlanBeteiligungBeitrag)):
+            with self.subTest(plantyp=plantyp):
+                fk = f"{plantyp}_beteiligung"
+                titel = f"TÖB {plantyp}"
+                self.post_formset(
+                    self._toeb_url("beteiligungbeitrag-toeb-create", plantyp, toeb_id=self.toeb_unit.id),
+                    {"beitrag": {"titel": titel, "beschreibung": self.tiptap_json,
+                                 "email": "egal@example.org", fk: bet.id},
+                     "attachments": []},
+                )
+                saved = model.objects.get(titel=titel)
+                self.assertEqual(saved.toeb, self.toeb_unit)
+                self.assertEqual(saved.email, "reporter@behoerde.de")   # vom User, nicht aus dem Formular
+                self.assertEqual(saved.eingangsdatum, date.today())
+                self.assertEqual(getattr(saved, fk), bet)
+
+    # --- TÖB: Rechte für Create und Update -----------------------------------
+    def test_toeb_views_permission_matrix(self):
+        User.objects.create_superuser("root", "root@example.com", "password123")
+        alt = BPlanBeteiligungBeitrag.objects.create(
+            bplan_beteiligung=self.bplan_beteiligung, titel="TÖB alt", email="reporter@behoerde.de", beschreibung=self.tiptap_json,
+            toeb=self.toeb_unit, typ="1000", eingangsdatum=self.heute, approved=True)
+        urls = {
+            "create": self._toeb_url("beteiligungbeitrag-toeb-create", toeb_id=self.toeb_unit.id),
+            "update": self._toeb_url("beteiligungbeitrag-toeb-update", pk=alt.id),
+        }
+        for who, names, expected in (("reporter_master", ("create", "update"), 200),
+                                     ("root", ("create",), 200),
+                                     ("joe_stranger", ("create", "update"), 403)):
+            self.client.logout()
+            self.client.login(username=who, password="password123")
+            for name in names:
+                with self.subTest(who=who, view=name):
+                    self.assertEqual(self.client.get(urls[name]).status_code, expected)
+        self.client.logout()
+        for name, url in urls.items():
+            with self.subTest(who="anonym", view=name):
+                self.assertIn(self.client.get(url).status_code, (302, 403))   # 500 wäre ein Fund
+
+    # --- Probe: fremde und unbekannte TÖB-Einheit ---------------------------
+    def test_toeb_create_for_foreign_or_unknown_unit_is_denied(self):
+        andere = ToebUnit.objects.create(organization=self.behoerde, name="Anderer Fachbereich",
+                                         theme="NSLP", public=True)   # reporter_master ist dort kein Editor
+        self.client.login(username="reporter_master", password="password123")
+        for toeb_id in (andere.id, 999999):
+            with self.subTest(toeb_id=toeb_id):
+                r = self.client.get(self._toeb_url("beteiligungbeitrag-toeb-create", toeb_id=toeb_id))
+                self.assertIn(r.status_code, (403, 404))
+
+    # --- Generic (Sachbearbeiter): Erfolgspfad --------------------------------
+    def test_generic_create_saves_beitrag_for_both_plantypes(self):
+        self.client.login(username="admin_master", password="password123")
+        common = {"typ": "2000", "eingangsdatum": str(self.heute), "name": "Erika Muster",
+                  "email": "", "titel": "Schriftlich", "beschreibung": self.tiptap_json}
+        for plantyp, bet, model, beitrag in (
+            ("bplan", self.bplan_beteiligung, BPlanBeteiligungBeitrag,
+             {**common, "bplan_beteiligung": self.bplan_beteiligung.id}),
+            ("fplan", self.fplan_beteiligung, FPlanBeteiligungBeitrag, common),
+        ):
+            with self.subTest(plantyp=plantyp):
+                self.post_formset(self._toeb_url("beteiligungbeitrag-generic-create", plantyp),
+                                  {"beitrag": beitrag, "attachments": []})
+                saved = model.objects.get(titel="Schriftlich")
+                self.assertTrue(saved.approved)                          # Form.save() setzt approved=True
+                self.assertEqual(getattr(saved, f"{plantyp}_beteiligung"), bet)
+
+    # weitere TOEB BeteiligungBeitrag Tests
+    def test_toeb_create_post_for_foreign_unit_creates_nothing(self):
+        andere = ToebUnit.objects.create(organization=self.behoerde, name="Anderer Fachbereich",
+                                         theme="NSLP", public=True)
+        self.client.login(username="reporter_master", password="password123")
+        url = self._toeb_url("beteiligungbeitrag-toeb-create", toeb_id=andere.id)
+        self.post_formset(url, {
+            "beitrag": {"titel": "Fremdstelle", "beschreibung": self.tiptap_json,
+                        "email": "x@example.org", "bplan_beteiligung": self.bplan_beteiligung.id},
+            "attachments": [],
+        }, expected=403)
+        self.assertFalse(BPlanBeteiligungBeitrag.objects.filter(titel="Fremdstelle").exists())
+
+    def test_toeb_create_requires_editor_of_the_addressed_assigned_unit(self):
+        b = ToebUnit.objects.create(organization=self.behoerde, name="Fachbereich B", theme="NSLP", public=True)
+        c = ToebUnit.objects.create(organization=self.behoerde, name="Fachbereich C", theme="NSLP", public=True)
+        self.bplan_beteiligung.assigned_toebs.add(b)          # b zugewiesen, c nicht; reporter_master ist nur Editor von toeb_unit
+        self.client.login(username="reporter_master", password="password123")
+        for unit, expected in ((self.toeb_unit, 200),          # zugewiesen + Editor: "einer von mehreren" reicht
+                               (b, 403),                       # zugewiesen, aber kein Editor
+                               (c, 403)):                      # nicht zugewiesen
+            with self.subTest(unit=unit.name):
+                r = self.client.get(self._toeb_url("beteiligungbeitrag-toeb-create", toeb_id=unit.id))
+                self.assertEqual(r.status_code, expected)
+
+    def _make_toeb_beitrag(self):
+        return BPlanBeteiligungBeitrag.objects.create(
+            bplan_beteiligung=self.bplan_beteiligung, titel="TÖB alt", beschreibung="Bedenken",
+            name="Sachbearbeiter", email="reporter@behoerde.de", toeb=self.toeb_unit,
+            typ="1000", eingangsdatum=self.heute, approved=True)
+
+    def test_toeb_create_ignores_foreign_beteiligung_in_payload(self):
+        other_plan = BPlan.objects.create(name="Anderer Plan", geltungsbereich=self.bplan.geltungsbereich)
+        other = BPlanBeteiligung.objects.create(bplan=other_plan, typ="1000", bekanntmachung_datum=self.gestern,
+                                                start_datum=self.gestern, end_datum=self.in_einem_monat)
+        self.client.login(username="reporter_master", password="password123")
+        url = self._toeb_url("beteiligungbeitrag-toeb-create", toeb_id=self.toeb_unit.id)
+        self.client.post(url, data=json.dumps({"formset_data": {"beitrag": {
+            "titel": "Umgeleitet", "beschreibung": self.tiptap_json, "email": "x@example.org",
+            "bplan_beteiligung": other.id}, "attachments": []}}),
+            content_type="application/json", HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertFalse(BPlanBeteiligungBeitrag.objects.filter(titel="Umgeleitet", bplan_beteiligung=other).exists())
+
+    def test_toeb_update_and_delete_edge_cases(self):
+        beitrag = self._make_toeb_beitrag()
+        upd = self._toeb_url("beteiligungbeitrag-toeb-update", pk=beitrag.id)
+        dele = self._toeb_url("beteiligungbeitrag-toeb-delete", pk=beitrag.id)
+        self.client.logout()
+        for url in (upd, dele):
+            with self.subTest(who="anonym", url=url):
+                self.assertIn(self.client.get(url).status_code, (302, 403))     # 500 vor dem Fix bei Delete
+        self.client.login(username="joe_stranger", password="password123")
+        self.assertEqual(self.client.get(dele).status_code, 403)
+        self.client.login(username="reporter_master", password="password123")
+        for name in ("beteiligungbeitrag-toeb-update", "beteiligungbeitrag-toeb-delete"):
+            with self.subTest(view=name, beitrag="buerger"):                     # toeb=None -> 500 vor dem Fix
+                r = self.client.get(self._toeb_url(name, pk=self.bplan_beitrag.id))
+                self.assertIn(r.status_code, (403, 404))
+        r = self.client.post(dele)
+        self.assertRedirects(r, reverse("toebbeteiligungen-list"), fetch_redirect_response=False)
+        self.assertFalse(BPlanBeteiligungBeitrag.objects.filter(pk=beitrag.id).exists())
+
+    def test_toeb_update_and_delete_denied_for_editor_of_other_unit(self):
+        andere = ToebUnit.objects.create(organization=self.behoerde, name="Anderer Fachbereich",
+                                         theme="NSLP", public=True)
+        fremd = BPlanBeteiligungBeitrag.objects.create(
+            bplan_beteiligung=self.bplan_beteiligung, titel="Andere Einheit", beschreibung="Text",
+            name="Kollege", email="kollege@behoerde.de", toeb=andere, typ="1000",
+            eingangsdatum=self.heute, approved=True)
+        self.client.login(username="reporter_master", password="password123")   # gleiche Behörde, kein Editor von `andere`
+        for name in ("beteiligungbeitrag-toeb-update", "beteiligungbeitrag-toeb-delete"):
+            with self.subTest(view=name):
+                self.assertEqual(self.client.get(self._toeb_url(name, pk=fremd.id)).status_code, 403)
+        self.client.post(self._toeb_url("beteiligungbeitrag-toeb-delete", pk=fremd.id))
+        self.assertTrue(BPlanBeteiligungBeitrag.objects.filter(pk=fremd.id).exists())
+
+    def test_toeb_editor_requires_role_in_the_units_organization(self):
+        url = self._toeb_url("beteiligungbeitrag-toeb-create", toeb_id=self.toeb_unit.id)
+
+        outsider = User.objects.create_user("outsider", password="password123")
+        row = AdminOrgaUser.objects.create(organization=self.kommune, user=outsider, is_toeb_reporter=True)
+        self.toeb_unit.editors.add(row)                       # Editor-Zeile gehört zu einer anderen Organisation
+        self.client.login(username="outsider", password="password123")
+        with self.subTest(case="Editor-Zeile einer fremden Organisation"):
+            self.assertEqual(self.client.get(url).status_code, 403)
+
+        self.toeb_editor.is_toeb_reporter = False             # Rolle entzogen, Editor-Eintrag bleibt
+        self.toeb_editor.save()
+        self.client.login(username="reporter_master", password="password123")
+        with self.subTest(case="Rolle entzogen"):
+            self.assertEqual(self.client.get(url).status_code, 403)
+
+    # Nächste Runde
+    def test_is_toeb_editor_helper(self):
+        root = User.objects.create_superuser("root2", "root2@example.com", "password123")
+        self.assertFalse(is_toeb_editor(AnonymousUser(), self.toeb_unit))
+        self.assertTrue(is_toeb_editor(root, self.toeb_unit))
+        self.assertTrue(is_toeb_editor(self.toeb_user, self.toeb_unit))
+        self.assertFalse(is_toeb_editor(self.stranger_user, self.toeb_unit))
+        self.assertFalse(is_toeb_editor(self.stranger_user, None))      # Beitrag ohne Einheit
+
+    def _citizen_payload(self, titel="Lärm"):
+        return {"bplan_beteiligung": {"id": self.bplan_beteiligung.id},
+                "beitrag": [{"beitrag": {"name": "Heinz", "email": "h@example.com", "titel": titel,
+                                         "beschreibung": self.tiptap_json, "typ": 1000,
+                                         "eingangsdatum": str(self.heute)}, "attachments": []}],
+                "captcha": self.captcha_payload()}
+
+    def _citizen_url(self, **extra):
+        kw = {"plantyp": "bplan", "planid": self.bplan.id, "pk": self.bplan_beteiligung.id, **extra}
+        return reverse("beteiligungbeitrag-create-orga" if "orga_id" in kw else "beteiligungbeitrag-create", kwargs=kw)
+
+    # FPlan-Varianten von Update/Delete/Generic-Update, plus Superuser-Pfad der Update-View
+    def test_fplan_variants_of_update_delete_views(self):
+        beitrag = FPlanBeteiligungBeitrag.objects.create(
+            fplan_beteiligung=self.fplan_beteiligung, titel="TÖB fplan", beschreibung="Text",
+            name="Sachbearbeiter", email="reporter@behoerde.de", toeb=self.toeb_unit,
+            typ="1000", eingangsdatum=self.heute, approved=True)
+        User.objects.create_superuser("root3", "root3@example.com", "password123")
+        update = self._toeb_url("beteiligungbeitrag-toeb-update", "fplan", pk=beitrag.id)
+        delete = self._toeb_url("beteiligungbeitrag-toeb-delete", "fplan", pk=beitrag.id)
+        for who in ("reporter_master", "root3"):
+            self.client.login(username=who, password="password123")
+            with self.subTest(who=who):
+                self.assertEqual(self.client.get(update).status_code, 200)
+        self.client.login(username="admin_master", password="password123")
+        generic = self._toeb_url("beteiligungbeitrag-generic-update", "fplan", pk=self.fplan_beitrag.id)
+        self.assertEqual(self.client.get(generic).status_code, 200)
+        self.client.login(username="reporter_master", password="password123")
+        self.assertRedirects(self.client.post(delete), reverse("toebbeteiligungen-list"),
+                             fetch_redirect_response=False)
+        self.assertFalse(FPlanBeteiligungBeitrag.objects.filter(pk=beitrag.id).exists())
+
+    # Bürgerformular: Orga-Route und https-Aktivierungslink
+    def test_citizen_create_with_orga_and_https_activation_mail(self):
+        url = self._citizen_url(orga_id=self.kommune.id)
+        r = self.client.get(url)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["orga"], self.kommune)
+        cfg = {**settings.XPLANUNG_LIGHT_CONFIG, "mapfile_force_online_resource_https": True}
+        with override_settings(XPLANUNG_LIGHT_CONFIG=cfg):
+            self.post_formset(url, self._citizen_payload())
+        self.assertIn("https://", mail.outbox[-1].body)
+
+    # Probe 1: get_initial prüft die Beteiligung in BEIDEN Tabellen, egal welcher plantyp in der URL steht
+    """
+    def test_citizen_create_denied_for_unknown_or_foreign_plantyp_beteiligung(self):
+        weitere = BPlanBeteiligung.objects.create(bplan=self.bplan, typ="1000", bekanntmachung_datum=self.gestern,
+                                                  start_datum=self.gestern, end_datum=self.in_einem_monat)
+        for plantyp, planid, pk in (("bplan", self.bplan.id, 999999),        # unbekannt
+                                    ("fplan", self.fplan.id, weitere.id)):   # ID gehört zu einem BPlan
+            with self.subTest(plantyp=plantyp, pk=pk):
+                r = self.client.get(reverse("beteiligungbeitrag-create",
+                                            kwargs={"plantyp": plantyp, "planid": planid, "pk": pk}))
+                self.assertEqual(r.status_code, 403)
+    """
+
+    # Probe 2: Online-Beiträge sind für diese Beteiligung abgeschaltet
+    """
+    def test_citizen_post_denied_if_online_beitrag_not_allowed(self):
+        BPlanBeteiligung.objects.filter(pk=self.bplan_beteiligung.pk).update(allow_online_beitrag=False)
+        r = self.client.post(self._citizen_url(), data=json.dumps({"formset_data": self._citizen_payload("Gesperrt")}),
+                             content_type="application/json", HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        
+        self.assertFalse(BPlanBeteiligungBeitrag.objects.filter(titel="Gesperrt").exists())
+        self.assertNotEqual(r.status_code, 200)
+    """
+
+    def test_detail_view_for_superuser(self):
+        User.objects.create_superuser("root4", "root4@example.com", "password123")
+        self.client.login(username="root4", password="password123")
+        r = self.client.get(reverse("beteiligungbeitrag-detail", kwargs={
+            "plantyp": "bplan", "planid": self.bplan.id,
+            "beteiligungid": self.bplan_beteiligung.id, "pk": self.bplan_beitrag.id}))
+        self.assertEqual(r.status_code, 200)
+
+    def test_citizen_create_beteiligung_lookup_and_typ(self):
+        bplan_url = reverse("beteiligungbeitrag-create", kwargs={
+            "plantyp": "bplan", "planid": self.bplan.id, "pk": self.bplan_beteiligung.id})
+        fplan_url = reverse("beteiligungbeitrag-create", kwargs={
+            "plantyp": "fplan", "planid": self.fplan.id, "pk": self.fplan_beteiligung.id})
+        unknown = reverse("beteiligungbeitrag-create", kwargs={
+            "plantyp": "bplan", "planid": self.bplan.id, "pk": 999999})
+        self.assertEqual(self.client.get(unknown).status_code, 404)
+
+        self.assertEqual(self.bplan_beteiligung.pk, self.fplan_beteiligung.pk)   # gleiche ID in beiden Tabellen
+        BPlanBeteiligung.objects.all().update(typ="2000")
+        FPlanBeteiligung.objects.all().update(typ="2000")
+        self.assertEqual(self.client.get(bplan_url).status_code, 403)            # Typ nicht erlaubt (deckt 310-311)
+
+        BPlanBeteiligung.objects.all().update(typ="1000")                        # nur die BPlan-Seite erlaubt
+        self.assertEqual(self.client.get(fplan_url).status_code, 403)
+
+    def test_citizen_create_denied_if_not_open_for_online_beitrag(self):
+        url = self._citizen_url()
+        payload = json.dumps({"formset_data": self._citizen_payload("Gesperrt")})
+        baseline = {"allow_online_beitrag": True, "typ": "1000",
+                    "start_datum": self.gestern, "end_datum": self.in_einem_monat}
+        cases = (
+            ("Online-Beitrag abgeschaltet", {"allow_online_beitrag": False}),
+            ("Frist abgelaufen", {"start_datum": self.heute - timedelta(days=10), "end_datum": self.gestern}),
+            ("Frist noch nicht begonnen", {"start_datum": self.morgen}),
+            ("Typ nicht zulässig", {"typ": "2000"}),
+        )
+        for label, changes in cases:
+            with self.subTest(case=label):
+                BPlanBeteiligung.objects.filter(pk=self.bplan_beteiligung.pk).update(**{**baseline, **changes})
+                self.assertEqual(self.client.get(url).status_code, 403)
+                r = self.client.post(url, data=payload, content_type="application/json",
+                                     HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+                self.assertEqual(r.status_code, 403)
+                self.assertFalse(BPlanBeteiligungBeitrag.objects.filter(titel="Gesperrt").exists())

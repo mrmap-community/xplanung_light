@@ -33,7 +33,19 @@ from xplanung_light.views.user import ExtentUserOrgaInfo
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from xplanung_light.views.mixins import GemeindeAdminRequiredMixin
+from django.http import Http404
 
+def is_toeb_editor(user, toeb_unit):
+    """Superuser oder Editor (is_toeb_reporter) der übergebenen TÖB-Einheit."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return toeb_unit is not None and toeb_unit.editors.filter(
+        user=user,
+        is_toeb_reporter=True,
+        organization_id=toeb_unit.organization_id,                                                   
+    ).exists()
 
 class XPlanBeteiligungBeitragCreateView(ExtentUserOrgaInfo, CreateView):
     """
@@ -175,21 +187,6 @@ class BeteiligungBeitragListView(ExtentUserOrgaInfo, SingleTableView):
             )
         return context
 
-    def get_context_data2(self, **kwargs):
-        """
-        Docstring for get_context_data
-        
-        :param self: Description
-        :param kwargs: Description
-        """
-        #planid = self.kwargs['planid']
-        #beteiligungid = self.kwargs['beteiligungid']
-        context = super().get_context_data(**kwargs)
-        context["plan"] = self.reference_model.objects.get(pk=self.planid)
-        context["plantyp"] = self.plantyp
-        context["beteiligung"] = self.parent_model.objects.get(pk=self.beteiligungid)
-        return context
-
 
 class BeteiligungBeitragDeleteView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
     """
@@ -287,9 +284,14 @@ class BeteiligungBeitragCreateView(ExtentUserOrgaInfo, EditCollectionView):
             self.template_name = 'xplanung_light/beteiligungbeitrag_form.html'
         if "orga_id" in kwargs.keys():
             self.orga_id = kwargs.get('orga_id')
-        #TODO: Anpassen für FPlan
         self.planid = kwargs.get('planid')
         self.beteiligung_pk = kwargs.get('pk')
+        beteiligung_qs = self.model.objects.filter(pk=self.beteiligung_pk,
+                                                   **{f"{self.plantyp}_id": self.planid})
+        if not beteiligung_qs.exists():
+            raise Http404
+        if not beteiligung_qs.filter(typ__in=[1000, 10001], allow_online_beitrag=True, start_datum__lte=datetime.now().date(), end_datum__gte=datetime.now().date()).exists():
+            raise PermissionDenied("Für das gewählte Verfahren ist eine nicht-authentifizierte Beteiligung nicht zulässig!")
         return super().dispatch(request, *args, **kwargs)
         
     def get_initial(self):
@@ -307,13 +309,6 @@ class BeteiligungBeitragCreateView(ExtentUserOrgaInfo, EditCollectionView):
             self.success_url = reverse('organization-bauleitplanung-list', kwargs={'pk': self.kwargs['orga_id']})
         else:
             self.success_url = reverse('beteiligungbeitrag-list', kwargs={'plantyp': self.kwargs['plantyp'], 'planid': self.kwargs['planid'], 'beteiligungid': self.kwargs['pk']})
-        if self.kwargs['pk']:
-            bplan_beteiligung_exist = BPlanBeteiligung.objects.filter(typ__in=[1000, 10001], id=self.kwargs['pk']).exists()
-            fplan_beteiligung_exist = FPlanBeteiligung.objects.filter(typ__in=[1000, 10001], id=self.kwargs['pk']).exists()
-            
-            if not bplan_beteiligung_exist and not fplan_beteiligung_exist:
-                raise PermissionDenied("Für das gewählte Verfahren ist eine nicht-authentifizierte Beteiligung nicht zulässig!")
-
         return super().get_initial()
     
     def get_context_data(self, **kwargs):
@@ -329,20 +324,14 @@ class BeteiligungBeitragCreateView(ExtentUserOrgaInfo, EditCollectionView):
         context["plan"] = self.planmodel.objects.get(pk=self.kwargs['planid'])
         # try except logic
         beteiligung = None
-        try:
-            beteiligung = self.model.objects.get(pk=self.kwargs['pk'], allow_online_beitrag=True)
-        except:
-            pass
+        beteiligung = self.model.objects.get(pk=self.kwargs['pk'])
         context["beteiligung"] = beteiligung
         if 'orga_id' in self.kwargs.keys():
             orga = AdministrativeOrganization.objects.get(pk=self.kwargs['orga_id'])
             context["orga"] = orga
         consent_options = None
-        try:
-            today = datetime.now().date()
-            consent_options = ConsentOption.objects.filter(obsolete=False, mandatory=True, valid_from__lte=today, valid_until__gte=today, type='commentator')
-        except:
-            pass
+        today = datetime.now().date()
+        consent_options = ConsentOption.objects.filter(obsolete=False, mandatory=True, valid_from__lte=today, valid_until__gte=today, type='commentator')
         context["consent_options"] = consent_options
         return context
 
@@ -712,6 +701,14 @@ class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, F
         # Url zu der nach dem Erstellen der Instanz weitergeleitet wird
         self.success_url = reverse('toebbeteiligungen-list')
         return initial
+    
+    def _may_write(self, user):
+        toeb_unit = get_object_or_404(ToebUnit, pk=self.toeb_id)
+        if user.is_superuser:
+            return True
+        beteiligung = get_object_or_404(self.model_parent, pk=self.beteiligung_pk)
+        return (beteiligung.assigned_toebs.filter(pk=toeb_unit.pk).exists()
+                and is_toeb_editor(user, toeb_unit))
 
     def dispatch(self, request, *args, **kwargs):
         """
@@ -758,14 +755,16 @@ class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, F
         else:
             raise PermissionDenied("Unbekannter Plantyp.")
         # Superuser darf alles ändern, sonst nur ein User mit der Rolle is_toeb_reporter
-        if not request.user.is_superuser:
-            toeb_unit = get_object_or_404(ToebUnit, pk=self.toeb_id)
-            if not AdminOrgaUser.objects.filter(
-                organization=toeb_unit.organization,
-                user=request.user,
-                is_toeb_reporter=True,
-            ).exists():
-                raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")        
+        #if not request.user.is_superuser: #ab hier 
+        #    toeb_unit = get_object_or_404(ToebUnit, pk=self.toeb_id)
+        #    if not AdminOrgaUser.objects.filter(
+        #        organization=toeb_unit.organization,
+        #        user=request.user,
+        #        is_toeb_reporter=True,
+        #    ).exists():
+        #        raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")      #bis hier   
+        if not self._may_write(request.user):
+            raise PermissionDenied("Nutzer ist kein TÖB-Sachbearbeiter für diese Stelle!")
         return super().dispatch(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
@@ -792,13 +791,9 @@ class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, F
         context['extra_context'] = self.extra_context
         # Berechtigungsprüfung
         # check ob Nutzer toeb reporter für den angegebenen TOEB ist
-        if self.request.user.is_superuser == False:
-            if self.request.user.is_anonymous:
-                raise PermissionDenied("Um diese Funktion zu nutzen, müssen sie angemeldet sein!")
-            toeb_unit_orga = ToebUnit.objects.filter(id=self.toeb_id).values('organization')
-            if AdminOrgaUser.objects.filter(organization=toeb_unit_orga[0]['organization'], user=self.request.user, is_toeb_reporter=True).exists():
-                context[self.reference_model_name_lower] = plan
-                return context
+        # Check in dispatch
+        # zweite Absicherung, falls die View ohne dispatch benutzt wird
+        if not self._may_write(self.request.user):
             raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
         # Übergabe des Planobjekts - warum unter bplan/fplan - kann ggf. raus
         context[self.reference_model_name_lower] = plan
@@ -835,7 +830,10 @@ class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, F
             beitrag_instance.email = self.request.user.email
             beitrag_instance.eingangsdatum = date.today()
             # Überschrieben der beteiligungsid (zur Sicherheit - hier braucht man eine instanz, keine id!):
-            #setattr(beitrag_instance, self.plantyp + '_beteiligung', parent_pk)
+            #setattr(beitrag_instance, self.plantyp + '_beteiligung', parent_pk) # hier einfügen ...
+            beitrag_instance = beitrag_form.save(commit=False)
+            setattr(beitrag_instance, f"{self.plantyp}_beteiligung",
+                    get_object_or_404(self.model_parent, pk=self.beteiligung_pk))
             # beitrag_instance.parent_id = parent_pk 
             beitrag_instance.save()
             beitrag_form.save_m2m()
@@ -924,16 +922,10 @@ class BeteiligungBeitragToebUpdateView(LoginRequiredMixin, ExtentUserOrgaInfo, E
         self.pk = kwargs.get('pk')
         self.object = self.get_object()
         if not request.user.is_authenticated:
-            return super().dispatch(request, *args, **kwargs)  # LoginRequiredMixin übernimmt
-        if not request.user.is_superuser:
-            toeb_orga = ToebUnit.objects.filter(id=self.object.toeb.id).values('organization')
-            is_reporter = AdminOrgaUser.objects.filter(
-                organization=toeb_orga[0]['organization'],
-                user=request.user,
-                is_toeb_reporter=True,
-            ).exists()
-            if not is_reporter:
-                raise PermissionDenied("Nutzer ist kein TÖB-Sachbearbeiter für diese Stelle!")
+            return super().dispatch(request, *args, **kwargs)   # LoginRequiredMixin
+        self.object = self.get_object()
+        if not is_toeb_editor(request.user, self.object.toeb):
+            raise PermissionDenied("Nutzer ist kein TÖB-Sachbearbeiter für diese Stelle!")
         return super().dispatch(request, *args, **kwargs)        
     
 
@@ -958,12 +950,12 @@ class BeteiligungBeitragToebUpdateView(LoginRequiredMixin, ExtentUserOrgaInfo, E
         #context["beitrag"] = self.get_object()
         context['extra_context'] = self.extra_context
         # check ob Nutzer toeb reporter für die jeweilige TOEBUnit ist
-        if self.request.user.is_superuser == False:
-            toeb_unit_orga = ToebUnit.objects.filter(id=self.object.toeb.id).values('organization')
-            if AdminOrgaUser.objects.filter(organization=toeb_unit_orga[0]['organization'], user=self.request.user, is_toeb_reporter=True).exists():
-                context[self.reference_model_name_lower] = plan
-                return context
+        # Berechtigung wird in dispatch geprüft (is_toeb_editor)
+        # Und zusätzlich noch mal hier
+        if not is_toeb_editor(self.request.user, self.object.toeb):
             raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        context[self.reference_model_name_lower] = plan
+        return context
         context[self.reference_model_name_lower] = plan
         return context
     
@@ -1001,7 +993,7 @@ class BeteiligungBeitragToebUpdateView(LoginRequiredMixin, ExtentUserOrgaInfo, E
         return super().form_collection_valid(form_collection)
     """
 
-class BeteiligungBeitragToebDeleteView(ExtentUserOrgaInfo, UserPassesTestMixin, SuccessMessageMixin, DeleteView):
+class BeteiligungBeitragToebDeleteView(LoginRequiredMixin, ExtentUserOrgaInfo, UserPassesTestMixin, SuccessMessageMixin, DeleteView):
     """
     Löschen eines BeteiligungsBeitrag-Records - aus Sicht der TOEB.
 
@@ -1043,13 +1035,8 @@ class BeteiligungBeitragToebDeleteView(ExtentUserOrgaInfo, UserPassesTestMixin, 
         raise PermissionDenied("Unbekannter Plantyp.")
     
     def test_func(self):
-        """
-        Funktion zur Berechtigungsprüfung - über UserPassesTestMixin - weniger Code ;-)
-        """
-        obj = self.get_object()
-        toeb_unit_orga = ToebUnit.objects.filter(id=obj.toeb.id).values('organization')
-        return AdminOrgaUser.objects.filter(organization=toeb_unit_orga[0]['organization'], user=self.request.user, is_toeb_reporter=True).exists() or self.request.user.is_superuser
-
+        return is_toeb_editor(self.request.user, self.get_object().toeb)
+    
     """
     def get_queryset(self, **kwargs):
         qs = super().get_queryset()

@@ -39,7 +39,7 @@ class BeteiligungBeitragCoreViewTests(TestCase):
         self.bplan.geometry = dummy_polygon
         self.bplan.gemeinde.add(self.orga)
         self.bplan_beteiligung = BPlanBeteiligung.objects.create(
-            bplan=self.bplan, typ="1000", bekanntmachung_datum=self.gestern, start_datum=self.gestern, end_datum=self.in_einem_monat
+            bplan=self.bplan, typ="1000", bekanntmachung_datum=self.gestern, start_datum=self.gestern, end_datum=self.in_einem_monat, allow_online_beitrag=True
         )
 
         # 4. FPlan & aktives Beteiligungsverfahren anlegen
@@ -47,7 +47,7 @@ class BeteiligungBeitragCoreViewTests(TestCase):
         self.fplan.geometry = dummy_polygon
         self.fplan.gemeinde.add(self.orga)
         self.fplan_beteiligung = FPlanBeteiligung.objects.create(
-            fplan=self.fplan, typ="1000", bekanntmachung_datum=self.gestern, start_datum=self.gestern, end_datum=self.in_einem_monat
+            fplan=self.fplan, typ="1000", bekanntmachung_datum=self.gestern, start_datum=self.gestern, end_datum=self.in_einem_monat, allow_online_beitrag=True
         )
 
         # 5. Einen bestehenden Bürgerbeitrag erzeugen
