@@ -23,6 +23,7 @@ from xplanung_light.models import (
     ToebUnit
 )
 from captcha.models import CaptchaStore
+import os
 
 
 User = get_user_model()
@@ -433,3 +434,24 @@ class BeteiligungBeitragUltimateTests(TestCase):
         r = self.client.get(reverse("beteiligung-beitrag-attachment-download-orig",
                                     kwargs={"plantyp": "bplan", "pk": 999999}))
         self.assertEqual(r.status_code, 404)   # schlägt aktuell mit DoesNotExist fehl
+
+    def test_detail_for_superuser(self):
+        User.objects.create_superuser("root", "root@example.com", "password123")
+        self.client.login(username="root", password="password123")
+        r = self.client.get(reverse("gastbeteiligungbeitrag-detail", kwargs=self._kw()))
+        self.assertEqual(r.status_code, 200)
+
+    def test_default_download_without_redaction_serves_original(self):
+        self.client.login(username="admin_master", password="password123")
+        url = reverse("beteiligung-beitrag-attachment-download",
+                      kwargs={"plantyp": "bplan", "pk": self.bplan_anhang.pk})
+        r = self.client.get(url)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(b"".join(r.streaming_content), b"binary-data")
+
+    def test_download_of_missing_file_is_404(self):
+        os.remove(self.bplan_anhang.attachment.path)
+        self.client.login(username="admin_master", password="password123")
+        url = reverse("beteiligung-beitrag-attachment-download-orig",
+                      kwargs={"plantyp": "bplan", "pk": self.bplan_anhang.pk})
+        self.assertEqual(self.client.get(url).status_code, 404)

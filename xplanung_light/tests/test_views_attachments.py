@@ -13,6 +13,7 @@ from xplanung_light.models import (
     BPlanSpezExterneReferenz, FPlanSpezExterneReferenz,
 )
 from xplanung_light.views import views
+from unittest.mock import patch
 
 User = get_user_model()
 _MEDIA = tempfile.mkdtemp()
@@ -80,6 +81,7 @@ class PlanAttachmentTests(TestCase):
                     self.assertEqual(view(request_for(self.admin), pk=att.pk).status_code, 200)
                     self.assertEqual(view(request_for(self.root), pk=att.pk).status_code, 200)
 
+    """
     def test_missing_file_is_404(self):
         for plantyp in ("bplan", "fplan"):
             with self.subTest(plantyp=plantyp):
@@ -88,6 +90,27 @@ class PlanAttachmentTests(TestCase):
                 self.assertEqual(view(request_for(), pk=att.pk).status_code, 404)
                 type(att).objects.filter(pk=att.pk).update(attachment="")  # kein Dateifeld gesetzt
                 self.assertEqual(view(request_for(), pk=att.pk).status_code, 404)
+    """
+
+    def test_open_errors_return_404(self):
+        for plantyp in ("bplan", "fplan"):
+            for exc in (FileNotFoundError, ValueError):
+                with self.subTest(plantyp=plantyp, exc=exc.__name__):
+                    att, view = self.make(plantyp)
+                    with patch("django.db.models.fields.files.FieldFile.open", side_effect=exc):
+                        r = view(request_for(), pk=att.pk)
+                    self.assertEqual(r.status_code, 404)
+
+    def test_missing_file_paths_return_404(self):
+        for plantyp in ("bplan", "fplan"):
+            with self.subTest(plantyp=plantyp, case="Datei fehlt auf der Platte"):
+                att, view = self.make(plantyp)
+                os.remove(att.attachment.path)
+                self.assertEqual(view(request_for(), pk=att.pk).status_code, 404)   # os.path.exists-Zweig
+            with self.subTest(plantyp=plantyp, case="kein Dateifeld gesetzt"):
+                att, view = self.make(plantyp)
+                type(att).objects.filter(pk=att.pk).update(attachment="")
+                self.assertEqual(view(request_for(), pk=att.pk).status_code, 404) 
 
 
 class XplanHtmlTests(TestCase):
@@ -117,3 +140,5 @@ class XplanHtmlTests(TestCase):
                 r = self.call(pk, **params)
                 self.assertEqual(r.status_code, 200)
                 self.assertIn(b"Access-Control", str(r.headers).encode() + b"Access-Control")  # Header vorhanden
+
+

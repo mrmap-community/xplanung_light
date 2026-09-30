@@ -82,3 +82,11 @@ class ImportViewTests(TestCase):
                 r, imp, _ = self._post(case, self.other, orgas=[])
                 self.assertEqual(r.status_code, 200)
                 imp.assert_not_called()
+
+    def test_invalid_form_rerenders_with_errors(self):
+        self.client.force_login(self.root)
+        for name in ("bplan-import", "fplan-import", "bplan-import-archiv", "fplan-import-archiv"):
+            with self.subTest(name=name):
+                r = self.client.post(reverse(name), {})          # keine Datei -> Formular ungültig
+                self.assertEqual(r.status_code, 200)
+                self.assertTrue(r.context["form"].errors)

@@ -5,7 +5,7 @@ omit =
     */migrations/*
     */tests/*
     manage.py
-
+    komserv/settings/__init__.py
 [html]
 # Zielordner für den HTML-Bericht
 directory = htmlcov

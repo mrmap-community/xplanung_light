@@ -1,6 +1,6 @@
 import django_tables2 as tables
 from django_tables2.utils import A
-from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp, ToebUnit
+from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp, FPlanUvp, ToebUnit
 from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz, BPlanBeteiligungBeitrag, FPlanBeteiligungBeitrag, RequestForRole
 from .models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme 
 from .models import ConsentOption, BPlanBeteiligungToebNotification, FPlanBeteiligungToebNotification
@@ -537,7 +537,7 @@ class FPlanUvpTable(tables.Table):
     uvp_ende_datum = tables.Column(verbose_name="Ende Umweltprüfung")
 
     class Meta:
-        model = Uvp
+        model = FPlanUvp
         template_name = "django_tables2/bootstrap5.html"
         fields = ( "id", "uvp", "typ", "uvp_beginn_datum", "uvp_ende_datum", "edit", "delete")
 

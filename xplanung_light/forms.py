@@ -99,7 +99,7 @@ class BPlanSpezExterneReferenzForm(forms.ModelForm):
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
     def clean(self):
         cleaned_data = super().clean()
-        print(self.cleaned_data['typ'])
+        #print(self.cleaned_data['typ'])
         # check if karte should be uploaded
         if cleaned_data['typ'] == '1070': # Karte
             # Validierung der Rasterdatei 
@@ -122,7 +122,7 @@ class FPlanSpezExterneReferenzForm(forms.ModelForm):
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
     def clean(self):
         cleaned_data = super().clean()
-        print(self.cleaned_data['typ'])
+        #print(self.cleaned_data['typ'])
         # check if karte should be uploaded
         if cleaned_data['typ'] == '1070': # Karte
             # Validierung der Rasterdatei 
@@ -1597,7 +1597,7 @@ class BeteiligungToebDualSortableSelector(DualSortableSelector):
     """
     def label_from_instance(self, obj):
         """Überschreibt die Label-Darstellung mit zusätzlichen Annotierungen."""
-        print(f"label_from_instance aufgerufen für: {obj}") 
+        #print(f"label_from_instance aufgerufen für: {obj}") 
         prefix = "* "
         return f"{prefix}{obj.label}"
         #emails = self.form._email_map.get(obj.pk, 'keine E-Mails')

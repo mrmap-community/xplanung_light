@@ -321,7 +321,7 @@ class XPlanung():
                 existing_plan.xplan_gml = self.xml_string.strip()
                 existing_plan.xplan_gml_version = "6.0"
                 id = existing_plan.save()
-                print("Plan ID (update): " + str(existing_plan.id))
+                #print("Plan ID (update): " + str(existing_plan.id))
                 # Anhänge abspeichern, wenn welche dabei sind - prüfen, ob sie schon existieren
                 self.sync_referenzen(existing_plan, referenzen, ns, plan_typ)
                 return True
@@ -359,7 +359,7 @@ class XPlanung():
             zipfile_ob = ZipFile(self.context_file_bytesio)
             if zipfile_ob.read(file_name):
                 valid = True
-                print("found file in zip: " + file_name)
+                #print("found file in zip: " + file_name)
                 file_bytes = zipfile_ob.read(file_name)
                 file_bytesio = BytesIO(file_bytes)
                 file_bytesio.name = file_name
@@ -375,20 +375,23 @@ class XPlanung():
                             fplan=plan, name=name, typ=typ
                         )
                     if created:
-                        print("Referenz erstellt!")
+                        #print("Referenz erstellt!")
+                        pass
                     else:
-                        print("Referenz aktualisiert!")
+                        #print("Referenz aktualisiert!")
+                        pass
                     spez_externe_referenz.attachment.save(file_name, file_bytesio, save=False)
                     spez_externe_referenz.aus_archiv = True
                     spez_externe_referenz.save()
                 else:
-                    print("Datei nicht valide! Wurde nicht importiert")
+                    #print("Datei nicht valide! Wurde nicht importiert")
+                    pass
 
     def validate(self, file, typ):
         if typ == '99999':
-            print("GeoreferenzierterScan: type: " + str(type(file)))
+            #print("GeoreferenzierterScan: type: " + str(type(file)))
             real_mime_type = magic.from_buffer(file.read(1024), mime=True)
-            print("GeoreferenzierterScan: mimetype: " + real_mime_type)
+            #print("GeoreferenzierterScan: mimetype: " + real_mime_type)
             if real_mime_type != 'image/tiff':
                 return False
         return True

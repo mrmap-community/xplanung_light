@@ -146,27 +146,18 @@ def get_beteiligung_beitrag_attachment(request, priorize_redacted=True, **kwargs
                 access_allowed = True
             else:
                 return HttpResponse("401 Unauthorized", status=401) 
-    try:
-        attachment = attachment_model.objects.get(pk=kwargs['pk'])
-    except attachment_model.DoesNotExist:
-        attachment = None
-    if access_allowed:
-        if attachment:
-            if os.path.exists(attachment.attachment.file.name):
-                if priorize_redacted == True:
-                    if hasattr(attachment, 'redacted_version'):
-                        response = FileResponse(attachment.redacted_version.attachment)
-                    else:
-                        response = FileResponse(attachment.attachment)
-                else:
-                    response = FileResponse(attachment.attachment)
-                return response
-            else:
-                return HttpResponse("File not found", status=404) 
-        else:
-            return HttpResponse("Object not found", status=404)
-    else:
+    attachment = get_object_or_404(attachment_model, pk=kwargs['pk'])
+    if not access_allowed:
         return HttpResponse("Forbidden", status=403)
+    if not os.path.exists(attachment.attachment.path):
+        return HttpResponse("File not found", status=404)
+    if priorize_redacted == True:
+        if hasattr(attachment, 'redacted_version'):
+            return FileResponse(attachment.redacted_version.attachment)
+        else:
+            return FileResponse(attachment.attachment)
+    else:
+        return FileResponse(attachment.attachment)
 
 def get_beteiligung_beitrag_attachment_orig(request, **kwargs):
     return get_beteiligung_beitrag_attachment(request, priorize_redacted=False, **kwargs)
@@ -704,7 +695,7 @@ def childs_map(request, pk:int):
     ortsgemeinden = AdministrativeOrganization.objects.none()
     geojson = {"type": "FeatureCollection", "features": []}
     if orga.gs == '000' and not orga.vs == '00':
-        print("Verbandsgemeinde gefunden!")
+        #print("Verbandsgemeinde gefunden!")
         # alle Gemeinden der VG laden
         # https://dakdeniz.medium.com/increase-django-geojson-serialization-performance-7cd8cb66e366
         #ortsgemeinden = AdministrativeOrganization.objects.filter(ls=orga.ls, ks=orga.ks, vs=orga.vs). exclude(gs='000').annotate(geojson=AsGeoJSON('geometry'))
@@ -803,8 +794,6 @@ def bplan_import(request):
                     messages.success(request, 'Bebauungsplan wurde erfolgreich importiert!')
             #print("bplan_import: import done")
             return redirect(reverse('bplan-list'))
-        else:
-            print("bplan_import: form invalid")
     else:
         #print("bplan_import: no post")
         form = BPlanImportForm()
@@ -856,8 +845,6 @@ def fplan_import(request):
                     messages.success(request, 'Flächennutzungsplan wurde erfolgreich importiert!')
             #print("bplan_import: import done")
             return redirect(reverse('fplan-list'))
-        else:
-            print("fplan_import: form invalid")
     else:
         #print("bplan_import: no post")
         form = FPlanImportForm()
@@ -906,8 +893,6 @@ def bplan_import_archiv(request):
                     messages.success(request, 'Bebauungsplan wurde erfolgreich importiert!')
             #print("bplan_import: import done")
             return redirect(reverse('bplan-list'))
-        else:
-            print("bplan_import_archiv: form invalid")
     else:
         # print("bplan_import: no post")
         form = BPlanImportArchivForm()
@@ -956,8 +941,6 @@ def fplan_import_archiv(request):
                     messages.success(request, 'Flächennutzungsplan wurde erfolgreich importiert!')
             #print("bplan_import: import done")
             return redirect(reverse('fplan-list'))
-        else:
-            print("fplan_import_archiv: form invalid")
     else:
         # print("bplan_import: no post")
         form = FPlanImportArchivForm()
@@ -1132,7 +1115,8 @@ def register(request):
             login(request, user)
             return redirect('home')
         else:
-            print('form is invalid')
+            #print('form is invalid')
+            pass
     context = {'form': form}
     return render(request, 'registration/register.html', context)
 

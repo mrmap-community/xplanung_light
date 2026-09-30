@@ -6,16 +6,24 @@ from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
-
+from django.http import HttpResponse
 from xplanung_light.models import BPlan
 import requests
 from django.test import RequestFactory
 from xplanung_light.views import views
 from xplanung_light.models import FPlan
+from xplanung_light.models import AdministrativeOrganization as Orga, FPlan
 
 VIEWS = "xplanung_light.views.views"
 GETCAP = {"SERVICE": "WMS", "REQUEST": "GetCapabilities"}
 
+def failing_unlink():
+    """os.unlink löscht die Temp-Datei trotzdem, wirft danach aber OSError."""
+    real = os.unlink
+    def _unlink(path, *a, **kw):
+        real(path, *a, **kw)
+        raise OSError("simulated")
+    return patch(f"{VIEWS}.os.unlink", side_effect=_unlink)
 
 def fake_mapscript(m, gml=b"<msGMLOutput/>", version=80000, dispatch=0):
     m.MS_SUCCESS, m.MS_DONE, m.MS_FAILURE = 0, 1, 2
@@ -43,6 +51,7 @@ class OwsViewTests(TestCase):
             name="BPlan Test",
             geltungsbereich=GEOSGeometry("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))"),
         )
+        self.orga = Orga.objects.create(name="OG Schilda", ls="07", ks="316", gs="001")
 
     def _start(self, patcher):
         mock = patcher.start()
@@ -158,6 +167,75 @@ class OwsViewTests(TestCase):
             with self.subTest(name=name, version=7):
                 fake_mapscript(self.ms, version=70000)
                 self.assertEqual(self.client.get(url, GETCAP).status_code, 200)
+    
+    # --- ows (pk = Organisation): MapServer-8-Zweig, https, Fehlerzweige ---------
+    def test_ows_https_flag_and_mapserver_8_branch(self):
+        cfg = {**settings.XPLANUNG_LIGHT_CONFIG, "mapfile_force_online_resource_https": True}
+        url = reverse("ows", kwargs={"pk": self.orga.pk})
+        with override_settings(XPLANUNG_LIGHT_CONFIG=cfg):
+            self.assertEqual(self.client.get(url, GETCAP).status_code, 200)
+        self.assertTrue(self.gen.generate_mapfile.call_args.args[2].startswith("https://"))
+        self.ms.configObj.assert_called_once()
+
+    def test_ows_dispatch_errors(self):
+        url = reverse("ows", kwargs={"pk": self.orga.pk})
+        for status, text in ((1, "No valid OWS Request!"), (2, "not successfully processed")):
+            with self.subTest(status=status):
+                fake_mapscript(self.ms, dispatch=status)
+                self.assertContains(self.client.get(url, GETCAP), text)
+
+    # --- ows_beteiligungen -----------------------------------------------------
+    def test_ows_beteiligungen_https_mapserver_7_and_failure(self):
+        url = reverse("beteiligungen-map")
+        cfg = {**settings.XPLANUNG_LIGHT_CONFIG, "mapfile_force_online_resource_https": True}
+        with override_settings(XPLANUNG_LIGHT_CONFIG=cfg):
+            self.client.get(url, GETCAP)
+        self.assertIn("https://testserver", self._loaded_mapfile())
+
+        fake_mapscript(self.ms, version=70000)
+        self.ms.configObj.reset_mock()
+        self.assertEqual(self.client.get(url, GETCAP).status_code, 200)
+        self.ms.configObj.assert_not_called()
+
+        fake_mapscript(self.ms, dispatch=2)
+        self.assertContains(self.client.get(url, GETCAP), "not successfully processed")
+
+    # --- os.unlink-Fehler der Temp-Konfiguration in allen vier Views ------------
+    def test_tempfile_unlink_errors_are_ignored(self):
+        urls = [
+            reverse("beteiligungen-map"),
+            reverse("bplan-overview-map", kwargs={"pk": self.bplan.id}),
+            reverse("ows", kwargs={"pk": self.orga.pk}),
+            reverse("plan-map", kwargs={"plantyp": "bplan"}),
+        ]
+        for url in urls:
+            with self.subTest(url=url), failing_unlink():
+                self.assertEqual(self.client.get(url, GETCAP).status_code, 200)
+
+    # --- GetFeatureInfo mit FPlan-Treffern (ows und ows_all_orgas_xplan) --------
+    def test_featureinfo_passes_ids_to_xplan_html(self):
+        fplan = FPlan.objects.create(name="F", geltungsbereich=self.bplan.geltungsbereich)
+        self.bplan.gemeinde.add(self.orga)
+        fplan.gemeinde.add(self.orga)
+        key = self.orga.ls + self.orga.ks + self.orga.gs
+        cases = [
+            (reverse("plan-map", kwargs={"plantyp": p}), "bplan_layer", "fplan_layer")   # Layernamen prüfen!
+            for p in ("bplan", "fplan")
+        ] + [
+            (reverse("ows", kwargs={"pk": self.orga.pk}), f"BPlan.{key}.0_layer", f"FPlan.{key}.0_layer"),
+        ]
+        for url, b_layer, f_layer in cases:
+            with self.subTest(url=url), patch(f"{VIEWS}.xplan_html") as xh:
+                xh.return_value = HttpResponse("ok")
+                gml = (f"<msGMLOutput><{b_layer}><f><id>{self.bplan.id}</id></f></{b_layer}>"
+                       f"<{f_layer}><f><id>{fplan.id}</id></f></{f_layer}></msGMLOutput>").encode()
+                fake_mapscript(self.ms, gml=gml)
+                self.client.get(url, {"SERVICE": "WMS", "REQUEST": "GetFeatureInfo", "INFO_FORMAT": "text/html"})
+                call = xh.call_args
+                request = next(v for v in (*call.args, *call.kwargs.values()) if hasattr(v, "GET"))
+                self.assertEqual(request.GET["bplan_id__in"], str(self.bplan.id))
+                self.assertEqual(request.GET["fplan_id__in"], str(fplan.id))
+
     """    
     def test_fplan_overview_direct_call(self):
         fplan = FPlan.objects.create(name="FPlan Test", geltungsbereich=self.bplan.geltungsbereich)
@@ -202,3 +280,5 @@ class GeocodeBkgTests(TestCase):
     def test_upstream_error_returns_400(self):
         with patch(f"{VIEWS}.requests.get", side_effect=requests.ConnectionError):
             self.assertEqual(self.call(query="x").status_code, 400)
+
+    
