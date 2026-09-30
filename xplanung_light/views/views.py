@@ -175,9 +175,9 @@ def xplan_html(request, pk:int):
             bplan_filter = []
         else:
             if orga:
-                bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.filter(gemeinde=orga))
+                bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.filter(gemeinde=orga, public=True))
             else:
-                bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.all())
+                bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.filter(public=True))
     else:
         bplan_filter = []
     if 'fplan_id__in' in request.GET.keys():    
@@ -185,9 +185,9 @@ def xplan_html(request, pk:int):
             fplan_filter = []
         else:
             if orga:
-                fplan_filter = FPlanIdFilter(request.GET, queryset=FPlan.objects.filter(gemeinde=orga))
+                fplan_filter = FPlanIdFilter(request.GET, queryset=FPlan.objects.filter(gemeinde=orga, public=True))
             else:
-                fplan_filter = FPlanIdFilter(request.GET, queryset=FPlan.objects.all())
+                fplan_filter = FPlanIdFilter(request.GET, queryset=FPlan.objects.filter(public=True))
     else:
         fplan_filter = []
     if bplan_filter == [] and fplan_filter == []:

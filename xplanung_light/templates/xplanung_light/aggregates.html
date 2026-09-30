@@ -5,5 +5,8 @@ Schnittstellen (Aggregate)
 {% block content %}
 <ul>
     <li><a href="{% url 'beteiligungen-map' %}?VERSION=1.3.0&SERVICE=WMS&REQUEST=GetCapabilities" target="_blank">Laufende Verfahren (WMS)</a></li>
+    <li><a href="{% url 'plan-map' plantyp='bplan' %}?VERSION=1.3.0&SERVICE=WMS&REQUEST=GetCapabilities" target="_blank">Rechtskräftige Bebauungspläne (WMS)</a></li>
+    <li><a href="{% url 'plan-map' plantyp='fplan' %}?VERSION=1.3.0&SERVICE=WMS&REQUEST=GetCapabilities" target="_blank">Wirksame Flächennutzungspläne (WMS)</a></li>
+
 </ul>
 {% endblock %}
