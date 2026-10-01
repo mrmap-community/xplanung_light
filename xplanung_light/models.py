@@ -2,7 +2,8 @@ from django.db import models
 import datetime
 from django.utils import timezone
 from django.contrib.auth.models import User
-import uuid, os
+import uuid
+import os
 from simple_history.models import HistoricalRecords, HistoricForeignKey
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models.functions import Envelope
@@ -36,12 +37,12 @@ from django_clamd.validators import validate_file_infection
 
 # generic meta model
 class GenericMetadata(models.Model):
-    generic_id = models.UUIDField(default = uuid.uuid4)
-    #created = models.DateTimeField(null=True)
-    #changed = models.DateTimeField(null=True)
-    #deleted = models.DateTimeField(null=True)
-    #active = models.BooleanField(default=True)
-    #owned_by_user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    generic_id = models.UUIDField(default=uuid.uuid4)
+    # created = models.DateTimeField(null=True)
+    # changed = models.DateTimeField(null=True)
+    # deleted = models.DateTimeField(null=True)
+    # active = models.BooleanField(default=True)
+    # owned_by_user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
 
     class Meta:
         abstract = True
@@ -49,6 +50,7 @@ class GenericMetadata(models.Model):
     """def save(self, *args, **kwargs):
         self.owned_by_user= self.request.user
         super().save(*args, **kwargs)"""
+
 
 """
 TODO: UserProfile - Nutzer hat m2m Relation zu AdministrativeOrganization - dadurch wird geregelt, für welche Organisationen er Pläne erfassen kann
@@ -78,15 +80,22 @@ https://www.w3.org/TR/vocab-dcat-3/#license-rights
 
 """
 
+
 class License(GenericMetadata):
 
-    identifier = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Identifikator / Name', help_text='Offizieller Identifikatir / Name der Lizenz')
-    label = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Titel / Bezeichnung der Lizenz', help_text='Offizieller Titel / Bezeichnung der Lizenz un deutscher Sprache')
-    url = models.URLField(blank=False, null=False, verbose_name='URL', help_text='Verweis auf eine Seite mit einer genauen Beschreibung der Lizenz')
-    is_open = models.BooleanField(blank=False, null=False, default=False, verbose_name='Lizenz ist OpenData kompatibel')
-    need_source = models.BooleanField(blank=False, null=False, default=False, verbose_name='Lizenz ist erfordert Quellenangabe')
-    symbol = models.ImageField(blank=True, null=True, verbose_name='Symbol für die Anzeige')
-    history=HistoricalRecords()
+    identifier = models.CharField(blank=False, null=False, max_length=1024,
+                                  verbose_name='Identifikator / Name', help_text='Offizieller Identifikatir / Name der Lizenz')
+    label = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Titel / Bezeichnung der Lizenz',
+                             help_text='Offizieller Titel / Bezeichnung der Lizenz un deutscher Sprache')
+    url = models.URLField(blank=False, null=False, verbose_name='URL',
+                          help_text='Verweis auf eine Seite mit einer genauen Beschreibung der Lizenz')
+    is_open = models.BooleanField(
+        blank=False, null=False, default=False, verbose_name='Lizenz ist OpenData kompatibel')
+    need_source = models.BooleanField(
+        blank=False, null=False, default=False, verbose_name='Lizenz ist erfordert Quellenangabe')
+    symbol = models.ImageField(
+        blank=True, null=True, verbose_name='Symbol für die Anzeige')
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.label} ({self.identifier})"
@@ -96,13 +105,18 @@ class License(GenericMetadata):
 Die Klasse kann nur einmal pro app erstellt werden: https://django-organizations.readthedocs.io/en/latest/cookbook.html#advanced-customization-using-abstract-models
 """
 
-#class AdminOrgaUser(OrganizationUserBase):
-class AdminOrgaUser(AbstractOrganizationUser):    
-    is_admin = models.BooleanField(blank=False, null=False, verbose_name='Nutzer ist Administrator für Organisation', default=False)
-    is_toeb_reporter = models.BooleanField(blank=False, null=False, verbose_name='Nutzer kann Stellungnahmen für TOEB-Einheiten dieser Organisation abgeben.', default=False)
+# class AdminOrgaUser(OrganizationUserBase):
+
+
+class AdminOrgaUser(AbstractOrganizationUser):
+    is_admin = models.BooleanField(
+        blank=False, null=False, verbose_name='Nutzer ist Administrator für Organisation', default=False)
+    is_toeb_reporter = models.BooleanField(
+        blank=False, null=False, verbose_name='Nutzer kann Stellungnahmen für TOEB-Einheiten dieser Organisation abgeben.', default=False)
     # FKs explizit überschreiben – zeigen auf deine eigenen Klassen
     organization = models.ForeignKey(
-        "xplanung_light.AdministrativeOrganization",  # nicht "organizations.Organization"
+        # nicht "organizations.Organization"
+        "xplanung_light.AdministrativeOrganization",
         related_name="admin_orga_users",
         on_delete=models.CASCADE,
     )
@@ -113,7 +127,7 @@ class AdminOrgaUser(AbstractOrganizationUser):
     )
     # history TBD
     history = HistoricalRecords()
-    #give_statements = models.BooleanField(blank=False, null=False, verbose_name='Nutzer darf Stellungnahmen für Organisation abgeben', default=False)
+    # give_statements = models.BooleanField(blank=False, null=False, verbose_name='Nutzer darf Stellungnahmen für Organisation abgeben', default=False)
     # Einfache Rollen
     """
     AUSKUNFT = "1000"
@@ -126,20 +140,20 @@ class AdminOrgaUser(AbstractOrganizationUser):
     ]
     user_type = models.IntegerField(choices=USER_TYPE_CHOICES, default='1000', verbose_name='Typ / Rolle des Nutzers', db_index=True)
     """
-    #class Meta(AbstractOrganizationUser.Meta):
+    # class Meta(AbstractOrganizationUser.Meta):
     #    unique_together = ('organization', 'user')
-    
+
     def __str__(self):
         return f"{self.user} - {self.organization}"
 
 
-#class AdminOrgaOwner(OrganizationOwnerBase):
+# class AdminOrgaOwner(OrganizationOwnerBase):
 #    pass
 
 class AdminOrgaInvitation(OrganizationInvitationBase):
     pass
 
- 
+
 # This is REQUIRED by the library when defining custom organization models.
 class AdminOrgaOwner(AbstractOrganizationOwner):
     pass
@@ -148,10 +162,13 @@ class AdminOrgaOwner(AbstractOrganizationOwner):
 # User Profile um die Telefonnummer und ggf. weitere Informationen zum Standarduser abzulegen
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    phone = models.CharField(max_length=256, blank=True, null=True, verbose_name='Telefonnummer')
+    phone = models.CharField(max_length=256, blank=True,
+                             null=True, verbose_name='Telefonnummer')
 
-# administrative organizations - Klasse 
-#class AdministrativeOrganization(GenericMetadata, OrganizationBase):
+# administrative organizations - Klasse
+# class AdministrativeOrganization(GenericMetadata, OrganizationBase):
+
+
 class AdministrativeOrganization(GenericMetadata, AbstractOrganization):
 
     COUNTY = "KR"
@@ -182,36 +199,52 @@ class AdministrativeOrganization(GenericMetadata, AbstractOrganization):
     # Übergang zu etwas umfangreicherem django-organization model - mit slugs ... - damit wir auch Historisieren können - nur beim initialen Import müssen die slugs jetzt generiert werden!
     # Dazu muss das Import-script angepasst werden! - slugs müssen unique sein, daher sinnvoll Namen der Orga in Kombination mit AGS für Gebietskörperschaften
     slug = models.SlugField(unique=True, blank=True, default=uuid.uuid4)
-    ls = models.CharField(max_length=2, verbose_name='Landesschlüssel', help_text='Eindeutiger zweistelliger Schlüssel für das Bundesland - RLP: 07', default='07')
-    ks = models.CharField(max_length=3, verbose_name='Kreisschlüssel', help_text='Eindeutiger dreistelliger Schlüssel für den Landkreis', default='000')
-    vs = models.CharField(blank=True, null=True, max_length=2, verbose_name='Gemeindeverbandsschlüssel', help_text='Eindeutiger zweistelliger Schlüssel für den Gemeindeverband', default='00')
-    gs = models.CharField(max_length=3, verbose_name='Gemeindeschlüssel', help_text='Eindeutiger dreistelliger Schlüssel für die Gemeinde', default='000')
+    ls = models.CharField(max_length=2, verbose_name='Landesschlüssel',
+                          help_text='Eindeutiger zweistelliger Schlüssel für das Bundesland - RLP: 07', default='07')
+    ks = models.CharField(max_length=3, verbose_name='Kreisschlüssel',
+                          help_text='Eindeutiger dreistelliger Schlüssel für den Landkreis', default='000')
+    vs = models.CharField(blank=True, null=True, max_length=2, verbose_name='Gemeindeverbandsschlüssel',
+                          help_text='Eindeutiger zweistelliger Schlüssel für den Gemeindeverband', default='00')
+    gs = models.CharField(max_length=3, verbose_name='Gemeindeschlüssel',
+                          help_text='Eindeutiger dreistelliger Schlüssel für die Gemeinde', default='000')
     # ts = ... - Ortsbezirks(-teil)schlüssel ...
-    ts = models.CharField(blank=True, null=True, max_length=4, verbose_name='Ortsteilschlüssel', help_text='Eindeutiger, maximal vierstelliger Schlüssel einen Teil einer Gebietskörperschaft - von Bundesland zu Bundesland unterschiedlich geregelt!')
-    
-    name = models.CharField(max_length=1024, verbose_name='Name der Gebietskörperschaft/Organisation', help_text='Offizieller Name der Gebietskörperschaft/Organisation - z.B. Rhein-Lahn-Kreis')
-    type = models.CharField(max_length=3, choices=ADMIN_CLASS_CHOICES, default='UK', verbose_name='Typ der Gebietskörperschaft/Organisation', db_index=True)
-    name_part = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name des Teils der Gebietskörperschaft', help_text='Offizieller Namen eines Teils der Gebietskörperschaft - z.B. Arzheim - als Ortsbezirk 2 der Stadt Koblenz')
-    
+    ts = models.CharField(blank=True, null=True, max_length=4, verbose_name='Ortsteilschlüssel',
+                          help_text='Eindeutiger, maximal vierstelliger Schlüssel einen Teil einer Gebietskörperschaft - von Bundesland zu Bundesland unterschiedlich geregelt!')
 
-    #is_toeb = ... 
+    name = models.CharField(max_length=1024, verbose_name='Name der Gebietskörperschaft/Organisation',
+                            help_text='Offizieller Name der Gebietskörperschaft/Organisation - z.B. Rhein-Lahn-Kreis')
+    type = models.CharField(max_length=3, choices=ADMIN_CLASS_CHOICES, default='UK',
+                            verbose_name='Typ der Gebietskörperschaft/Organisation', db_index=True)
+    name_part = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name des Teils der Gebietskörperschaft',
+                                 help_text='Offizieller Namen eines Teils der Gebietskörperschaft - z.B. Arzheim - als Ortsbezirk 2 der Stadt Koblenz')
 
-    address_street = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Straße mit Hausnummer', help_text='Straße und Hausnummer')
-    address_postcode = models.CharField(blank=True, null=True, max_length=5, verbose_name='Postleitzahl', help_text='Postleitzahl')
-    
-    address_city = models.CharField(max_length=256, blank=True, null=True, verbose_name='Stadt')
-    address_phone = models.CharField(max_length=256, blank=True, null=True, verbose_name='Telefon')
-    address_facsimile = models.CharField(max_length=256, blank=True, null=True, verbose_name='Fax')
-    address_email = models.EmailField(max_length=512, blank=True, null=True, verbose_name='EMail')
-    address_homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
-    coat_of_arms_url = models.URLField(blank=True, null=True, verbose_name='Link zum Wappen', help_text='Hier bietet sich an den Link von Wikipedia zu übernehmen.')
-    
-    geometry = models.GeometryField(blank=True, null=True, verbose_name='Gebiet')
+    # is_toeb = ...
+
+    address_street = models.CharField(blank=True, null=True, max_length=1024,
+                                      verbose_name='Straße mit Hausnummer', help_text='Straße und Hausnummer')
+    address_postcode = models.CharField(
+        blank=True, null=True, max_length=5, verbose_name='Postleitzahl', help_text='Postleitzahl')
+
+    address_city = models.CharField(
+        max_length=256, blank=True, null=True, verbose_name='Stadt')
+    address_phone = models.CharField(
+        max_length=256, blank=True, null=True, verbose_name='Telefon')
+    address_facsimile = models.CharField(
+        max_length=256, blank=True, null=True, verbose_name='Fax')
+    address_email = models.EmailField(
+        max_length=512, blank=True, null=True, verbose_name='EMail')
+    address_homepage = models.URLField(
+        blank=True, null=True, verbose_name='Homepage')
+    coat_of_arms_url = models.URLField(blank=True, null=True, verbose_name='Link zum Wappen',
+                                       help_text='Hier bietet sich an den Link von Wikipedia zu übernehmen.')
+
+    geometry = models.GeometryField(
+        blank=True, null=True, verbose_name='Gebiet')
 
     history = HistoricalRecords()
 
     # published_data_contact_point - foreign key
-    #published_data_contact_point = HistoricForeignKey(ContactOrganization, null=True, blank=True, verbose_name='Kontaktstelle für die publizierten Pläne der Organisation', help_text='Auswahl einer Kontaktstelle für die publizierten Pläne der Organisation', on_delete=models.SET_NULL)
+    # published_data_contact_point = HistoricForeignKey(ContactOrganization, null=True, blank=True, verbose_name='Kontaktstelle für die publizierten Pläne der Organisation', help_text='Auswahl einer Kontaktstelle für die publizierten Pläne der Organisation', on_delete=models.SET_NULL)
     # https://www.w3.org/TR/vocab-dcat-3/#license-rights
     # dcterm namespace
     # https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/license
@@ -219,19 +252,23 @@ class AdministrativeOrganization(GenericMetadata, AbstractOrganization):
     # https://www.dublincore.org/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/rights
 
     # published_data_license - foreign key
-    published_data_license = HistoricForeignKey(License, null=True, blank=True, verbose_name='Standardisierte Lizenz', help_text='Auswahl einer standardisierten Lizenz', on_delete=models.SET_NULL)
+    published_data_license = HistoricForeignKey(License, null=True, blank=True, verbose_name='Standardisierte Lizenz',
+                                                help_text='Auswahl einer standardisierten Lizenz', on_delete=models.SET_NULL)
 
     # published_data_license_source_note - if needed
-    published_data_license_source_note = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Quellenangabe', help_text='Art der Quellenangabe - falls Lizenz diese erfordert')
+    published_data_license_source_note = models.CharField(
+        blank=True, null=True, max_length=4096, verbose_name='Quellenangabe', help_text='Art der Quellenangabe - falls Lizenz diese erfordert')
     # published_data_accessrights
-    published_data_accessrights = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Zugriffsbeschränkungen', help_text='Angaben zu vorhandenen Zugriffsbeschränkungen (ist beispielsweise der Zugriff für jedermann möglich, oder nur für besonders berechtigte Personengruppen)')
+    published_data_accessrights = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Zugriffsbeschränkungen',
+                                                   help_text='Angaben zu vorhandenen Zugriffsbeschränkungen (ist beispielsweise der Zugriff für jedermann möglich, oder nur für besonders berechtigte Personengruppen)')
     # published_data_rights
-    published_data_rights = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Sonstige rechtliche Hinweise', help_text='Sonstige rechtliche Hinweise, die nicht von den Angaben zu Lizenzen oder Zugriffsbeschränkungen abgedeckt sind')
+    published_data_rights = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Sonstige rechtliche Hinweise',
+                                             help_text='Sonstige rechtliche Hinweise, die nicht von den Angaben zu Lizenzen oder Zugriffsbeschränkungen abgedeckt sind')
 
     @property
     def ags_10(self):
         return self.ls + self.ks + self.vs + self.gs
-    
+
     @property
     def ags(self):
         return self.ls + self.ks + self.gs
@@ -242,7 +279,7 @@ class AdministrativeOrganization(GenericMetadata, AbstractOrganization):
             return f"{self.name_part} - {self.name} ({self.get_type_display()})"
         else:
             return f"{self.name} ({self.get_type_display()})"
-        #return f"{self.name} ({self.get_type_display()})"
+        # return f"{self.name} ({self.get_type_display()})"
 
 
 """
@@ -278,27 +315,38 @@ Die Kontaktinformationen in den Gebietsköperschaften selbst, sollen die offizie
 dienen nur als Fallback.
 """
 
+
 class ContactOrganization(GenericMetadata):
 
-    name = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Name der Kontaktstelle', help_text='Offizieller Name der Kontaktstelle - z.B. Bauamt Pirmasens')
-    unit = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name der Einheit/Referat', help_text='Name der zuständigen Einheit innerhalb der Kontaktstelle - z.B. Auskunftsstelle Bauleitplanung')
-    person = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name einer Kontaktperson', help_text='Name einer Person die direkt kontaktiert werden kann, wenn man Informationen zu den Bauleitplänen benötigt.')
-    phone = models.CharField(blank=False, null=False, max_length=256, verbose_name='Telefon')
-    facsimile = models.CharField(blank=True, null=True, max_length=256, verbose_name='Fax')
-    email = models.EmailField(blank=False, null=False, max_length=512, verbose_name='EMail')
+    name = models.CharField(blank=False, null=False, max_length=1024, verbose_name='Name der Kontaktstelle',
+                            help_text='Offizieller Name der Kontaktstelle - z.B. Bauamt Pirmasens')
+    unit = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name der Einheit/Referat',
+                            help_text='Name der zuständigen Einheit innerhalb der Kontaktstelle - z.B. Auskunftsstelle Bauleitplanung')
+    person = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Name einer Kontaktperson',
+                              help_text='Name einer Person die direkt kontaktiert werden kann, wenn man Informationen zu den Bauleitplänen benötigt.')
+    phone = models.CharField(blank=False, null=False,
+                             max_length=256, verbose_name='Telefon')
+    facsimile = models.CharField(
+        blank=True, null=True, max_length=256, verbose_name='Fax')
+    email = models.EmailField(blank=False, null=False,
+                              max_length=512, verbose_name='EMail')
     homepage = models.URLField(blank=True, null=True, verbose_name='Homepage')
-    datenschutz_link = models.URLField(blank=False, null=False, verbose_name='Link zur Datenschutzerklärung der Kontaktstelle', help_text='Hier muss ein Link auf die Datenschutzerklärung der für die Verwaltung und Publikation zuständigen Kontaktstelle angegeben werden. Ohne Angabe dieses Links, sind Online-Stellungnahmen nicht möglich.')
-    gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Kontakt für Gemeinde(n)", related_name="contacts")
+    datenschutz_link = models.URLField(blank=False, null=False, verbose_name='Link zur Datenschutzerklärung der Kontaktstelle',
+                                       help_text='Hier muss ein Link auf die Datenschutzerklärung der für die Verwaltung und Publikation zuständigen Kontaktstelle angegeben werden. Ohne Angabe dieses Links, sind Online-Stellungnahmen nicht möglich.')
+    gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False,
+                                      verbose_name="Kontakt für Gemeinde(n)", related_name="contacts")
     history = HistoricalRecords(m2m_fields=[gemeinde])
 
     def __str__(self):
         # Returns a string representation of a contact organization.
         return f"{self.name} ({self.unit})"
 
+
 """
 Klasse um TOEB-Stellen zu verwalten. Sie hängen über eine Relation an den Organisationen. Damit kann ein Organisationsadmin 
 die Informationen zu seinen eigenen/internen Stellen eigenständig verwalten. 
 """
+
 
 class ToebUnit(GenericMetadata):
 
@@ -382,7 +430,7 @@ class ToebUnit(GenericMetadata):
         (TOU, "Tourismus"),
         (UNVB, "Umwelt und Naturschutzverbände"),
         (UNVE, "Umwelt- und Naturschutzvereinigungen"),
-        (VE, "Ver- und Entsorgung (keine TK)"), 
+        (VE, "Ver- und Entsorgung (keine TK)"),
         (VK, "Verkehr"),
         (VT, "Verteidigung"),
         (VW, "Veterinärwesen"),
@@ -390,19 +438,32 @@ class ToebUnit(GenericMetadata):
         (OTH, "Sonstige"),
     ]
 
-    name = models.CharField(blank=False, null=False, max_length=2048, verbose_name='Name der Institution / Regionalstelle', help_text='Offizieller Name der Institution / Regionalstelle - z.B. Regionalstelle Wasserwirtschaft, Abfallwirtschaft, Bodenschutz')
-    description = models.TextField(blank=True, null=True, verbose_name='Beschreibung des Aufgabenbereichs', help_text='Erläuterung des Aufgabenbereichs - z.B. Erlaubnisse/Bewilligungen nach § 8, 9 WHG, ... ')
-    theme = models.CharField(max_length=5, choices=THEME_CLASS_CHOICES, default='OTH', verbose_name='Thematische Zuordnung', db_index=True)
-    email = models.EmailField(blank=False, null=False, max_length=512, verbose_name='Offizielle EMail-Adresse')
-    public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Öffentlich verfügbar", help_text="Gibt an, ob Informationen über die frei verfügbaren Schnittstellen publiziert werden.")
-    internal = models.BooleanField(null=False, blank=False, default=False, verbose_name="Intern", help_text="Kontakt wird nur intern verwendet.")
-    address_street = models.CharField(blank=True, null=True, max_length=1024, verbose_name='Straße mit Hausnummer / Postfach', help_text='Straße und Hausnummer / Postfach')
-    address_postcode = models.CharField(blank=True, null=True, max_length=5, verbose_name='Postleitzahl', help_text='Postleitzahl')
-    address_city = models.CharField(max_length=256, blank=True, null=True, verbose_name='Stadt')
-    address_phone = models.CharField(max_length=256, blank=True, null=True, verbose_name='Telefon')
-    geometry = models.GeometryField(blank=True, null=True, verbose_name='Zuständigkeitsbereich')
-    organization = HistoricForeignKey(AdministrativeOrganization, blank=False, verbose_name="Übergeordnete Organisation", related_name="toebs", on_delete=models.CASCADE)
-    editors = models.ManyToManyField(AdminOrgaUser, verbose_name='Sachbearbeiter', help_text='Sachbearbeiter', related_name="toeb_units")
+    name = models.CharField(blank=False, null=False, max_length=2048, verbose_name='Name der Institution / Regionalstelle',
+                            help_text='Offizieller Name der Institution / Regionalstelle - z.B. Regionalstelle Wasserwirtschaft, Abfallwirtschaft, Bodenschutz')
+    description = models.TextField(blank=True, null=True, verbose_name='Beschreibung des Aufgabenbereichs',
+                                   help_text='Erläuterung des Aufgabenbereichs - z.B. Erlaubnisse/Bewilligungen nach § 8, 9 WHG, ... ')
+    theme = models.CharField(max_length=5, choices=THEME_CLASS_CHOICES,
+                             default='OTH', verbose_name='Thematische Zuordnung', db_index=True)
+    email = models.EmailField(
+        blank=False, null=False, max_length=512, verbose_name='Offizielle EMail-Adresse')
+    public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Öffentlich verfügbar",
+                                 help_text="Gibt an, ob Informationen über die frei verfügbaren Schnittstellen publiziert werden.")
+    internal = models.BooleanField(null=False, blank=False, default=False,
+                                   verbose_name="Intern", help_text="Kontakt wird nur intern verwendet.")
+    address_street = models.CharField(blank=True, null=True, max_length=1024,
+                                      verbose_name='Straße mit Hausnummer / Postfach', help_text='Straße und Hausnummer / Postfach')
+    address_postcode = models.CharField(
+        blank=True, null=True, max_length=5, verbose_name='Postleitzahl', help_text='Postleitzahl')
+    address_city = models.CharField(
+        max_length=256, blank=True, null=True, verbose_name='Stadt')
+    address_phone = models.CharField(
+        max_length=256, blank=True, null=True, verbose_name='Telefon')
+    geometry = models.GeometryField(
+        blank=True, null=True, verbose_name='Zuständigkeitsbereich')
+    organization = HistoricForeignKey(AdministrativeOrganization, blank=False,
+                                      verbose_name="Übergeordnete Organisation", related_name="toebs", on_delete=models.CASCADE)
+    editors = models.ManyToManyField(
+        AdminOrgaUser, verbose_name='Sachbearbeiter', help_text='Sachbearbeiter', related_name="toeb_units")
     history = HistoricalRecords(m2m_fields=[editors])
 
     """
@@ -455,47 +516,57 @@ https://xleitstelle.de/releases/objektartenkatalog_6_0
 Achtung neu: https://xleitstelle.de/releases/objektartenkatalog_6_1
 2025-04-01
 """
+
+
 class XPlan(GenericMetadata):
 
     # https://gist.github.com/chhantyal/5370749
     # Aktuell nicht verwendet - Dateien werden in DB abgelegt
     def get_upload_path(self, filename):
         name, ext = os.path.splitext(filename)
-        return os.path.join('uploads', 'gml' , str(self.generic_id) + "_" + slugify(name)) + ext
+        return os.path.join('uploads', 'gml', str(self.generic_id) + "_" + slugify(name)) + ext
 
-    name = models.CharField(null=False, blank=False, max_length=2048, verbose_name='Name des Plans', help_text='Offizieller Name des raumbezogenen Plans')
-    #nummer [0..1]
+    name = models.CharField(null=False, blank=False, max_length=2048,
+                            verbose_name='Name des Plans', help_text='Offizieller Name des raumbezogenen Plans')
+    # nummer [0..1]
     nummer = models.CharField(max_length=56, verbose_name="Nummer des Plans.")
-    #internalId [0..1]
-    #beschreibung [0..1]
-    beschreibung = models.TextField(null=True, blank=True, max_length=4096, verbose_name="Kommentierende Beschreibung des Plans. Es wird empfohlen, eine Planbeschreibung zu erfassen.")
-    #kommentar [0..1]
-    #technHerstellDatum [0..1], Date
-    #genehmigungsDatum [0..1], Date
-    #untergangsDatum [0..1], Date
-    untergangs_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Untergangs", help_text="Datum, an dem der Plan (z.B. durch Ratsbeschluss oder Gerichtsurteil) aufgehoben oder für nichtig erklärt wurde.")
-    #aendertPlan [0..*], XP_VerbundenerPlan
-    #wurdeGeaendertVonPlan [0..*], XP_VerbundenerPlan
-    #aendertPlanBereich [0..*], Referenz, Testphase
-    #wurdeGeaendertVonPlanBereich [0..*], Referenz, Testphase
-    #erstellungsMassstab [0..1], Integer
-    massstab = models.IntegerField(null=True, blank=True, default=1000, verbose_name="Kartenmaßstab des Plans", help_text="Der bei der Erstellung des Plans benutzter Kartenmaßstab.")
-    #bezugshoehe [0..1], Length
-    #hoehenbezug [0..1]
-    #technischerPlanersteller, [0..1]
-    #raeumlicherGeltungsbereich [1], GM_Object
-    geltungsbereich = models.GeometryField(null=False, blank=False, verbose_name='Grenze des räumlichen Geltungsbereiches des Plans.')
-    #verfahrensMerkmale [0..*], XP_VerfahrensMerkmal
-    #hatGenerAttribut [0..*], XP_GenerAttribut
-    #externeReferenz, [0..*], XP_SpezExterneReferenz
-    #texte [0..*], XP_TextAbschnitt
-    #begruendungsTexte [0..*], XP_BegruendungAbschnitt
+    # internalId [0..1]
+    # beschreibung [0..1]
+    beschreibung = models.TextField(null=True, blank=True, max_length=4096,
+                                    verbose_name="Kommentierende Beschreibung des Plans. Es wird empfohlen, eine Planbeschreibung zu erfassen.")
+    # kommentar [0..1]
+    # technHerstellDatum [0..1], Date
+    # genehmigungsDatum [0..1], Date
+    # untergangsDatum [0..1], Date
+    untergangs_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Untergangs",
+                                        help_text="Datum, an dem der Plan (z.B. durch Ratsbeschluss oder Gerichtsurteil) aufgehoben oder für nichtig erklärt wurde.")
+    # aendertPlan [0..*], XP_VerbundenerPlan
+    # wurdeGeaendertVonPlan [0..*], XP_VerbundenerPlan
+    # aendertPlanBereich [0..*], Referenz, Testphase
+    # wurdeGeaendertVonPlanBereich [0..*], Referenz, Testphase
+    # erstellungsMassstab [0..1], Integer
+    massstab = models.IntegerField(null=True, blank=True, default=1000, verbose_name="Kartenmaßstab des Plans",
+                                   help_text="Der bei der Erstellung des Plans benutzter Kartenmaßstab.")
+    # bezugshoehe [0..1], Length
+    # hoehenbezug [0..1]
+    # technischerPlanersteller, [0..1]
+    # raeumlicherGeltungsbereich [1], GM_Object
+    geltungsbereich = models.GeometryField(
+        null=False, blank=False, verbose_name='Grenze des räumlichen Geltungsbereiches des Plans.')
+    # verfahrensMerkmale [0..*], XP_VerfahrensMerkmal
+    # hatGenerAttribut [0..*], XP_GenerAttribut
+    # externeReferenz, [0..*], XP_SpezExterneReferenz
+    # texte [0..*], XP_TextAbschnitt
+    # begruendungsTexte [0..*], XP_BegruendungAbschnitt
     # https://stackoverflow.com/questions/35312334/how-can-i-store-history-of-manytomanyfield-using-django-simple-history
-    #history = HistoricalRecords(inherit=True, m2m_fields=)
-    #history = HistoricalRecords(inherit=True)
-    xplan_gml = models.TextField(null = True, blank = True, verbose_name="XPlan GML-Dokument", help_text="")
-    xplan_gml_version = models.CharField(null=True, blank=True, max_length=5, verbose_name='XPlan GML-Dokument Version', help_text='')
-    public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Plan öffentlich verfügbar", help_text="Gibt an, ob Informationen zum Plan über die frei verfügbaren Schnittstellen publiziert werden.")
+    # history = HistoricalRecords(inherit=True, m2m_fields=)
+    # history = HistoricalRecords(inherit=True)
+    xplan_gml = models.TextField(
+        null=True, blank=True, verbose_name="XPlan GML-Dokument", help_text="")
+    xplan_gml_version = models.CharField(
+        null=True, blank=True, max_length=5, verbose_name='XPlan GML-Dokument Version', help_text='')
+    public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Plan öffentlich verfügbar",
+                                 help_text="Gibt an, ob Informationen zum Plan über die frei verfügbaren Schnittstellen publiziert werden.")
 
     class Meta:
         abstract = True
@@ -506,11 +577,13 @@ class BauleitPlan(XPlan):
     Abstrakte Klasse, die alle dem BPlan und FPlan gemeinsamen Attribute managed!
     Lohnt sich wahrscheinlich nicht...
     """
-    #gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
-    planart = models.CharField(null=False, blank=False, max_length=5, default='1000', verbose_name='Typ des vorliegenden Plans.', db_index=True)
-    #history = HistoricalRecords(m2m_fields=[gemeinde])
-    aufstellungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Aufstellungsbeschlusses", help_text="Datum des Aufstellungsbeschlusses")
-    
+    # gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
+    planart = models.CharField(null=False, blank=False, max_length=5, default='1000',
+                               verbose_name='Typ des vorliegenden Plans.', db_index=True)
+    # history = HistoricalRecords(m2m_fields=[gemeinde])
+    aufstellungsbeschluss_datum = models.DateField(
+        null=True, blank=True, verbose_name="Datum des Aufstellungsbeschlusses", help_text="Datum des Aufstellungsbeschlusses")
+
     class Meta:
         abstract = True
 
@@ -569,55 +642,66 @@ class BPlan(XPlan):
         '4000': "InKraftGetreten",
         '5000': "Untergegangen",
     }
-    
-    #gemeinde [1..*], XP_Gemeinde
+
+    # gemeinde [1..*], XP_Gemeinde
     # Zur Vereinfachung zunächst nur Kardinalität 1 implementieren
-    #gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
-    gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
+    # gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
+    gemeinde = models.ManyToManyField(
+        AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
     history = HistoricalRecords(m2m_fields=[gemeinde])
-    #planaufstellendeGemeinde [0..*], XP_Gemeinde
-    #plangeber [0..*], XP_Plangeber
-    #planArt [1..*], BP_PlanArt
-    planart = models.CharField(null=False, blank=False, max_length=5, choices=BPLAN_TYPE_CHOICES, default='1000', verbose_name='Typ des vorliegenden Bebauungsplans.', db_index=True)
-	#sonstPlanArt [0..1], BP_SonstPlanArt
-    #rechtsstand = models.CharField(null=True, blank=True, max_length=5, choices=BPLAN_RECHTSSTAND_CHOICES, default='1000', verbose_name='Rechtsstand des Bebauungsplans', help_text='Rechtsstand des Bebauungsplans - wird automatisch aus den Datumsfeldern ermittelt!', db_index=True)
-    #rechtsstand [0..1], BP_Rechtsstand
-    #status [0..1], BP_Status
-    #aenderungenBisDatum [0..1], Date
-    #aufstellungsbeschlussDatum [0..1], Date
-    aufstellungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Aufstellungsbeschlusses", help_text="Datum des Aufstellungsbeschlusses")
-    #veraenderungssperre [0..1], BP_VeraenderungssperreDaten
+    # planaufstellendeGemeinde [0..*], XP_Gemeinde
+    # plangeber [0..*], XP_Plangeber
+    # planArt [1..*], BP_PlanArt
+    planart = models.CharField(null=False, blank=False, max_length=5, choices=BPLAN_TYPE_CHOICES,
+                               default='1000', verbose_name='Typ des vorliegenden Bebauungsplans.', db_index=True)
+    # sonstPlanArt [0..1], BP_SonstPlanArt
+    # rechtsstand = models.CharField(null=True, blank=True, max_length=5, choices=BPLAN_RECHTSSTAND_CHOICES, default='1000', verbose_name='Rechtsstand des Bebauungsplans', help_text='Rechtsstand des Bebauungsplans - wird automatisch aus den Datumsfeldern ermittelt!', db_index=True)
+    # rechtsstand [0..1], BP_Rechtsstand
+    # status [0..1], BP_Status
+    # aenderungenBisDatum [0..1], Date
+    # aufstellungsbeschlussDatum [0..1], Date
+    aufstellungsbeschluss_datum = models.DateField(
+        null=True, blank=True, verbose_name="Datum des Aufstellungsbeschlusses", help_text="Datum des Aufstellungsbeschlusses")
+    # veraenderungssperre [0..1], BP_VeraenderungssperreDaten
     """
     Folgende 4 Attribute werden bei xplanung-light als Relation geführt 
     """
-    #auslegungsStartDatum [0..*], Date
-    #auslegungsEndDatum [0..*], Date
-    #traegerbeteiligungsStartDatum [0..*], Date
-    #traegerbeteiligungsEndDatum [0..*], Date
+    # auslegungsStartDatum [0..*], Date
+    # auslegungsEndDatum [0..*], Date
+    # traegerbeteiligungsStartDatum [0..*], Date
+    # traegerbeteiligungsEndDatum [0..*], Date
 
-    #satzungsbeschlussDatum [0..1], Date
-    satzungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Satzungsbeschlusses", help_text="Datum des Satzungsbeschlusses, falls ein Bebauungsplan als Satzung beschlossen wird.")
-    #rechtsverordnungsDatum [0..1], Date
-    rechtsverordnungs_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Rechtsverordnung", help_text="Datum der Rechtsverordnung, falls ein Bebauungsplan als Rechtsverordnung beschlossen wird.")
-    #inkrafttretensDatum [0..1], Date
-    inkrafttretens_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Inkrafttretens", help_text="Datum des Inkrafttretens")
-    #ausfertigungsDatum [0..1], Date
-    ausfertigungs_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Ausfertigung", help_text="Datum der Ausfertigung")
-    #staedtebaulicherVertrag [0..1], Boolean
-    staedtebaulicher_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Städtebaulicher Vertrag", help_text="Gibt an, ob es zum Plan einen städtebaulichen Vertrag gibt.")
-    #erschliessungsVertrag [0..1], Boolean
-    erschliessungs_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Erschließungsvertrag", help_text="Gibt an, ob es für den Plan einen Erschließungsvertrag gibt.")
-    #durchfuehrungsVertrag [0..1], Boolean
-    durchfuehrungs_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Durchführungsvertrag", help_text="Gibt an, ob für das Planungsgebiet einen Durchführungsvertrag (Kombination aus Städtebaulichen Vertrag und Erschließungsvertrag) gibt.")
-    #gruenordnungsplan [0..1], Boolean
-    gruenordnungsplan = models.BooleanField(null=False, blank=False, default=False, verbose_name="Grünordnungsplan", help_text="Gibt an, ob für den Plan ein zugehöriger Grünordnungsplan existiert.")
+    # satzungsbeschlussDatum [0..1], Date
+    satzungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Satzungsbeschlusses",
+                                               help_text="Datum des Satzungsbeschlusses, falls ein Bebauungsplan als Satzung beschlossen wird.")
+    # rechtsverordnungsDatum [0..1], Date
+    rechtsverordnungs_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Rechtsverordnung",
+                                               help_text="Datum der Rechtsverordnung, falls ein Bebauungsplan als Rechtsverordnung beschlossen wird.")
+    # inkrafttretensDatum [0..1], Date
+    inkrafttretens_datum = models.DateField(
+        null=True, blank=True, verbose_name="Datum des Inkrafttretens", help_text="Datum des Inkrafttretens")
+    # ausfertigungsDatum [0..1], Date
+    ausfertigungs_datum = models.DateField(
+        null=True, blank=True, verbose_name="Datum der Ausfertigung", help_text="Datum der Ausfertigung")
+    # staedtebaulicherVertrag [0..1], Boolean
+    staedtebaulicher_vertrag = models.BooleanField(
+        null=False, blank=False, default=False, verbose_name="Städtebaulicher Vertrag", help_text="Gibt an, ob es zum Plan einen städtebaulichen Vertrag gibt.")
+    # erschliessungsVertrag [0..1], Boolean
+    erschliessungs_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Erschließungsvertrag",
+                                                 help_text="Gibt an, ob es für den Plan einen Erschließungsvertrag gibt.")
+    # durchfuehrungsVertrag [0..1], Boolean
+    durchfuehrungs_vertrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Durchführungsvertrag",
+                                                 help_text="Gibt an, ob für das Planungsgebiet einen Durchführungsvertrag (Kombination aus Städtebaulichen Vertrag und Erschließungsvertrag) gibt.")
+    # gruenordnungsplan [0..1], Boolean
+    gruenordnungsplan = models.BooleanField(null=False, blank=False, default=False, verbose_name="Grünordnungsplan",
+                                            help_text="Gibt an, ob für den Plan ein zugehöriger Grünordnungsplan existiert.")
     """
     Die gesetzlichen Grundlagen sollten sich aus den Datumsangeben automatisch ergeben
     """
-    #versionBauNVO [0..1], XP_GesetzlicheGrundlage
-    #versionBauGB [0..1], XP_GesetzlicheGrundlage
-    #versionSonstRechtsgrundlage [0..*], XP_GesetzlicheGrundlage
-    #bereich [0..*], BP_Bereich
+    # versionBauNVO [0..1], XP_GesetzlicheGrundlage
+    # versionBauGB [0..1], XP_GesetzlicheGrundlage
+    # versionSonstRechtsgrundlage [0..*], XP_GesetzlicheGrundlage
+    # bereich [0..*], BP_Bereich
 
     def clean(self, *args, **kwargs):
         """
@@ -631,14 +715,15 @@ class BPlan(XPlan):
         if self.rechtsverordnungs_datum:
             dates.append(self.rechtsverordnungs_datum)
         if self.ausfertigungs_datum:
-            dates.append(self.ausfertigungs_datum)    
+            dates.append(self.ausfertigungs_datum)
         if self.inkrafttretens_datum:
             dates.append(self.inkrafttretens_datum)
         if self.untergangs_datum:
             dates.append(self.untergangs_datum)
         is_sorted = dates == sorted(dates)
         if is_sorted == False:
-            raise ValidationError(('Die Datumsangaben entsprechen nicht ihrer logischen zeitlichen Abfolge!'))
+            raise ValidationError(
+                ('Die Datumsangaben entsprechen nicht ihrer logischen zeitlichen Abfolge!'))
     # https://stackoverflow.com/questions/17682567/how-to-add-a-calculated-field-to-a-django-model
     """
     Das Problem ist wieder, dass wir nicht sortieren und das Feld wie ein Standard-DB Feld managen können 
@@ -647,7 +732,8 @@ class BPlan(XPlan):
     """
     @property
     def rechtsstand(self):
-        zahl_laufender_beteiligungen = BPlanBeteiligung.objects.filter(bplan=self.pk, start_datum__lte=datetime.date.today(), end_datum__gt=datetime.date.today()).exists()
+        zahl_laufender_beteiligungen = BPlanBeteiligung.objects.filter(
+            bplan=self.pk, start_datum__lte=datetime.date.today(), end_datum__gt=datetime.date.today()).exists()
         if zahl_laufender_beteiligungen:
             zahl_laufender_beteiligungen = 1
         else:
@@ -657,13 +743,13 @@ class BPlan(XPlan):
         if not self.untergangs_datum and self.inkrafttretens_datum and self.inkrafttretens_datum <= datetime.date.today():
             return "4000"
         if not self.untergangs_datum and not self.inkrafttretens_datum and self.satzungsbeschluss_datum and self.satzungsbeschluss_datum <= datetime.date.today():
-            return "3000" 
+            return "3000"
         if not self.untergangs_datum and not self.inkrafttretens_datum and not self.satzungsbeschluss_datum and self.aufstellungsbeschluss_datum and self.aufstellungsbeschluss_datum <= datetime.date.today() and zahl_laufender_beteiligungen > 0:
             return "2000"
         if not self.untergangs_datum and not self.inkrafttretens_datum and not self.satzungsbeschluss_datum and self.aufstellungsbeschluss_datum and self.aufstellungsbeschluss_datum <= datetime.date.today() and zahl_laufender_beteiligungen == 0:
             return "1000"
         return None
-    
+
     def get_rechtsstand_display(self):
         """
         Funktion zur Anzeige der Strings für das computed attribute
@@ -702,20 +788,23 @@ class BPlan(XPlan):
     def __str__(self):
         """Returns a string representation of a BPlan."""
         return f"{self.name} ({self.get_planart_display()})"
-    
+
+
 """
 FPlan 
 Beispiele:
 https://www.geoportal.rlp.de/mapbender/php/mod_exportIso19139.php?url=https%3A%2F%2Fgdk.gdi-de.org%2Fgeonetwork%2Fsrv%2Fger%2Fcsw%3Frequest%3DGetRecordById%26service%3DCSW%26version%3D2.0.2%26Id%3D93033873-236e-449c-b20e-b238a6f8af8d%26ElementSetName%3Dfull%26OUTPUTSCHEMA%3Dhttp%3A%2F%2Fwww.isotc211.org%2F2005%2Fgmd&resolveCoupledResources=true
 https://www.geoportal.rlp.de/mapbender/php/mod_exportIso19139.php?url=https%3A%2F%2Fgdk.gdi-de.org%2Fgeonetwork%2Fsrv%2Fger%2Fcsw%3Frequest%3DGetRecordById%26service%3DCSW%26version%3D2.0.2%26Id%3D9fa0c44a-1348-4953-a765-36781a788845%26ElementSetName%3Dfull%26OUTPUTSCHEMA%3Dhttp%3A%2F%2Fwww.isotc211.org%2F2005%2Fgmd&resolveCoupledResources=true
 """
+
+
 class FPlan(XPlan):
 
     FPLAN = "1000"
     GEMEINSAMERFPLAN = "2000"
     REGFPLAN = "3000"
     FPLANREGPLAN = "4000"
-    SACHLICHERTEILPLAN  = "5000"
+    SACHLICHERTEILPLAN = "5000"
     SONSTIGES = "6000"
 
     FPLAN_TYPE_CHOICES = [
@@ -735,26 +824,31 @@ class FPlan(XPlan):
         '5000': "Untergegangen",
     }
 
-    #gemeinde [1..*], XP_Gemeinde
-    #gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
-    gemeinde = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
+    # gemeinde [1..*], XP_Gemeinde
+    # gemeinde = models.ForeignKey(AdministrativeOrganization, null=True, on_delete=models.SET_NULL)
+    gemeinde = models.ManyToManyField(
+        AdministrativeOrganization, blank=False, verbose_name="Gemeinde(n)")
     history = HistoricalRecords(m2m_fields=[gemeinde])
-    #planaufstellendeGemeinde [0..*], XP_Gemeinde
-    #plangeber [0..*], XP_Plangeber
-    #planArt [1..*], FP_PlanArt
-    planart = models.CharField(null=False, blank=False, max_length=5, choices=FPLAN_TYPE_CHOICES, default='1000', verbose_name='Typ des vorliegenden Flächennutzungsplans.', db_index=True)
-	#sonstPlanArt [0..1], BP_SonstPlanArt
-    #rechtsstand [0..1], BP_Rechtsstand
-    #status [0..1], BP_Status
-    #aenderungenBisDatum [0..1], Date
-    #aufstellungsbeschlussDatum [0..1], Date
-    aufstellungsbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Aufstellungsbeschlusses", help_text="Datum des Aufstellungsbeschlusses")
+    # planaufstellendeGemeinde [0..*], XP_Gemeinde
+    # plangeber [0..*], XP_Plangeber
+    # planArt [1..*], FP_PlanArt
+    planart = models.CharField(null=False, blank=False, max_length=5, choices=FPLAN_TYPE_CHOICES,
+                               default='1000', verbose_name='Typ des vorliegenden Flächennutzungsplans.', db_index=True)
+    # sonstPlanArt [0..1], BP_SonstPlanArt
+    # rechtsstand [0..1], BP_Rechtsstand
+    # status [0..1], BP_Status
+    # aenderungenBisDatum [0..1], Date
+    # aufstellungsbeschlussDatum [0..1], Date
+    aufstellungsbeschluss_datum = models.DateField(
+        null=True, blank=True, verbose_name="Datum des Aufstellungsbeschlusses", help_text="Datum des Aufstellungsbeschlusses")
     # Aus FP_Plan https://xleitstelle.de/releases/objektartenkatalog_6_0
-    #planbeschlussDatum [0..1], Date
+    # planbeschlussDatum [0..1], Date
     # TODO: Prüfen, was planbeschluss_datum in diesem Kontext eigentlich bedeutet - prüfen gegen Rechtsstand '3000'!
-    planbeschluss_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Planbeschlusses", help_text="Datum des Planbeschlusses")
-    #wirksamkeitsDatum [0..1], Date
-    wirksamkeits_datum = models.DateField(null=True, blank=True, verbose_name="Datum der Wirksamkeit", help_text="Datum der Wirksamkeit")
+    planbeschluss_datum = models.DateField(
+        null=True, blank=True, verbose_name="Datum des Planbeschlusses", help_text="Datum des Planbeschlusses")
+    # wirksamkeitsDatum [0..1], Date
+    wirksamkeits_datum = models.DateField(
+        null=True, blank=True, verbose_name="Datum der Wirksamkeit", help_text="Datum der Wirksamkeit")
 
     def clean(self, *args, **kwargs):
         """
@@ -771,11 +865,13 @@ class FPlan(XPlan):
             dates.append(self.untergangs_datum)
         is_sorted = dates == sorted(dates)
         if is_sorted == False:
-            raise ValidationError(('Die Datumsangaben entsprechen nicht ihrer logischen zeitlichen Abfolge!'))
-        
+            raise ValidationError(
+                ('Die Datumsangaben entsprechen nicht ihrer logischen zeitlichen Abfolge!'))
+
     @property
     def rechtsstand(self):
-        zahl_laufender_beteiligungen = FPlanBeteiligung.objects.filter(fplan=self.pk, start_datum__lte=datetime.date.today(), end_datum__gt=datetime.date.today()).exists()
+        zahl_laufender_beteiligungen = FPlanBeteiligung.objects.filter(
+            fplan=self.pk, start_datum__lte=datetime.date.today(), end_datum__gt=datetime.date.today()).exists()
         if zahl_laufender_beteiligungen:
             zahl_laufender_beteiligungen = 1
         else:
@@ -785,13 +881,13 @@ class FPlan(XPlan):
         if not self.untergangs_datum and self.wirksamkeits_datum and self.wirksamkeits_datum <= datetime.date.today():
             return "4000"
         if not self.untergangs_datum and not self.wirksamkeits_datum and self.planbeschluss_datum and self.planbeschluss_datum <= datetime.date.today():
-            return "3000" 
+            return "3000"
         if not self.untergangs_datum and not self.wirksamkeits_datum and not self.planbeschluss_datum and self.aufstellungsbeschluss_datum and self.aufstellungsbeschluss_datum <= datetime.date.today() and zahl_laufender_beteiligungen > 0:
             return "2000"
         if not self.untergangs_datum and not self.wirksamkeits_datum and not self.planbeschluss_datum and self.aufstellungsbeschluss_datum and self.aufstellungsbeschluss_datum <= datetime.date.today() and zahl_laufender_beteiligungen == 0:
             return "1000"
         return None
-    
+
     def get_rechtsstand_display(self):
         """
         Funktion zur Anzeige der Strings für das computed attribute
@@ -808,70 +904,76 @@ class FPlan(XPlan):
 """
 Informationen zur Durchführung von UVPs
 """
+
+
 class XPlanUvp(GenericMetadata):
-        
+
     TYPE_CHOICES = [
-        ( '18.1: Feriendorf Außenbereich',
+        ('18.1: Feriendorf Außenbereich',
             (
                 ('18_1_1', '18.1.1 (X): Betten >= 300 oder GZ >= 200'),
-                ('18_1_2', '18.1.2 (A): Betten >= 100 < 300 oder GZ >=80 < 200'), 
+                ('18_1_2', '18.1.2 (A): Betten >= 100 < 300 oder GZ >=80 < 200'),
             ),
-        ),
-        ( '18.2: Campingplatz Außenbereich',
+         ),
+        ('18.2: Campingplatz Außenbereich',
             (
                 ('18_2_1', '18.2.1 (X): StPl 200+'),
-                ('18_2_2', '18.2.2 (A): StPl >=50 < 200'), 
+                ('18_2_2', '18.2.2 (A): StPl >=50 < 200'),
             ),
-        ),
-        ( '18.3: Freizeitpark Außenbereich',
+         ),
+        ('18.3: Freizeitpark Außenbereich',
             (
                 ('18_3_1', '18.3.1 (X):  F > 10ha'),
-                ('18_3_2', '18.3.2 (A): 4ha < F < 10ha'), 
+                ('18_3_2', '18.3.2 (A): 4ha < F < 10ha'),
             ),
-        ),
-        ( '18.4: Parkplatz Außenbereich',
+         ),
+        ('18.4: Parkplatz Außenbereich',
             (
                 ('18_4_1', '18.4.1 (X): F > 1ha'),
-                ('18_4_2', '18.4.2 (A): 0,5ha < F < 1ha'), 
+                ('18_4_2', '18.4.2 (A): 0,5ha < F < 1ha'),
             ),
-        ),
-        ( '18.5: Industriezone Außenbereich',
+         ),
+        ('18.5: Industriezone Außenbereich',
             (
                 ('18_5_1', '18.5.1 (X): F > 100.000m^2'),
-                ('18_5_2', '18.5.2 (A): 20.000m^2 < F < 100.000m^2'), 
+                ('18_5_2', '18.5.2 (A): 20.000m^2 < F < 100.000m^2'),
             ),
-        ),
-        ( '18.6: Einkaufszentrums Außenbereich',
+         ),
+        ('18.6: Einkaufszentrums Außenbereich',
             (
                 ('18_6_1', '18.6.1 (X): F > 5.000m^2'),
-                ('18_6_2', '18.6.2 (A): 1.200m^2 < F < 5.000m^2'), 
+                ('18_6_2', '18.6.2 (A): 1.200m^2 < F < 5.000m^2'),
             ),
-        ),
-        ( '18.7: BPlan Außenbereich',
+         ),
+        ('18.7: BPlan Außenbereich',
             (
                 ('18_7_1', '18.7.1 (X): F > 100.000m^2'),
-                ('18_7_2', '18.7.2 (A): 20.000m^2 < F < 100.000m^2'), 
+                ('18_7_2', '18.7.2 (A): 20.000m^2 < F < 100.000m^2'),
             ),
-        ),
-        ( 'Andere',
+         ),
+        ('Andere',
             (
                 ('18_8', '18.8 (A): Vorhaben gem 18.1-18.7 - Nichtaußenbereich'),
-                ('18_9', '18.9: Vorgesehene UVP - Zulässigkeit gem. BPlan'), 
+                ('18_9', '18.9: Vorgesehene UVP - Zulässigkeit gem. BPlan'),
             ),
-        ),
+         ),
     ]
 
-    uvp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP durchgeführt", help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP durchgeführt wurde.")
-    typ = models.CharField(null=True, blank=True, max_length=7, choices=TYPE_CHOICES, verbose_name='Kategorie für Bauvorhaben gem. Anlage 1 UVPG', help_text="Kategorie für Bauvorhaben gem. Anlage 1 UVPG - https://www.gesetze-im-internet.de/uvpg/anlage_1.html", db_index=True)
-    uvp_beginn_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Beginns der UVP", help_text="Datum des Beginns der UVP.")
-    uvp_ende_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Abschlusses der UVP", help_text="Datum des Abschlusses der UVP.")
-    #bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="uvps")
-    #history = HistoricalRecords()
+    uvp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP durchgeführt",
+                              help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP durchgeführt wurde.")
+    typ = models.CharField(null=True, blank=True, max_length=7, choices=TYPE_CHOICES, verbose_name='Kategorie für Bauvorhaben gem. Anlage 1 UVPG',
+                           help_text="Kategorie für Bauvorhaben gem. Anlage 1 UVPG - https://www.gesetze-im-internet.de/uvpg/anlage_1.html", db_index=True)
+    uvp_beginn_datum = models.DateField(
+        null=True, blank=True, verbose_name="Datum des Beginns der UVP", help_text="Datum des Beginns der UVP.")
+    uvp_ende_datum = models.DateField(
+        null=True, blank=True, verbose_name="Datum des Abschlusses der UVP", help_text="Datum des Abschlusses der UVP.")
+    # bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="uvps")
+    # history = HistoricalRecords()
 
     def __str__(self):
         """Returns a string representation of the Info about the UVP."""
         return f"UVP - { self.id } ({self.get_typ_display()})"
-    
+
     class Meta:
         abstract = True
 
@@ -879,62 +981,64 @@ class XPlanUvp(GenericMetadata):
 class Uvp(XPlanUvp):
 
     TYPE_CHOICES = [
-        ( '18.1: Feriendorf Außenbereich',
+        ('18.1: Feriendorf Außenbereich',
             (
                 ('18_1_1', '18.1.1 (X): Betten >= 300 oder GZ >= 200'),
-                ('18_1_2', '18.1.2 (A): Betten >= 100 < 300 oder GZ >=80 < 200'), 
+                ('18_1_2', '18.1.2 (A): Betten >= 100 < 300 oder GZ >=80 < 200'),
             ),
-        ),
-        ( '18.2: Campingplatz Außenbereich',
+         ),
+        ('18.2: Campingplatz Außenbereich',
             (
                 ('18_2_1', '18.2.1 (X): StPl 200+'),
-                ('18_2_2', '18.2.2 (A): StPl >=50 < 200'), 
+                ('18_2_2', '18.2.2 (A): StPl >=50 < 200'),
             ),
-        ),
-        ( '18.3: Freizeitpark Außenbereich',
+         ),
+        ('18.3: Freizeitpark Außenbereich',
             (
                 ('18_3_1', '18.3.1 (X):  F > 10ha'),
-                ('18_3_2', '18.3.2 (A): 4ha < F < 10ha'), 
+                ('18_3_2', '18.3.2 (A): 4ha < F < 10ha'),
             ),
-        ),
-        ( '18.4: Parkplatz Außenbereich',
+         ),
+        ('18.4: Parkplatz Außenbereich',
             (
                 ('18_4_1', '18.4.1 (X): F > 1ha'),
-                ('18_4_2', '18.4.2 (A): 0,5ha < F < 1ha'), 
+                ('18_4_2', '18.4.2 (A): 0,5ha < F < 1ha'),
             ),
-        ),
-        ( '18.5: Industriezone Außenbereich',
+         ),
+        ('18.5: Industriezone Außenbereich',
             (
                 ('18_5_1', '18.5.1 (X): F > 100.000m^2'),
-                ('18_5_2', '18.5.2 (A): 20.000m^2 < F < 100.000m^2'), 
+                ('18_5_2', '18.5.2 (A): 20.000m^2 < F < 100.000m^2'),
             ),
-        ),
-        ( '18.6: Einkaufszentrums Außenbereich',
+         ),
+        ('18.6: Einkaufszentrums Außenbereich',
             (
                 ('18_6_1', '18.6.1 (X): F > 5.000m^2'),
-                ('18_6_2', '18.6.2 (A): 1.200m^2 < F < 5.000m^2'), 
+                ('18_6_2', '18.6.2 (A): 1.200m^2 < F < 5.000m^2'),
             ),
-        ),
-        ( '18.7: BPlan Außenbereich',
+         ),
+        ('18.7: BPlan Außenbereich',
             (
                 ('18_7_1', '18.7.1 (X): F > 100.000m^2'),
-                ('18_7_2', '18.7.2 (A): 20.000m^2 < F < 100.000m^2'), 
+                ('18_7_2', '18.7.2 (A): 20.000m^2 < F < 100.000m^2'),
             ),
-        ),
-        ( 'Andere',
+         ),
+        ('Andere',
             (
                 ('18_8', '18.8 (A): Vorhaben gem 18.1-18.7 - Nichtaußenbereich'),
-                ('18_9', '18.9: Vorgesehene UVP - Zulässigkeit gem. BPlan'), 
+                ('18_9', '18.9: Vorgesehene UVP - Zulässigkeit gem. BPlan'),
             ),
-        ),
+         ),
     ]
 
-    uvp_vp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP Vorprüfung durchgeführt", help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP Vorprüfung durchgeführt wurde.")
-    #uvp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP durchgeführt", help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP durchgeführt wurde.")
-    #typ = models.CharField(null=True, blank=True, max_length=7, choices=TYPE_CHOICES, verbose_name='Kategorie für Bauvorhaben gem. Anlage 1 UVPG', help_text="Kategorie für Bauvorhaben gem. Anlage 1 UVPG - https://www.gesetze-im-internet.de/uvpg/anlage_1.html", db_index=True)
-    #uvp_beginn_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Beginns der UVP", help_text="Datum des Beginns der UVP.")
-    #uvp_ende_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Abschlusses der UVP", help_text="Datum des Abschlusses der UVP.")
-    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="uvps")
+    uvp_vp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP Vorprüfung durchgeführt",
+                                 help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP Vorprüfung durchgeführt wurde.")
+    # uvp = models.BooleanField(null=False, blank=False, default=False, verbose_name="UVP durchgeführt", help_text="Gibt an, ob bei der Aufstellung des Plan eine UVP durchgeführt wurde.")
+    # typ = models.CharField(null=True, blank=True, max_length=7, choices=TYPE_CHOICES, verbose_name='Kategorie für Bauvorhaben gem. Anlage 1 UVPG', help_text="Kategorie für Bauvorhaben gem. Anlage 1 UVPG - https://www.gesetze-im-internet.de/uvpg/anlage_1.html", db_index=True)
+    # uvp_beginn_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Beginns der UVP", help_text="Datum des Beginns der UVP.")
+    # uvp_ende_datum = models.DateField(null=True, blank=True, verbose_name="Datum des Abschlusses der UVP", help_text="Datum des Abschlusses der UVP.")
+    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE,
+                               verbose_name="BPlan", help_text="BPlan", related_name="uvps")
     history = HistoricalRecords()
 
 
@@ -945,9 +1049,11 @@ class FPlanUvp(XPlanUvp):
     TYPE_CHOICES = [
         (SUP,  "Strategische Umweltprüfung"),
     ]
-    
-    typ = models.CharField(null=True, blank=True, max_length=7, choices=TYPE_CHOICES, verbose_name='Kategorie für Umweltprüfungen gem. UVPG', help_text="Kategorie für Umweltprüfungen - weitere Infos: https://www.umweltbundesamt.de/sites/default/files/medien/11850/publikationen/112_2023_texte_evaluation_der_praxis_der_strategischen_umweltpruefung_in_deutschland.pdf", db_index=True)
-    fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE, verbose_name="FPlan", help_text="FPlan", related_name="uvps")
+
+    typ = models.CharField(null=True, blank=True, max_length=7, choices=TYPE_CHOICES, verbose_name='Kategorie für Umweltprüfungen gem. UVPG',
+                           help_text="Kategorie für Umweltprüfungen - weitere Infos: https://www.umweltbundesamt.de/sites/default/files/medien/11850/publikationen/112_2023_texte_evaluation_der_praxis_der_strategischen_umweltpruefung_in_deutschland.pdf", db_index=True)
+    fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE,
+                               verbose_name="FPlan", help_text="FPlan", related_name="uvps")
     history = HistoricalRecords()
 
 
@@ -956,6 +1062,8 @@ Um die verschieden Beteiligungsverfahren abbilden zu können, macht es Sinn die 
 jeweilige Planung zu hängen. Das erfolgt ähnlich wie bei den Anlagen. In XPlanung gibt es 4 Datumsfelder, die der jeweiligen 
 Kardinalität von 0..*. Diese können aus 
 """
+
+
 class XPlanBeteiligung(GenericMetadata):
 
     AUSLEGUNG = "1000"
@@ -970,28 +1078,35 @@ class XPlanBeteiligung(GenericMetadata):
         (AUSLEGUNG,  "Öffentliche Auslegung"),
 
     ]
-    bekanntmachung_datum = models.DateField(null=False, blank=False, verbose_name="Datum der Bekanntmachung", help_text="Datum der Bekanntmachung des Verfahrens")
-    start_datum = models.DateField(null=False, blank=False, verbose_name="Beginn", help_text="Datum des Beginns des Beteiligungsverfahrens")
-    end_datum = models.DateField(null=False, blank=False, verbose_name="Ende", help_text="Enddatum des Beteiligungsverfahrens")
-    typ = models.CharField(null=False, blank=False, max_length=5, choices=TYPE_CHOICES, default='1000', verbose_name='Typ des Beteiligungsverfahrens', help_text="Typ des Beteiligungsverfahrens - aktuell Auslegung oder TÖB", db_index=True)
-    publikation_internet = models.URLField(null=True, blank=True, verbose_name="Publikation im Internet", help_text="Link zur Publikation auf der Homepage der jeweiligen Organisation")
-    #beschreibung = models.TextField(null=True, blank=True, verbose_name="Erläuternde Beschreibung des Beteiligungsverfahrens")
-    #from formset.modelfields import RichTextField
-    beschreibung = RichTextField(null=True, blank=True, verbose_name="Erläuternde Beschreibung des Beteiligungsverfahrens")
-    allow_online_beitrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Online-Stellungnahme zulassen", help_text="Gibt an, ob das Online-Verfahren für den Beteiligungsprozess zugelassen wird.")
-    
+    bekanntmachung_datum = models.DateField(
+        null=False, blank=False, verbose_name="Datum der Bekanntmachung", help_text="Datum der Bekanntmachung des Verfahrens")
+    start_datum = models.DateField(null=False, blank=False, verbose_name="Beginn",
+                                   help_text="Datum des Beginns des Beteiligungsverfahrens")
+    end_datum = models.DateField(
+        null=False, blank=False, verbose_name="Ende", help_text="Enddatum des Beteiligungsverfahrens")
+    typ = models.CharField(null=False, blank=False, max_length=5, choices=TYPE_CHOICES, default='1000',
+                           verbose_name='Typ des Beteiligungsverfahrens', help_text="Typ des Beteiligungsverfahrens - aktuell Auslegung oder TÖB", db_index=True)
+    publikation_internet = models.URLField(null=True, blank=True, verbose_name="Publikation im Internet",
+                                           help_text="Link zur Publikation auf der Homepage der jeweiligen Organisation")
+    # beschreibung = models.TextField(null=True, blank=True, verbose_name="Erläuternde Beschreibung des Beteiligungsverfahrens")
+    # from formset.modelfields import RichTextField
+    beschreibung = RichTextField(
+        null=True, blank=True, verbose_name="Erläuternde Beschreibung des Beteiligungsverfahrens")
+    allow_online_beitrag = models.BooleanField(null=False, blank=False, default=False, verbose_name="Online-Stellungnahme zulassen",
+                                               help_text="Gibt an, ob das Online-Verfahren für den Beteiligungsprozess zugelassen wird.")
+
     @property
     def days_left(self):
         if self.end_datum:
             return (self.end_datum - timezone.now().date()).days
         return 0
-    
+
     @property
     def days_passed(self):
         if self.start_datum:
             return (timezone.now().date() - self.start_datum).days
         return 0
-    
+
     @property
     def days_total(self):
         if self.end_datum and self.start_datum:
@@ -999,18 +1114,20 @@ class XPlanBeteiligung(GenericMetadata):
         return 0
 
     def __str__(self):
-            """Returns a string representation of Beteiligung."""
-            return f"{self.get_typ_display()} - vom {self.bekanntmachung_datum}"
-    
+        """Returns a string representation of Beteiligung."""
+        return f"{self.get_typ_display()} - vom {self.bekanntmachung_datum}"
+
     class Meta:
         abstract = True
 
 
 class BPlanBeteiligung(XPlanBeteiligung):
 
-    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="beteiligungen")
+    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE,
+                               verbose_name="BPlan", help_text="BPlan", related_name="beteiligungen")
     # Nur benötigt bei Trägerbeteiligung
-    assigned_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Zugewiesene TOEBs", help_text="Zugewiesene TOEBs", related_name="bplan_beteiligungen")
+    assigned_toebs = models.ManyToManyField(
+        ToebUnit, blank=True, verbose_name="Zugewiesene TOEBs", help_text="Zugewiesene TOEBs", related_name="bplan_beteiligungen")
     history = HistoricalRecords(m2m_fields=[assigned_toebs])
 
     @property
@@ -1020,37 +1137,50 @@ class BPlanBeteiligung(XPlanBeteiligung):
 
 class FPlanBeteiligung(XPlanBeteiligung):
 
-    fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE, verbose_name="FPlan", help_text="FPlan", related_name="beteiligungen")
+    fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE,
+                               verbose_name="FPlan", help_text="FPlan", related_name="beteiligungen")
     # Nur benötigt bei Trägerbeteiligung
-    assigned_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Zugewiesene TOEBs", help_text="Zugewiesene TOEBs", related_name="fplan_beteiligungen")
+    assigned_toebs = models.ManyToManyField(
+        ToebUnit, blank=True, verbose_name="Zugewiesene TOEBs", help_text="Zugewiesene TOEBs", related_name="fplan_beteiligungen")
     history = HistoricalRecords(m2m_fields=[assigned_toebs])
 
     @property
     def plan(self):
         return self.fplan
 
+
 """
 Hier kommen die Modelle für die Benachrichtigungen zu den Beteiligungsverfahren
 """
 
+
 class XPlanBeteiligungToebNotification(GenericMetadata):
-    start = models.DateTimeField(null=False, blank=False, verbose_name="Startzeit", help_text="Startzeit")
-    end = models.DateTimeField(null=True, blank=True, verbose_name="Abschlusszeit", help_text="Abschlusszeit")
-    message = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Bemerkung', help_text='Zusätzlicher Hinweis für Benachrichtigungsmail')
-    protocol = models.JSONField(blank=True, null=True, verbose_name='Protokoll', help_text='Protokoll im json-Format')
+    start = models.DateTimeField(
+        null=False, blank=False, verbose_name="Startzeit", help_text="Startzeit")
+    end = models.DateTimeField(
+        null=True, blank=True, verbose_name="Abschlusszeit", help_text="Abschlusszeit")
+    message = models.CharField(blank=True, null=True, max_length=4096, verbose_name='Bemerkung',
+                               help_text='Zusätzlicher Hinweis für Benachrichtigungsmail')
+    protocol = models.JSONField(
+        blank=True, null=True, verbose_name='Protokoll', help_text='Protokoll im json-Format')
+
     class Meta:
         abstract = True
 
 
 class BPlanBeteiligungToebNotification(XPlanBeteiligungToebNotification):
-    bplanbeteiligung = HistoricForeignKey(BPlanBeteiligung, blank=False, null=False, on_delete=models.CASCADE, verbose_name="BPlan-Beteiligung", help_text="BPlan-Beteiligung", related_name="bplan_beteiligung_notifications")
-    selected_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Ausgewählte TOEBs", help_text="Ausgewählte TOEBs")
+    bplanbeteiligung = HistoricForeignKey(BPlanBeteiligung, blank=False, null=False, on_delete=models.CASCADE,
+                                          verbose_name="BPlan-Beteiligung", help_text="BPlan-Beteiligung", related_name="bplan_beteiligung_notifications")
+    selected_toebs = models.ManyToManyField(
+        ToebUnit, blank=True, verbose_name="Ausgewählte TOEBs", help_text="Ausgewählte TOEBs")
     history = HistoricalRecords(m2m_fields=[selected_toebs])
-    
+
 
 class FPlanBeteiligungToebNotification(XPlanBeteiligungToebNotification):
-    fplanbeteiligung = HistoricForeignKey(FPlanBeteiligung, blank=False, null=False, on_delete=models.CASCADE, verbose_name="FPlan-Beteiligung", help_text="FPlan-Beteiligung", related_name="fplan_beteiligung_notifications")
-    selected_toebs = models.ManyToManyField(ToebUnit, blank=True, verbose_name="Ausgewählte TOEBs", help_text="Ausgewählte TOEBs")
+    fplanbeteiligung = HistoricForeignKey(FPlanBeteiligung, blank=False, null=False, on_delete=models.CASCADE,
+                                          verbose_name="FPlan-Beteiligung", help_text="FPlan-Beteiligung", related_name="fplan_beteiligung_notifications")
+    selected_toebs = models.ManyToManyField(
+        ToebUnit, blank=True, verbose_name="Ausgewählte TOEBs", help_text="Ausgewählte TOEBs")
     history = HistoricalRecords(m2m_fields=[selected_toebs])
 
 
@@ -1059,6 +1189,7 @@ Die folgenden Klassen dienen der Abbildung eines Beteiligungsprozesses - zuminde
 die sich in der Offenlage befindlichen Pläne zu kommentieren, sowohl durch den Bürger, als auch durch eine andere Behörde.
 Die Frage ist aber, ob es für diese Zwecke nicht schon speziell entwickelte Software gibt, die schon länger eingesetzt wird.
 """
+
 
 class BeteiligungBeitrag(GenericMetadata):
 
@@ -1074,23 +1205,30 @@ class BeteiligungBeitrag(GenericMetadata):
         (NIEDERSCHRIFT, "Niederschrift"),
     ]
 
-    titel = models.CharField(null=False, blank=False, max_length=300, verbose_name="Titel des Beitrags", help_text="Geben Sie hier bitte einen aussagekräftigen Titel für Ihren Beitrag an.")
-    beschreibung = RichTextField(null=False, blank=False, verbose_name="Beitrag / Kommentar (Textform)")
-    approved = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag bestätigt")
-    typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_TYPE_CHOICES, default='1000', verbose_name='Einreichung', help_text="Art der Einreichung des Beitrags / Kommentars", db_index=True)
-    name = models.CharField(null=True, blank=True, max_length=300, verbose_name="Name", help_text="Name der Person oder Institution die den Beitrag einreicht")
-    email = models.EmailField(null=True, blank=True, verbose_name='EMail', help_text='EMail-Adresse zur Bestätigung der Abgabe Ihrer Stellungnahme. Sie bekommen eine Aktivierungsmail geschickt.')
-    withdrawn = models.BooleanField(null=False, blank=False, default=False, verbose_name="Beitrag zurückgezogen")
+    titel = models.CharField(null=False, blank=False, max_length=300, verbose_name="Titel des Beitrags",
+                             help_text="Geben Sie hier bitte einen aussagekräftigen Titel für Ihren Beitrag an.")
+    beschreibung = RichTextField(
+        null=False, blank=False, verbose_name="Beitrag / Kommentar (Textform)")
+    approved = models.BooleanField(
+        null=False, blank=False, default=False, verbose_name="Beitrag bestätigt")
+    typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_TYPE_CHOICES, default='1000',
+                           verbose_name='Einreichung', help_text="Art der Einreichung des Beitrags / Kommentars", db_index=True)
+    name = models.CharField(null=True, blank=True, max_length=300, verbose_name="Name",
+                            help_text="Name der Person oder Institution die den Beitrag einreicht")
+    email = models.EmailField(null=True, blank=True, verbose_name='EMail',
+                              help_text='EMail-Adresse zur Bestätigung der Abgabe Ihrer Stellungnahme. Sie bekommen eine Aktivierungsmail geschickt.')
+    withdrawn = models.BooleanField(
+        null=False, blank=False, default=False, verbose_name="Beitrag zurückgezogen")
     # Feld mit Eingangsdatum falls nicht Online abgegeben! Wenn über Online-Formular, dann wird Datum des Abschickens automatisch gesetzt.
-    #eingangsdatum = models.DateField(null=False, blank=False, default=datetime.date.today, verbose_name="Eingangsdatum", help_text="Eingangsdatum des Beitrags.")
-    eingangsdatum = models.DateField(null=False, blank=False, verbose_name="Eingangsdatum", help_text="Eingangsdatum des Beitrags.")
-
+    # eingangsdatum = models.DateField(null=False, blank=False, default=datetime.date.today, verbose_name="Eingangsdatum", help_text="Eingangsdatum des Beitrags.")
+    eingangsdatum = models.DateField(
+        null=False, blank=False, verbose_name="Eingangsdatum", help_text="Eingangsdatum des Beitrags.")
 
     class Meta:
         abstract = True
 
 
-class BeteiligungBeitragAnhang(GenericMetadata):   
+class BeteiligungBeitragAnhang(GenericMetadata):
 
     BESCHREIBUNG = "1000"
     FOTO = "2000"
@@ -1103,9 +1241,11 @@ class BeteiligungBeitragAnhang(GenericMetadata):
     ]
 
     name = models.CharField(null=False, blank=False, max_length=256)
-    typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_ATTACHMENT_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des Anhangs', help_text="Typ / Inhalt des Anhangs zum Kommentar", db_index=True)
-    attachment = models.FileField(null = True, blank = True, max_length=1024, upload_to='uploads', verbose_name="Dokument")
-    #public
+    typ = models.CharField(null=False, blank=False, max_length=5, choices=COMMENT_ATTACHMENT_TYPE_CHOICES, default='1000',
+                           verbose_name='Typ / Inhalt des Anhangs', help_text="Typ / Inhalt des Anhangs zum Kommentar", db_index=True)
+    attachment = models.FileField(
+        null=True, blank=True, max_length=1024, upload_to='uploads', verbose_name="Dokument")
+    # public
 
     class Meta:
         abstract = True
@@ -1113,8 +1253,10 @@ class BeteiligungBeitragAnhang(GenericMetadata):
 
 class BPlanBeteiligungBeitrag(BeteiligungBeitrag):
 
-    bplan_beteiligung = HistoricForeignKey(BPlanBeteiligung, on_delete=models.CASCADE, verbose_name="BPlanBeteiligung", help_text="BPlanBeteiligung", related_name="comments")
-    toeb = HistoricForeignKey(ToebUnit, on_delete=models.SET_NULL, null = True, blank = True, verbose_name="Träger öffentlicher Belange")
+    bplan_beteiligung = HistoricForeignKey(BPlanBeteiligung, on_delete=models.CASCADE,
+                                           verbose_name="BPlanBeteiligung", help_text="BPlanBeteiligung", related_name="comments")
+    toeb = HistoricForeignKey(ToebUnit, on_delete=models.SET_NULL,
+                              null=True, blank=True, verbose_name="Träger öffentlicher Belange")
     history = HistoricalRecords()
 
     """
@@ -1134,16 +1276,20 @@ class BPlanBeteiligungBeitrag(BeteiligungBeitrag):
     def beteiligung(self):
         return self.bplan_beteiligung
 
-class BPlanBeteiligungBeitragAnhang(BeteiligungBeitragAnhang):   
 
-    beitrag = HistoricForeignKey(BPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zum Beitrag / Kommentar", help_text="Dateianhänge zum Beitrag / Kommentar", related_name="attachments")
+class BPlanBeteiligungBeitragAnhang(BeteiligungBeitragAnhang):
+
+    beitrag = HistoricForeignKey(BPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zum Beitrag / Kommentar",
+                                 help_text="Dateianhänge zum Beitrag / Kommentar", related_name="attachments")
     history = HistoricalRecords()
 
 
 class FPlanBeteiligungBeitrag(BeteiligungBeitrag):
 
-    fplan_beteiligung = HistoricForeignKey(FPlanBeteiligung, null=True, on_delete=models.CASCADE, verbose_name="FPlanBeteiligung", help_text="FPlanBeteiligung", related_name="comments")
-    toeb = HistoricForeignKey(ToebUnit, on_delete=models.SET_NULL, null = True, blank = True, verbose_name="Träger öffentlicher Belange")
+    fplan_beteiligung = HistoricForeignKey(FPlanBeteiligung, null=True, on_delete=models.CASCADE,
+                                           verbose_name="FPlanBeteiligung", help_text="FPlanBeteiligung", related_name="comments")
+    toeb = HistoricForeignKey(ToebUnit, on_delete=models.SET_NULL,
+                              null=True, blank=True, verbose_name="Träger öffentlicher Belange")
     history = HistoricalRecords()
 
     """
@@ -1162,11 +1308,14 @@ class FPlanBeteiligungBeitrag(BeteiligungBeitrag):
     @property
     def beteiligung(self):
         return self.fplan_beteiligung
-    
-class FPlanBeteiligungBeitragAnhang(BeteiligungBeitragAnhang):   
 
-    beitrag = HistoricForeignKey(FPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zum Beitrag / Kommentar", help_text="Dateianhänge zum Beitrag / Kommentar", related_name="attachments")
+
+class FPlanBeteiligungBeitragAnhang(BeteiligungBeitragAnhang):
+
+    beitrag = HistoricForeignKey(FPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Anlage zum Beitrag / Kommentar",
+                                 help_text="Dateianhänge zum Beitrag / Kommentar", related_name="attachments")
     history = HistoricalRecords()
+
 
 """
 Abwägungstabelle Beispiel: https://sessionnet-oparl.krz.de/Oparl/bodies/5374/downloadfiles/a/00229040.pdf
@@ -1183,6 +1332,8 @@ T = Textliche Festsetzung / Hinweise ändern
 V = Vorschlag wurde bereits berücksichtigt
 Z = Zurückweisung der Argumentation
 """
+
+
 class XPlanBeitragStellungnahme(GenericMetadata):
     """
     BEGRUENDUNG_AAE = "B"
@@ -1217,56 +1368,66 @@ class XPlanBeitragStellungnahme(GenericMetadata):
         ('V', 'Vorschlag wurde bereits berücksichtigt'),
         ('Z', 'Zurückweisung der Argumentation'),
     ]
-    
+
     # Dict für schnelleren Lookup
     TAGS_DICT = dict(TAGS)
-    
-    bezug_beitrag = RichTextField(null=True, blank=True, verbose_name="Bezug", help_text="Auszug/Zitat/Referenz aus Beitrag auf den sich die Stellungnahme bezieht")
-    stellungnahme = RichTextField(null=True, blank=True, verbose_name="Stellungnahme", help_text="Textliche Stellungnahme der Verwaltung")
-    beruecksichtigung = models.JSONField(blank=True, default=list, verbose_name="Berücksichtigung", help_text="Berücksichtigung in der Planung")
-    #history = HistoricalRecords()
+
+    bezug_beitrag = RichTextField(null=True, blank=True, verbose_name="Bezug",
+                                  help_text="Auszug/Zitat/Referenz aus Beitrag auf den sich die Stellungnahme bezieht")
+    stellungnahme = RichTextField(null=True, blank=True, verbose_name="Stellungnahme",
+                                  help_text="Textliche Stellungnahme der Verwaltung")
+    beruecksichtigung = models.JSONField(
+        blank=True, default=list, verbose_name="Berücksichtigung", help_text="Berücksichtigung in der Planung")
+    # history = HistoricalRecords()
     """
     Nach Hinweis von Claude
     """
+
     def clean(self):
         super().clean()
         valid_tags = [tag[0] for tag in self.TAGS]
         if not isinstance(self.beruecksichtigung, list):
-            raise ValidationError({'beruecksichtigung': 'Berücksichtigung muss eine Liste sein'})
-        #Test ob ein Eintrag ausgewählt wurde, der nur einzeln stehen kann
+            raise ValidationError(
+                {'beruecksichtigung': 'Berücksichtigung muss eine Liste sein'})
+        # Test ob ein Eintrag ausgewählt wurde, der nur einzeln stehen kann
         einzelne_eintraege = ['K', 'V', 'N', 'Z']
         if len(self.beruecksichtigung) > 1:
             for value in einzelne_eintraege:
                 if value in self.beruecksichtigung:
-                    raise ValidationError({'beruecksichtigung': 'Der Wert ' + value + ' kann nicht mit anderen Gründen kombiniert werden!'})
-        
-        invalid_tags = [tag for tag in self.beruecksichtigung if tag not in valid_tags]
+                    raise ValidationError(
+                        {'beruecksichtigung': 'Der Wert ' + value + ' kann nicht mit anderen Gründen kombiniert werden!'})
+
+        invalid_tags = [
+            tag for tag in self.beruecksichtigung if tag not in valid_tags]
         if invalid_tags:
             raise ValidationError({
                 'beruecksichtigung': f'Ungültige Tags: {", ".join(invalid_tags)}'
             })
-    
+
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
-    
+
     @property
     def beruecksichtigung_labels(self):
         """Gibt die lesbaren Tag-Namen zurück"""
         return [self.TAGS_DICT.get(tag, tag) for tag in self.beruecksichtigung]
-
 
     class Meta:
         abstract = True
 
 
 class BPlanBeitragStellungnahme(XPlanBeitragStellungnahme):
-    beitrag = HistoricForeignKey(BPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Stellungnahme", help_text="Stellungnahme der Verwaltung", related_name='stellungnahmen')
+    beitrag = HistoricForeignKey(BPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Stellungnahme",
+                                 help_text="Stellungnahme der Verwaltung", related_name='stellungnahmen')
     history = HistoricalRecords()
 
+
 class FPlanBeitragStellungnahme(XPlanBeitragStellungnahme):
-    beitrag = HistoricForeignKey(FPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Stellungnahme", help_text="Stellungnahme der Verwaltung", related_name='stellungnahmen')
+    beitrag = HistoricForeignKey(FPlanBeteiligungBeitrag, on_delete=models.CASCADE, verbose_name="Stellungnahme",
+                                 help_text="Stellungnahme der Verwaltung", related_name='stellungnahmen')
     history = HistoricalRecords()
+
 
 class XPlanSpezExterneReferenz(GenericMetadata):
     """
@@ -1275,9 +1436,10 @@ class XPlanSpezExterneReferenz(GenericMetadata):
     https://wiki.debian.org/ClamAV
     """
     # https://gist.github.com/chhantyal/5370749
+
     def get_upload_path(self, filename):
         name, ext = os.path.splitext(filename)
-        return os.path.join('uploads', 'attachments' , str(self.generic_id) + "_" + slugify(name)) + ext
+        return os.path.join('uploads', 'attachments', str(self.generic_id) + "_" + slugify(name)) + ext
 
     BESCHREIBUNG = "1000"
     BEGRUENDUNG = "1010"
@@ -1296,7 +1458,7 @@ class XPlanSpezExterneReferenz(GenericMetadata):
     GRUENORDNUNGSPLAN = "2300"
     ERSCHLIESSUNGSVERTRAG = "2400"
     DURCHFUEHRUNGSVERTRAG = "2500"
-    STAEDTEBAULICHERVERTRAG  = "2600"
+    STAEDTEBAULICHERVERTRAG = "2600"
     UMWELTBEZOGENESTELLUNGNAHMEN = "2700"
     BESCHLUSS = "2800"
     VORHABENUNDERSCHLIESSUNGSPLAN = "2900"
@@ -1333,7 +1495,8 @@ class XPlanSpezExterneReferenz(GenericMetadata):
         (BESCHLUSS, "Beschluss"),
         (VORHABENUNDERSCHLIESSUNGSPLAN, "VorhabenUndErschliessungsplan"),
         (METADATENPLAN, "MetadatenPlan"),
-        (STAEDTEBAULENTWICKLUNGSKONZEPTINNENENTWICKLUNG, "StaedtebaulEntwicklungskonzeptInnenentwicklung"),
+        (STAEDTEBAULENTWICKLUNGSKONZEPTINNENENTWICKLUNG,
+         "StaedtebaulEntwicklungskonzeptInnenentwicklung"),
         (GENEHMIGUNG, "Genehmigung"),
         (BEKANNTMACHUNG, "Bekanntmachung"),
         (SCHUTZGEBIETSVERORDNUNG, "Schutzgebietsverordnung"),
@@ -1342,66 +1505,74 @@ class XPlanSpezExterneReferenz(GenericMetadata):
         (REFSCAN, "GeoreferenzierterScan"),
     ]
 
-    #georefURL [0..1], URI
-    #art [0..1], XP_ExterneReferenzArt
-    #referenzName [1], CharacterString
-    name = models.CharField(null=False, blank=False, default="Unbekannt", max_length=2048, verbose_name='Name des Dokumentes', help_text='Name bzw. Titel des referierten Dokuments. Der Standardname ist "Unbekannt".')
-    #referenzURL [1], URI
-    #referenzMimeType [0..1], XP_MimeTypes
-    #beschreibung [0..1], CharacterString
-    #datum [0..1], Date
-    #typ [1], XP_ExterneReferenzTyp
-    typ = models.CharField(null=False, blank=False, max_length=5, choices=REF_TYPE_CHOICES, default='1000', verbose_name='Typ / Inhalt des referierten Dokuments oder Rasterplans', help_text="Typ / Inhalt des referierten Dokuments oder Rasterplans", db_index=True)
-    attachment = models.FileField(null = True, blank = True, max_length=1024, upload_to='uploads', verbose_name="Dokument", validators=[validate_file_infection])
-    #bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
-    #bplan = models.ForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
-    
+    # georefURL [0..1], URI
+    # art [0..1], XP_ExterneReferenzArt
+    # referenzName [1], CharacterString
+    name = models.CharField(null=False, blank=False, default="Unbekannt", max_length=2048, verbose_name='Name des Dokumentes',
+                            help_text='Name bzw. Titel des referierten Dokuments. Der Standardname ist "Unbekannt".')
+    # referenzURL [1], URI
+    # referenzMimeType [0..1], XP_MimeTypes
+    # beschreibung [0..1], CharacterString
+    # datum [0..1], Date
+    # typ [1], XP_ExterneReferenzTyp
+    typ = models.CharField(null=False, blank=False, max_length=5, choices=REF_TYPE_CHOICES, default='1000',
+                           verbose_name='Typ / Inhalt des referierten Dokuments oder Rasterplans', help_text="Typ / Inhalt des referierten Dokuments oder Rasterplans", db_index=True)
+    attachment = models.FileField(null=True, blank=True, max_length=1024, upload_to='uploads',
+                                  verbose_name="Dokument", validators=[validate_file_infection])
+    # bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
+    # bplan = models.ForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
+
     # Anwendungsspezifische Felder
-    aus_archiv = models.BooleanField(null=False, blank=False, default=False, verbose_name="Anhang stammt aus hochgeladenem ZIP-Archiv", help_text="Gibt an, ob der Anhang ursprünglich aus einem hochgeladenem ZIP-Archiv stammt.")
-    public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Anlage öffentlich verfügbar", help_text="Gibt an, ob Informationen über die frei verfügbaren Schnittstellen publiziert werden (Links in Detail-Ansicht, ZIP-Archiv, ...).")
-    #history = HistoricalRecords()
+    aus_archiv = models.BooleanField(null=False, blank=False, default=False, verbose_name="Anhang stammt aus hochgeladenem ZIP-Archiv",
+                                     help_text="Gibt an, ob der Anhang ursprünglich aus einem hochgeladenem ZIP-Archiv stammt.")
+    public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Anlage öffentlich verfügbar",
+                                 help_text="Gibt an, ob Informationen über die frei verfügbaren Schnittstellen publiziert werden (Links in Detail-Ansicht, ZIP-Archiv, ...).")
+    # history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
         # https://stackoverflow.com/questions/7514964/django-how-to-create-a-file-and-save-it-to-a-models-filefield
         # TODO - check if really needed - cause reading files from zip don't allow to have a temporary_file_path for each zipped file!
-        if self.typ == '****': # 1070 Karte
-            #raster_file = self.attachment.file.read()
+        if self.typ == '****':  # 1070 Karte
+            # raster_file = self.attachment.file.read()
             try:
                 # https://dev.to/doridoro/what-is-contentfile-in-django-6nm
-                raster = GDALRaster(self.attachment.file.temporary_file_path()) 
+                raster = GDALRaster(self.attachment.file.temporary_file_path())
                 target_srs = SpatialReference(25832)
                 if raster.srs.srid != 25832:
                     target = raster.transform(target_srs)
                     # Was fehlt: Kompression und Overviews - müssten neu generiert werden!
                     # https://gis.stackexchange.com/questions/457264/save-a-gdal-dataset-to-django-file-field
-                    #print(target.srs.srid)
-                    #print(target.extent)
-                    #print(target.name)
-                    #print(target.is_vsi_based)
+                    # print(target.srs.srid)
+                    # print(target.extent)
+                    # print(target.name)
+                    # print(target.is_vsi_based)
                     # Save the BytesIO object to the ImageField with the new filename
                     # Change name of attachment
-                    new_name = self.attachment.name.lower()[0:-4] + "_transformed.tif"
+                    new_name = self.attachment.name.lower()[
+                        0:-4] + "_transformed.tif"
                     if target.is_vsi_based:
-                        #print("vsi_based")
+                        # print("vsi_based")
                         # TODO: Problem - von Datei wird nur ein erster Teil geschrieben - ggf. ckunk Problem - Problem war dass das Raster erst geschlossen werden musste :-(
                         temp_raster = BytesIO()
                         temp_raster.write(target.vsi_buffer)
                         temp_raster.seek(0)
-                        self.attachment.save(new_name, ContentFile(temp_raster.getvalue()), save=False)
+                        self.attachment.save(new_name, ContentFile(
+                            temp_raster.getvalue()), save=False)
                         temp_raster.close()
                     else:
                         temp_file_name = target.name
-                        target = None # extremly needed !
+                        target = None  # extremly needed !
                         # load from file
                         with open(temp_file_name, "rb") as f:
                             # test Dateigröße
-                            #f.seek(0,2) # move the cursor to the end of the file
-                            #print(f.tell())
-                            #binary_file = f.read()
+                            # f.seek(0,2) # move the cursor to the end of the file
+                            # print(f.tell())
+                            # binary_file = f.read()
                             self.attachment.save(new_name, File(f), save=False)
                 # https://stackoverflow.com/questions/67750359/typeerror-a-bytes-like-object-is-required-not-io-bytesio-django-pillow
             except (IOError, SyntaxError) as e:
-                raise ValueError(f"Konnte GeoTIFF nicht nach UTM32 transformieren. -- {e}")
+                raise ValueError(
+                    f"Konnte GeoTIFF nicht nach UTM32 transformieren. -- {e}")
         super().save(*args, **kwargs)
 
     @property
@@ -1409,8 +1580,8 @@ class XPlanSpezExterneReferenz(GenericMetadata):
         return os.path.basename(self.attachment.file.name)
 
     def __str__(self):
-            """Returns a string representation of SpezExterneReferenz."""
-            return f"{self.name} ({self.get_typ_display()})"
+        """Returns a string representation of SpezExterneReferenz."""
+        return f"{self.name} ({self.get_typ_display()})"
 
     """
         Angabe eines referenzierten Scans - aus dem Beispiel von Hamburg / XLeitstelle - ist aber veraltet!
@@ -1430,13 +1601,15 @@ class XPlanSpezExterneReferenz(GenericMetadata):
 
 class BPlanSpezExterneReferenz(XPlanSpezExterneReferenz):
 
-    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
+    bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE,
+                               verbose_name="BPlan", help_text="BPlan", related_name="attachments")
     history = HistoricalRecords()
 
 
 class FPlanSpezExterneReferenz(XPlanSpezExterneReferenz):
 
-    fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE, verbose_name="FPlan", help_text="FPlan", related_name="attachments")
+    fplan = HistoricForeignKey(FPlan, on_delete=models.CASCADE,
+                               verbose_name="FPlan", help_text="FPlan", related_name="attachments")
     history = HistoricalRecords()
 
 
@@ -1457,12 +1630,17 @@ class RequestForRole(models.Model):
         (ORGADMIN, "Organisationsadministrator"),
     ]
 
-    owned_by_user = models.ForeignKey(User, blank=True, null=True, on_delete=models.CASCADE)
-    organizations = models.ManyToManyField(AdministrativeOrganization, blank=False, verbose_name="Gebietskörperschaft(en)", related_name='pending_role_requests')
+    owned_by_user = models.ForeignKey(
+        User, blank=True, null=True, on_delete=models.CASCADE)
+    organizations = models.ManyToManyField(AdministrativeOrganization, blank=False,
+                                           verbose_name="Gebietskörperschaft(en)", related_name='pending_role_requests')
     history = HistoricalRecords(m2m_fields=[organizations])
-    delete_reason = models.CharField(null=True, blank=True, max_length=10, choices=DELETE_REASON_CHOICES, verbose_name='Grund für die Löschung', help_text="Grund für die Löschung des Antrags")
-    role = models.CharField(max_length=2, choices=ROLE_CHOICES, default='OA', verbose_name='Rolle', help_text="Rolle des Nutzers in Bezug auf die Organisation")
-    editing_note = models.TextField(null=True, verbose_name="Begründung", help_text="Begründung für die Ablehnung des Antrags bzw. Hinweise zur Freigabe - wie wurde Antragsteller kontaktiert/geprüft. Bei Ablehnung bekommt der Antragsteller die Begründung als Mail zugestellt!")
+    delete_reason = models.CharField(null=True, blank=True, max_length=10, choices=DELETE_REASON_CHOICES,
+                                     verbose_name='Grund für die Löschung', help_text="Grund für die Löschung des Antrags")
+    role = models.CharField(max_length=2, choices=ROLE_CHOICES, default='OA',
+                            verbose_name='Rolle', help_text="Rolle des Nutzers in Bezug auf die Organisation")
+    editing_note = models.TextField(null=True, verbose_name="Begründung",
+                                    help_text="Begründung für die Ablehnung des Antrags bzw. Hinweise zur Freigabe - wie wurde Antragsteller kontaktiert/geprüft. Bei Ablehnung bekommt der Antragsteller die Begründung als Mail zugestellt!")
 
 
 class ConsentOption(models.Model):
@@ -1482,15 +1660,24 @@ class ConsentOption(models.Model):
         (APPLICATION, "Gesamte Anwendung"),
     ]
 
-    type = models.CharField(max_length=15, choices=CONSENT_OPTION_TYPES, verbose_name="Rolle", help_text="Rolle auf die die Einwilligungsoption anzuwenden ist.", db_index=True)
-    title = models.CharField(null=False, blank=False, max_length=300, verbose_name="Titel der Einwilligungsoption", help_text="Titel der Einwilligungsoption")
-    description = RichTextField(null=False, blank=False, verbose_name="Einwilligungsoption (Text)")
-    valid_from = models.DateField(null=True, blank=True, verbose_name="Gültig von", help_text="Beginn der Gültigkeit der Einwilligungsoption")
-    valid_until = models.DateField(null=True, blank=True, verbose_name="Gültig bis", help_text="Ende der Gültigkeit der Einwilligungsoption")
-    opt_out = models.BooleanField(null=False, blank=False, default=False, verbose_name="Vorausgewählt") #boolean preselected
-    mandatory = models.BooleanField(null=False, blank=False, default=False, verbose_name="Verpflichtend")
-    validity_period = models.IntegerField(null=True, blank=True, verbose_name="Gültigkeitsdauer in Tagen") # integer (days)
-    obsolete = models.BooleanField(null=False, blank=False, default=False, verbose_name="Hinfällig")
+    type = models.CharField(max_length=15, choices=CONSENT_OPTION_TYPES, verbose_name="Rolle",
+                            help_text="Rolle auf die die Einwilligungsoption anzuwenden ist.", db_index=True)
+    title = models.CharField(null=False, blank=False, max_length=300,
+                             verbose_name="Titel der Einwilligungsoption", help_text="Titel der Einwilligungsoption")
+    description = RichTextField(
+        null=False, blank=False, verbose_name="Einwilligungsoption (Text)")
+    valid_from = models.DateField(null=True, blank=True, verbose_name="Gültig von",
+                                  help_text="Beginn der Gültigkeit der Einwilligungsoption")
+    valid_until = models.DateField(null=True, blank=True, verbose_name="Gültig bis",
+                                   help_text="Ende der Gültigkeit der Einwilligungsoption")
+    opt_out = models.BooleanField(
+        null=False, blank=False, default=False, verbose_name="Vorausgewählt")  # boolean preselected
+    mandatory = models.BooleanField(
+        null=False, blank=False, default=False, verbose_name="Verpflichtend")
+    validity_period = models.IntegerField(
+        null=True, blank=True, verbose_name="Gültigkeitsdauer in Tagen")  # integer (days)
+    obsolete = models.BooleanField(
+        null=False, blank=False, default=False, verbose_name="Hinfällig")
     history = HistoricalRecords()
 
 
@@ -1499,14 +1686,20 @@ class Consent(models.Model):
     Klasse zum Verwalten der durch den Nutzer akzeptierten Nutzungsbedingungen.
     Wird abgespeichert, wenn ein Admin-Nutzer sich anmeldet oder registriert.
     """
-    
-    user = models.ForeignKey(User, null=True, on_delete=models.CASCADE, verbose_name="Nutzer")
-    option = HistoricForeignKey(ConsentOption, on_delete=models.CASCADE, null=True, verbose_name="Einwilligungsoption")
-    consenting = models.BooleanField(null=False, blank=False, default=False, verbose_name="Eingewilligt")
-    date = models.DateField(null=False, blank=False, verbose_name="Datum der Einwilligung")
-    expires_on =  models.DateField(null=False, blank=False, verbose_name="Ablauf der Einwilligung") # Wird ausgefüllt, wenn validity_period gesetzt war
-    #vsign - ip
-    #vhash - hash
+
+    user = models.ForeignKey(
+        User, null=True, on_delete=models.CASCADE, verbose_name="Nutzer")
+    option = HistoricForeignKey(
+        ConsentOption, on_delete=models.CASCADE, null=True, verbose_name="Einwilligungsoption")
+    consenting = models.BooleanField(
+        null=False, blank=False, default=False, verbose_name="Eingewilligt")
+    date = models.DateField(null=False, blank=False,
+                            verbose_name="Datum der Einwilligung")
+    # Wird ausgefüllt, wenn validity_period gesetzt war
+    expires_on = models.DateField(
+        null=False, blank=False, verbose_name="Ablauf der Einwilligung")
+    # vsign - ip
+    # vhash - hash
 
 
 class AbstractRedactedDocument(GenericMetadata):
@@ -1541,6 +1734,8 @@ class RedactedFPlanBeteiligungBeitragAnhang(AbstractRedactedDocument):
         related_name="redacted_version", verbose_name="Anhang",
     )
     history = HistoricalRecords()
+
+
 """
 anhang = FPlanBeteiligungBeitragAnhang.objects.get(pk=1)
 if hasattr(anhang, 'redacted_version'):

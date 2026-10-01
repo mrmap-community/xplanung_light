@@ -1,11 +1,13 @@
-from xplanung_light.models import BPlan, BPlanBeteiligung, BPlanBeitragStellungnahme, AdministrativeOrganization#, BPlanBeitragStellungnahmeAnhang
+# , BPlanBeitragStellungnahmeAnhang
+from xplanung_light.models import BPlan, BPlanBeteiligung, BPlanBeitragStellungnahme, AdministrativeOrganization
 from xplanung_light.models import FPlanBeteiligung, FPlan, FPlanBeitragStellungnahme, ContactOrganization
 from xplanung_light.models import FPlanBeteiligungBeitrag, BPlanBeteiligungBeitrag
 from xplanung_light.models import ConsentOption
 from xplanung_light.forms import BPlanBeitragStellungnahmeForm, FPlanBeitragStellungnahmeForm
 from xplanung_light.views.xplanrelations import XPlanRelationsCreateView, XPlanRelationsUpdateView, XPlanRelationsDeleteView
 from django.views.generic import CreateView, ListView, DeleteView, DetailView, UpdateView
-from formset.views import FormViewMixin, FormCollectionView, EditCollectionView #, CreateCollectionView
+# , CreateCollectionView
+from formset.views import FormViewMixin, FormCollectionView, EditCollectionView
 from django_tables2 import SingleTableView
 from xplanung_light.tables import BPlanBeitragStellungnahmeTable, FPlanBeitragStellungnahmeTable
 from django.urls import reverse_lazy, reverse
@@ -30,7 +32,9 @@ from django.shortcuts import get_object_or_404
 from xplanung_light.views.mixins import GemeindeAdminRequiredMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-class BeitragStellungnahmeScopeMixin(GemeindeAdminRequiredMixin): #(GemeindeAdminRequiredMixin):
+
+# (GemeindeAdminRequiredMixin):
+class BeitragStellungnahmeScopeMixin(GemeindeAdminRequiredMixin):
 
     def resolve_scope(self):
         self.plan = get_object_or_404(
@@ -70,7 +74,7 @@ class XPlanBeitragStellungnahmeCreateView(ExtentUserOrgaInfo, CreateView):
     Anlagen eines BPlanBeitragStellungnahme-Datensatzes über Formular.
 
     """
-    #form_class = BPlanCreateForm
+    # form_class = BPlanCreateForm
 
 
 class BeitragStellungnahmeListView(BeitragStellungnahmeScopeMixin, ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableView):
@@ -84,7 +88,7 @@ class BeitragStellungnahmeListView(BeitragStellungnahmeScopeMixin, ExtentUserOrg
     reference_model = BPlan
     table_class = BPlanBeitragStellungnahmeTable
     reference_model_name_lower = 'bplan'
-    
+
     def dispatch(self, request, *args, **kwargs):
         # Hier sind die Parameter aus der re_path verfügbar
         self.plantyp = kwargs.get('plantyp')
@@ -101,7 +105,7 @@ class BeitragStellungnahmeListView(BeitragStellungnahmeScopeMixin, ExtentUserOrg
             self.reference_model = FPlan
         else:
             raise PermissionDenied("Unbekannter Plantyp.")
-        
+
         self.planid = kwargs['planid']
         self.beitragid = kwargs['beitragid']
         self.beteiligungid = kwargs['beteiligungid']
@@ -138,32 +142,33 @@ class BeitragStellungnahmeListView(BeitragStellungnahmeScopeMixin, ExtentUserOrg
         """
         self.template_name = 'xplanung_light/beitragstellungnahme_list.html'
         # Debugausgabe
-        #print(f"Typ: {self.plantyp}")
+        # print(f"Typ: {self.plantyp}")
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self, **kwargs):
         """
         Docstring for get_queryset
-        
+
         :param self: Description
         :param kwargs: Description
         """
         qs = super().get_queryset().filter(beitrag=self.beitrag).annotate(
-                    last_changed=Subquery(
-                        self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-                    )
-                ).order_by('-last_changed')
+            last_changed=Subquery(
+                self.model.history.filter(id=OuterRef("pk")).order_by(
+                    '-history_date').values('history_date')[:1]
+            )
+        ).order_by('-last_changed')
         return qs
 
     def get_context_data(self, **kwargs):
         """
         Docstring for get_context_data
-        
+
         :param self: Description
         :param kwargs: Description
         """
-        #planid = self.kwargs['planid']
-        #beteiligungid = self.kwargs['beteiligungid']
+        # planid = self.kwargs['planid']
+        # beteiligungid = self.kwargs['beteiligungid']
         context = super().get_context_data(**kwargs)
         context["plan"] = self.plan
         context["plantyp"] = self.plantyp
@@ -179,14 +184,14 @@ class XPlanBeitragStellungnahmeCreateView(BeitragStellungnahmeScopeMixin, FormVi
     Klasse zum Anlegen einer Stellungnahme zu einem Beteiligungsbeitrag. Die Klasse nutzt django-formset um 
     auch Richtext-Beschreibungen zu ermöglichen. Sie erbt von der Standard XPlanRelations Klasse um die Berechtigungen 
     abzufangen. Die hängen an den Plänen.
-    
+
     """
     # Dummy Werte für Klasse
     model = BPlanBeitragStellungnahme
     reference_model = BPlan
     reference_model_name_lower = 'bplan'
     parent_model = BPlanBeteiligungBeitrag
-    template_name="xplanung_light/bplanbeitragstellungnahme_form.html"
+    template_name = "xplanung_light/bplanbeitragstellungnahme_form.html"
     form_class = BPlanBeitragStellungnahmeForm
     list_url_name = 'beitragstellungnahme-list'
     extra_context = None
@@ -204,32 +209,32 @@ class XPlanBeitragStellungnahmeCreateView(BeitragStellungnahmeScopeMixin, FormVi
             self.table_class = FPlanBeitragStellungnahmeTable
             self.form_class = FPlanBeitragStellungnahmeForm
             self.reference_model = FPlan
-        self.planid = self.kwargs.get('planid') 
+        self.planid = self.kwargs.get('planid')
         self.template_name = 'xplanung_light/beitragstellungnahme_form.html'
-        #TODO: Anpassen für FPlan
+        # TODO: Anpassen für FPlan
         self.beitragid = kwargs.get('beitragid')
         self.beteiligungid = kwargs.get('beteiligungid')
         # Debugausgabe
-        #print(f"Typ: {self.plantyp}")
+        # print(f"Typ: {self.plantyp}")
 
         self.resolve_scope()
 
         return super().dispatch(request, *args, **kwargs)
-    
+
     def get_initial(self):
         initial = super().get_initial()
         initial['beitrag'] = self.beitragid
         return initial
-    
+
     def form_valid(self, form):
         form.instance.beitrag = self.beitrag
         return super().form_valid(form)
-    
+
     def get_context_data(self, **kwargs):
         """
         get_context_data wird überschrieben um über einen extra_context die Möglichkeit zu bekommen,
         im Template zwischen add und update zu unterscheiden.
-        
+
         """
         context = super().get_context_data(**kwargs)
         context['extra_context'] = self.extra_context
@@ -239,24 +244,24 @@ class XPlanBeitragStellungnahmeCreateView(BeitragStellungnahmeScopeMixin, FormVi
         """
         Wenn das Anlagen des Stellungnahmeobjektes erfolgreich war, wird auf die Liste der Stellungnahmen zum BPlan
         weitergleitet.
-        
+
         """
         return reverse_lazy(self.list_url_name, kwargs={'planid': self.kwargs['planid'], 'plantyp': self.plantyp, 'beteiligungid': self.beteiligungid, 'beitragid': self.beitragid})
 
 
-class XPlanBeitragStellungnahmeUpdateView(BeitragStellungnahmeScopeMixin,FormViewMixin, XPlanRelationsUpdateView):
+class XPlanBeitragStellungnahmeUpdateView(BeitragStellungnahmeScopeMixin, FormViewMixin, XPlanRelationsUpdateView):
     """
     Klasse zum Anlegen einer Stellungnahme zu einem Beteiligungsbeitrag. Die Klasse nutzt django-formset um 
     auch Richtext-Beschreibungen zu ermöglichen. Sie erbt von der Standard XPlanRelations Klasse um die Berechtigungen 
     abzufangen. Die hängen an den Plänen.
-    
+
     """
     # Dummy Werte für Klasse
     model = BPlanBeitragStellungnahme
     reference_model = BPlan
     reference_model_name_lower = 'bplan'
     parent_model = BPlanBeteiligungBeitrag
-    template_name="xplanung_light/beitragstellungnahme_form.html"
+    template_name = "xplanung_light/beitragstellungnahme_form.html"
     form_class = BPlanBeitragStellungnahmeForm
     list_url_name = 'beitragstellungnahme-list'
     extra_context = None
@@ -274,7 +279,7 @@ class XPlanBeitragStellungnahmeUpdateView(BeitragStellungnahmeScopeMixin,FormVie
             self.table_class = FPlanBeitragStellungnahmeTable
             self.form_class = FPlanBeitragStellungnahmeForm
             self.reference_model = FPlan
-        self.planid = self.kwargs.get('planid') 
+        self.planid = self.kwargs.get('planid')
         self.template_name = 'xplanung_light/beitragstellungnahme_form.html'
         self.beitragid = kwargs.get('beitragid')
         self.beteiligungid = kwargs.get('beteiligungid')
@@ -282,18 +287,18 @@ class XPlanBeitragStellungnahmeUpdateView(BeitragStellungnahmeScopeMixin,FormVie
         self.resolve_scope()
 
         return super().dispatch(request, *args, **kwargs)
-    
+
     def form_valid(self, form):
         form.instance.beitrag = self.beitrag
         return super().form_valid(form)
-    
+
     """
     def get_queryset(self):
         return super().get_queryset().filter(
             pk=self.kwargs["pk"],
             beitrag=self.beitrag,
         )
-    """   
+    """
 
     def get_queryset(self):
         return self.model.objects.filter(
@@ -305,12 +310,12 @@ class XPlanBeitragStellungnahmeUpdateView(BeitragStellungnahmeScopeMixin,FormVie
         initial = super().get_initial()
         initial['beitrag'] = self.beitragid
         return initial
-    
+
     def get_context_data(self, **kwargs):
         """
         get_context_data wird überschrieben um über einen extra_context die Möglichkeit zu bekommen,
         im Template zwischen add und update zu unterscheiden.
-        
+
         """
         context = super().get_context_data(**kwargs)
         context['extra_context'] = self.extra_context
@@ -320,7 +325,7 @@ class XPlanBeitragStellungnahmeUpdateView(BeitragStellungnahmeScopeMixin,FormVie
         """
         Wenn das Anlagen des Beteiligungsobjektes erfolgreich war, wird auf die Liste der Beteiligungen zum BPlan
         weitergleitet.
-        
+
         """
         return reverse_lazy(self.list_url_name, kwargs={'planid': self.kwargs['planid'], 'plantyp': self.plantyp, 'beteiligungid': self.beteiligungid, 'beitragid': self.beitragid})
 
@@ -348,7 +353,7 @@ class XPlanBeitragStellungnahmeDeleteView(BeitragStellungnahmeScopeMixin, XPlanR
             self.parent_model = FPlanBeteiligungBeitrag
             self.reference_model = FPlan
 
-        self.planid = self.kwargs.get('planid') 
+        self.planid = self.kwargs.get('planid')
         self.beitragid = kwargs.get('beitragid')
         self.beteiligungid = kwargs.get('beteiligungid')
         self.resolve_scope()
@@ -362,16 +367,16 @@ class XPlanBeitragStellungnahmeDeleteView(BeitragStellungnahmeScopeMixin, XPlanR
         )
         self.check_gemeinde_admin(self.plan)
         return obj
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        #context['beitrag']
+        # context['beitrag']
         return context
-    
+
     def get_success_url(self):
         """
         Wenn das Anlagen des Beteiligungsobjektes erfolgreich war, wird auf die Liste der Beteiligungen zum BPlan
         weitergleitet.
-        
+
         """
         return reverse_lazy(self.list_url_name, kwargs={'planid': self.kwargs['planid'], 'plantyp': self.plantyp, 'beteiligungid': self.beteiligungid, 'beitragid': self.beitragid})
