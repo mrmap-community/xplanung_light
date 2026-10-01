@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    #'xplanung_light',
+    # 'xplanung_light',
     'debug_toolbar',
     'django_bootstrap5',
     'simple_history',
@@ -69,7 +69,7 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
     'xplanung_light.middleware.UserRoleInfoMiddleware',
-    #'xplanung_light.middleware.SystemInfoMiddleware',
+    # 'xplanung_light.middleware.SystemInfoMiddleware',
 ]
 
 ROOT_URLCONF = 'komserv.urls'
@@ -91,9 +91,9 @@ TEMPLATES = [
 ]
 # django-organization
 # Tells django-organization to use your concrete custom model
-#ORGS_ORGANIZATION_MODEL = 'xplanung_light.AdministrativeOrganization'
+# ORGS_ORGANIZATION_MODEL = 'xplanung_light.AdministrativeOrganization'
 
-#AUTH_USER_MODEL = 'your_django_app_name.CustomUser' 
+# AUTH_USER_MODEL = 'your_django_app_name.CustomUser'
 
 WSGI_APPLICATION = 'komserv.wsgi.application'
 
@@ -137,7 +137,7 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 FIXTURE_DIRS = [
-    BASE_DIR / 'fixtures', # Assuming BASE_DIR is defined
+    BASE_DIR / 'fixtures',  # Assuming BASE_DIR is defined
     BASE_DIR / 'tests/fixtures'
 ]
 AUTH_PASSWORD_VALIDATORS = [
@@ -190,11 +190,11 @@ LEAFLET_CONFIG = {
     # https://stackoverflow.com/questions/66938889/how-to-add-leaflet-extensions-marker-basemap-geocoder-to-django-leaflet
     # conf here
     # RLP
-    #'SPATIAL_EXTENT': (6.0, 49.0, 8.5, 52),
-    #'DEFAULT_CENTER': (7.0, 50.0),
+    # 'SPATIAL_EXTENT': (6.0, 49.0, 8.5, 52),
+    # 'DEFAULT_CENTER': (7.0, 50.0),
     'TILES': 'https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png',
-    #'TILES': 'https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{x}/{y}.png',
-    #'TILES': 'https://sgx.geodatenzentrum.de/wmts_basemapde/tile/1.0.0/de_basemapde_web_raster_farbe/default/GLOBAL_WEBMERCATOR/{z}/{x}/{-y}.png',
+    # 'TILES': 'https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{x}/{y}.png',
+    # 'TILES': 'https://sgx.geodatenzentrum.de/wmts_basemapde/tile/1.0.0/de_basemapde_web_raster_farbe/default/GLOBAL_WEBMERCATOR/{z}/{x}/{-y}.png',
     # Deutschland
     'SPATIAL_EXTENT': (5.67, 47.44, 14.86, 55.67),
     'DEFAULT_CENTER': (9.55, 51.68),
@@ -209,9 +209,9 @@ LEAFLET_CONFIG = {
             'auto-include': True,
         },
         'geocoder': {
-         'css': ['vendor/leaflet-geocoder/dist/Control.Geocoder.css'],
-         'js': ['vendor/leaflet-geocoder/dist/Control.Geocoder.js'],
-         'auto-include': True,
+            'css': ['vendor/leaflet-geocoder/dist/Control.Geocoder.css'],
+            'js': ['vendor/leaflet-geocoder/dist/Control.Geocoder.js'],
+            'auto-include': True,
         },
         'fullscreen': {
             'css': ['vendor/leaflet-fullscreen/Control.FullScreen.css'],
@@ -219,21 +219,21 @@ LEAFLET_CONFIG = {
             'auto-include': True,
         },
         # TODO: Geocoder und Fullscreen als vendor mit ins Projekt nehmen um cross-origin Problematik zu umgehen!
-        #'fullscreen': {
+        # 'fullscreen': {
         #    'css': ['https://unpkg.com/leaflet.fullscreen/dist/Control.FullScreen.css'],
         #    'js': ['https://unpkg.com/leaflet.fullscreen/dist/Control.FullScreen.umd.js'],
         #    'auto-include': True,
-        #},
-         #'geocoder': {
+        # },
+        # 'geocoder': {
         # 'css': ['https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css'],
         # 'js': ['https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js'],
         # 'auto-include': True,
-        #},
+        # },
     }
 }
 
 SERIALIZATION_MODULES = {
-    "geojson": "django.contrib.gis.serializers.geojson", 
+    "geojson": "django.contrib.gis.serializers.geojson",
 }
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -247,11 +247,11 @@ DOCS_ACCESS = 'public'
 
 ORGS_SLUGFIELD = 'django_extensions.db.fields.AutoSlugField'
 
-#INVITATION_BACKEND = 'xplanung_light.backends.MyInvitationBackend'
-#REGISTRATION_BACKEND = 'xplanung_light.backends.MyRegistrationBackend'
+# INVITATION_BACKEND = 'xplanung_light.backends.MyInvitationBackend'
+# REGISTRATION_BACKEND = 'xplanung_light.backends.MyRegistrationBackend'
 
 # Konfigurationen für xplanung_light
-XPLANUNG_LIGHT_VERSION = "0.2.0"
+XPLANUNG_LIGHT_VERSION = "0.3.0"
 # Kontaktinformationen für Metadaten und Dienste
 XPLANUNG_LIGHT_CONFIG = {
     'metadata_contact': {
@@ -270,13 +270,16 @@ XPLANUNG_LIGHT_CONFIG = {
     'mapfile_cache_duration_seconds': 20,
     "mapfile_force_online_resource_https": False,
     "further_base_layers": [
-        #{"name": "dop20rp", "title": "DOP20 RP", "url": "https://geo4.service24.rlp.de/wms/rp_dop20.fcgi?", "attribution": "Lizenz ...", "layer_name": "rp_dop20"},
-        {"name": "topplusfarbe", "title": "TopPlus Farbe", "url": "https://sgx.geodatenzentrum.de/wms_topplus_open?", "attribution": "Lizenz ...", "layer_name": "web"},
-        {"name": "topplusfarbegrau", "title": "TopPlus Grau", "url": "https://sgx.geodatenzentrum.de/wms_topplus_open?", "attribution": "Lizenz ...", "layer_name": "web_grau"},   
+        # {"name": "dop20rp", "title": "DOP20 RP", "url": "https://geo4.service24.rlp.de/wms/rp_dop20.fcgi?", "attribution": "Lizenz ...", "layer_name": "rp_dop20"},
+        {"name": "topplusfarbe", "title": "TopPlus Farbe", "url": "https://sgx.geodatenzentrum.de/wms_topplus_open?",
+            "attribution": "Lizenz ...", "layer_name": "web"},
+        {"name": "topplusfarbegrau", "title": "TopPlus Grau", "url": "https://sgx.geodatenzentrum.de/wms_topplus_open?",
+            "attribution": "Lizenz ...", "layer_name": "web_grau"},
     ],
     "overlay_layers": [
-        {"name": "likarp", "title": "Liegenschaftskarte RP", "url": "https://geo5.service24.rlp.de/wms/liegenschaften_rp.fcgi?", "attribution": "Lizenz ...", "layer_name": "Flurstueck"},
-        #{"name": "topplusfarbegrau", "title": "TopPlus Grau", "url": "https://sgx.geodatenzentrum.de/wms_topplus_open?", "attribution": "Lizenz ...", "layer_name": "web_grau"},   
+        {"name": "likarp", "title": "Liegenschaftskarte RP", "url": "https://geo5.service24.rlp.de/wms/liegenschaften_rp.fcgi?",
+            "attribution": "Lizenz ...", "layer_name": "Flurstueck"},
+        # {"name": "topplusfarbegrau", "title": "TopPlus Grau", "url": "https://sgx.geodatenzentrum.de/wms_topplus_open?", "attribution": "Lizenz ...", "layer_name": "web_grau"},
     ],
     'limits': {
         'upload_file_size_limits': {
