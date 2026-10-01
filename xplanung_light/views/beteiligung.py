@@ -24,6 +24,7 @@ from django.db.models import Avg, F, Q
 from django.db.models import Case, When, Value, CharField
 from django.db.models import Count, Q, ExpressionWrapper, BooleanField
 from django.db.models.functions import ( ExtractDay )
+from django.shortcuts import get_object_or_404
 #from django.db.models.aggregates import Aggregate
 
 # https://stackoverflow.com/questions/74111981/django-aggregate-into-array
@@ -184,6 +185,8 @@ def beitrag_json_aggregation(plantyp='bplan'):
 class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
     """
     Klasse zur Anzeige der laufenden BPlan- und FPlan-Verfahren einer Gebietskörperschaft.
+    View ist nicht beschränkt und soll vom Bürger angesehen werden. In Dashboard verlinkt.
+    Der View soll auch für angemeldete Nutzer funktionieren - dann aber gefiltert auf die eigenen Verfahren.
 
     """
     template_name = "xplanung_light/beteiligungen.html"
@@ -195,21 +198,6 @@ class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
         
         :param self: Description
         """
-        #if 'pk' in self.kwargs.keys():
-        #    print("Got pk: " + str(self.kwargs['pk']))
-
-        # Info: https://forum.djangoproject.com/t/group-concat-in-orm/21149
-        # https://stackoverflow.com/questions/73668842/django-with-mysql-subquery-returns-more-than-1-row
-        # https://djangosnippets.org/snippets/10860/
-        #gemeinden_bplaene = AdministrativeOrganization.objects.filter(bplan__id=OuterRef("bplan__id"))
-        #beteiligungen_bplaene_1 = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=serializers.serialize('json', Subquery(gemeinden_bplaene)))
-        #beteiligungen_bplaene_1 = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=Subquery(gemeinden_bplaene))
-
-        #beteiligungen_bplaene = BPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), bplan__public=True).distinct().annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), gemeinden=JsonGroupArray('bplan__gemeinde__name'))
-
-        #rest_tage=ExtractDay(timezone.now().date() - F('end_datum')), gesamt_tage=ExtractDay(F('start_datum') - F('end_datum')), 
-
-
         beteiligungen_bplaene = BPlanBeteiligung.objects.filter(
             end_datum__gte=timezone.now()
             ).filter(
@@ -217,7 +205,6 @@ class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
                 ).distinct().annotate(
                     xplan_name=F('bplan__name'), plantyp=Value('BPlan'), xplan_id=F('bplan__id'), gemeinden=organization_json_aggregation()
                     )
-        #beteiligungen_fplaene = FPlanBeteiligung.objects.filter(end_datum__gte=timezone.now()).filter(bekanntmachung_datum__lte=timezone.now(), fplan__public=True).distinct().annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), gemeinden=JsonGroupArray('fplan__gemeinde__name'))
         beteiligungen_fplaene = FPlanBeteiligung.objects.filter(
             end_datum__gte=timezone.now()
             ).filter(
@@ -225,13 +212,10 @@ class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
                 ).distinct().annotate(
                     xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), gemeinden=organization_json_aggregation(plantyp='fplan')
                     )
-
+        # Filter für Administratoren
         if not self.request.user.is_superuser and not self.request.user.is_anonymous:
             beteiligungen_bplaene = beteiligungen_bplaene.filter(bplan__gemeinde__admin_orga_users__user=self.request.user, bplan__gemeinde__admin_orga_users__is_admin=True)
-            beteiligungen_fplaene = beteiligungen_fplaene.filter(fplan__gemeinde__admin_orga_users__user=self.request.user, fplan__gemeinde__admin_orga_users__is_admin=True)
-        
-        
-        
+            beteiligungen_fplaene = beteiligungen_fplaene.filter(fplan__gemeinde__admin_orga_users__user=self.request.user, fplan__gemeinde__admin_orga_users__is_admin=True)        
         # Info:
         # union(), intersection(), and difference() return model instances of the type of the first QuerySet even if the arguments are QuerySets of other models. Passing different models works as long as the SELECT list is the same in all QuerySets (at least the types, the names don’t matter as long as the types in the same order).   
         # https://pythonguides.com/union-operation-on-models-django/
@@ -241,7 +225,9 @@ class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
 
 class BeteiligungenOrgaListView(LoginRequiredMixin, BeteiligungenListView):
     """
-    Klasse für die Darstellung einer Liste aller Beteiligungsverfahren einer Gebietskörperschaft
+    Klasse für die Darstellung einer Liste aller Beteiligungsverfahren einer Gebietskörperschaft. Der View ist in 
+    in der den Orga-Admins zugänglichen Übersichtsseite verlinkt. Ein nicht angemeldeter Nutzer wird zum login 
+    weitergeleitet.
     
     """
     template_name = "xplanung_light/organization_beteiligungen.html"
@@ -310,10 +296,6 @@ class BeteiligungenOrgaListView(LoginRequiredMixin, BeteiligungenListView):
                 
         # https://pythonguides.com/union-operation-on-models-django/
         beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
-        """
-        for beteiligung in beteiligungen_plaene:
-            print(beteiligung.plantyp + " - " + str(beteiligung.bekanntmachung_datum))
-        """
         return beteiligungen_plaene  
     
     def get_context_data(self, **kwargs):
@@ -531,6 +513,7 @@ class TipTapToReportLab:
         handlers = {"paragraph": self._handle_paragraph, 
                     "heading": self._handle_heading, 
                     "bulletList": self._handle_list, 
+                    "orderedList": self._handle_list, 
                     "horizontalRule": lambda n: [HRFlowable(width="100%"), Spacer(1, 0.4*cm)]}
         handler = handlers.get(node.type)
         return handler(node) if handler else None
@@ -610,7 +593,8 @@ class TipTapToReportLab:
             items.append(ListItem(li_elements))
 
         # bulletType 'bullet' für BulletList, '1' für OrderedList
-        return [ListFlowable(items, bulletType='bullet', leftIndent=20), Spacer(1, 0.2*cm)]
+        bullet = '1' if node.type == 'orderedList' else 'bullet'
+        return [ListFlowable(items, bulletType=bullet, leftIndent=20), Spacer(1, 0.2*cm)]
     
     def _handle_list_old(self, node: TipTapNode):
         items = [ListItem([self._process_node(c) for c in (li.content or [])]) for li in (node.content or [])]
@@ -1049,7 +1033,9 @@ class BeteiligungPdfView(DetailView):
         if self.plantyp == 'fplan':
             self.model = FPlanBeteiligung
             self.planmodel = FPlan
-        self.beteiligung = self.model.objects.get(pk=kwargs['beteiligungid'])
+        self.beteiligung = get_object_or_404(
+            self.model, pk=kwargs['beteiligungid'], **{f"{self.plantyp}_id": kwargs['planid']})
+        #self.beteiligung = self.model.objects.get(pk=kwargs['beteiligungid'])
         self.plan = self.planmodel.objects.get(pk=kwargs['planid'])
         #print(self.beteiligung)
         return super().dispatch(request, *args, **kwargs)

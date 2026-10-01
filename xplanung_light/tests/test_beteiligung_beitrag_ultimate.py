@@ -747,3 +747,65 @@ class BeteiligungBeitragUltimateTests(TestCase):
                                      HTTP_X_REQUESTED_WITH="XMLHttpRequest")
                 self.assertEqual(r.status_code, 403)
                 self.assertFalse(BPlanBeteiligungBeitrag.objects.filter(titel="Gesperrt").exists())
+
+    def test_pdf_for_superuser_with_rich_description(self):
+        rich = {"type": "doc", "content": [
+            {"type": "heading", "attrs": {"level": 2}, "content": [{"type": "text", "text": "Ziel"}]},
+            {"type": "bulletList", "content": [{"type": "listItem", "content": [
+                {"type": "paragraph", "content": [{"type": "text", "text": "Punkt", "marks": [{"type": "bold"}]}]}]}]},
+        ]}
+        BPlanBeteiligung.objects.filter(pk=self.bplan_beteiligung.pk).update(beschreibung=rich)
+        User.objects.create_superuser("root5", "root5@example.com", "password123")
+        self.client.login(username="root5", password="password123")
+        kw = {"plantyp": "bplan", "planid": self.bplan.id, "beteiligungid": self.bplan_beteiligung.id}
+        cfg = {**settings.XPLANUNG_LIGHT_CONFIG, "mapfile_force_online_resource_https": True}
+        for flag in ({}, cfg):
+            with self.subTest(https=bool(flag)), override_settings(**({"XPLANUNG_LIGHT_CONFIG": flag} if flag else {})):
+                r = self.client.get(reverse("beteiligungbeitrag-list-pdf", kwargs=kw))
+                self.assertEqual(r.status_code, 200)
+                body = b"".join(r) if r.streaming else r.content
+                self.assertTrue(body.startswith(b"%PDF"))
+        kw["beteiligungid"] = 999999
+        other_plan = BPlan.objects.create(name="Anderer Plan", geltungsbereich=self.bplan.geltungsbereich)
+        kw_other = {**kw, "beteiligungid": self.bplan_beteiligung.id, "planid": other_plan.id}
+        self.assertEqual(self.client.get(reverse("beteiligungbeitrag-list-pdf", kwargs=kw_other)).status_code, 404)
+        self.assertEqual(self.client.get(reverse("beteiligungbeitrag-list-pdf", kwargs=kw)).status_code, 404)
+
+    def test_pdf_not_available_via_foreign_plan_url(self):
+        orga_b = AdministrativeOrganization.objects.create(name="OG B", ls="07", ks="316", gs="099")
+        admin_b = User.objects.create_user("admin_b", password="password123")
+        AdminOrgaUser.objects.create(organization=orga_b, user=admin_b, is_admin=True)
+        plan_b = BPlan.objects.create(name="Plan B", geltungsbereich=self.bplan.geltungsbereich)
+        plan_b.gemeinde.add(orga_b)
+        self.client.login(username="admin_b", password="password123")
+        url = reverse("beteiligungbeitrag-list-pdf", kwargs={
+            "plantyp": "bplan", "planid": plan_b.id, "beteiligungid": self.bplan_beteiligung.id})
+        self.assertIn(self.client.get(url).status_code, (403, 404))
+
+    def test_beteiligungen_list_per_user(self):
+        BPlan.objects.filter(pk=self.bplan.pk).update(public=True)
+        self.bplan.gemeinde.add(self.kommune)
+        url = reverse("beteiligungen")
+
+        def names(username=None):
+            self.client.logout()
+            if username:
+                self.client.login(username=username, password="password123")
+            r = self.client.get(url)
+            self.assertEqual(r.status_code, 200)
+            return [o.xplan_name for o in r.context["object_list"]]
+
+        self.assertIn(self.bplan.name, names())                    # anonym
+        self.assertIn(self.bplan.name, names("admin_master"))      # Admin der Kommune
+        User.objects.create_superuser("root7", "root7@example.com", "password123")
+        self.assertIn(self.bplan.name, names("root7"))             # Superuser
+        
+    def test_orga_beteiligungen_list_permissions(self):
+        User.objects.create_superuser("root6", "root6@example.com", "password123")
+        url = reverse("organization-beteiligungen-list", kwargs={"pk": self.kommune.id})
+        self.client.logout()
+        self.assertEqual(self.client.get(url).status_code, 302)          # LoginRequiredMixin
+        for who, expected in (("root6", 200), ("admin_master", 200), ("joe_stranger", 403)):
+            with self.subTest(who=who):
+                self.client.login(username=who, password="password123")
+                self.assertEqual(self.client.get(url).status_code, expected)

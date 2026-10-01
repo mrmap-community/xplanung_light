@@ -55,7 +55,7 @@ class XPlanBeteiligungBeitragCreateView(ExtentUserOrgaInfo, CreateView):
     #form_class = BPlanCreateForm
 
 
-class BeteiligungBeitragListView(ExtentUserOrgaInfo, SingleTableView):
+class BeteiligungBeitragListView(LoginRequiredMixin, ExtentUserOrgaInfo, SingleTableView):
     """
     ListView zur Anzeige der BeteiligungBeitrag-Records. Hier Die Klasse entscheidet je nach URL, um welchen Plantyp es sich handelt.
 
