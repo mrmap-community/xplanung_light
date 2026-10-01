@@ -18,7 +18,7 @@ LAYER
             "ows_metadataurl_format"    "text/xml"
             "ows_metadataurl_type"      "TC211"
             "gml_exclude_items"         "xplan_gml"
-            #"ows_enable_request" "* !GetCapabilities"
+            "ows_enable_request" "*"
         END
         #DEBUG 5
         TEMPLATE        "xplanung_light/mapserver/templates/bplan.html"
