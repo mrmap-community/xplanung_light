@@ -1,5 +1,5 @@
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
-import requests 
+import requests
 from django.shortcuts import render
 from xplanung_light.forms import RegistrationForm
 from django.contrib.gis.gdal import OGRGeometry
@@ -51,7 +51,8 @@ import tempfile
 from urllib.parse import urlsplit
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-#from django.utils.timezone import datetime
+# from django.utils.timezone import datetime
+
 
 def _is_plan_admin(request, plan):
     """Return whether the current user may access a private plan resource."""
@@ -63,6 +64,7 @@ def _is_plan_admin(request, plan):
         admin_orga_users__user=request.user,
         admin_orga_users__is_admin=True,
     ).exists()
+
 
 def get_bplan_attachment(request, pk):
     try:
@@ -87,6 +89,7 @@ def get_bplan_attachment(request, pk):
     except (FileNotFoundError, ValueError):
         return HttpResponse("File not found", status=404)
 
+
 def get_fplan_attachment(request, pk):
     try:
         attachment = FPlanSpezExterneReferenz.objects.select_related().get(pk=pk)
@@ -110,31 +113,36 @@ def get_fplan_attachment(request, pk):
     except (FileNotFoundError, ValueError):
         return HttpResponse("File not found", status=404)
 
+
 def get_beteiligung_beitrag_attachment(request, priorize_redacted=True, **kwargs):
     """
     Auslieferung der Anlagen aus den Stellungnahmen
-    
+
     :param request: Description
     :param pk: Description
     """
     gemeinden = None
     if kwargs['plantyp'] == 'bplan':
-        #beitrag = BPlanBeteiligungBeitrag.objects.get(attachments__in=[kwargs['pk']])
-        beitrag = get_object_or_404(BPlanBeteiligungBeitrag, attachments__in=[kwargs['pk']])
-        gemeinden = AdministrativeOrganization.objects.filter(bplan__beteiligungen__comments__attachments__in=[kwargs['pk']])
+        # beitrag = BPlanBeteiligungBeitrag.objects.get(attachments__in=[kwargs['pk']])
+        beitrag = get_object_or_404(
+            BPlanBeteiligungBeitrag, attachments__in=[kwargs['pk']])
+        gemeinden = AdministrativeOrganization.objects.filter(
+            bplan__beteiligungen__comments__attachments__in=[kwargs['pk']])
         attachment_model = BPlanBeteiligungBeitragAnhang
     if kwargs['plantyp'] == 'fplan':
-        beitrag = get_object_or_404(FPlanBeteiligungBeitrag, attachments__in=[kwargs['pk']])
-        #beitrag = FPlanBeteiligungBeitrag.objects.get(attachments__in=[kwargs['pk']])
-        gemeinden = AdministrativeOrganization.objects.filter(fplan__beteiligungen__comments__attachments__in=[kwargs['pk']])
+        beitrag = get_object_or_404(
+            FPlanBeteiligungBeitrag, attachments__in=[kwargs['pk']])
+        # beitrag = FPlanBeteiligungBeitrag.objects.get(attachments__in=[kwargs['pk']])
+        gemeinden = AdministrativeOrganization.objects.filter(
+            fplan__beteiligungen__comments__attachments__in=[kwargs['pk']])
         attachment_model = FPlanBeteiligungBeitragAnhang
     # Nur admins der Gebietskörperschaften oder superuser
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
             for user in gemeinde.admin_orga_users.all():
-                if user.user == request.user and user.is_admin:   
-                    # Zugriff wird erteilt                     
+                if user.user == request.user and user.is_admin:
+                    # Zugriff wird erteilt
                     access_allowed = True
     else:
         access_allowed = True
@@ -142,10 +150,10 @@ def get_beteiligung_beitrag_attachment(request, priorize_redacted=True, **kwargs
     if request.user.is_anonymous:
         if 'beitrag_generic_id' in request.session.keys():
             if request.session['beitrag_generic_id'] == str(beitrag.generic_id):
-                #print('beitrag id steht in session - activate ...!')
+                # print('beitrag id steht in session - activate ...!')
                 access_allowed = True
             else:
-                return HttpResponse("401 Unauthorized", status=401) 
+                return HttpResponse("401 Unauthorized", status=401)
     attachment = get_object_or_404(attachment_model, pk=kwargs['pk'])
     if not access_allowed:
         return HttpResponse("Forbidden", status=403)
@@ -159,35 +167,41 @@ def get_beteiligung_beitrag_attachment(request, priorize_redacted=True, **kwargs
     else:
         return FileResponse(attachment.attachment)
 
+
 def get_beteiligung_beitrag_attachment_orig(request, **kwargs):
     return get_beteiligung_beitrag_attachment(request, priorize_redacted=False, **kwargs)
 
-def xplan_html(request, pk:int):
+
+def xplan_html(request, pk: int):
     if pk:
         orga = AdministrativeOrganization.objects.get(pk=pk)
     else:
         orga = None
-    #bplan_list = BPlan.objects.filter(gemeinde=orga)
-    #print(bplaene)
-    #print(request.GET)
+    # bplan_list = BPlan.objects.filter(gemeinde=orga)
+    # print(bplaene)
+    # print(request.GET)
     if 'bplan_id__in' in request.GET.keys():
         if len(request.GET['bplan_id__in']) == 0:
             bplan_filter = []
         else:
             if orga:
-                bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.filter(gemeinde=orga, public=True))
+                bplan_filter = BPlanIdFilter(
+                    request.GET, queryset=BPlan.objects.filter(gemeinde=orga, public=True))
             else:
-                bplan_filter = BPlanIdFilter(request.GET, queryset=BPlan.objects.filter(public=True))
+                bplan_filter = BPlanIdFilter(
+                    request.GET, queryset=BPlan.objects.filter(public=True))
     else:
         bplan_filter = []
-    if 'fplan_id__in' in request.GET.keys():    
+    if 'fplan_id__in' in request.GET.keys():
         if len(request.GET['fplan_id__in']) == 0:
             fplan_filter = []
         else:
             if orga:
-                fplan_filter = FPlanIdFilter(request.GET, queryset=FPlan.objects.filter(gemeinde=orga, public=True))
+                fplan_filter = FPlanIdFilter(
+                    request.GET, queryset=FPlan.objects.filter(gemeinde=orga, public=True))
             else:
-                fplan_filter = FPlanIdFilter(request.GET, queryset=FPlan.objects.filter(public=True))
+                fplan_filter = FPlanIdFilter(
+                    request.GET, queryset=FPlan.objects.filter(public=True))
     else:
         fplan_filter = []
     if bplan_filter == [] and fplan_filter == []:
@@ -197,46 +211,51 @@ def xplan_html(request, pk:int):
         # TODO: Allow integration in website of contact for administrative unit
         return response
     else:
-        response = render(request, 'xplanung_light/xplan_list_html.html', {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
+        response = render(request, 'xplanung_light/xplan_list_html.html',
+                          {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
         response.headers['Access-Control-Allow-Origin'] = "*"
         response.headers['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
         # TODO: Allow integration in website of contact for administrative unit
         return response
+
 
 def ows_beteiligungen(request):
     """
     OWS für die laufenden Beteiligungsverfahren, hier müssen wir zwischen Spatialite und PostGIS unterscheiden!
     """
     if connection.vendor == "sqlite":
-        #"db.sqlite3"
+        # "db.sqlite3"
         connection_string = str(connection.settings_dict['NAME'])
     if connection.vendor == "postgresql":
-        #'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
-        connection_string = 'host=' + str(connection.settings_dict['HOST']) + ' dbname=' + str(connection.settings_dict['NAME']) + ' user=' + str(connection.settings_dict['USER']) + ' password=' + str(connection.settings_dict['PASSWORD']) + ' port='+ str(connection.settings_dict['PORT'])
+        # 'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
+        connection_string = 'host=' + str(connection.settings_dict['HOST']) + ' dbname=' + str(connection.settings_dict['NAME']) + ' user=' + str(
+            connection.settings_dict['USER']) + ' password=' + str(connection.settings_dict['PASSWORD']) + ' port=' + str(connection.settings_dict['PORT'])
     qs = parse_qs(request.META['QUERY_STRING'])
-    req =  mapscript.OWSRequest()
+    req = mapscript.OWSRequest()
     # TODO - auch POST unterstützen!
     for k, v in qs.items():
         req.setParameter(k, ','.join(v))
-        #print(str(k) + "-" + str(v))
+        # print(str(k) + "-" + str(v))
     map_file_string = ''
     with open(os.path.join(str(settings.BASE_DIR), "xplanung_light/mapserver/mapfiles/beteiligungen.map")) as file:
         map_file_string = file.read()
         # Überschreiben der Online Resource
-        # TODO http/https zentral konfigurieren 
+        # TODO http/https zentral konfigurieren
         if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
-            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('beteiligungen-map')).replace('http://','https://'))
+            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(
+                reverse('beteiligungen-map')).replace('http://', 'https://'))
         else:
-            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('beteiligungen-map')))
+            map_file_string = map_file_string.replace(
+                '<wms_onlineresource>', request.build_absolute_uri(reverse('beteiligungen-map')))
         # Alternativer Versuch das SQL aus django generieren zu lassen
         #
-        #offengelegte_plaene = BPlan.objects.filter(beteiligungen__end_datum__lte=timezone.now()).filter(beteiligungen__bekanntmachung_datum__gte=timezone.now()).only('geltungsbereich', 'name','id')
-        #offengelegte_plaene = BPlan.objects.all().only('geltungsbereich', 'name','id')
-        #print(str(offengelegte_plaene.query))
+        # offengelegte_plaene = BPlan.objects.filter(beteiligungen__end_datum__lte=timezone.now()).filter(beteiligungen__bekanntmachung_datum__gte=timezone.now()).only('geltungsbereich', 'name','id')
+        # offengelegte_plaene = BPlan.objects.all().only('geltungsbereich', 'name','id')
+        # print(str(offengelegte_plaene.query))
         # TODO - check warum es bei der Definition des SQL durch Django Unterschiede zum fest vorgegebenen SQL gibt ...
-        #print(str(connection.vendor))
+        # print(str(connection.vendor))
         if connection.vendor == "sqlite":
-            #print('sqlite used')
+            # print('sqlite used')
             datastring_point = """select st_centroid(geltungsbereich), xplanung_light_bplan.id as plan_id from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on 
                         xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true 
                         and bekanntmachung_datum <= date() and end_datum >= date()
@@ -272,12 +291,16 @@ def ows_beteiligungen(request):
             """
 
         if connection.vendor == "postgresql":
-           datastring_polygon =  "geom from (" + datastring_polygon + ") as foo using unique plan_id using srid=25832"
-           datastring_point = "geom from (" + datastring_point + ") as foo using unique plan_id using srid=25832"
-        #map_file_string = map_file_string.replace('<datastring>', str(offengelegte_plaene.query).replace('CAST (AsEWKB(', '').replace(') AS BLOB)', ''))
-        map_file_string = map_file_string.replace('<datastring_polygon>', datastring_polygon).replace('<datastring_point>', datastring_point)
-        map_file_string = map_file_string.replace('<connection_type>', 'OGR').replace('<connection>', connection_string)
-        #print(map_file_string)
+            datastring_polygon = "geom from (" + datastring_polygon + \
+                ") as foo using unique plan_id using srid=25832"
+            datastring_point = "geom from (" + datastring_point + \
+                ") as foo using unique plan_id using srid=25832"
+        # map_file_string = map_file_string.replace('<datastring>', str(offengelegte_plaene.query).replace('CAST (AsEWKB(', '').replace(') AS BLOB)', ''))
+        map_file_string = map_file_string.replace(
+            '<datastring_polygon>', datastring_polygon).replace('<datastring_point>', datastring_point)
+        map_file_string = map_file_string.replace(
+            '<connection_type>', 'OGR').replace('<connection>', connection_string)
+        # print(map_file_string)
     # Switch für verschiedene Mapserver Versionen
     # Erstellen einer Grundkonfigurationsdatei für Mapserver > 8.0.0
     mapserver_version = mapscript.msGetVersionInt()
@@ -289,13 +312,15 @@ def ows_beteiligungen(request):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
+        map_obj = mapscript.msLoadMapFromString(
+            map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
         try:
             os.unlink(tmp_path)
         except OSError:
             pass
     else:
-        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")    
+        map_obj = mapscript.msLoadMapFromString(
+            map_file_string, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
     dispatch_status = map_obj.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
@@ -315,13 +340,14 @@ def ows_beteiligungen(request):
     http_response.headers['Access-Control-Allow-Origin'] = "*"
     return http_response
 
-def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
+
+def ows_bplan_overview(request, pk: int, plan_typ='bplan'):
     """
     WMS für die Detailanzeige der Lage eines einzelnen Plans
     """
     plan = get_object_or_404(FPlan if plan_typ == 'fplan' else BPlan, pk=pk)
     qs = parse_qs(request.META['QUERY_STRING'])
-    req =  mapscript.OWSRequest()
+    req = mapscript.OWSRequest()
     for k, v in qs.items():
         req.setParameter(k, ','.join(v))
     map_file_string = ''
@@ -329,28 +355,36 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
         map_file_string = file.read()
         # Überschreiben der Online Resource
         if plan_typ == 'bplan':
-            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('bplan-overview-map', kwargs={"pk": pk})))
+            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(
+                reverse('bplan-overview-map', kwargs={"pk": pk})))
         if plan_typ == 'fplan':
-            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(reverse('fplan-overview-map', kwargs={"pk": pk})))
+            map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(
+                reverse('fplan-overview-map', kwargs={"pk": pk})))
         # Überschreiben der Punkte des Features:
         wkt = str(plan.geltungsbereich)
-        map_file_string = map_file_string.replace('<wkt>', wkt.replace('SRID=4326;',''))
+        map_file_string = map_file_string.replace(
+            '<wkt>', wkt.replace('SRID=4326;', ''))
         geometry = OGRGeometry(str(plan.geltungsbereich), srs=4326)
         wgs84_extent = geometry.extent
-        #print(wgs84_extent)
+        # print(wgs84_extent)
         # Nutzung des Proxy, wenn in settings definiert - da verhält sich gunicorn wohl anders als runserver im Debug
         if not settings.REQUESTS_PROXIES == None and 'http' in settings.REQUESTS_PROXIES.keys():
-            #print('proxy set')
+            # print('proxy set')
             # Get host, port
             proxy = urlsplit(settings.REQUESTS_PROXIES['http'])
-            map_file_string = map_file_string.replace('<proxy_host>', proxy.hostname)
-            map_file_string = map_file_string.replace('<proxy_port>', str(proxy.port))
+            map_file_string = map_file_string.replace(
+                '<proxy_host>', proxy.hostname)
+            map_file_string = map_file_string.replace(
+                '<proxy_port>', str(proxy.port))
         else:
-            #print('proxy not set')
+            # print('proxy not set')
             # Löschen der Proxy-Konfigurationseinträge
-            map_file_string = map_file_string.replace('"wms_proxy_host" "<proxy_host>"', '')
-            map_file_string = map_file_string.replace('"wms_proxy_port" "<proxy_port>"', '')
-            map_file_string = map_file_string.replace('"wms_proxy_type" "http"', '')
+            map_file_string = map_file_string.replace(
+                '"wms_proxy_host" "<proxy_host>"', '')
+            map_file_string = map_file_string.replace(
+                '"wms_proxy_port" "<proxy_port>"', '')
+            map_file_string = map_file_string.replace(
+                '"wms_proxy_type" "http"', '')
     # 2. Den Aufruf versionsabhängig steuern
     mapserver_version = mapscript.msGetVersionInt()
     if mapserver_version >= 80000:
@@ -361,17 +395,19 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
+        map_obj = mapscript.msLoadMapFromString(
+            map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
         try:
             os.unlink(tmp_path)
         except OSError:
-            pass 
+            pass
     else:
-        map_obj = mapscript.msLoadMapFromString(map_file_string, str(settings.BASE_DIR) + "/")
+        map_obj = mapscript.msLoadMapFromString(
+            map_file_string, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
-    #try:
+    # try:
     #    dispatch_status = map.OWSDispatch(req)
-    #except:
+    # except:
     #    return HttpResponse("Fehler beim Mapserver aufgetreten!")
     dispatch_status = map_obj.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
@@ -390,23 +426,27 @@ def ows_bplan_overview(request, pk:int, plan_typ='bplan'):
     http_response.headers['Content-Length'] = str(len(result))
     return http_response
 
-def ows_fplan_overview(request, pk:int, plan_typ='fplan'):
+
+def ows_fplan_overview(request, pk: int, plan_typ='fplan'):
     """
     WMS für die Detailanzeige der Lage eines einzelnen Plans
     """
     return ows_bplan_overview(request, pk, plan_typ='fplan')
+
 
 def geocodeBkg(request):
     """
     Geocoder BKG-Gazetteer
     """
     ALLOWED_PARAMS = {'query', 'count', 'bbox', 'filter'}
-    url = settings.BKG_GEOCODER_CONFIG['base_url'] + settings.BKG_GEOCODER_CONFIG['api_key'] + "/geosearch"
+    url = settings.BKG_GEOCODER_CONFIG['base_url'] + \
+        settings.BKG_GEOCODER_CONFIG['api_key'] + "/geosearch"
     params = {k: v for k, v in request.GET.items() if k in ALLOWED_PARAMS}
     params.setdefault('count', 20)
     try:
         if settings.REQUESTS_PROXIES:
-            response = requests.get(url, params=params, timeout=5, proxies=settings.REQUESTS_PROXIES)
+            response = requests.get(
+                url, params=params, timeout=5, proxies=settings.REQUESTS_PROXIES)
         else:
             response = requests.get(url, params=params, timeout=5)
         response.raise_for_status()
@@ -414,19 +454,20 @@ def geocodeBkg(request):
         return HttpResponseBadRequest("Geocoding service unavailable")
     return JsonResponse(response.json(), safe=False)
 
-def ows(request, pk:int):
+
+def ows(request, pk: int):
     """
     OWS Proxy für den Mapserver, der per mapscript aufgerufen wird. Beim GetFeatureInfo wird in den Prozess eingegriffen und die HTML-Anzeige der Django Anwendung
     zurückgeliefert.
     """
     orga = AdministrativeOrganization.objects.get(pk=pk)
-    req =  mapscript.OWSRequest()
+    req = mapscript.OWSRequest()
     """
     req.setParameter( 'SERVICE', 'WMS' )
     req.setParameter( 'VERSION', '1.1.0' )
     req.setParameter( 'REQUEST', 'GetCapabilities' )
     """
-    #print(request.META['QUERY_STRING'])
+    # print(request.META['QUERY_STRING'])
     qs = parse_qs(request.META['QUERY_STRING'])
     """
     Check ob eine GetFeatureInfo Anfrage gestellt wird. Falls das der Fall ist, greifen wir ein und grabben die IDs der zurückgelieferten Pläne heraus.
@@ -444,37 +485,43 @@ def ows(request, pk:int):
         if is_featureinfo and k.lower() == 'info_format' and is_featureinfo_format_html:
             v[0] = 'application/vnd.ogc.gml'
         req.setParameter(k, ','.join(v))
-    #print(req)
+    # print(req)
     # test wfs http://127.0.0.1:8000/organization/1/ows/?REQUEST=GetFeature&VERSION=1.1.0&SERVICE=wfs&typename=BPlan.0723507001.12
-    ## first variant - fast - 0.07 seconds
-    #map = mapscript.mapObj( '/home/armin/devel/django/komserv2/test.map' )
-    ## alternative approach - read from file into string and then from string with special path - also fast - 0.1 seconds
-    #with open('/home/armin/devel/django/komserv2/test.map') as file:
-        #map_file_string = file.read()
-    #map = mapscript.msLoadMapFromString(map_file_string, '/home/armin/devel/django/komserv2/')
-    ## next alternative - slowest - 1.1 seconds
-    #mapfile = mappyfile.open("/home/armin/devel/django/komserv2/test.map")
-    #map = mapscript.msLoadMapFromString(mappyfile.dumps(mapfile), '/home/armin/devel/django/komserv2/')
-    ## next alternative - load from dynamically generated mapfile ;-)
+    # first variant - fast - 0.07 seconds
+    # map = mapscript.mapObj( '/home/armin/devel/django/komserv2/test.map' )
+    # alternative approach - read from file into string and then from string with special path - also fast - 0.1 seconds
+    # with open('/home/armin/devel/django/komserv2/test.map') as file:
+        # map_file_string = file.read()
+    # map = mapscript.msLoadMapFromString(map_file_string, '/home/armin/devel/django/komserv2/')
+    # next alternative - slowest - 1.1 seconds
+    # mapfile = mappyfile.open("/home/armin/devel/django/komserv2/test.map")
+    # map = mapscript.msLoadMapFromString(mappyfile.dumps(mapfile), '/home/armin/devel/django/komserv2/')
+    # next alternative - load from dynamically generated mapfile ;-)
     mapfile_generator = MapfileGenerator()
     """
     Der Link auf die ISO-Metadaten pro Layer muss als absolute URL übergeben werden
     """
     if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
-        metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000})).replace('http://', 'https://')
+        metadata_uri = request.build_absolute_uri(reverse(
+            'bplan-export-iso19139', kwargs={"pk": 1000000})).replace('http://', 'https://')
     else:
-        metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000}))
+        metadata_uri = request.build_absolute_uri(
+            reverse('bplan-export-iso19139', kwargs={"pk": 1000000}))
     # Mapfile wird zunächst für x Sekunden gecached, da der Bau und das Parsen über mappyfile sehr langsam ist
     if cache.get("mapfile_" + orga.ags):
-        cache.touch("mapfile_" + orga.ags, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
+        cache.touch("mapfile_" + orga.ags,
+                    settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
         mapfile = cache.get("mapfile_" + orga.ags)
     else:
         if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
-            mapfile = mapfile_generator.generate_mapfile(pk, request.build_absolute_uri(reverse('ows', kwargs={"pk": pk})), metadata_uri).replace('http://', 'https://')
+            mapfile = mapfile_generator.generate_mapfile(pk, request.build_absolute_uri(
+                reverse('ows', kwargs={"pk": pk})), metadata_uri).replace('http://', 'https://')
         else:
-            mapfile = mapfile_generator.generate_mapfile(pk, request.build_absolute_uri(reverse('ows', kwargs={"pk": pk})), metadata_uri)
-        cache.set("mapfile_" + orga.ags, mapfile, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
-    #print(mapfile)
+            mapfile = mapfile_generator.generate_mapfile(
+                pk, request.build_absolute_uri(reverse('ows', kwargs={"pk": pk})), metadata_uri)
+        cache.set("mapfile_" + orga.ags, mapfile,
+                  settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
+    # print(mapfile)
     # 2. Den Aufruf versionsabhängig steuern
     mapserver_version = mapscript.msGetVersionInt()
     if mapserver_version >= 80000:
@@ -485,13 +532,15 @@ def ows(request, pk:int):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        map_obj = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", mapserverConfig)
+        map_obj = mapscript.msLoadMapFromString(
+            mapfile, str(settings.BASE_DIR) + "/", mapserverConfig)
         try:
             os.unlink(tmp_path)
         except OSError:
-            pass 
+            pass
     else:
-        map_obj = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
+        map_obj = mapscript.msLoadMapFromString(
+            mapfile, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
     dispatch_status = map_obj.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
@@ -509,34 +558,38 @@ def ows(request, pk:int):
     """
     # Einfaches Parsen der GML-Rückgabe des Mapservers um die IDs der zurückgelieferten Objekte abzugreifen
     if is_featureinfo and is_featureinfo_format_html:
-        #print(result.decode('utf-8'))
+        # print(result.decode('utf-8'))
         root = defused_ET.fromstring(result.decode('utf-8'))
         # Auslesen der BPläne für FPläne noch zu erweitern bzw. anzupassen.
-        bplan_ids = root.findall("./BPlan." + orga.ls + orga.ks + orga.gs + ".0_layer//id", None)
+        bplan_ids = root.findall(
+            "./BPlan." + orga.ls + orga.ks + orga.gs + ".0_layer//id", None)
         bplan_id_list = []
         for id in bplan_ids:
             bplan_id_list.append(int(id.text))
         bplan_id_list_unique = list(dict.fromkeys(bplan_id_list))
-        #print(bplan_id_list_unique)
-        fplan_ids = root.findall("./FPlan." + orga.ls + orga.ks + orga.gs + ".0_layer//id", None)
+        # print(bplan_id_list_unique)
+        fplan_ids = root.findall(
+            "./FPlan." + orga.ls + orga.ks + orga.gs + ".0_layer//id", None)
         fplan_id_list = []
         for fplan_id in fplan_ids:
             fplan_id_list.append(int(fplan_id.text))
         fplan_id_list_unique = list(dict.fromkeys(fplan_id_list))
-        #print(fplan_id_list_unique)
+        # print(fplan_id_list_unique)
         # https://stackoverflow.com/questions/45188800/how-can-i-set-query-parameter-dynamically-to-request-get-in-django
         if not request.GET._mutable:
             request.GET._mutable = True
             # TODO: Ggf. löschen aller vorherigen GET-Parameter
         # Setzen der ID-Filter-Parameter
         if len(bplan_id_list_unique) > 0:
-            request.GET['bplan_id__in'] = (',').join(str(v) for v in bplan_id_list_unique)
+            request.GET['bplan_id__in'] = (',').join(
+                str(v) for v in bplan_id_list_unique)
         else:
             request.GET['bplan_id__in'] = ''
         if len(fplan_id_list_unique) > 0:
-            request.GET['fplan_id__in'] = (',').join(str(v) for v in fplan_id_list_unique)   
+            request.GET['fplan_id__in'] = (',').join(
+                str(v) for v in fplan_id_list_unique)
         else:
-            request.GET['fplan_id__in'] = ''     
+            request.GET['fplan_id__in'] = ''
         return views.xplan_html(pk=pk, request=request)
     # [('Content-Type', 'application/vnd.ogc.wms_xml; charset=UTF-8'), ('Content-Length', '11385')]
     response_headers = [('Content-Type', content_type),
@@ -549,20 +602,20 @@ def ows(request, pk:int):
     http_response.headers['Access-Control-Allow-Origin'] = "*"
     return http_response
 
-def ows_all_orgas_xplan(request, plantyp='fplan'):
-    #print(plantyp)
+
+def ows_all_orgas_xplan(request, plantyp: str):
     """
     OWS Proxy für den Mapserver, der per mapscript aufgerufen wird. Beim GetFeatureInfo wird in den Prozess eingegriffen und die HTML-Anzeige der Django Anwendung
     zurückgeliefert.
     """
-    #orga = AdministrativeOrganization.objects.get(pk=pk)
-    req =  mapscript.OWSRequest()
+    # orga = AdministrativeOrganization.objects.get(pk=pk)
+    req = mapscript.OWSRequest()
     """
     req.setParameter( 'SERVICE', 'WMS' )
     req.setParameter( 'VERSION', '1.1.0' )
     req.setParameter( 'REQUEST', 'GetCapabilities' )
     """
-    #print(request.META['QUERY_STRING'])
+    # print(request.META['QUERY_STRING'])
     qs = parse_qs(request.META['QUERY_STRING'])
     """
     Check ob eine GetFeatureInfo Anfrage gestellt wird. Falls das der Fall ist, greifen wir ein und grabben die IDs der zurückgelieferten Pläne heraus.
@@ -580,38 +633,44 @@ def ows_all_orgas_xplan(request, plantyp='fplan'):
         if is_featureinfo and k.lower() == 'info_format' and is_featureinfo_format_html:
             v[0] = 'application/vnd.ogc.gml'
         req.setParameter(k, ','.join(v))
-    #print(req)
+    # print(req)
     # test wfs http://127.0.0.1:8000/organization/1/ows/?REQUEST=GetFeature&VERSION=1.1.0&SERVICE=wfs&typename=BPlan.0723507001.12
-    ## first variant - fast - 0.07 seconds
-    #map = mapscript.mapObj( '/home/armin/devel/django/komserv2/test.map' )
-    ## alternative approach - read from file into string and then from string with special path - also fast - 0.1 seconds
-    #with open('/home/armin/devel/django/komserv2/test.map') as file:
-        #map_file_string = file.read()
-    #map = mapscript.msLoadMapFromString(map_file_string, '/home/armin/devel/django/komserv2/')
-    ## next alternative - slowest - 1.1 seconds
-    #mapfile = mappyfile.open("/home/armin/devel/django/komserv2/test.map")
-    #map = mapscript.msLoadMapFromString(mappyfile.dumps(mapfile), '/home/armin/devel/django/komserv2/')
-    ## next alternative - load from dynamically generated mapfile ;-)
+    # first variant - fast - 0.07 seconds
+    # map = mapscript.mapObj( '/home/armin/devel/django/komserv2/test.map' )
+    # alternative approach - read from file into string and then from string with special path - also fast - 0.1 seconds
+    # with open('/home/armin/devel/django/komserv2/test.map') as file:
+        # map_file_string = file.read()
+    # map = mapscript.msLoadMapFromString(map_file_string, '/home/armin/devel/django/komserv2/')
+    # next alternative - slowest - 1.1 seconds
+    # mapfile = mappyfile.open("/home/armin/devel/django/komserv2/test.map")
+    # map = mapscript.msLoadMapFromString(mappyfile.dumps(mapfile), '/home/armin/devel/django/komserv2/')
+    # next alternative - load from dynamically generated mapfile ;-)
     mapfile_generator = MapfileGenerator()
     """
     Der Link auf die ISO-Metadaten pro Layer muss als absolute URL übergeben werden
     TODO - anzupassen für die Layer aller Pläne
     """
     if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
-        metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000})).replace('http://', 'https://')
+        metadata_uri = request.build_absolute_uri(reverse(
+            'bplan-export-iso19139', kwargs={"pk": 1000000})).replace('http://', 'https://')
     else:
-        metadata_uri = request.build_absolute_uri(reverse('bplan-export-iso19139', kwargs={"pk": 1000000}))
+        metadata_uri = request.build_absolute_uri(
+            reverse('bplan-export-iso19139', kwargs={"pk": 1000000}))
     # Mapfile wird zunächst für x Sekunden gecached, da der Bau und das Parsen über mappyfile sehr langsam ist
     if cache.get("mapfile_all_orgas_" + plantyp):
-        cache.touch("mapfile_all_orgas_" + plantyp, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
+        cache.touch("mapfile_all_orgas_" + plantyp,
+                    settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
         mapfile = cache.get("mapfile_all_orgas_" + plantyp)
     else:
         if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
-            mapfile = mapfile_generator.generate_mapfile_all_orgas_xplan(request.build_absolute_uri(reverse('plan-map', kwargs={'plantyp': plantyp})), metadata_uri, plantyp=plantyp).replace('http://', 'https://')
+            mapfile = mapfile_generator.generate_mapfile_all_orgas_xplan(request.build_absolute_uri(reverse(
+                'plan-map', kwargs={'plantyp': plantyp})), metadata_uri, plantyp=plantyp).replace('http://', 'https://')
         else:
-            mapfile = mapfile_generator.generate_mapfile_all_orgas_xplan(request.build_absolute_uri(reverse('plan-map', kwargs={'plantyp': plantyp})), metadata_uri, plantyp=plantyp)
-        cache.set("mapfile_all_orgas_" + plantyp, mapfile, settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
-    #print(mapfile)
+            mapfile = mapfile_generator.generate_mapfile_all_orgas_xplan(request.build_absolute_uri(
+                reverse('plan-map', kwargs={'plantyp': plantyp})), metadata_uri, plantyp=plantyp)
+        cache.set("mapfile_all_orgas_" + plantyp, mapfile,
+                  settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
+    # print(mapfile)
     # 2. Den Aufruf versionsabhängig steuern
     mapserver_version = mapscript.msGetVersionInt()
     if mapserver_version >= 80000:
@@ -622,13 +681,15 @@ def ows_all_orgas_xplan(request, plantyp='fplan'):
         # 2. MapServer mitteilen, wo die globale Konfiguration liegt
         os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
         mapserverConfig = mapscript.configObj()
-        map_obj = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/", mapserverConfig)
+        map_obj = mapscript.msLoadMapFromString(
+            mapfile, str(settings.BASE_DIR) + "/", mapserverConfig)
         try:
             os.unlink(tmp_path)
         except OSError:
-            pass 
+            pass
     else:
-        map_obj = mapscript.msLoadMapFromString(mapfile, str(settings.BASE_DIR) + "/") 
+        map_obj = mapscript.msLoadMapFromString(
+            mapfile, str(settings.BASE_DIR) + "/")
     mapscript.msIO_installStdoutToBuffer()
     dispatch_status = map_obj.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
@@ -646,7 +707,7 @@ def ows_all_orgas_xplan(request, plantyp='fplan'):
     """
     # Einfaches Parsen der GML-Rückgabe des Mapservers um die IDs der zurückgelieferten Objekte abzugreifen
     if is_featureinfo and is_featureinfo_format_html:
-        #print(result.decode('utf-8'))
+        # print(result.decode('utf-8'))
         root = defused_ET.fromstring(result.decode('utf-8'))
         # Auslesen der BPläne für FPläne noch zu erweitern bzw. anzupassen.
         bplan_ids = root.findall("./bplan_layer//id", None)
@@ -654,26 +715,28 @@ def ows_all_orgas_xplan(request, plantyp='fplan'):
         for id in bplan_ids:
             bplan_id_list.append(int(id.text))
         bplan_id_list_unique = list(dict.fromkeys(bplan_id_list))
-        #print(bplan_id_list_unique)
+        # print(bplan_id_list_unique)
         fplan_ids = root.findall("./fplan_layer//id", None)
         fplan_id_list = []
         for fplan_id in fplan_ids:
             fplan_id_list.append(int(fplan_id.text))
         fplan_id_list_unique = list(dict.fromkeys(fplan_id_list))
-        #print(fplan_id_list_unique)
+        # print(fplan_id_list_unique)
         # https://stackoverflow.com/questions/45188800/how-can-i-set-query-parameter-dynamically-to-request-get-in-django
         if not request.GET._mutable:
             request.GET._mutable = True
             # TODO: Ggf. löschen aller vorherigen GET-Parameter
         # Setzen der ID-Filter-Parameter
         if len(bplan_id_list_unique) > 0:
-            request.GET['bplan_id__in'] = (',').join(str(v) for v in bplan_id_list_unique)
+            request.GET['bplan_id__in'] = (',').join(
+                str(v) for v in bplan_id_list_unique)
         else:
             request.GET['bplan_id__in'] = ''
         if len(fplan_id_list_unique) > 0:
-            request.GET['fplan_id__in'] = (',').join(str(v) for v in fplan_id_list_unique)   
+            request.GET['fplan_id__in'] = (',').join(
+                str(v) for v in fplan_id_list_unique)
         else:
-            request.GET['fplan_id__in'] = ''     
+            request.GET['fplan_id__in'] = ''
         return views.xplan_html(pk=None, request=request)
     # [('Content-Type', 'application/vnd.ogc.wms_xml; charset=UTF-8'), ('Content-Length', '11385')]
     response_headers = [('Content-Type', content_type),
@@ -686,22 +749,26 @@ def ows_all_orgas_xplan(request, plantyp='fplan'):
     http_response.headers['Access-Control-Allow-Origin'] = "*"
     return http_response
 
+
 def vg_list(request):
-    verbandsgemeinden = AdministrativeOrganization.objects.filter(gs='000').exclude(vs='00').only('id', 'name')
+    verbandsgemeinden = AdministrativeOrganization.objects.filter(
+        gs='000').exclude(vs='00').only('id', 'name')
     return render(request, "xplanung_light/verbandsgemeinden.html", {"verbandsgemeinden": verbandsgemeinden})
 
-def childs_map(request, pk:int):
+
+def childs_map(request, pk: int):
     orga = AdministrativeOrganization.objects.get(pk=pk)
     ortsgemeinden = AdministrativeOrganization.objects.none()
     geojson = {"type": "FeatureCollection", "features": []}
     if orga.gs == '000' and not orga.vs == '00':
-        #print("Verbandsgemeinde gefunden!")
+        # print("Verbandsgemeinde gefunden!")
         # alle Gemeinden der VG laden
         # https://dakdeniz.medium.com/increase-django-geojson-serialization-performance-7cd8cb66e366
-        #ortsgemeinden = AdministrativeOrganization.objects.filter(ls=orga.ls, ks=orga.ks, vs=orga.vs). exclude(gs='000').annotate(geojson=AsGeoJSON('geometry'))
-        ortsgemeinden = AdministrativeOrganization.objects.filter(ls=orga.ls, ks=orga.ks, vs=orga.vs). exclude(gs='000')
-        #print(len(ortsgemeinden))
-        #for ortsgemeinde in ortsgemeinden:
+        # ortsgemeinden = AdministrativeOrganization.objects.filter(ls=orga.ls, ks=orga.ks, vs=orga.vs). exclude(gs='000').annotate(geojson=AsGeoJSON('geometry'))
+        ortsgemeinden = AdministrativeOrganization.objects.filter(
+            ls=orga.ls, ks=orga.ks, vs=orga.vs). exclude(gs='000')
+        # print(len(ortsgemeinden))
+        # for ortsgemeinde in ortsgemeinden:
         #    print(ortsgemeinde.name + " - " + ortsgemeinde.gs)
         # for postgres there is a good hint at:
         # https://gist.github.com/bahoo/fca19de157fde5bb34b30dea8f1352d8
@@ -711,7 +778,7 @@ def childs_map(request, pk:int):
             serialize("geojson", ortsgemeinden, fields=["id", "name"], geometry_field='geometry')
         )
         """
-        # Alternativ alle features in eine Collection überführen 
+        # Alternativ alle features in eine Collection überführen
         featurecollection = {}
         featurecollection['type'] = "FeatureCollection"
         featurecollection['crs'] = {}
@@ -719,7 +786,7 @@ def childs_map(request, pk:int):
         featurecollection['crs']['properties'] = {}
         featurecollection['crs']['properties']['name'] = "EPSG:4326"
         featurecollection['features'] = []
-        
+
         for ortsgemeinde in ortsgemeinden:
             # feature = json.loads(ortsgemeinde.geojson)
             feature = {}
@@ -730,11 +797,12 @@ def childs_map(request, pk:int):
             # feature['geometry'] = json.loads(ortsgemeinde.geojson)
             # Alternativ - geometry über geos vereinfachen ;-)
             geosgeometry = GEOSGeometry(ortsgemeinde.geometry)
-            feature['geometry'] = json.loads(geosgeometry.simplify(0.0005).json)
+            feature['geometry'] = json.loads(
+                geosgeometry.simplify(0.0005).json)
             # feature['geometry'] = json.loads(geosgeometry.json)
             featurecollection['features'].append(feature)
         geojson = featurecollection
-        
+
     """
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -752,9 +820,9 @@ def childs_map(request, pk:int):
 def bplan_import(request):
     if request.method == "POST":
         form = BPlanImportForm(request.POST, request.FILES)
-        #print("bplan_import: form rendered")
+        # print("bplan_import: form rendered")
         if form.is_valid():
-            #print("bplan_import: form valid")
+            # print("bplan_import: form valid")
             # https://stackoverflow.com/questions/44722885/reading-inmemoryuploadedfile-twice
             # pointer muss auf Dateianfang gesetzt sein!
             request.FILES['file'].seek(0)
@@ -765,7 +833,8 @@ def bplan_import(request):
             if request.user.is_superuser == False:
                 orgas = xplanung.get_orgas()
                 if orgas == []:
-                    messages.error(request, 'Im GML konnte keine Organisation gefunden werden - prüfen sie die Datei oder wenden sie sich an den Administrator!')
+                    messages.error(
+                        request, 'Im GML konnte keine Organisation gefunden werden - prüfen sie die Datei oder wenden sie sich an den Administrator!')
                     form = BPlanImportForm()
                     return render(request, "xplanung_light/bplan_import.html", {"form": form})
                 user_orga_admin = []
@@ -773,15 +842,18 @@ def bplan_import(request):
                     user_is_admin = False
                     for user in gemeinde.admin_orga_users.all():
                         if user.user == request.user and user.is_admin:
-                            user_is_admin = True 
+                            user_is_admin = True
                     user_orga_admin.append(user_is_admin)
                 if all(user_orga_admin) == False or user_orga_admin == []:
-                    messages.error(request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
+                    messages.error(
+                        request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
                     form = BPlanImportForm()
                     return render(request, "xplanung_light/bplan_import.html", {"form": form})
-            bplan_created = xplanung.import_plan(overwrite=overwrite, plan_typ='bplan')
+            bplan_created = xplanung.import_plan(
+                overwrite=overwrite, plan_typ='bplan')
             if bplan_created == False:
-                messages.error(request, 'Bebauungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
+                messages.error(
+                    request, 'Bebauungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
                 # extent form  with confirmation field!
                 # https://amgcomputing.blogspot.com/2015/11/django-form-confirm-before-saving.html
                 # reload form
@@ -789,22 +861,25 @@ def bplan_import(request):
                 return render(request, "xplanung_light/bplan_import.html", {"form": form})
             else:
                 if overwrite:
-                    messages.success(request, 'Bebauungsplan wurde erfolgreich aktualisiert!')
+                    messages.success(
+                        request, 'Bebauungsplan wurde erfolgreich aktualisiert!')
                 else:
-                    messages.success(request, 'Bebauungsplan wurde erfolgreich importiert!')
-            #print("bplan_import: import done")
+                    messages.success(
+                        request, 'Bebauungsplan wurde erfolgreich importiert!')
+            # print("bplan_import: import done")
             return redirect(reverse('bplan-list'))
     else:
-        #print("bplan_import: no post")
+        # print("bplan_import: no post")
         form = BPlanImportForm()
     return render(request, "xplanung_light/bplan_import.html", {"form": form})
+
 
 def fplan_import(request):
     if request.method == "POST":
         form = FPlanImportForm(request.POST, request.FILES)
-        #print("bplan_import: form rendered")
+        # print("bplan_import: form rendered")
         if form.is_valid():
-            #print("bplan_import: form valid")
+            # print("bplan_import: form valid")
             # https://stackoverflow.com/questions/44722885/reading-inmemoryuploadedfile-twice
             # pointer muss auf Dateianfang gesetzt sein!
             request.FILES['file'].seek(0)
@@ -815,7 +890,8 @@ def fplan_import(request):
             if request.user.is_superuser == False:
                 orgas = xplanung.get_orgas()
                 if orgas == []:
-                    messages.error(request, 'Im GML konnte keine Organisation gefunden werden - prüfen sie die Datei oder wenden sie sich an den Administrator!')
+                    messages.error(
+                        request, 'Im GML konnte keine Organisation gefunden werden - prüfen sie die Datei oder wenden sie sich an den Administrator!')
                     form = FPlanImportForm()
                     return render(request, "xplanung_light/fplan_import.html", {"form": form})
                 user_orga_admin = []
@@ -823,16 +899,19 @@ def fplan_import(request):
                     user_is_admin = False
                     for user in gemeinde.admin_orga_users.all():
                         if user.user == request.user and user.is_admin:
-                            user_is_admin = True 
+                            user_is_admin = True
                     user_orga_admin.append(user_is_admin)
                 if all(user_orga_admin) == False or user_orga_admin == []:
-                    messages.error(request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
+                    messages.error(
+                        request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
                     form = FPlanImportForm()
                     return render(request, "xplanung_light/fplan_import.html", {"form": form})
-            fplan_created = xplanung.import_plan(overwrite=overwrite, plan_typ='fplan')
+            fplan_created = xplanung.import_plan(
+                overwrite=overwrite, plan_typ='fplan')
 
             if fplan_created == False:
-                messages.error(request, 'Flächennutzungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
+                messages.error(
+                    request, 'Flächennutzungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
                 # extent form  with confirmation field!
                 # https://amgcomputing.blogspot.com/2015/11/django-form-confirm-before-saving.html
                 # reload form
@@ -840,15 +919,18 @@ def fplan_import(request):
                 return render(request, "xplanung_light/fplan_import.html", {"form": form})
             else:
                 if overwrite:
-                    messages.success(request, 'Flächennutzungsplan wurde erfolgreich aktualisiert!')
+                    messages.success(
+                        request, 'Flächennutzungsplan wurde erfolgreich aktualisiert!')
                 else:
-                    messages.success(request, 'Flächennutzungsplan wurde erfolgreich importiert!')
-            #print("bplan_import: import done")
+                    messages.success(
+                        request, 'Flächennutzungsplan wurde erfolgreich importiert!')
+            # print("bplan_import: import done")
             return redirect(reverse('fplan-list'))
     else:
-        #print("bplan_import: no post")
+        # print("bplan_import: no post")
         form = FPlanImportForm()
     return render(request, "xplanung_light/fplan_import.html", {"form": form})
+
 
 def bplan_import_archiv(request):
     if request.method == "POST":
@@ -865,22 +947,26 @@ def bplan_import_archiv(request):
                 orgas = xplanung.get_orgas()
                 user_orga_admin = []
                 if orgas == []:
-                    messages.error(request, 'Im GML konnte keine Organisation gefunden werden - prüfen sie die Datei oder wenden sie sich an den Administrator!')
+                    messages.error(
+                        request, 'Im GML konnte keine Organisation gefunden werden - prüfen sie die Datei oder wenden sie sich an den Administrator!')
                     form = BPlanImportArchivForm()
                     return render(request, "xplanung_light/bplan_import_archiv.html", {"form": form})
                 for gemeinde in orgas:
                     user_is_admin = False
                     for user in gemeinde.admin_orga_users.all():
                         if user.user == request.user and user.is_admin:
-                            user_is_admin = True 
+                            user_is_admin = True
                     user_orga_admin.append(user_is_admin)
                 if all(user_orga_admin) == False:
-                    messages.error(request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
+                    messages.error(
+                        request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
                     form = BPlanImportArchivForm()
                     return render(request, "xplanung_light/bplan_import_archiv.html", {"form": form})
-            bplan_created = xplanung.import_plan_archiv(overwrite=overwrite, plan_typ='bplan')
+            bplan_created = xplanung.import_plan_archiv(
+                overwrite=overwrite, plan_typ='bplan')
             if bplan_created == False:
-                messages.error(request, 'Bebauungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
+                messages.error(
+                    request, 'Bebauungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
                 # extent form  with confirmation field!
                 # https://amgcomputing.blogspot.com/2015/11/django-form-confirm-before-saving.html
                 # reload form
@@ -888,15 +974,18 @@ def bplan_import_archiv(request):
                 return render(request, "xplanung_light/bplan_import_archiv.html", {"form": form})
             else:
                 if overwrite:
-                    messages.success(request, 'Bebauungsplan wurde erfolgreich aktualisiert!')
+                    messages.success(
+                        request, 'Bebauungsplan wurde erfolgreich aktualisiert!')
                 else:
-                    messages.success(request, 'Bebauungsplan wurde erfolgreich importiert!')
-            #print("bplan_import: import done")
+                    messages.success(
+                        request, 'Bebauungsplan wurde erfolgreich importiert!')
+            # print("bplan_import: import done")
             return redirect(reverse('bplan-list'))
     else:
         # print("bplan_import: no post")
         form = BPlanImportArchivForm()
     return render(request, "xplanung_light/bplan_import_archiv.html", {"form": form})
+
 
 def fplan_import_archiv(request):
     if request.method == "POST":
@@ -913,22 +1002,26 @@ def fplan_import_archiv(request):
                 orgas = xplanung.get_orgas()
                 user_orga_admin = []
                 if orgas == []:
-                    messages.error(request, 'Im GML konnte keine Organisation gefunden werden - prüfen sie die Datei oder wenden sie sich an den Administrator!')
+                    messages.error(
+                        request, 'Im GML konnte keine Organisation gefunden werden - prüfen sie die Datei oder wenden sie sich an den Administrator!')
                     form = FPlanImportArchivForm()
                     return render(request, "xplanung_light/fplan_import_archiv.html", {"form": form})
                 for gemeinde in orgas:
                     user_is_admin = False
                     for user in gemeinde.admin_orga_users.all():
                         if user.user == request.user and user.is_admin:
-                            user_is_admin = True 
+                            user_is_admin = True
                     user_orga_admin.append(user_is_admin)
                 if all(user_orga_admin) == False:
-                    messages.error(request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
+                    messages.error(
+                        request, 'Nutzer ist nicht Administrator aller Gemeinden im XPlan-GML Dokument - Plan kann nicht importiert werden - bitte wenden sie sich an den Administrator!')
                     form = FPlanImportArchivForm()
                     return render(request, "xplanung_light/fplan_import_archiv.html", {"form": form})
-            plan_created = xplanung.import_plan_archiv(overwrite=overwrite, plan_typ='fplan')
+            plan_created = xplanung.import_plan_archiv(
+                overwrite=overwrite, plan_typ='fplan')
             if plan_created == False:
-                messages.error(request, 'Flächennutzungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
+                messages.error(
+                    request, 'Flächennutzungsplan ist schon vorhanden - bitte selektieren sie explizit \"Vorhandenen Plan überschreiben\"!')
                 # extent form  with confirmation field!
                 # https://amgcomputing.blogspot.com/2015/11/django-form-confirm-before-saving.html
                 # reload form
@@ -936,10 +1029,12 @@ def fplan_import_archiv(request):
                 return render(request, "xplanung_light/fplan_import_archiv.html", {"form": form})
             else:
                 if overwrite:
-                    messages.success(request, 'Flächennutzungsplan wurde erfolgreich aktualisiert!')
+                    messages.success(
+                        request, 'Flächennutzungsplan wurde erfolgreich aktualisiert!')
                 else:
-                    messages.success(request, 'Flächennutzungsplan wurde erfolgreich importiert!')
-            #print("bplan_import: import done")
+                    messages.success(
+                        request, 'Flächennutzungsplan wurde erfolgreich importiert!')
+            # print("bplan_import: import done")
             return redirect(reverse('fplan-list'))
     else:
         # print("bplan_import: no post")
@@ -947,46 +1042,50 @@ def fplan_import_archiv(request):
     return render(request, "xplanung_light/fplan_import_archiv.html", {'form': form,
                                                                        'user_is_admin': request.user_is_admin,
                                                                        'user_is_toeb_reporter': request.user_is_toeb_reporter,
-                                                                      }
-    )
+                                                                       }
+                  )
+
 
 def aggregates(request):
-    #context = {
+    # context = {
     #    "user_is_admin": request.user_is_admin,
     #    "user_is_toeb_reporter": request.is_toeb_reporter,
-    #}
+    # }
     return render(request, "xplanung_light/aggregates.html")
 
+
 def datenschutz(request):
-    # Lade die aktuellen Informationen bezüglich des Datenschutzes und der Nutzungsbedingungen 
+    # Lade die aktuellen Informationen bezüglich des Datenschutzes und der Nutzungsbedingungen
     today = datetime.datetime.now().date()
-    consent_options = ConsentOption.objects.filter(obsolete=False, mandatory=True, valid_from__lte=today, valid_until__gte=today, type='application')
-    return render(request, "xplanung_light/datenschutz.html", { 'consent_options': consent_options,
-                                                                'user_is_admin': request.user_is_admin,
-                                                                'user_is_toeb_reporter': request.user_is_toeb_reporter,
-                                                              }
-    )
+    consent_options = ConsentOption.objects.filter(
+        obsolete=False, mandatory=True, valid_from__lte=today, valid_until__gte=today, type='application')
+    return render(request, "xplanung_light/datenschutz.html", {'consent_options': consent_options,
+                                                               'user_is_admin': request.user_is_admin,
+                                                               'user_is_toeb_reporter': request.user_is_toeb_reporter,
+                                                               }
+                  )
+
 
 def impressum(request):
-    # Lade die aktuellen Informationen aus den Metadaten zu den Diensten - Provider Informationen aus den settings 
+    # Lade die aktuellen Informationen aus den Metadaten zu den Diensten - Provider Informationen aus den settings
     # Verantwortliche Organisation
     responsible_organisation = {}
     responsible_organisation['name'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['organization_name']
     responsible_organisation['phone'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['phone']
     responsible_organisation['email'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email']
-    return render(request, "xplanung_light/impressum.html", { 'orga_info': responsible_organisation,
-                                                              'user_is_admin': request.user_is_admin,
-                                                              'user_is_toeb_reporter': request.user_is_toeb_reporter,
-                                                            }
-    )
-    
+    return render(request, "xplanung_light/impressum.html", {'orga_info': responsible_organisation,
+                                                             'user_is_admin': request.user_is_admin,
+                                                             'user_is_toeb_reporter': request.user_is_toeb_reporter,
+                                                             }
+                  )
+
 
 def home(request):
     # The attributes are already attached by the middleware
-    #context = {
+    # context = {
     #    "user_is_admin": request.user_is_admin,
     #    "user_is_toeb_reporter": request.is_toeb_reporter
-    #}
+    # }
     # Lade alle Informationen zu den vorhandenen Daten für das Dashboard
     bplan_info = {}
     fplan_info = {}
@@ -999,94 +1098,115 @@ def home(request):
     bplan_beteiligungen_qs = BPlanBeteiligung.objects.only('id')
     fplan_beteiligungen_qs = FPlanBeteiligung.objects.only('id')
 
-    bplan_info['all_public_objects'] = bplan_qs.filter(public=True).distinct().count()
-    fplan_info['all_public_objects']  = fplan_qs.filter(public=True).distinct().count()
+    bplan_info['all_public_objects'] = bplan_qs.filter(
+        public=True).distinct().count()
+    fplan_info['all_public_objects'] = fplan_qs.filter(
+        public=True).distinct().count()
 
     # Filtern der querysets auf nicht anonyme Nutzer die kein Administrator sind (my...)
     if not request.user.is_superuser and request.user.is_anonymous == False:
-        orga_qs = orga_qs.filter(admin_orga_users__user=request.user, admin_orga_users__is_admin=True)
-        bplan_qs = bplan_qs.filter(gemeinde__admin_orga_users__user=request.user, gemeinde__admin_orga_users__is_admin=True)
-        fplan_qs = fplan_qs.filter(gemeinde__admin_orga_users__user=request.user, gemeinde__admin_orga_users__is_admin=True)
-        bplan_beteiligungen_qs = bplan_beteiligungen_qs.filter(bplan__gemeinde__admin_orga_users__user=request.user, bplan__gemeinde__admin_orga_users__is_admin=True)
-        fplan_beteiligungen_qs = fplan_beteiligungen_qs.filter(fplan__gemeinde__admin_orga_users__user=request.user, fplan__gemeinde__admin_orga_users__is_admin=True)
+        orga_qs = orga_qs.filter(
+            admin_orga_users__user=request.user, admin_orga_users__is_admin=True)
+        bplan_qs = bplan_qs.filter(
+            gemeinde__admin_orga_users__user=request.user, gemeinde__admin_orga_users__is_admin=True)
+        fplan_qs = fplan_qs.filter(
+            gemeinde__admin_orga_users__user=request.user, gemeinde__admin_orga_users__is_admin=True)
+        bplan_beteiligungen_qs = bplan_beteiligungen_qs.filter(
+            bplan__gemeinde__admin_orga_users__user=request.user, bplan__gemeinde__admin_orga_users__is_admin=True)
+        fplan_beteiligungen_qs = fplan_beteiligungen_qs.filter(
+            fplan__gemeinde__admin_orga_users__user=request.user, fplan__gemeinde__admin_orga_users__is_admin=True)
 
-    plan_orga_qs = orga_qs.annotate(count_plan=Count('bplan') + Count('fplan')).filter(count_plan__gt=0)
-    plan_orga_public_qs = orga_qs.annotate(count_plan=Count('bplan', distinct=True, filter=Q(bplan__public=True)) + Count('fplan', distinct=True, filter=Q(fplan__public=True))).filter(count_plan__gt=0)
+    plan_orga_qs = orga_qs.annotate(count_plan=Count(
+        'bplan') + Count('fplan')).filter(count_plan__gt=0)
+    plan_orga_public_qs = orga_qs.annotate(count_plan=Count('bplan', distinct=True, filter=Q(
+        bplan__public=True)) + Count('fplan', distinct=True, filter=Q(fplan__public=True))).filter(count_plan__gt=0)
 
     bplan_info['all_objects'] = bplan_qs.distinct().count()
-    fplan_info['all_objects']  = fplan_qs.distinct().count()
+    fplan_info['all_objects'] = fplan_qs.distinct().count()
 
-    bplan_info['public_objects'] = bplan_qs.filter(public=True).distinct().count()
-    fplan_info['public_objects']  = fplan_qs.filter(public=True).distinct().count()
+    bplan_info['public_objects'] = bplan_qs.filter(
+        public=True).distinct().count()
+    fplan_info['public_objects'] = fplan_qs.filter(
+        public=True).distinct().count()
 
     count_bplan_beteiligungen = bplan_beteiligungen_qs.distinct().count()
     count_fplan_beteiligungen = fplan_beteiligungen_qs.distinct().count()
 
-    count_actual_bplan_beteiligungen = bplan_beteiligungen_qs.filter(bplan__public=True, end_datum__gte=timezone.now(), bekanntmachung_datum__lte=timezone.now()).only('id').distinct().count()
-    count_actual_fplan_beteiligungen = fplan_beteiligungen_qs.filter(fplan__public=True, end_datum__gte=timezone.now(), bekanntmachung_datum__lte=timezone.now()).only('id').distinct().count()
-    
-    beteiligungen_info['all_objects']  = count_fplan_beteiligungen + count_bplan_beteiligungen
-    beteiligungen_info['actual_public_objects']  = count_actual_fplan_beteiligungen + count_actual_bplan_beteiligungen
-    
-    orga_info['all_objects']  = orga_qs.only('id').distinct().count()
+    count_actual_bplan_beteiligungen = bplan_beteiligungen_qs.filter(bplan__public=True, end_datum__gte=timezone.now(
+    ), bekanntmachung_datum__lte=timezone.now()).only('id').distinct().count()
+    count_actual_fplan_beteiligungen = fplan_beteiligungen_qs.filter(fplan__public=True, end_datum__gte=timezone.now(
+    ), bekanntmachung_datum__lte=timezone.now()).only('id').distinct().count()
+
+    beteiligungen_info['all_objects'] = count_fplan_beteiligungen + \
+        count_bplan_beteiligungen
+    beteiligungen_info['actual_public_objects'] = count_actual_fplan_beteiligungen + \
+        count_actual_bplan_beteiligungen
+
+    orga_info['all_objects'] = orga_qs.only('id').distinct().count()
     orga_info['objects_with_plans'] = plan_orga_qs.distinct().count()
     orga_info['objects_with_public_plans'] = plan_orga_public_qs.distinct().count()
 
     # Für den anonymen Benutzer sind nur die publizierten Verfahren sichtbar!
-    #if request.user.is_anonymous == True:
-    #bplan_info['public_objects'] = BPlan.objects.filter(public=True).only('id').count()
-    #fplan_info['public_objects']  = FPlan.objects.filter(public=True).only('id').count()
-    #orga_info['public_objects']  = AdministrativeOrganization.filter(public=True).objects.only('id').count()
+    # if request.user.is_anonymous == True:
+    # bplan_info['public_objects'] = BPlan.objects.filter(public=True).only('id').count()
+    # fplan_info['public_objects']  = FPlan.objects.filter(public=True).only('id').count()
+    # orga_info['public_objects']  = AdministrativeOrganization.filter(public=True).objects.only('id').count()
 
-    return render(request, "xplanung_light/home.html", {'bplan_info': bplan_info, 
-                                                        'fplan_info': fplan_info, 
-                                                        'orga_info': orga_info, 
+    return render(request, "xplanung_light/home.html", {'bplan_info': bplan_info,
+                                                        'fplan_info': fplan_info,
+                                                        'orga_info': orga_info,
                                                         'beteiligungen_info': beteiligungen_info,
                                                         'user_is_admin': request.user_is_admin,
                                                         'user_is_toeb_reporter': request.user_is_toeb_reporter,
                                                         }
-    )
-    
-def bauleitplanung_orga_html(request, pk:int):
+                  )
+
+
+def bauleitplanung_orga_html(request, pk: int):
     orga = AdministrativeOrganization.objects.get(id=pk)
-    bplaene = BPlan.objects.filter(public=True, gemeinde__id=pk, inkrafttretens_datum__lte=timezone.now())
-    fplaene = FPlan.objects.filter(public=True, gemeinde__id=pk, wirksamkeits_datum__lte=timezone.now())
+    bplaene = BPlan.objects.filter(
+        public=True, gemeinde__id=pk, inkrafttretens_datum__lte=timezone.now())
+    fplaene = FPlan.objects.filter(
+        public=True, gemeinde__id=pk, wirksamkeits_datum__lte=timezone.now())
     beteiligungen_bplaene = BPlanBeteiligung.objects.distinct().filter(
-            bplan__gemeinde__id=pk, bplan__public=True
-        ).filter(
-            end_datum__gte=timezone.now(),
-            bekanntmachung_datum__lte=timezone.now()
-        ).annotate(
-            xplan_name=F('bplan__name'),
-            xplan_id=F('bplan__id'),
-            plantyp=Value('BPlan'),
-            geltungsbereich=F('bplan__geltungsbereich'),#).distinct()
-            beteiligung_typ=F('typ')
-        ).annotate(
-            # TODO check warum filter nicht zieht...
-            confirmed_comments=Count('comments', distinct=True, filter=Q(comments__approved=True, comments__withdrawn=False))
-        ).distinct()
+        bplan__gemeinde__id=pk, bplan__public=True
+    ).filter(
+        end_datum__gte=timezone.now(),
+        bekanntmachung_datum__lte=timezone.now()
+    ).annotate(
+        xplan_name=F('bplan__name'),
+        xplan_id=F('bplan__id'),
+        plantyp=Value('BPlan'),
+        geltungsbereich=F('bplan__geltungsbereich'),  # ).distinct()
+        beteiligung_typ=F('typ')
+    ).annotate(
+        # TODO check warum filter nicht zieht...
+        confirmed_comments=Count('comments', distinct=True, filter=Q(
+            comments__approved=True, comments__withdrawn=False))
+    ).distinct()
     beteiligungen_fplaene = FPlanBeteiligung.objects.filter(
-            fplan__gemeinde__id=pk, fplan__public=True
-        ).filter(
-            end_datum__gte=timezone.now(),
-            bekanntmachung_datum__lte=timezone.now()
-        ).annotate(
-            xplan_name=F('fplan__name'),
-            xplan_id=F('fplan__id'),
-            plantyp=Value('FPlan'),
-            geltungsbereich=F('fplan__geltungsbereich'),#).distinct()
-            beteiligung_typ=F('typ')
-        ).annotate(
-            confirmed_comments=Count('comments', distinct=True, filter=Q(comments__approved=True, comments__withdrawn=False))
-        ).distinct()
-        # https://pythonguides.com/union-operation-on-models-django/
-    beteiligungen_qs = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum') 
+        fplan__gemeinde__id=pk, fplan__public=True
+    ).filter(
+        end_datum__gte=timezone.now(),
+        bekanntmachung_datum__lte=timezone.now()
+    ).annotate(
+        xplan_name=F('fplan__name'),
+        xplan_id=F('fplan__id'),
+        plantyp=Value('FPlan'),
+        geltungsbereich=F('fplan__geltungsbereich'),  # ).distinct()
+        beteiligung_typ=F('typ')
+    ).annotate(
+        confirmed_comments=Count('comments', distinct=True, filter=Q(
+            comments__approved=True, comments__withdrawn=False))
+    ).distinct()
+    # https://pythonguides.com/union-operation-on-models-django/
+    beteiligungen_qs = beteiligungen_bplaene.union(
+        beteiligungen_fplaene).order_by('end_datum')
     other_info = {}
-    other_info['today'] = datetime.date.today() 
-    #for beteiligung in beteiligungen_qs:
+    other_info['today'] = datetime.date.today()
+    # for beteiligung in beteiligungen_qs:
     #    print(str(beteiligung.id) + " - " + beteiligung.xplan_name)
-        #print(beteiligung.geltungsbereich)
+    # print(beteiligung.geltungsbereich)
     return render(request, "xplanung_light/bauleitplanung_orga_list.html", {'orga': orga,
                                                                             'beteiligungen': beteiligungen_qs,
                                                                             'bplaene': bplaene,
@@ -1095,67 +1215,74 @@ def bauleitplanung_orga_html(request, pk:int):
                                                                             'user_is_admin': request.user_is_admin,
                                                                             'user_is_toeb_reporter': request.user_is_toeb_reporter,
                                                                             }
-    )
-    
+                  )
+
+
 def about(request):
     return render(request, "xplanung_light/about.html", {'user_is_admin': request.user_is_admin,
                                                          'user_is_toeb_reporter': request.user_is_toeb_reporter,
-                                                        }
-    )
+                                                         }
+                  )
 
 # https://dev.to/balt1794/registration-page-using-usercreationform-django-part-1-21j7
+
+
 def register(request):
     if request.method != 'POST':
         form = RegistrationForm()
     else:
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            #form.save()
+            # form.save()
             user = form.save()
             login(request, user)
             return redirect('home')
         else:
-            #print('form is invalid')
+            # print('form is invalid')
             pass
     context = {'form': form}
     return render(request, 'registration/register.html', context)
+
 
 """
 Funktionen für die Steuerung der Abgabe von Stellungnahmen - insbesondere durch Gast-Nutzer
 """
 
+
 def beitrag_activate(request, **kwargs):
     """
     Funktion um einen BPlanBeteiligungBeitrag (Stellungnahme) zu aktivieren
-    
+
     :param request: Description
     :param kwargs: Description
     """
-    context={}
+    context = {}
     # Switch für den Plantyp
     gemeinden = None
     if kwargs['plantyp'] == 'bplan':
         beitrag_model = BPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
+        gemeinden = AdministrativeOrganization.objects.filter(
+            bplan__id__in=[kwargs['planid']])
     if kwargs['plantyp'] == 'fplan':
         beitrag_model = FPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(fplan__id__in=[kwargs['planid']])
+        gemeinden = AdministrativeOrganization.objects.filter(
+            fplan__id__in=[kwargs['planid']])
     # Zunächst Nur admins der Gebietskörperschaften oder superuser
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
             for user in gemeinde.admin_orga_users.all():
-                if user.user == request.user and user.is_admin:   
-                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird                  
+                if user.user == request.user and user.is_admin:
+                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird
                     access_allowed = True
     else:
         # Superuser dürfen immer freischalten
         access_allowed = True
-    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat 
+    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat
     if request.user.is_anonymous:
         if 'beitrag_generic_id' in request.session.keys():
             if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
-                #print('beitrag id steht in session - activate ...!')
+                # print('beitrag id steht in session - activate ...!')
                 access_allowed = True
     if not access_allowed:
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
@@ -1169,23 +1296,24 @@ def beitrag_activate(request, **kwargs):
     if request.user.is_anonymous:
         context['beitrag'] = beitrag
         context['plantyp'] = kwargs['plantyp']
-        if kwargs['plantyp'] =='bplan':
+        if kwargs['plantyp'] == 'bplan':
             context['beteiligung'] = beitrag.bplan_beteiligung
             context['plan'] = beitrag.bplan_beteiligung.bplan
-        if kwargs['plantyp'] =='fplan':
+        if kwargs['plantyp'] == 'fplan':
             context['beteiligung'] = beitrag.fplan_beteiligung
             context['plan'] = beitrag.fplan_beteiligung.fplan
-        #context={}
-        #context['object'] = beitrag
-        #context['beitrag_generic_id'] = beitrag.generic_id
+        # context={}
+        # context['object'] = beitrag
+        # context['beitrag_generic_id'] = beitrag.generic_id
         return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
     else:
         return redirect("beteiligungbeitrag-list", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
 
+
 def beitrag_withdraw(request, **kwargs):
     """
     Funktion um einen BPlanBeteiligungBeitrag (Stellungnahme) zurückzuziehen
-    
+
     :param request: Description
     :param kwargs: Description
     """
@@ -1193,26 +1321,28 @@ def beitrag_withdraw(request, **kwargs):
     gemeinden = None
     if kwargs['plantyp'] == 'bplan':
         beitrag_model = BPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
+        gemeinden = AdministrativeOrganization.objects.filter(
+            bplan__id__in=[kwargs['planid']])
     if kwargs['plantyp'] == 'fplan':
         beitrag_model = FPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(fplan__id__in=[kwargs['planid']])
+        gemeinden = AdministrativeOrganization.objects.filter(
+            fplan__id__in=[kwargs['planid']])
     # Zunächst Nur admins der Gebietskörperschaften oder superuser
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
             for user in gemeinde.admin_orga_users.all():
-                if user.user == request.user and user.is_admin:   
-                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird                  
+                if user.user == request.user and user.is_admin:
+                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird
                     access_allowed = True
     else:
         # Superuser dürfen immer freischalten
         access_allowed = True
-    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat 
+    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat
     if request.user.is_anonymous:
         if 'beitrag_generic_id' in request.session.keys():
             if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
-                #print('beitrag id steht in session - activate ...!')
+                # print('beitrag id steht in session - activate ...!')
                 access_allowed = True
     if not access_allowed:
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
@@ -1224,26 +1354,27 @@ def beitrag_withdraw(request, **kwargs):
         beitrag.save()
     # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
     if request.user.is_anonymous:
-        context={}
+        context = {}
         context['beitrag'] = beitrag
         context['plantyp'] = kwargs['plantyp']
-        if kwargs['plantyp'] =='bplan':
+        if kwargs['plantyp'] == 'bplan':
             context['beteiligung'] = beitrag.bplan_beteiligung
             context['plan'] = beitrag.bplan_beteiligung.bplan
-        if kwargs['plantyp'] =='fplan':
+        if kwargs['plantyp'] == 'fplan':
             context['beteiligung'] = beitrag.fplan_beteiligung
             context['plan'] = beitrag.fplan_beteiligung.fplan
-        #context={}
-        #context['object'] = beitrag
-        #context['beitrag_generic_id'] = beitrag.generic_id
+        # context={}
+        # context['object'] = beitrag
+        # context['beitrag_generic_id'] = beitrag.generic_id
         return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
     else:
         return redirect("beteiligungbeitrag-list", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
-    
+
+
 def beitrag_reactivate(request, **kwargs):
     """
     Funktion um einen BPlanBeteiligungBeitrag (Stellungnahme) zurückzuziehen
-    
+
     :param request: Description
     :param kwargs: Description
     """
@@ -1251,26 +1382,28 @@ def beitrag_reactivate(request, **kwargs):
     gemeinden = None
     if kwargs['plantyp'] == 'bplan':
         beitrag_model = BPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
+        gemeinden = AdministrativeOrganization.objects.filter(
+            bplan__id__in=[kwargs['planid']])
     if kwargs['plantyp'] == 'fplan':
         beitrag_model = FPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(fplan__id__in=[kwargs['planid']])
+        gemeinden = AdministrativeOrganization.objects.filter(
+            fplan__id__in=[kwargs['planid']])
     # Zunächst Nur admins der Gebietskörperschaften oder superuser
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
             for user in gemeinde.admin_orga_users.all():
-                if user.user == request.user and user.is_admin:   
-                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird                  
+                if user.user == request.user and user.is_admin:
+                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird
                     access_allowed = True
     else:
         # Superuser dürfen immer freischalten
         access_allowed = True
-    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat 
+    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat
     if request.user.is_anonymous:
         if 'beitrag_generic_id' in request.session.keys():
             if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
-                #print('beitrag id steht in session - reactivate ...!')
+                # print('beitrag id steht in session - reactivate ...!')
                 access_allowed = True
     if not access_allowed:
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
@@ -1282,27 +1415,28 @@ def beitrag_reactivate(request, **kwargs):
         beitrag.save()
     # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
     if request.user.is_anonymous:
-        context={}
+        context = {}
         context['beitrag'] = beitrag
         context['plantyp'] = kwargs['plantyp']
-        if kwargs['plantyp'] =='bplan':
+        if kwargs['plantyp'] == 'bplan':
             context['beteiligung'] = beitrag.bplan_beteiligung
             context['plan'] = beitrag.bplan_beteiligung.bplan
-        if kwargs['plantyp'] =='fplan':
+        if kwargs['plantyp'] == 'fplan':
             context['beteiligung'] = beitrag.fplan_beteiligung
             context['plan'] = beitrag.fplan_beteiligung.fplan
-        #context['object'] = beitrag
-        #context['beitrag_generic_id'] = beitrag.generic_id
+        # context['object'] = beitrag
+        # context['beitrag_generic_id'] = beitrag.generic_id
         return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
     else:
         return redirect("beteiligungbeitrag-list", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
+
 
 def beitrag_authenticate(request, **kwargs):
     """
     Funktion zur Authentifizierung eines Gast Nutzers. Die Authentifizierung erfolgt auf Basis der bei der Stellungnahme
     angegebenen EMail-Adresse. Die generic_id des Beitrags wird als Variable in die Session geschrieben und dient
     zur Prüfung der Berechtigung für das Aktivieren/Zurückziehen des Beitrags (Stellungnahme).
-    
+
     :param request: Description
     :param kwargs: Description
     """
@@ -1314,8 +1448,8 @@ def beitrag_authenticate(request, **kwargs):
     beitrag = beitrag_model.objects.get(generic_id=kwargs['generic_id'])
     gast_beitrag_authenticate_form = GastBeitragAuthenticateForm(
         request.POST if request.method == "POST" else None
-        )
-    if request.method =="POST":
+    )
+    if request.method == "POST":
         if gast_beitrag_authenticate_form.is_valid():
             if beitrag.email == gast_beitrag_authenticate_form.cleaned_data['email']:
                 # Speichern der uuid in die Session
@@ -1323,7 +1457,8 @@ def beitrag_authenticate(request, **kwargs):
                 # Weiterleitung zur Detailseite der Stellungnahme
                 return redirect("gastbeteiligungbeitrag-detail", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=beitrag.generic_id)
             else:
-                messages.error(request, 'Die angegebene E-Mail wurde nicht für das Anlegen der Stellungnahme genutzt!')
+                messages.error(
+                    request, 'Die angegebene E-Mail wurde nicht für das Anlegen der Stellungnahme genutzt!')
                 context = {}
                 context['object'] = beitrag
                 context['beitrag_generic_id'] = beitrag.generic_id
@@ -1337,11 +1472,12 @@ def beitrag_authenticate(request, **kwargs):
     context["form"] = gast_beitrag_authenticate_form
     return render(request, "xplanung_light/gastbeteiligungbeitrag_authenticate.html", context)
 
+
 def beitrag_detail(request, **kwargs):
     """
     View für die Detailseite des Beitrags zum Beteiligungsverfahren. Der View dient in erster Linie für die Gast-Nutzer und 
     wird im Gegensatz zum View für die admins per generic_id aufgerufen.
-    
+
     :param request: Description
     :param kwargs: Description
     """
@@ -1349,37 +1485,41 @@ def beitrag_detail(request, **kwargs):
     gemeinden = None
     if kwargs['plantyp'] == 'bplan':
         beitrag_model = BPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(bplan__id__in=[kwargs['planid']])
+        gemeinden = AdministrativeOrganization.objects.filter(
+            bplan__id__in=[kwargs['planid']])
     if kwargs['plantyp'] == 'fplan':
         beitrag_model = FPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(fplan__id__in=[kwargs['planid']])
+        gemeinden = AdministrativeOrganization.objects.filter(
+            fplan__id__in=[kwargs['planid']])
     # Wir brauchen auch das Datum des Beitrags - ziehen wir aus der History
     beitrag = beitrag_model.objects.annotate(
-                    last_changed=Subquery(
-                        beitrag_model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-                    )
-                ).annotate(
-                    last_changed=Subquery(
-                        beitrag_model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
-                    )    
-                ).get(generic_id=kwargs['generic_id'])
+        last_changed=Subquery(
+            beitrag_model.history.filter(id=OuterRef("pk")).order_by(
+                '-history_date').values('history_date')[:1]
+        )
+    ).annotate(
+        last_changed=Subquery(
+            beitrag_model.history.filter(id=OuterRef("pk")).order_by(
+                '-history_date').values('history_date')[:1]
+        )
+    ).get(generic_id=kwargs['generic_id'])
     # Permissions prüfen
     # Nur admins der Gebietskörperschaften oder superuser
     access_allowed = False
     if request.user.is_superuser == False:
         for gemeinde in gemeinden:
             for user in gemeinde.admin_orga_users.all():
-                if user.user == request.user and user.is_admin:   
-                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird                  
+                if user.user == request.user and user.is_admin:
+                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird
                     access_allowed = True
     else:
         # Superuser dürfen immer freischalten
         access_allowed = True
-    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat 
+    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat
     if request.user.is_anonymous:
         if 'beitrag_generic_id' in request.session.keys():
             if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
-                #print('beitrag id steht in session!')
+                # print('beitrag id steht in session!')
                 access_allowed = True
     if not access_allowed:
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
@@ -1387,13 +1527,14 @@ def beitrag_detail(request, **kwargs):
     context = {}
     context['beitrag'] = beitrag
     context['plantyp'] = kwargs['plantyp']
-    if kwargs['plantyp'] =='bplan':
+    if kwargs['plantyp'] == 'bplan':
         context['beteiligung'] = beitrag.bplan_beteiligung
         context['plan'] = beitrag.bplan_beteiligung.bplan
-    if kwargs['plantyp'] =='fplan':
+    if kwargs['plantyp'] == 'fplan':
         context['beteiligung'] = beitrag.fplan_beteiligung
         context['plan'] = beitrag.fplan_beteiligung.fplan
     return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
+
 
 class RequestForRoleConfirm(LoginRequiredMixin, FormView):
     form_class = RequestForRoleConfirmForm
@@ -1411,29 +1552,32 @@ class RequestForRoleConfirm(LoginRequiredMixin, FormView):
         request = RequestForRole.objects.get(id=self.kwargs['pk'])
         contact_org_admin = None
         if not self.request.user.is_superuser:
-            # Check auf Admin-Rolle des Nutzers für jede Organisation 
+            # Check auf Admin-Rolle des Nutzers für jede Organisation
             user_is_admin_for_all = True
             for organization in request.organizations.all():
                 # Check if Eintrag existiert
                 if not AdminOrgaUser.objects.filter(organization=organization, user=self.request.user, is_admin=True).exists():
-                   user_is_admin_for_all = False
-                   break
+                    user_is_admin_for_all = False
+                    break
             if not user_is_admin_for_all:
-                form.add_error(None, "Nutzer ist nicht Administrator für alle beantragten Organisationen - Freigabe kann nicht erfolgen!")
+                form.add_error(
+                    None, "Nutzer ist nicht Administrator für alle beantragten Organisationen - Freigabe kann nicht erfolgen!")
                 return super().form_invalid(form)
             if request.role != "TR":
-                form.add_error(None, "Nutzer kann nur TOEB-Reporter Rollen freischalten - Freigabe kann nicht erfolgen!")
+                form.add_error(
+                    None, "Nutzer kann nur TOEB-Reporter Rollen freischalten - Freigabe kann nicht erfolgen!")
                 return super().form_invalid(form)
             # Kontaktinformationen in View übernehmen damit Antragsteller mit Genehmiger (OrgAdmin) Kontakt aufnehmen kann
             contact_org_admin = self.request.user
         organizations = []
         # Administratorrollen anlegen
         for organization in request.organizations.all():
-            #print(organization)
+            # print(organization)
             # Füge Rolle für Nutzer hinzu
             # get or create !
             try:
-                obj = AdminOrgaUser.objects.get(user=request.owned_by_user, organization=organization)
+                obj = AdminOrgaUser.objects.get(
+                    user=request.owned_by_user, organization=organization)
             except AdminOrgaUser.DoesNotExist:
                 obj = AdminOrgaUser()
                 obj.user = request.owned_by_user
@@ -1448,21 +1592,26 @@ class RequestForRoleConfirm(LoginRequiredMixin, FormView):
         request.delete_reason = 'c'
         request.save()
         request.delete()
-        messages.add_message(self.request, messages.SUCCESS, "Antrag " + str(self.kwargs['pk']) + " wurde bestätigt!")
+        messages.add_message(self.request, messages.SUCCESS,
+                             "Antrag " + str(self.kwargs['pk']) + " wurde bestätigt!")
         # Senden einer EMail mit Benachrichtung an Antragsteller
         # Senden einer EMail mit Benachrichtung an Antragsteller
-        subject = str("XPlanung-light: Ihr Antrag auf Zuweisung der " + request.get_role_display() + "-Rolle vom " + datetime.date.today().strftime('%Y-%m-%d'))
-        html_content = render_to_string("xplanung_light/email/role_antrag_confirm.html", context={"organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'], "contact_org_admin": contact_org_admin, },)
-        text_content = render_to_string("xplanung_light/email/role_antrag_confirm.txt", context={"organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'], "contact_org_admin": contact_org_admin, },)
+        subject = str("XPlanung-light: Ihr Antrag auf Zuweisung der " +
+                      request.get_role_display() + "-Rolle vom " + datetime.date.today().strftime('%Y-%m-%d'))
+        html_content = render_to_string("xplanung_light/email/role_antrag_confirm.html", context={
+                                        "organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'], "contact_org_admin": contact_org_admin, },)
+        text_content = render_to_string("xplanung_light/email/role_antrag_confirm.txt", context={
+                                        "organizations": organizations, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'], "contact_org_admin": contact_org_admin, },)
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
             from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
             to=[str(request.owned_by_user.email),],
-            #bcc=[str(farmshop.contact_email),],
-            reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
+            # bcc=[str(farmshop.contact_email),],
+            reply_to=[
+                settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
         )
-        #email.content_subtype = "text"
+        # email.content_subtype = "text"
         email.attach_alternative(html_content, "text/html")
         email.send(fail_silently=True)
         # TODO
@@ -1485,18 +1634,20 @@ class RequestForRoleRefuse(LoginRequiredMixin, FormView):
         request = RequestForRole.objects.get(id=self.kwargs['pk'])
         contact_org_admin = None
         if not self.request.user.is_superuser:
-            # Check auf Admin-Rolle des Nutzers für jede Organisation 
+            # Check auf Admin-Rolle des Nutzers für jede Organisation
             user_is_admin_for_all = True
             for organization in request.organizations.all():
                 # Check if Eintrag existiert
                 if not AdminOrgaUser.objects.filter(organization=organization, user=self.request.user, is_admin=True).exists():
-                   user_is_admin_for_all = False
-                   break 
+                    user_is_admin_for_all = False
+                    break
             if not user_is_admin_for_all:
-                form.add_error(None, "Nutzer ist nicht Administrator für alle beantragten Organisationen - Zurückweisung kann nicht erfolgen!")
+                form.add_error(
+                    None, "Nutzer ist nicht Administrator für alle beantragten Organisationen - Zurückweisung kann nicht erfolgen!")
                 return super().form_invalid(form)
             if request.role != "TR":
-                form.add_error(None, "Nutzer kann nur TOEB-Reporter Rollen verwalten - Zurückweisung nicht möglich!")
+                form.add_error(
+                    None, "Nutzer kann nur TOEB-Reporter Rollen verwalten - Zurückweisung nicht möglich!")
                 return super().form_invalid(form)
             # Kontaktinformationen in View übernehmen damit Antragsteller mit Genehmiger (OrgAdmin) Kontakt aufnehmen kann
             contact_org_admin = self.request.user
@@ -1504,20 +1655,25 @@ class RequestForRoleRefuse(LoginRequiredMixin, FormView):
         request.delete_reason = 'r'
         request.save()
         request.delete()
-        messages.add_message(self.request, messages.SUCCESS, "Antrag " + str(self.kwargs['pk']) + " wurde zurückgewiesen!")
+        messages.add_message(self.request, messages.SUCCESS, "Antrag " +
+                             str(self.kwargs['pk']) + " wurde zurückgewiesen!")
         # Senden einer EMail mit Benachrichtung an Antragsteller
-        subject = str("XPlanung-light: Ihr Antrag auf Zuweisung der " + request.get_role_display() + "-Rolle vom " + datetime.date.today().strftime('%Y-%m-%d'))
-        html_content = render_to_string("xplanung_light/email/role_antrag_refuse.html", context={"editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'], "contact_org_admin": contact_org_admin, },)
-        text_content = render_to_string("xplanung_light/email/role_antrag_refuse.txt", context={"editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'], "contact_org_admin": contact_org_admin,},)
+        subject = str("XPlanung-light: Ihr Antrag auf Zuweisung der " +
+                      request.get_role_display() + "-Rolle vom " + datetime.date.today().strftime('%Y-%m-%d'))
+        html_content = render_to_string("xplanung_light/email/role_antrag_refuse.html", context={
+                                        "editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'], "contact_org_admin": contact_org_admin, },)
+        text_content = render_to_string("xplanung_light/email/role_antrag_refuse.txt", context={
+                                        "editing_note": request.editing_note, "metadata_contact": settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'], "contact_org_admin": contact_org_admin, },)
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
             from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
             to=[str(request.owned_by_user.email),],
-            #bcc=[str(farmshop.contact_email),],
-            reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
+            # bcc=[str(farmshop.contact_email),],
+            reply_to=[
+                settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
         )
-        #email.content_subtype = "text"
+        # email.content_subtype = "text"
         email.attach_alternative(html_content, "text/html")
         email.send(fail_silently=True)
         # TODO

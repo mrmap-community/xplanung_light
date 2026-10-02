@@ -75,7 +75,7 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         self.assertEqual(response.headers.get('Content-Type'), 'image/png')
 
     # -------------------------------------------------------------------------
-    # 3. Test: WFS GetCapabilities & GetFeature
+    # 3. Test: WFS GetCapabilities & GetFeature OWS pro Orga
     # -------------------------------------------------------------------------
 
     def test_wfs_get_capabilities(self):
@@ -104,21 +104,21 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         # print(response.content)
         self.assertIn('xml', response.headers.get('Content-Type', ''))
 
-    """
-    Dienst für bplan
-    """
     # -------------------------------------------------------------------------
-    # 4. Test: WMS GetCapabilities/GetMap
+    # 4. Test BPlan Aggregat
     # -------------------------------------------------------------------------
     """
     # Testet den WMS GetCapabilities-Request über den View.
-    # Deaktiviert weil er auf github nicht durchgelaufen ist - kann aber auch ein temporäres Problem auf github gewesen sein.
-    # Lokal läuft der Test
+    # Deaktiviert weil er auf github nicht durchgelaufen ist -
+    # lokal läuft der Test auf spatialite problemlos durch
+    # Meldung auf github ubuntu 24.04: 
+    File "/home/runner/work/xplanung_light/xplanung_light/.venv/lib/python3.12/site-packages/mapscript/mapscript.py", line 1612, in OWSDispatch
+    return _mapscript.mapObj_OWSDispatch(self, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    _mapscript.MapServerError: msWMSGetCapabilities(): WMS server error. WMS request not enabled. Check wms/ows_enable_request settings.
     """
 
     def test_wms_get_capabilities_bplan(self):
-
-        # Ersetzen Sie 'wms_view_name' durch Ihren tatsächlichen URL-Namen
         url = reverse('plan-map', kwargs={'plantyp': 'bplan'})
         response = self.client.get(url, {
             'SERVICE': 'WMS',
@@ -150,12 +150,11 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         self.assertEqual(response.headers.get('Content-Type'), 'image/png')
 
     # -------------------------------------------------------------------------
-    # 5. Test: WMS GetCapabilities
+    # 5. Test: FPlan Aggregat
     # -------------------------------------------------------------------------
 
     def test_wms_get_capabilities_fplan(self):
         """Testet den WMS GetCapabilities-Request über den View."""
-        # Ersetzen Sie 'wms_view_name' durch Ihren tatsächlichen URL-Namen
         url = reverse('plan-map', kwargs={'plantyp': 'fplan'})
         response = self.client.get(url, {
             'SERVICE': 'WMS',
