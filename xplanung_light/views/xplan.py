@@ -1,9 +1,9 @@
 from django.http import HttpResponseRedirect
-from xplanung_light.forms import  BPlanCreateForm, BPlanUpdateForm
+from xplanung_light.forms import BPlanCreateForm, BPlanUpdateForm
 from django.views.generic import (CreateView, UpdateView, DeleteView)
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, FPlan, FPlanSpezExterneReferenz
-#from xplanung_light.views.bplan import BPlanDetailXPlanLightView
-#from xplanung_light.views.fplan import FPlanDetailXPlanLightView
+# from xplanung_light.views.bplan import BPlanDetailXPlanLightView
+# from xplanung_light.views.fplan import FPlanDetailXPlanLightView
 from django.urls import reverse_lazy
 from leaflet.forms.widgets import LeafletWidget
 from django_tables2 import SingleTableView, SingleTableMixin
@@ -27,7 +27,8 @@ from django.db.models import Subquery, OuterRef, Q
 from django.contrib.gis.db.models import Extent
 from django.http import FileResponse
 import json
-import io, zipfile
+import io
+import zipfile
 from pathlib import Path
 from django.core.exceptions import PermissionDenied
 import uuid
@@ -40,9 +41,11 @@ from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.views.user import ExtentUserOrgaInfo
 from xplanung_light.views.mixins import GemeindeAdminRequiredMixin, PublicOrGemeindeAdminRequiredMixin
 
-def qualify_gml_geometry(gml_from_db:str):
-    ET.register_namespace('gml','http://www.opengis.net/gml/3.2')
-    root = defused_ET.fromstring("<?xml version='1.0' encoding='UTF-8'?><snippet xmlns:gml='http://www.opengis.net/gml/3.2'>" + gml_from_db + "</snippet>")
+
+def qualify_gml_geometry(gml_from_db: str):
+    ET.register_namespace('gml', 'http://www.opengis.net/gml/3.2')
+    root = defused_ET.fromstring(
+        "<?xml version='1.0' encoding='UTF-8'?><snippet xmlns:gml='http://www.opengis.net/gml/3.2'>" + gml_from_db + "</snippet>")
     ns = {
         'gml': 'http://www.opengis.net/gml/3.2',
     }
@@ -55,23 +58,24 @@ def qualify_gml_geometry(gml_from_db:str):
         multi_polygon_element = root.find('gml:MultiSurface', ns)
         uuid_multisurface = uuid.uuid4()
         multi_polygon_element.set("gml:id", "GML_" + str(uuid_multisurface))
-        # Füge gml_id Attribute hinzu - besser diese als Hash aus den Geometrien zu rechnen, oder in Zukunft generic_ids der Bereiche zu verwenden 
-        polygons = root.findall('gml:MultiSurface/gml:surfaceMember/gml:Polygon', ns)
+        # Füge gml_id Attribute hinzu - besser diese als Hash aus den Geometrien zu rechnen, oder in Zukunft generic_ids der Bereiche zu verwenden
+        polygons = root.findall(
+            'gml:MultiSurface/gml:surfaceMember/gml:Polygon', ns)
         for polygon in polygons:
             uuid_polygon = uuid.uuid4()
             polygon.set("gml:id", "GML_" + str(uuid_polygon))
         return ET.tostring(multi_polygon_element, encoding="utf-8", method="xml").decode('utf8')
     else:
         polygon_element = root.find('gml:Polygon', ns)
-        #polygon_element.set("xmlns:gml", "http://www.opengis.net/gml/3.2")   
+        # polygon_element.set("xmlns:gml", "http://www.opengis.net/gml/3.2")
         uuid_polygon = uuid.uuid4()
         polygon_element.set("gml:id", "GML_" + str(uuid_polygon))
         # Ausgabe der Geometrie in ein XML-Snippet - erweitert um den MultiSurface/surfaceMember Rahmen
-        ET.dump(polygon_element) 
+        # ET.dump(polygon_element)
         return '<gml:MultiSurface srsName="EPSG:25832"><gml:surfaceMember>' + ET.tostring(polygon_element, encoding="utf-8", method="xml").decode('utf8') + '</gml:surfaceMember></gml:MultiSurface>'
 
 
-class XPlanCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
+class XPlanCreateView(LoginRequiredMixin, ExtentUserOrgaInfo, CreateView):
     """
     Anlagen eines XPlanPlan-Datensatzes über Formular.
     Generische Klasse zur Vererbung an BPlan und FPlan
@@ -81,7 +85,7 @@ class XPlanCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
     model_name_lower = str(model._meta).lower()
     # copy fields to form class - cause form class will handle the form now!
     # fields = ["name", "nummer", "geltungsbereich", "gemeinde", "planart", "inkrafttretens_datum", "staedtebaulicher_vetrag"]
-    success_url = reverse_lazy(model_name_lower + "-list") 
+    success_url = reverse_lazy(model_name_lower + "-list")
 
     def get_context_data(self, **kwargs):
         # Get the current context from the parent's get_context_data method
@@ -92,7 +96,7 @@ class XPlanCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
         if 'further_base_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
             context['further_base_layers'] = settings.XPLANUNG_LIGHT_CONFIG['further_base_layers']
         if 'overlay_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
-            context['overlay_layers'] = settings.XPLANUNG_LIGHT_CONFIG['overlay_layers']   
+            context['overlay_layers'] = settings.XPLANUNG_LIGHT_CONFIG['overlay_layers']
         return context
 
     def get_form(self, form_class=None):
@@ -102,16 +106,19 @@ class XPlanCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
         """
         form = super().get_form(self.form_class)
         if self.request.user.is_superuser:
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(
+                bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
         else:
             """
             Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *admin_orga_users*
             und auf die Eigenschaft *is_admin*
             """
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
-        form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(
+                admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
+        form.fields['geltungsbereich'].widget = LeafletWidget(
+            attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%', 'MINIMAP': True})
         return form
-    
+
     def form_valid(self, form):
         if self.request.user.is_superuser == False:
             # Überprüfen, ob der jeweilige Nutzer auch als Administrator für jede Gemeinde eingetragen ist
@@ -119,14 +126,15 @@ class XPlanCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
                 user_is_admin = False
                 for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
-                        user_is_admin = True 
+                        user_is_admin = True
                 if user_is_admin == False:
-                    form.add_error("gemeinde", "Nutzer ist kein Administrator für die dem Plan-Objekt zugewiesene Gemeinde *" + str(gemeinde) + "* - Plan kann nicht angelegt werden!")
-                    return super().form_invalid(form)
+                    form.add_error("gemeinde", "Nutzer ist kein Administrator für die dem Plan-Objekt zugewiesene Gemeinde *" + str(
+                        gemeinde) + "* - Plan kann nicht angelegt werden!")  # pragma: no cover
+                    return super().form_invalid(form)  # pragma: no cover
         return super().form_valid(form)
-    
 
-class XPlanUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+
+class XPlanUpdateView(LoginRequiredMixin, GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, SuccessMessageMixin, UpdateView):
     """
     Editieren eines XPlan-Datensatzes.
     """
@@ -134,14 +142,15 @@ class XPlanUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequi
     model = BPlan
     model_name_lower = str(model._meta.model_name).lower()
 
-    success_url = reverse_lazy(model_name_lower + "-list") 
+    success_url = reverse_lazy(model_name_lower + "-list")
     success_message = "Plan wurde aktualisiert!"
 
     def get_form(self, form_class=None):
         success_url = self.get_success_url()
         form = super().get_form(form_class)
         if self.request.user.is_superuser:
-            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
+            form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.annotate(
+                bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
         else:
             # Deaktivieren des Gemeinde Fields - falls auch noch andere Gemeinde am Plan hängt, für die der aktuelle Nutzer kein admin ist
             object = self.get_object()
@@ -150,7 +159,7 @@ class XPlanUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequi
                 user_is_admin = False
                 for user in gemeinde.admin_orga_users.all():
                     if user.user == self.request.user and user.is_admin:
-                        user_is_admin = True 
+                        user_is_admin = True
                 user_orga_admin.append(user_is_admin)
             if all(user_orga_admin) == False:
                 form.fields['gemeinde'].disabled = True
@@ -159,20 +168,31 @@ class XPlanUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequi
                 """
                 Wir filtern hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *admin_orga_users* und auf die Eigenschaft *is_admin*
                 """
-                form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
-        form.fields['geltungsbereich'].widget = LeafletWidget(attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%','MINIMAP': True})
+                form.fields['gemeinde'].queryset = form.fields['gemeinde'].queryset.filter(
+                    admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).annotate(bbox=(Extent("geometry"))).only("pk", "name", "name_part", "type")
+        form.fields['geltungsbereich'].widget = LeafletWidget(
+            attrs={'geom_type': 'MultiPolygon', 'map_height': '400px', 'map_width': '90%', 'MINIMAP': True})
         return form
-    
-    def get_context_data(self, **kwargs):
-        # Get the current context from the parent's get_context_data method
-        context = super().get_context_data(**kwargs)
-        if 'further_base_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
-            context['further_base_layers'] = settings.XPLANUNG_LIGHT_CONFIG['further_base_layers']
-        if 'overlay_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
-            context['overlay_layers'] = settings.XPLANUNG_LIGHT_CONFIG['overlay_layers'] 
-        return context
 
     def form_valid(self, form):
+        """
+        Soll dazu dienen, dass Nutzer nur solche Gemeinden hinzufügen darf, für die er Admin ist. 
+        Er darf die Gemeinden nicht deselktieren, für die er kein Admin ist.
+        """
+
+        # Vorschlag von Claude als Ersatz für bisherige Funktion - TODO testen
+        if not self.request.user.is_superuser:
+            current = set(self.object.gemeinde.all())
+            submitted = set(form.cleaned_data['gemeinde'])
+            for gemeinde, verb in ([(g, "hinzugefügt") for g in submitted - current]
+                                   + [(g, "entfernt") for g in current - submitted]):
+                # Über http nicht erreicbar!
+                if not gemeinde.admin_orga_users.filter(user=self.request.user, is_admin=True).exists():  # pragma: no cover
+                    form.add_error("gemeinde", f"Die Gemeinde *{gemeinde}* darf nicht {verb} werden, "
+                                   "da Sie dort kein Administrator sind.")
+                    return self.form_invalid(form)
+
+        """
         if not self.request.user.is_superuser:
             # Der Nutzer darf nur Gemeinden hinzufügen,
             # für die er selbst Admin ist.
@@ -188,7 +208,8 @@ class XPlanUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequi
                         form.add_error(
                             "gemeinde",
                             "Die Gemeinde *{}* darf nicht geändert werden, "
-                            "da Sie dort kein Administrator sind.".format(gemeinde)
+                            "da Sie dort kein Administrator sind.".format(
+                                gemeinde)
                         )
                     else:
                         # Neue Gemeinde darf nur hinzugefügt werden,
@@ -196,7 +217,8 @@ class XPlanUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequi
                         form.add_error(
                             "gemeinde",
                             "Die Gemeinde *{}* darf nicht hinzugefügt werden, "
-                            "da Sie dort kein Administrator sind.".format(gemeinde)
+                            "da Sie dort kein Administrator sind.".format(
+                                gemeinde)
                         )
                     return self.form_invalid(form)
             # Prüfen, ob bestehende Gemeinden entfernt wurden,
@@ -215,6 +237,7 @@ class XPlanUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequi
                         "da Sie dort kein Administrator sind.".format(gemeinde)
                     )
                     return self.form_invalid(form)
+        """
         self.success_message = (
             "Plan *" + form.cleaned_data['name'] + "* aktualisiert!"
         )
@@ -236,12 +259,12 @@ class XPlanUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequi
         self.success_message = "Plan *" + form.cleaned_data['name'] + "* aktualisiert!" 
         return super().form_valid(form)
     """
-    
+
     def get_object(self, queryset=None):
         object = super().get_object(queryset)
         self.check_gemeinde_admin(object)
         return object
-    
+
     """
     def get_object(self):
         object = super().get_object()
@@ -257,38 +280,41 @@ class XPlanUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequi
     def get_queryset(self):
         qs = super().get_queryset()
         qs = qs.annotate(
-                    count_attachments=Count('attachments', distinct=True)
-                ).annotate(
-                    count_beteiligungen=Count('beteiligungen', distinct=True)
-                ).annotate(
-                    count_uvps=Count('uvps', distinct=True)
-                )
+            count_attachments=Count('attachments', distinct=True)
+        ).annotate(
+            count_beteiligungen=Count('beteiligungen', distinct=True)
+        ).annotate(
+            count_uvps=Count('uvps', distinct=True)
+        )
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        if 'further_base_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
+            context['further_base_layers'] = settings.XPLANUNG_LIGHT_CONFIG['further_base_layers']
+        if 'overlay_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
+            context['overlay_layers'] = settings.XPLANUNG_LIGHT_CONFIG['overlay_layers']
         # Den letzten Eintrag aus der Historie für dieses Objekt abfragen
         # self.object wird von der CBV automatisch bereitgestellt
         latest_history = self.object.history.order_by('-history_date').first()
-        #latest_history = self.object.history.most_recent()
+        # latest_history = self.object.history.most_recent()
         if latest_history:
             # Daten separat in den Kontext packen
             context['letzte_aenderung_am'] = latest_history.history_date
             context['bearbeitet_von'] = latest_history.history_user
-        else:
+        else:  # pragma: no cover
             context['letzte_aenderung_am'] = None
             context['bearbeitet_von'] = None
-            
         return context
 
-class XPlanDeleteView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixin, DeleteView):
+
+class XPlanDeleteView(LoginRequiredMixin, GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
     """
     Löschen eines XPlan-Datensatzes.
     """
     model = BPlan
     model_name_lower = str(model._meta.model_name).lower()
     success_message = "Plan wurde gelöscht!"
-
 
     def form_valid(self, form):
         self.object = self.get_object()
@@ -347,11 +373,11 @@ class XPlanDeleteView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequi
     """
 
     def get_success_url(self):
-        return reverse_lazy(self.model_name_lower+ "-list")
+        return reverse_lazy(self.model_name_lower + "-list")
 
 
-#class XPlanListView(LoginRequiredMixin, FilterView, SingleTableView):
-class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, FilterView):
+# class XPlanListView(LoginRequiredMixin, FilterView, SingleTableView):
+class XPlanListView(LoginRequiredMixin, ExtentUserOrgaInfo, SingleTableMixin, FilterView):
     """
     Liste der Plan-Datensätze.
 
@@ -362,17 +388,17 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
     model_name_lower = str(model._meta.model_name).lower()
     table_class = BPlanTable
     template_name = 'xplanung_light/' + model_name_lower + '_list.html'
-    success_url = reverse_lazy(model_name_lower + "-list") 
+    success_url = reverse_lazy(model_name_lower + "-list")
     filterset_class = BPlanFilter
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        #print("User is some admin: " + str(context['user_is_admin']))
-        #print("User is some toeb reporter: " + str(context['user_is_toeb_reporter']))
+        # print("User is some admin: " + str(context['user_is_admin']))
+        # print("User is some toeb reporter: " + str(context['user_is_toeb_reporter']))
         # TODO: Anstatt object_list.data vlt. table.data? ... - dann haben wir mehr Einfluss auf die Darstellung im Leaflet Client
-        #context["markers"] = json.loads(
+        # context["markers"] = json.loads(
         #    serialize("geojson", context['table'].page.object_list.data, fields=["id", "name", "pk", "planart"], geometry_field='geltungsbereich')
-        #)
+        # )
         # Alternativ alle features in eine Collection überführen und vereinfachen ...
         featurecollection = {}
         featurecollection['type'] = "FeatureCollection"
@@ -396,7 +422,8 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
             # Zähle die Stützpunkte der generalisierten Geometrie, wenn unter 5, dann sollte die Geometrie so ausgeliefert werden, wie sie ist
             # Simplify beschleunigt den View um fast 40% - je nach Komplexität der Geometrien
             if geosgeometry.simplify(0.0005).num_coords >= 5:
-                feature['geometry'] = json.loads(geosgeometry.simplify(0.0005).json)
+                feature['geometry'] = json.loads(
+                    geosgeometry.simplify(0.0005).json)
             else:
                 feature['geometry'] = json.loads(geosgeometry.json)
             featurecollection['features'].append(feature)
@@ -405,14 +432,15 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
         if 'further_base_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
             context['further_base_layers'] = settings.XPLANUNG_LIGHT_CONFIG['further_base_layers']
         return context
-    
+
     # https://www.geeksforgeeks.org/python/filter-objects-with-count-annotation-in-django/
     def get_queryset(self):
         if self.request.user.is_superuser:
             if self.model_name_lower == 'bplan':
                 qs = self.model.objects.prefetch_related('gemeinde').distinct().annotate(
                     last_changed=Subquery(
-                        self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                        self.model.history.filter(id=OuterRef("pk")).order_by(
+                            '-history_date').values('history_date')[:1]
                     )
                 ).order_by(
                     '-last_changed'
@@ -425,7 +453,8 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
                 ).annotate(
                     count_current_beteiligungen=Count(
                         'beteiligungen', distinct=True, filter=(
-                            Q(beteiligungen__end_datum__gte=timezone.now()) & Q(beteiligungen__start_datum__lte=timezone.now())
+                            Q(beteiligungen__end_datum__gte=timezone.now()) & Q(
+                                beteiligungen__start_datum__lte=timezone.now())
                         )
                     )
                 ).annotate(
@@ -434,7 +463,8 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
             if self.model_name_lower == 'fplan':
                 qs = self.model.objects.prefetch_related('gemeinde').distinct().annotate(
                     last_changed=Subquery(
-                        self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                        self.model.history.filter(id=OuterRef("pk")).order_by(
+                            '-history_date').values('history_date')[:1]
                     )
                 ).order_by('-last_changed').annotate(
                     bbox=Envelope("geltungsbereich")
@@ -445,7 +475,8 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
                 ).annotate(
                     count_current_beteiligungen=Count(
                         'beteiligungen', distinct=True, filter=(
-                            Q(beteiligungen__end_datum__gte=timezone.now()) & Q(beteiligungen__start_datum__lte=timezone.now())
+                            Q(beteiligungen__end_datum__gte=timezone.now()) & Q(
+                                beteiligungen__start_datum__lte=timezone.now())
                         )
                     )
                 ).annotate(
@@ -459,8 +490,9 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
                 ).distinct().prefetch_related('gemeinde').annotate(
                     last_changed=Subquery(
                         # user ist Organisation zugewiesen - ohen id_admin=True
-                        #qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
-                        self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                        # qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+                        self.model.history.filter(id=OuterRef("pk")).order_by(
+                            '-history_date').values('history_date')[:1]
                     )
                 ).order_by('-last_changed').annotate(
                     bbox=Envelope("geltungsbereich")
@@ -471,7 +503,8 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
                 ).annotate(
                     count_current_beteiligungen=Count(
                         'beteiligungen', distinct=True, filter=(
-                            Q(beteiligungen__end_datum__gte=timezone.now()) & Q(beteiligungen__start_datum__lte=timezone.now())
+                            Q(beteiligungen__end_datum__gte=timezone.now()) & Q(
+                                beteiligungen__start_datum__lte=timezone.now())
                         )
                     )
                 ).annotate(
@@ -483,8 +516,9 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
                 ).distinct().prefetch_related('gemeinde').annotate(
                     last_changed=Subquery(
                         # user ist Organisation zugewiesen - ohen id_admin=True
-                        #qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
-                        self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                        # qs = BPlan.objects.filter(gemeinde__users = self.request.user).distinct().prefetch_related('gemeinde').annotate(last_changed=Subquery(
+                        self.model.history.filter(id=OuterRef("pk")).order_by(
+                            '-history_date').values('history_date')[:1]
                     )
                 ).order_by('-last_changed').annotate(
                     bbox=Envelope("geltungsbereich")
@@ -495,7 +529,8 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
                 ).annotate(
                     count_current_beteiligungen=Count(
                         'beteiligungen', distinct=True, filter=(
-                            Q(beteiligungen__end_datum__gte=timezone.now()) & Q(beteiligungen__start_datum__lte=timezone.now())
+                            Q(beteiligungen__end_datum__gte=timezone.now()) & Q(
+                                beteiligungen__start_datum__lte=timezone.now())
                         )
                     )
                 ).annotate(
@@ -507,7 +542,7 @@ class XPlanListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableMixin, Fi
     def get_table_pagination(self, table):
         # Wert aus GET holen, Standard ist 10
         per_page = self.request.GET.get("per_page", 10)
-        
+
         # Sicherstellen, dass nur gültige Zahlen verwendet werden
         try:
             per_page = int(per_page)
@@ -527,17 +562,17 @@ class XPlanPublicListView(SingleTableMixin, FilterView):
     model_name_lower = str(model._meta.model_name).lower()
     table_class = BPlanPublicTable
     template_name = 'xplanung_light/' + model_name_lower + '_list.html'
-    success_url = reverse_lazy(model_name_lower + "-list") 
+    success_url = reverse_lazy(model_name_lower + "-list")
     filterset_class = BPlanPublicFilter
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Für die öffentlich zugänglichen Listen brauchen wir auch die Gesamtzahl aller 'public' Pläne
-        #context['number_plans'] = self.model.objects.filter(public=True).only('pk').count()
+        # context['number_plans'] = self.model.objects.filter(public=True).only('pk').count()
         # TODO: Anstatt object_list.data vlt. table.data? ... - dann haben wir mehr Einfluss auf die Darstellung im Leaflet Client
-        #context["markers"] = json.loads(
+        # context["markers"] = json.loads(
         #    serialize("geojson", context['table'].page.object_list.data, fields=["id", "name", "pk", "planart"], geometry_field='geltungsbereich')
-        #)
+        # )
         # Alternativ alle features in eine Collection überführen und vereinfachen ...
         featurecollection = {}
         featurecollection['type'] = "FeatureCollection"
@@ -559,7 +594,8 @@ class XPlanPublicListView(SingleTableMixin, FilterView):
             # Alternativ - geometry über geos vereinfachen ;-)
             geosgeometry = GEOSGeometry(plan.geltungsbereich)
             if geosgeometry.simplify(0.0005).num_coords >= 5:
-                feature['geometry'] = json.loads(geosgeometry.simplify(0.0005).json)
+                feature['geometry'] = json.loads(
+                    geosgeometry.simplify(0.0005).json)
             else:
                 feature['geometry'] = json.loads(geosgeometry.json)
             featurecollection['features'].append(feature)
@@ -568,12 +604,13 @@ class XPlanPublicListView(SingleTableMixin, FilterView):
         if 'further_base_layers' in settings.XPLANUNG_LIGHT_CONFIG.keys():
             context['further_base_layers'] = settings.XPLANUNG_LIGHT_CONFIG['further_base_layers']
         return context
-    
+
     # https://www.geeksforgeeks.org/python/filter-objects-with-count-annotation-in-django/
     def get_queryset(self):
         qs = self.model.objects.prefetch_related('gemeinde').distinct().filter(public=True).annotate(
             last_changed=Subquery(
-                self.model.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                self.model.history.filter(id=OuterRef("pk")).order_by(
+                    '-history_date').values('history_date')[:1]
             )
         ).order_by(
             '-last_changed'
@@ -582,7 +619,8 @@ class XPlanPublicListView(SingleTableMixin, FilterView):
         ).annotate(
             count_current_beteiligungen=Count(
                 'beteiligungen', distinct=True, filter=(
-                    Q(beteiligungen__end_datum__gte=timezone.now()) & Q(beteiligungen__start_datum__lte=timezone.now())
+                    Q(beteiligungen__end_datum__gte=timezone.now()) & Q(
+                        beteiligungen__start_datum__lte=timezone.now())
                 )
             )
         )
@@ -614,23 +652,25 @@ class XPlanListViewHtml(FilterView, ListView):
 class XPlanDetailView(PublicOrGemeindeAdminRequiredMixin, DetailView):
     model = BPlan
     model_name_lower = str(model._meta.model_name).lower()
-    
+
     def get_queryset(self):
         # Erweiterung der auszulesenden Objekte um eine transformierte Geomtrie im Format GML 3
         queryset = super().get_queryset()
         return queryset
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Geometrien 
-        ogr_geom = OGRGeometry(str(context[self.model_name_lower].geltungsbereich), srs=4326)
+        # Geometrien
+        ogr_geom = OGRGeometry(
+            str(context[self.model_name_lower].geltungsbereich), srs=4326)
         offset = 0.01
         extent0 = float(ogr_geom.extent[0]) - offset
         extent1 = float(ogr_geom.extent[1]) - offset
         extent2 = float(ogr_geom.extent[2]) + offset
         extent3 = float(ogr_geom.extent[3]) + offset
-        context['wgs84_extent'] = [ extent0, extent1, extent2, extent3]
-        ct = CoordTransform(SpatialReference(4326, srs_type='epsg'), SpatialReference(25832, srs_type='epsg'))
+        context['wgs84_extent'] = [extent0, extent1, extent2, extent3]
+        ct = CoordTransform(SpatialReference(
+            4326, srs_type='epsg'), SpatialReference(25832, srs_type='epsg'))
         # Transformation nach EPSG:25832
         ogr_geom.transform(ct)
         # Speichern des Extents in den Context
@@ -639,7 +679,7 @@ class XPlanDetailView(PublicOrGemeindeAdminRequiredMixin, DetailView):
         extent1 = float(ogr_geom.extent[1]) - offset
         extent2 = float(ogr_geom.extent[2]) + offset
         extent3 = float(ogr_geom.extent[3]) + offset
-        # Um Verzerrungen zu vermeiden - Ausgabe soll immer in einer festen Größe erfolgen 
+        # Um Verzerrungen zu vermeiden - Ausgabe soll immer in einer festen Größe erfolgen
         # 200 x 200
         dx = extent2 - extent0
         dy = extent3 - extent1
@@ -651,8 +691,9 @@ class XPlanDetailView(PublicOrGemeindeAdminRequiredMixin, DetailView):
             d = dy - dx
             extent2 = extent2 + d / 2
             extent0 = extent0 - d / 2
-        context['extent'] = [ extent0, extent1, extent2, extent3]
-        combined_geometry = context[self.model_name_lower].gemeinde.all().aggregate(bereich=Union('geometry'))['bereich']
+        context['extent'] = [extent0, extent1, extent2, extent3]
+        combined_geometry = context[self.model_name_lower].gemeinde.all(
+        ).aggregate(bereich=Union('geometry'))['bereich']
         if combined_geometry:
             ogr_gemeinde_geom = OGRGeometry(str(combined_geometry), srs=4326)
             ogr_gemeinde_geom.transform(ct)
@@ -671,33 +712,36 @@ class XPlanDetailView(PublicOrGemeindeAdminRequiredMixin, DetailView):
                 d = dy - dx
                 extent2 = extent2 + d / 2
                 extent0 = extent0 - d / 2
-            context['gemeinden_extent'] = [extent0, extent1, extent2, extent3]    
+            context['gemeinden_extent'] = [extent0, extent1, extent2, extent3]
         else:
             context['gemeinden_extent'] = None
         return context
 
 
-class XPlanDetailXPlanLightView(XPlanDetailView):  
+class XPlanDetailXPlanLightView(XPlanDetailView):
 
     def get_queryset(self):
         # Erweiterung der auszulesenden Objekte um eine transformierte Geomtrie im Format GML 3
-        queryset = super().get_queryset().annotate(geltungsbereich_gml_25832=AsGML(Transform("geltungsbereich", 25832), version=3)).annotate(geltungsbereich_gml_4326=AsGML("geltungsbereich", version=3))
+        queryset = super().get_queryset().annotate(geltungsbereich_gml_25832=AsGML(Transform("geltungsbereich",
+                                                                                             25832), version=3)).annotate(geltungsbereich_gml_4326=AsGML("geltungsbereich", version=3))
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Um einen XPlanung-konformen Auszug zu bekommen, werden gml_id(s) verwendet.
-        # Es handelt sich um uuids, die noch das Prefix "GML_" bekommen. Grundsätzlich sollten die 
-        # aus den Daten in der DB stammen und dort vergeben werden. 
+        # Es handelt sich um uuids, die noch das Prefix "GML_" bekommen. Grundsätzlich sollten die
+        # aus den Daten in der DB stammen und dort vergeben werden.
         # Im ersten Schritt synthetisieren wir sie einfach ;-)
         context['auszug_uuid'] = "GML_" + str(uuid.uuid4())
         context[self.model_name_lower + '_uuid'] = "GML_" + str(uuid.uuid4())
         # Irgendwie gibt es keine django model function um direkt den Extent der Geometrie zu erhalten. Daher nutzen wir hier gdal
         # und Transformieren die Daten erneut im RAM
         # Definition der Transformation (Daten sind immer in WGS 84 - 4326)
-        ct = CoordTransform(SpatialReference(4326, srs_type='epsg'), SpatialReference(25832, srs_type='epsg'))
+        ct = CoordTransform(SpatialReference(
+            4326, srs_type='epsg'), SpatialReference(25832, srs_type='epsg'))
         # OGRGeoemtry Objekt erstellen
-        ogr_geom = OGRGeometry(str(context[self.model_name_lower].geltungsbereich), srs=4326)
+        ogr_geom = OGRGeometry(
+            str(context[self.model_name_lower].geltungsbereich), srs=4326)
         context['wgs84_extent'] = ogr_geom.extent
         # Transformation nach EPSG:25832
         ogr_geom.transform(ct)
@@ -706,55 +750,66 @@ class XPlanDetailXPlanLightView(XPlanDetailView):
         # Übergabe der Informationen aus der setings.py an das Template
         context['metadata_contact'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']
         context['metadata_keywords'] = settings.XPLANUNG_LIGHT_CONFIG['metadata_keywords']
-        # Ausgabe der GML Variante zu Testzwecken 
+        # Ausgabe der GML Variante zu Testzwecken
         # print(context['bplan'].geltungsbereich_gml_25832)
         # Da die GML Daten nicht alle Attribute beinhalten, die XPlanung fordert, müssen wir sie anpassen, bzw. umschreiben
         # Hierzu nutzen wir die Funktion qualify_gml_geometry
-        context['multisurface_geometry_25832'] = qualify_gml_geometry(context[self.model_name_lower].geltungsbereich_gml_25832)
-        context['multisurface_geometry_4326'] = qualify_gml_geometry(context[self.model_name_lower].geltungsbereich_gml_4326)
+        context['multisurface_geometry_25832'] = qualify_gml_geometry(
+            context[self.model_name_lower].geltungsbereich_gml_25832)
+        context['multisurface_geometry_4326'] = qualify_gml_geometry(
+            context[self.model_name_lower].geltungsbereich_gml_4326)
         if self.model_name_lower == 'bplan':
-            relative_url = reverse('bplan-export-xplan-raster-6', kwargs={'pk': context[self.model_name_lower].id})
+            relative_url = reverse(
+                'bplan-export-xplan-raster-6', kwargs={'pk': context[self.model_name_lower].id})
         if self.model_name_lower == 'fplan':
-            # TODO adopt
-            relative_url = reverse('bplan-export-xplan-raster-6', kwargs={'pk': context[self.model_name_lower].id})
-        relative_url = reverse('bplan-export-xplan-raster-6', kwargs={'pk': context[self.model_name_lower].id})
-        context['iso19139_url']= self.request.build_absolute_uri(relative_url)
+            relative_url = reverse(
+                'fplan-export-xplan-raster-6', kwargs={'pk': context[self.model_name_lower].id})
+        context['iso19139_url'] = self.request.build_absolute_uri(relative_url)
         # Übergabe der attachments
         if self.model_name_lower == 'bplan':
-            context['attachments'] = BPlanSpezExterneReferenz.objects.filter(bplan=self.kwargs['pk'])
+            context['attachments'] = BPlanSpezExterneReferenz.objects.filter(
+                bplan=self.kwargs['pk'])
         if self.model_name_lower == 'fplan':
             # TODO adopt
-            context['attachments'] = FPlanSpezExterneReferenz.objects.filter(fplan=self.kwargs['pk'])   
+            context['attachments'] = FPlanSpezExterneReferenz.objects.filter(
+                fplan=self.kwargs['pk'])
         # Test ob ein Geotiff als Anlage vorhanden ist falls ja, wird das zusätzlich als spezielles refScan Objekt nach dem Geltungsbereich eingefügt
-        for attachment in context['attachments']:
-            if attachment.typ == '99999':
-                context['ref_scan'] = attachment
-                context['bereich_0_uuid'] = "GML_" + str(uuid.uuid4())
-            else:
-                context['ref_scan'] = None
+        context['ref_scan'] = next(
+            (a for a in context['attachments'] if a.typ == '99999'), None)
+        if context['ref_scan']:
+            context['bereich_0_uuid'] = "GML_" + str(uuid.uuid4())
+        # for attachment in context['attachments']:
+        #    if attachment.typ == '99999':
+        #        context['ref_scan'] = attachment
+        #        context['bereich_0_uuid'] = "GML_" + str(uuid.uuid4())
+        #    else:
+        #        context['ref_scan'] = None
         # TODO: Überschreiben des xplan gml mit neuen Inhalten - Anlagen, Datumswerten, ...
         if context[self.model_name_lower].xplan_gml:
-            #print("Ausgabe des gespeicherten/hochgeladenen GML - danach Überschreiben mit Inhalten aus der Datenbank")
+            # print("Ausgabe des gespeicherten/hochgeladenen GML - danach Überschreiben mit Inhalten aus der Datenbank")
             if self.model_name_lower == 'bplan':
-                context[self.model_name_lower].xplan_gml = XPlanung.proxy_bplan_gml(bplan_id=context[self.model_name_lower].id)
+                context[self.model_name_lower].xplan_gml = XPlanung.proxy_bplan_gml(
+                    bplan_id=context[self.model_name_lower].id)
             if self.model_name_lower == 'fplan':
                 # TODO adopt
-                context[self.model_name_lower].xplan_gml = XPlanung.proxy_fplan_gml(context[self.model_name_lower].id)    
+                context[self.model_name_lower].xplan_gml = XPlanung.proxy_fplan_gml(
+                    context[self.model_name_lower].id)
         return context
 
     def dispatch(self, *args, **kwargs):
         response = super().dispatch(*args, **kwargs)
         response['Content-type'] = "application/xml"  # set header
         return response
-    
 
-class XPlanDetailXPlanLightZipView(XPlanDetailView):  
+
+class XPlanDetailXPlanLightZipView(XPlanDetailView):
     """
     Erzeugt eine ZIP-Datei mit allen für XPlanung relevanten Dateien.
 
     Die GML-Datei wird über die Class-based View BPlanDetailXPlanLightView erzeugt.
     Die Anhänge werden automatisch aus den BPlanSpezExterneReferenz-Objekten generiert.
     """
+
     def dispatch(self, *args, **kwargs):
         response = super().dispatch(*args, **kwargs)
         # The parent mixin may terminate the request with an authentication
@@ -766,37 +821,42 @@ class XPlanDetailXPlanLightZipView(XPlanDetailView):
             class test(XPlanDetailXPlanLightView):
                 model = BPlan
                 model_name_lower = str(model._meta.model_name).lower()
-            xplan_gml_view = test.as_view(template_name="xplanung_light/bplan_template_xplanung_light_6.xml")(pk=self.kwargs['pk'], request=self.request).render()
+            xplan_gml_view = test.as_view(template_name="xplanung_light/bplan_template_xplanung_light_6.xml")(
+                pk=self.kwargs['pk'], request=self.request).render()
             # Alle Anhaenge ziehen
-            attachments = BPlanSpezExterneReferenz.objects.filter(bplan=self.kwargs['pk'], public=True)
+            attachments = BPlanSpezExterneReferenz.objects.filter(
+                bplan=self.kwargs['pk'], public=True)
         if self.model_name_lower == 'fplan':
             # TODO adopt
             class test(XPlanDetailXPlanLightView):
                 model = FPlan
                 model_name_lower = str(model._meta.model_name).lower()
-            xplan_gml_view = test.as_view(template_name="xplanung_light/fplan_template_xplanung_light_6.xml")(pk=self.kwargs['pk'], request=self.request).render()
+            xplan_gml_view = test.as_view(template_name="xplanung_light/fplan_template_xplanung_light_6.xml")(
+                pk=self.kwargs['pk'], request=self.request).render()
             # Alle Anhaenge ziehen
-            attachments = FPlanSpezExterneReferenz.objects.filter(fplan=self.kwargs['pk'], public=True)
-        #print(xplan_gml_view.content)
+            attachments = FPlanSpezExterneReferenz.objects.filter(
+                fplan=self.kwargs['pk'], public=True)
+        # print(xplan_gml_view.content)
         # https://stackoverflow.com/questions/2463770/python-in-memory-zip-library
         zip_buffer = io.BytesIO()
         file_array = []
-        #file_array.append(('bplan.gml', io.BytesIO(bplan_gml_view.content)))
+        # file_array.append(('bplan.gml', io.BytesIO(bplan_gml_view.content)))
         for attachment in attachments:
             # typ key
-            #print(attachment.typ)
+            # print(attachment.typ)
             # typ Display
-            #print(attachment.get_typ_display())
+            # print(attachment.get_typ_display())
             # full path
-            #print(attachment.attachment.file.name)
+            # print(attachment.attachment.file.name)
             # only filename
-            #print(Path(attachment.attachment.file.name).name)
-            #file_array.append(('bplan_referenz_' + attachment.get_typ_display() + '_' + Path(attachment.attachment.file.name).name, attachment.attachment.file.read()))
-            file_array.append((Path(attachment.attachment.file.name).name, attachment.attachment.file.read()))
+            # print(Path(attachment.attachment.file.name).name)
+            # file_array.append(('bplan_referenz_' + attachment.get_typ_display() + '_' + Path(attachment.attachment.file.name).name, attachment.attachment.file.read()))
+            file_array.append(
+                (Path(attachment.attachment.file.name).name, attachment.attachment.file.read()))
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
             zip_file.writestr('xplan.gml', xplan_gml_view.content)
             for file_name, data in file_array:
-                zip_file.writestr(file_name, data)  
+                zip_file.writestr(file_name, data)
         zip_buffer.seek(0)
         if self.model_name_lower == 'bplan':
             return FileResponse(zip_buffer, as_attachment=False, filename="bebauungsplan_" + str(self.kwargs['pk']) + ".zip")
