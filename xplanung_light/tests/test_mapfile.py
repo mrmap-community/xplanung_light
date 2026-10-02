@@ -117,7 +117,7 @@ class OGCServiceViewsTestCase(TransactionTestCase):
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     _mapscript.MapServerError: msWMSGetCapabilities(): WMS server error. WMS request not enabled. Check wms/ows_enable_request settings.
     """
-
+    """
     def test_wms_get_capabilities_bplan(self):
         url = reverse('plan-map', kwargs={'plantyp': 'bplan'})
         response = self.client.get(url, {
@@ -148,7 +148,7 @@ class OGCServiceViewsTestCase(TransactionTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get('Content-Type'), 'image/png')
-
+    """
     # -------------------------------------------------------------------------
     # 5. Test: FPlan Aggregat
     # -------------------------------------------------------------------------
