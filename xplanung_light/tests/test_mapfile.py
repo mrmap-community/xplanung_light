@@ -61,15 +61,14 @@ class OGCServiceViewsTestCase(TransactionTestCase):
             'SERVICE': 'WMS',
             'REQUEST': 'GetMap',
             'VERSION': '1.3.0',
-            'LAYERS': 'BPlan.07316000.0',
-            'STYLES': '',
+            'LAYERS': 'BPlan.07316000.0,FPlan.07316000.0',
+            'STYLES': ',',
             'CRS': 'EPSG:4326',
             # 'BBOX': '8.1,49.30,8.25,49.39',
             'BBOX': '49.342322,8.148906,49.343462,8.150873',
             'WIDTH': '200',
             'HEIGHT': '200',
             'FORMAT': 'image/png',
-            'EXCEPTIONS': 'inimage',
         })
 
         self.assertEqual(response.status_code, 200)
@@ -109,16 +108,16 @@ class OGCServiceViewsTestCase(TransactionTestCase):
     Dienst für bplan
     """
     # -------------------------------------------------------------------------
-    # 4. Test: WMS GetCapabilities
+    # 4. Test: WMS GetCapabilities/GetMap
     # -------------------------------------------------------------------------
     """
     # Testet den WMS GetCapabilities-Request über den View.
     # Deaktiviert weil er auf github nicht durchgelaufen ist - kann aber auch ein temporäres Problem auf github gewesen sein.
     # Lokal läuft der Test
     """
-    """
+
     def test_wms_get_capabilities_bplan(self):
-        
+
         # Ersetzen Sie 'wms_view_name' durch Ihren tatsächlichen URL-Namen
         url = reverse('plan-map', kwargs={'plantyp': 'bplan'})
         response = self.client.get(url, {
@@ -130,7 +129,26 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('text/xml', response.headers.get('Content-Type', ''))
         self.assertIn(b'WMS_Capabilities', response.content)
-    """
+
+    def test_wms_get_map_bplan(self):
+        url = reverse('plan-map', kwargs={'plantyp': 'bplan'})
+        response = self.client.get(url, {
+            'SERVICE': 'WMS',
+            'REQUEST': 'GetMap',
+            'VERSION': '1.3.0',
+            'LAYERS': 'bplan,bplan_cluster',
+            'STYLES': ',',
+            'CRS': 'EPSG:4326',
+            # 'BBOX': '8.1,49.30,8.25,49.39',
+            'BBOX': '49.342322,8.148906,49.343462,8.150873',
+            'WIDTH': '200',
+            'HEIGHT': '200',
+            'FORMAT': 'image/png',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get('Content-Type'), 'image/png')
+
     # -------------------------------------------------------------------------
     # 5. Test: WMS GetCapabilities
     # -------------------------------------------------------------------------
@@ -148,3 +166,22 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('text/xml', response.headers.get('Content-Type', ''))
         self.assertIn(b'WMS_Capabilities', response.content)
+
+    def test_wms_get_map_fplan(self):
+        url = reverse('plan-map', kwargs={'plantyp': 'fplan'})
+        response = self.client.get(url, {
+            'SERVICE': 'WMS',
+            'REQUEST': 'GetMap',
+            'VERSION': '1.3.0',
+            'LAYERS': 'fplan,fplan_cluster',
+            'STYLES': ',',
+            'CRS': 'EPSG:4326',
+            # 'BBOX': '8.1,49.30,8.25,49.39',
+            'BBOX': '49.342322,8.148906,49.343462,8.150873',
+            'WIDTH': '200',
+            'HEIGHT': '200',
+            'FORMAT': 'image/png',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get('Content-Type'), 'image/png')
