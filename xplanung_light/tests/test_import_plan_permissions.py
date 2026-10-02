@@ -54,6 +54,9 @@ def upload(content_type='application/gml'):
     )
 
 
+# Testklasse: XPlanungGetOrgasFPlanBug.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanungGetOrgasFPlanBug(TestCase):
     """
     Regressionstests für einen Bug in XPlanung.get_orgas(): die Methode
@@ -105,6 +108,9 @@ class XPlanungGetOrgasFPlanBug(TestCase):
 
     # --- Kern des Bugs: direkter, low-level Test von get_orgas() -----------
 
+    # Testfall: get orgas finds the Gemeinde für a gültig F-Plan document.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_orgas_finds_the_gemeinde_for_a_valid_fplan_document(self):
         """
         Regressionstest für den Fix: get_orgas() muss für ein valides
@@ -118,6 +124,9 @@ class XPlanungGetOrgasFPlanBug(TestCase):
         self.assertEqual(len(orgas), 1)
         self.assertEqual(orgas[0].pk, self.gemeinde.pk)
 
+    # Testfall: get orgas would find the Gemeinde wenn root element were bp Plan.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_orgas_would_find_the_gemeinde_if_root_element_were_bp_plan(self):
         """
         Kontrollprobe: dasselbe GML, nur mit xplan:BP_Plan statt xplan:FP_Plan
@@ -139,6 +148,9 @@ class XPlanungGetOrgasFPlanBug(TestCase):
 
     # --- Auswirkung auf fplan_import(): Autorisierung umgangen -------------
 
+    # Testfall: Benutzer ohne any Administrator Rolle cannot Import F-Plan.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_user_without_any_admin_role_cannot_import_fplan(self):
         """
         Regressionstest für den Fix: ein Nutzer ganz ohne AdminOrgaUser-
@@ -156,6 +168,9 @@ class XPlanungGetOrgasFPlanBug(TestCase):
         self.assertEqual(response.status_code, 200)  # Formular mit Fehlermeldung, kein Redirect
         self.assertFalse(FPlan.objects.filter(name='Testplan FPlan get_orgas').exists())
 
+    # Testfall: anonym Benutzer cannot Import F-Plan.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_cannot_import_fplan(self):
         """
         Wie oben, aber ganz ohne Login. fplan_import() hat weiterhin kein

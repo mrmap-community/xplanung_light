@@ -5,6 +5,9 @@ from xplanung_light.models import UserProfile
 
 User = get_user_model()
 
+# Testklasse: CustomUserViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class CustomUserViewTests(TestCase):
 
     def setUp(self):
@@ -18,6 +21,9 @@ class CustomUserViewTests(TestCase):
     # 1. PROFIL-AKTUALISIERUNG / UPDATE-VIEW (GET & POST)
     # ==============================================================================
 
+    # Testfall: Benutzer Profil aktualisieren View Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_user_profile_update_view_success(self):
         """Ein angemeldeter Benutzer kann seine Profil-Metadaten erfolgreich einsehen und aktualisieren."""
         self.client.login(username="profil_tester", password="password123")
@@ -47,6 +53,9 @@ class CustomUserViewTests(TestCase):
     # 2. CUSTOM PASSWORT-RESET-VIEW (POST)
     # ==============================================================================
 
+    # Testfall: benutzerdefiniert Passwort reset trigger E-Mail.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_custom_password_reset_trigger_email(self):
         """Das Absenden des Passwort-Reset-Formulars muss die Route erfolgreich passieren."""
         url = reverse("password_reset")

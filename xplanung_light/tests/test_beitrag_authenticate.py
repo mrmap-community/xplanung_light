@@ -15,6 +15,9 @@ from xplanung_light.models import (
 )
 
 
+# Testklasse: _BeitragAuthenticateMixin.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class _BeitragAuthenticateMixin:
     """
     Gast-Authentifizierung über beitrag_authenticate().
@@ -108,6 +111,9 @@ class _BeitragAuthenticateMixin:
 
     # --- Erfolgsfall --------------------------------------------------
 
+    # Testfall: richtige E-Mail setzt generic id in session und leitet weiter.
+    # Erwartung/Absicherung: verwendet assertEqual, assertRedirects.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_richtige_email_setzt_generic_id_in_session_und_leitet_weiter(self):
         # Erfolgsfall: richtige E-Mail -> Session gesetzt + Redirect auf die Detailseite.
         response = self._post(self.RICHTIGE_EMAIL)
@@ -126,6 +132,9 @@ class _BeitragAuthenticateMixin:
             }),
         )
 
+    # Testfall: erfolgreiche authentifizierung gewaehrt zugriff auf detailseite.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_erfolgreiche_authentifizierung_gewaehrt_zugriff_auf_detailseite(self):
         """End-to-End: nach der Authentifizierung ist die Detailseite ohne
         weiteren Redirect erreichbar."""
@@ -142,6 +151,9 @@ class _BeitragAuthenticateMixin:
 
     # --- Fehlerfall -----------------------------------------------------
 
+    # Testfall: falsche E-Mail setzt keine session und zeigt fehlermeldung.
+    # Erwartung/Absicherung: verwendet assertNotIn, assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_falsche_email_setzt_keine_session_und_zeigt_fehlermeldung(self):
         # Negativfall: falsche E-Mail -> keine Session, Formular wird mit Fehlermeldung neu angezeigt.
         response = self._post(self.FALSCHE_EMAIL)
@@ -154,6 +166,9 @@ class _BeitragAuthenticateMixin:
             "Erwartete Fehlermeldung zur falschen E-Mail wurde nicht gefunden",
         )
 
+    # Testfall: falsche E-Mail gewaehrt keinen zugriff auf geschuetzten Workflow.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_falsche_email_gewaehrt_keinen_zugriff_auf_geschuetzten_workflow(self):
         """
         Verzahnung mit den Workflow-Views: ohne gültige Session bleibt
@@ -170,6 +185,9 @@ class _BeitragAuthenticateMixin:
         self.assertIn('authenticate', response.url)
         self.assertFalse(self.BEITRAG_MODEL.objects.get(pk=self.beitrag.pk).approved)
 
+    # Testfall: E-Mail ohne gross klein schreibung wird nicht gleichgesetzt.
+    # Erwartung/Absicherung: verwendet assertNotIn, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_email_ohne_gross_klein_schreibung_wird_nicht_gleichgesetzt(self):
         """
         Dokumentiert das aktuelle Verhalten: der Vergleich beitrag.email ==
@@ -181,6 +199,9 @@ class _BeitragAuthenticateMixin:
         self.assertEqual(response.status_code, 200)
 
 
+# Testklasse: BeitragAuthenticate.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeitragAuthenticate(_BeitragAuthenticateMixin, TestCase):
     """BPlan-Variante - unveränderte Werte gegenüber der ursprünglichen Fassung."""
     PLANTYP = 'bplan'
@@ -192,6 +213,9 @@ class BeitragAuthenticate(_BeitragAuthenticateMixin, TestCase):
     BETEILIGUNG_FK_FIELD = 'bplan_beteiligung'
 
 
+# Testklasse: FPlanBeitragAuthenticate.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class FPlanBeitragAuthenticate(_BeitragAuthenticateMixin, TestCase):
     """FPlan-Variante - prüft dieselbe Gast-Authentifizierung für den
     Flächennutzungsplan-Zweig von beitrag_authenticate().

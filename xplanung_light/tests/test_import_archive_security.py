@@ -79,6 +79,9 @@ def upload_zip(files, name="archive.zip"):
     )
 
 
+# Testklasse: ArchiveValidatorSecurityTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ArchiveValidatorSecurityTests(TestCase):
     """The upload validators must reject structurally unsafe archives."""
 
@@ -90,18 +93,27 @@ class ArchiveValidatorSecurityTests(TestCase):
             name=GEMEINDE_NAME,
         )
 
+    # Testfall: B-Plan archive erfordert at least one GML.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_archive_requires_at_least_one_gml(self):
         upload = upload_zip({"readme.txt": b"no GML here"})
 
         with self.assertRaises(ValidationError):
             bplan_upload_file_validator(upload)
 
+    # Testfall: F-Plan archive erfordert at least one GML.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_archive_requires_at_least_one_gml(self):
         upload = upload_zip({"readme.txt": b"no GML here"})
 
         with self.assertRaises(ValidationError):
             fplan_upload_file_validator(upload)
 
+    # Testfall: B-Plan archive weist zurück multiple GML files.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_archive_rejects_multiple_gml_files(self):
         upload = upload_zip({
             "one.gml": make_plan_gml("one"),
@@ -111,6 +123,9 @@ class ArchiveValidatorSecurityTests(TestCase):
         with self.assertRaises(ValidationError):
             bplan_upload_file_validator(upload)
 
+    # Testfall: F-Plan archive weist zurück multiple GML files.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_archive_rejects_multiple_gml_files(self):
         upload = upload_zip({
             "one.gml": make_plan_gml("one", "FP_Plan"),
@@ -120,6 +135,8 @@ class ArchiveValidatorSecurityTests(TestCase):
         with self.assertRaises(ValidationError):
             fplan_upload_file_validator(upload)
 
+    # Testfall: B-Plan archive mit gültig single GML ist accepted.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_archive_with_valid_single_gml_is_accepted(self):
         upload = upload_zip({
             "plan.gml": make_plan_gml("single-valid"),
@@ -130,6 +147,8 @@ class ArchiveValidatorSecurityTests(TestCase):
         except ValidationError as exc:
             self.fail(f"valid BPlan ZIP was rejected: {exc}")
 
+    # Testfall: F-Plan archive mit gültig single GML ist accepted.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_archive_with_valid_single_gml_is_accepted(self):
         upload = upload_zip({
             "plan.gml": make_plan_gml("single-valid-fplan", "FP_Plan"),
@@ -140,6 +159,9 @@ class ArchiveValidatorSecurityTests(TestCase):
         except ValidationError as exc:
             self.fail(f"valid FPlan ZIP was rejected: {exc}")
 
+    # Testfall: malformed B-Plan zip ist nicht silently accepted.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_malformed_bplan_zip_is_not_silently_accepted(self):
         upload = SimpleUploadedFile(
             "broken.zip",
@@ -150,6 +172,9 @@ class ArchiveValidatorSecurityTests(TestCase):
         with self.assertRaises(zipfile.BadZipFile):
             bplan_upload_file_validator(upload)
 
+    # Testfall: malformed F-Plan zip ist nicht silently accepted.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_malformed_fplan_zip_is_not_silently_accepted(self):
         upload = SimpleUploadedFile(
             "broken.zip",
@@ -161,6 +186,9 @@ class ArchiveValidatorSecurityTests(TestCase):
             fplan_upload_file_validator(upload)
 
 
+# Testklasse: ArchiveImportAuthorizationTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ArchiveImportAuthorizationTests(TestCase):
     """Archive imports must require admin rights for every referenced municipality."""
 
@@ -179,6 +207,9 @@ class ArchiveImportAuthorizationTests(TestCase):
             name=GEMEINDE_NAME,
         )
 
+    # Testfall: foreign Benutzer cannot Import archive.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTemplateUsed, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_import_archive(self):
         cases = (
             ("bplan-import-archiv", "BPlanImportArchivForm", "xplanung_light/bplan_import_archiv.html", "BP_Plan", BPlan),

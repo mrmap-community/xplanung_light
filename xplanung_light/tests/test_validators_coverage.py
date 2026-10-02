@@ -10,6 +10,9 @@ from xplanung_light.models import AdministrativeOrganization
 from xplanung_light import validators
 
 
+# Testklasse: ValidatorCoverageTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ValidatorCoverageTests(TestCase):
     def _gml(self, plan_type="BP_Plan", name="Testplan", ags="07316000", org_name="Testgemeinde",
              include_name=True, include_planart=True, include_gemeinde=True,
@@ -44,6 +47,9 @@ class ValidatorCoverageTests(TestCase):
     # ------------------------------------------------------------------
     # Small helper / namespace
     # ------------------------------------------------------------------
+    # Testfall: namespace liefert namespace and leer string.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_namespace_returns_namespace_and_empty_string(self):
         import xml.etree.ElementTree as ET
         self.assertEqual(validators.namespace(ET.fromstring('<a:root xmlns:a="urn:test"/>')), '{urn:test}')
@@ -59,6 +65,9 @@ class ValidatorCoverageTests(TestCase):
                 zf.writestr(filename, payload)
         return SimpleUploadedFile('plan.zip', data.getvalue(), content_type=content_type)
 
+    # Testfall: Upload Validatoren weist zurück falsch archive mimetype.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={
         'limits': {
             'max_files_in_zip': 3,
@@ -76,6 +85,9 @@ class ValidatorCoverageTests(TestCase):
         with self.assertRaises(ValidationError):
             validators.fplan_upload_file_validator(upload)
 
+    # Testfall: Upload Validatoren weist zurück too many files.
+    # Erwartung/Absicherung: verwendet assertRaisesRegex.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_files_in_zip': 1, 'max_uncompressed_file_size': 1000,
         'max_uncompressed_zip_size': 1000, 'max_gml_size': 10000,
@@ -89,6 +101,9 @@ class ValidatorCoverageTests(TestCase):
         with self.assertRaisesRegex(ValidationError, 'höchstens'):
             validators.fplan_upload_file_validator(upload)
 
+    # Testfall: Upload Validatoren weist zurück oversized member.
+    # Erwartung/Absicherung: verwendet assertRaisesRegex.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_files_in_zip': 10, 'max_uncompressed_file_size': 3,
         'max_uncompressed_zip_size': 100, 'max_gml_size': 10000,
@@ -102,6 +117,9 @@ class ValidatorCoverageTests(TestCase):
         with self.assertRaisesRegex(ValidationError, 'zu groß'):
             validators.fplan_upload_file_validator(upload)
 
+    # Testfall: Upload Validatoren weist zurück oversized total content.
+    # Erwartung/Absicherung: verwendet assertRaisesRegex.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_files_in_zip': 10, 'max_uncompressed_file_size': 100,
         'max_uncompressed_zip_size': 5, 'max_gml_size': 10000,
@@ -115,6 +133,9 @@ class ValidatorCoverageTests(TestCase):
         with self.assertRaisesRegex(ValidationError, 'entpackte Inhalt'):
             validators.fplan_upload_file_validator(upload)
 
+    # Testfall: Upload Validatoren collect bad mimetype and fehlend GML.
+    # Erwartung/Absicherung: verwendet assertIn, assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_files_in_zip': 10, 'max_uncompressed_file_size': 100,
         'max_uncompressed_zip_size': 100, 'max_gml_size': 10000,
@@ -135,6 +156,9 @@ class ValidatorCoverageTests(TestCase):
         self.assertIn('nicht zugelassenen MimeType', str(cm.exception))
         self.assertIn('keine GML-Datei', str(cm.exception))
 
+    # Testfall: B-Plan Upload akzeptiert allowed files and ruft auf content Validator.
+    # Erwartung/Absicherung: verwendet assert_called_once.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_files_in_zip': 10, 'max_uncompressed_file_size': 100000,
         'max_uncompressed_zip_size': 200000, 'max_gml_size': 10000,
@@ -149,6 +173,9 @@ class ValidatorCoverageTests(TestCase):
             validators.bplan_upload_file_validator(upload)
         content.assert_called_once()
 
+    # Testfall: F-Plan Upload akzeptiert allowed files and ruft auf content Validator.
+    # Erwartung/Absicherung: verwendet assert_called_once.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_files_in_zip': 10, 'max_uncompressed_file_size': 100000,
         'max_uncompressed_zip_size': 200000, 'max_gml_size': 10000,
@@ -161,6 +188,9 @@ class ValidatorCoverageTests(TestCase):
             validators.fplan_upload_file_validator(upload)
         content.assert_called_once()
 
+    # Testfall: Upload Validatoren weist zurück multiple GML files.
+    # Erwartung/Absicherung: verwendet assertRaisesRegex.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_files_in_zip': 10, 'max_uncompressed_file_size': 100000,
         'max_uncompressed_zip_size': 200000, 'max_gml_size': 10000,
@@ -181,6 +211,9 @@ class ValidatorCoverageTests(TestCase):
     # ------------------------------------------------------------------
     # GML content validators
     # ------------------------------------------------------------------
+    # Testfall: content Validatoren weist zurück falsch mimetype and oversized file.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_gml_size': 1000, 'max_files_in_zip': 10,
         'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
@@ -194,6 +227,9 @@ class ValidatorCoverageTests(TestCase):
         with self.assertRaises(ValidationError):
             validators.fplan_content_validator(bad)
 
+    # Testfall: content Validatoren support bytesio and weist zurück bad bytesio mimetype.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_gml_size': 10000, 'max_files_in_zip': 10,
         'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
@@ -207,6 +243,9 @@ class ValidatorCoverageTests(TestCase):
             with self.assertRaises(ValidationError):
                 validators.fplan_content_validator(BytesIO(data))
 
+    # Testfall: content Validatoren weist zurück ungültig utf8 and ungültig xml.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_gml_size': 10000, 'max_files_in_zip': 10,
         'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
@@ -220,6 +259,9 @@ class ValidatorCoverageTests(TestCase):
         with self.assertRaises(ValidationError):
             validators.fplan_content_validator(malformed)
 
+    # Testfall: content Validatoren weist zurück unsupported root.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_gml_size': 10000, 'max_files_in_zip': 10,
         'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
@@ -232,6 +274,9 @@ class ValidatorCoverageTests(TestCase):
         with self.assertRaises(ValidationError):
             validators.fplan_content_validator(SimpleUploadedFile('x.gml', xml, content_type='text/xml'))
 
+    # Testfall: content Validatoren weist zurück fehlend mandatory Felder.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_gml_size': 10000, 'max_files_in_zip': 10,
         'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
@@ -245,6 +290,9 @@ class ValidatorCoverageTests(TestCase):
         with self.assertRaises(ValidationError):
             validators.fplan_content_validator(SimpleUploadedFile('x.gml', xml, content_type='text/xml'))
 
+    # Testfall: content Validatoren weist zurück unknown Organisation.
+    # Erwartung/Absicherung: verwendet assertIn, assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_gml_size': 10000, 'max_files_in_zip': 10,
         'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
@@ -256,6 +304,9 @@ class ValidatorCoverageTests(TestCase):
             validators.bplan_content_validator(SimpleUploadedFile('x.gml', xml, content_type='text/xml'))
         self.assertIn('kein Eintrag', str(cm.exception))
 
+    # Testfall: content Validatoren weist zurück Organisation name mismatch.
+    # Erwartung/Absicherung: verwendet assertIn, assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_gml_size': 10000, 'max_files_in_zip': 10,
         'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
@@ -273,6 +324,9 @@ class ValidatorCoverageTests(TestCase):
             )
         self.assertIn('gemeindeName', str(cm.exception))
 
+    # Testfall: content Validatoren weist zurück fehlend ags.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_gml_size': 10000, 'max_files_in_zip': 10,
         'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
@@ -283,6 +337,9 @@ class ValidatorCoverageTests(TestCase):
         with self.assertRaises(ValidationError):
             validators.bplan_content_validator(SimpleUploadedFile('x.gml', xml, content_type='text/xml'))
 
+    # Testfall: content Validatoren weist zurück ungültig Geometrie.
+    # Erwartung/Absicherung: verwendet assertRaisesRegex.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_gml_size': 10000, 'max_files_in_zip': 10,
         'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
@@ -298,6 +355,9 @@ class ValidatorCoverageTests(TestCase):
             with self.assertRaisesRegex(ValidationError, 'interpretieren'):
                 validators.fplan_content_validator(SimpleUploadedFile('x.gml', xml, content_type='text/xml'))
 
+    # Testfall: geotiff Validator weist zurück falsch mimetype ohne opening raster.
+    # Erwartung/Absicherung: verwendet assertIn, assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_geotiff_validator_rejects_wrong_mimetype_without_opening_raster(self):
         upload = SimpleUploadedFile('x.tif', b'abc', content_type='text/plain')
         fake_raster = Mock(info='')
@@ -307,6 +367,9 @@ class ValidatorCoverageTests(TestCase):
                 validators.geotiff_raster_validator(upload)
         self.assertIn('image/tiff', str(cm.exception))
 
+    # Testfall: geotiff Validator collects fehlend overview and compression.
+    # Erwartung/Absicherung: verwendet assertIn, assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_geotiff_validator_collects_missing_overview_and_compression(self):
         upload = SimpleUploadedFile('x.tif', b'abc', content_type='image/tiff')
         fake_raster = Mock(info='SOMETHING')
@@ -320,6 +383,9 @@ class ValidatorCoverageTests(TestCase):
         self.assertIn('Overviews', str(cm.exception))
         self.assertIn('LZW', str(cm.exception))
 
+    # Testfall: geotiff Validator behandelt raster open Fehlerfall.
+    # Erwartung/Absicherung: verwendet assertIn, assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_geotiff_validator_handles_raster_open_failure(self):
         upload = SimpleUploadedFile('x.tif', b'abc', content_type='image/tiff')
         with patch.object(validators.magic, 'from_buffer', return_value='image/tiff'), \
@@ -328,6 +394,9 @@ class ValidatorCoverageTests(TestCase):
                 validators.geotiff_raster_validator(upload)
         self.assertIn('Raster interpretieren', str(cm.exception))
 
+    # Testfall: geotiff Validator behandelt fehlend srs and extent.
+    # Erwartung/Absicherung: verwendet assertIn, assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_geotiff_validator_handles_missing_srs_and_extent(self):
         upload = SimpleUploadedFile('x.tif', b'abc', content_type='image/tiff')
         fake_raster = Mock(info='Overviews: 1\nCOMPRESSION=LZW')
@@ -341,6 +410,9 @@ class ValidatorCoverageTests(TestCase):
         self.assertIn('Koordinatenreferenzsystem', str(cm.exception))
         self.assertIn('Ausdehnung', str(cm.exception))
 
+    # Testfall: content Validatoren behandelt Geometrie transform Fehlerfall.
+    # Erwartung/Absicherung: verwendet assertIn, assertRaisesRegex.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
         'max_gml_size': 10000, 'max_files_in_zip': 10,
         'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
@@ -363,5 +435,8 @@ class ValidatorCoverageTests(TestCase):
                 validators.fplan_content_validator(SimpleUploadedFile('x.gml', xml, content_type='text/xml'))
         self.assertIn('EPSG:4326', str(cm.exception))
 
+    # Testfall: B-Plan datum Validator ist noop.
+    # Erwartung/Absicherung: verwendet assertIsNone.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_datum_validator_is_noop(self):
         self.assertIsNone(validators.bplan_datum_validator())

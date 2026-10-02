@@ -5,6 +5,9 @@ from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.models import FPlan, FPlanBeteiligung, FPlanBeteiligungBeitrag
 from xplanung_light.forms import FPlanBeteiligungForm
 
+# Testklasse: FPlanFormsBusinessLogicTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class FPlanFormsBusinessLogicTests(TestCase):
 
     def setUp(self):
@@ -21,6 +24,9 @@ class FPlanFormsBusinessLogicTests(TestCase):
         self.morgen = self.heute + timedelta(days=1)
         self.gestern = self.heute - timedelta(days=1)
 
+    # Testfall: F-Plan Beteiligung Formular fails wenn start after end date.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_beteiligung_form_fails_when_start_after_end_date(self):
         """Das FPlan-Formular muss fehlschlagen, wenn das Startdatum nach dem Enddatum liegt."""
         form_data = {
@@ -37,6 +43,9 @@ class FPlanFormsBusinessLogicTests(TestCase):
         self.assertIn('end_datum', form.errors)
         self.assertIn("Das Enddatum darf nicht vor dem Startdatum liegen.", form.errors['end_datum'])
 
+    # Testfall: F-Plan Beteiligung Formular verhindert type change on aktualisieren.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_beteiligung_form_prevents_type_change_on_update(self):
         """Djangos disabled=True ignoriert manipulierte Typänderungen beim FPlan und behält den alten Wert bei."""
         # 1. Bestehende Instanz in der DB anlegen (Typ 1000)
@@ -66,6 +75,9 @@ class FPlanFormsBusinessLogicTests(TestCase):
         saved_instance = form.save(commit=False)
         self.assertEqual(saved_instance.typ, '1000', "Sicherheitsfehler: Der gesperrte Typ wurde beim FPlan überschrieben!")
 
+    # Testfall: F-Plan Formular verhindert modification wenn contributions exist.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_form_prevents_modification_when_contributions_exist(self):
         """Wenn beim FPlan bereits Beiträge eingegangen sind, darf das Verfahren nicht mehr geändert werden."""
         beteiligung = FPlanBeteiligung.objects.create(

@@ -25,6 +25,9 @@ from xplanung_light.models import (
 )
 from xplanung_light.models import RedactedBPlanBeteiligungBeitragAnhang
 
+# Testklasse: PrivatePlanEndpointSecurity.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class PrivatePlanEndpointSecurity(TestCase):
     """Direct URLs must not expose a private plan to unauthorized users."""
 
@@ -76,30 +79,48 @@ class PrivatePlanEndpointSecurity(TestCase):
     def setUp(self):
         self.client = Client()
 
+    # Testfall: anonym cannot open nicht öffentlich B-Plan Detailansicht directly.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_open_private_bplan_detail_directly(self):
         response = self.client.get(reverse("bplan-detail", args=[self.bplan.pk]))
         self.assertEqual(response.status_code, 401)
 
+    # Testfall: foreign Benutzer cannot open nicht öffentlich B-Plan Detailansicht directly.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_open_private_bplan_detail_directly(self):
         self.client.force_login(self.foreign_user)
         response = self.client.get(reverse("bplan-detail", args=[self.bplan.pk]))
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: anonym cannot open nicht öffentlich F-Plan Detailansicht directly.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_open_private_fplan_detail_directly(self):
         response = self.client.get(reverse("fplan-detail", args=[self.fplan.pk]))
         self.assertEqual(response.status_code, 401)
 
+    # Testfall: foreign Benutzer cannot open nicht öffentlich F-Plan Detailansicht directly.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_open_private_fplan_detail_directly(self):
         self.client.force_login(self.foreign_user)
         response = self.client.get(reverse("fplan-detail", args=[self.fplan.pk]))
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: anonym cannot Export nicht öffentlich B-Plan as GML.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_export_private_bplan_as_gml(self):
         response = self.client.get(
             reverse("bplan-export-xplan-raster-6", args=[self.bplan.pk])
         )
         self.assertEqual(response.status_code, 401)
 
+    # Testfall: foreign Benutzer cannot Export nicht öffentlich B-Plan as GML.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_export_private_bplan_as_gml(self):
         self.client.force_login(self.foreign_user)
         response = self.client.get(
@@ -107,12 +128,18 @@ class PrivatePlanEndpointSecurity(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: anonym cannot Export nicht öffentlich B-Plan as zip.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_export_private_bplan_as_zip(self):
         response = self.client.get(
             reverse("bplan-export-xplan-raster-6-zip", args=[self.bplan.pk])
         )
         self.assertEqual(response.status_code, 401)
 
+    # Testfall: foreign Benutzer cannot Export nicht öffentlich B-Plan as zip.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_export_private_bplan_as_zip(self):
         self.client.force_login(self.foreign_user)
         response = self.client.get(
@@ -120,12 +147,18 @@ class PrivatePlanEndpointSecurity(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: anonym cannot Export nicht öffentlich B-Plan as iso19139.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_export_private_bplan_as_iso19139(self):
         response = self.client.get(
             reverse("bplan-export-iso19139", args=[self.bplan.pk])
         )
         self.assertEqual(response.status_code, 401)
 
+    # Testfall: foreign Benutzer cannot Export nicht öffentlich B-Plan as iso19139.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_export_private_bplan_as_iso19139(self):
         self.client.force_login(self.foreign_user)
         response = self.client.get(
@@ -133,12 +166,18 @@ class PrivatePlanEndpointSecurity(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: anonym cannot Export nicht öffentlich F-Plan as GML.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_export_private_fplan_as_gml(self):
         response = self.client.get(
             reverse("fplan-export-xplan-raster-6", args=[self.fplan.pk])
         )
         self.assertEqual(response.status_code, 401)
 
+    # Testfall: foreign Benutzer cannot Export nicht öffentlich F-Plan as GML.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_export_private_fplan_as_gml(self):
         self.client.force_login(self.foreign_user)
         response = self.client.get(
@@ -146,12 +185,18 @@ class PrivatePlanEndpointSecurity(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: anonym cannot Export nicht öffentlich F-Plan as zip.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_export_private_fplan_as_zip(self):
         response = self.client.get(
             reverse("fplan-export-xplan-raster-6-zip", args=[self.fplan.pk])
         )
         self.assertEqual(response.status_code, 401)
 
+    # Testfall: foreign Benutzer cannot Export nicht öffentlich F-Plan as zip.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_export_private_fplan_as_zip(self):
         self.client.force_login(self.foreign_user)
         response = self.client.get(
@@ -159,12 +204,18 @@ class PrivatePlanEndpointSecurity(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: anonym cannot Export nicht öffentlich F-Plan as iso19139.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_export_private_fplan_as_iso19139(self):
         response = self.client.get(
             reverse("fplan-export-iso19139", args=[self.fplan.pk])
         )
         self.assertEqual(response.status_code, 401)
 
+    # Testfall: foreign Benutzer cannot Export nicht öffentlich F-Plan as iso19139.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_export_private_fplan_as_iso19139(self):
         self.client.force_login(self.foreign_user)
         response = self.client.get(
@@ -172,6 +223,9 @@ class PrivatePlanEndpointSecurity(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: foreign Benutzer cannot Download nicht öffentlich B-Plan Anhang.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_download_private_bplan_attachment(self):
         attachment = BPlanSpezExterneReferenz.objects.create(
             bplan=self.bplan,
@@ -190,6 +244,9 @@ class PrivatePlanEndpointSecurity(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: anonym cannot Download nicht öffentlich B-Plan Anhang.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_download_private_bplan_attachment(self):
         attachment = BPlanSpezExterneReferenz.objects.create(
             bplan=self.bplan,
@@ -207,6 +264,9 @@ class PrivatePlanEndpointSecurity(TestCase):
         )
         self.assertEqual(response.status_code, 401)
 
+    # Testfall: foreign Benutzer cannot Download nicht öffentlich F-Plan Anhang.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_download_private_fplan_attachment(self):
         attachment = FPlanSpezExterneReferenz.objects.create(
             fplan=self.fplan,
@@ -225,6 +285,9 @@ class PrivatePlanEndpointSecurity(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: foreign Benutzer cannot Download other contribution Anhang via session id.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_download_other_contribution_attachment_via_session_id(self):
         """A guest session for contribution A must not authorize attachment B."""
         today = datetime.date.today()
@@ -310,6 +373,9 @@ class PrivatePlanEndpointSecurity(TestCase):
             ),
         )
 
+    # Testfall: contribution Anhang Administrator can Download original.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contribution_attachment_admin_can_download_original(self):
         attachment = self._create_bplan_attachment()
 
@@ -324,6 +390,9 @@ class PrivatePlanEndpointSecurity(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b"".join(response.streaming_content), b"secret")
 
+    # Testfall: contribution Anhang foreign Benutzer ist forbidden.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contribution_attachment_foreign_user_is_forbidden(self):
         attachment = self._create_bplan_attachment()
 
@@ -337,6 +406,9 @@ class PrivatePlanEndpointSecurity(TestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: contribution Anhang guest mit matching session can Download.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contribution_attachment_guest_with_matching_session_can_download(self):
         attachment = self._create_bplan_attachment()
 
@@ -354,6 +426,9 @@ class PrivatePlanEndpointSecurity(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b"".join(response.streaming_content), b"secret")
 
+    # Testfall: contribution Anhang guest mit falsch session ist unauthorized.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contribution_attachment_guest_with_wrong_session_is_unauthorized(self):
         attachment = self._create_bplan_attachment()
 
@@ -389,6 +464,9 @@ class PrivatePlanEndpointSecurity(TestCase):
 
         self.assertEqual(response.status_code, 401)
 
+    # Testfall: contribution Anhang prefers redacted version für normal Download.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contribution_attachment_prefers_redacted_version_for_normal_download(self):
         attachment = self._create_bplan_attachment(
             filename="original.txt",
@@ -415,6 +493,9 @@ class PrivatePlanEndpointSecurity(TestCase):
         self.assertEqual(b"".join(response.streaming_content), b"REDACTED")
         self.assertTrue(redacted.pk)
 
+    # Testfall: contribution Anhang original endpoint bypasses redacted version only für authorized Benutzer.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contribution_attachment_original_endpoint_bypasses_redacted_version_only_for_authorized_user(self):
         attachment = self._create_bplan_attachment(
             filename="original.txt",

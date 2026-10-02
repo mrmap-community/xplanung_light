@@ -34,6 +34,9 @@ def fake_mapscript(m, gml=b"<msGMLOutput/>", version=80000, dispatch=0):
     return m
 
 
+# Testklasse: OwsViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class OwsViewTests(TestCase):
     def setUp(self):
         cache.clear()
@@ -63,6 +66,9 @@ class OwsViewTests(TestCase):
 
     # --- ows_all_orgas_xplan -------------------------------------------------
 
+    # Testfall: alle orgas passthrough and mapfile cache.
+    # Erwartung/Absicherung: verwendet assert_called_once, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_all_orgas_passthrough_and_mapfile_cache(self):
         for plantyp in ("bplan", "fplan"):
             with self.subTest(plantyp=plantyp):
@@ -75,6 +81,9 @@ class OwsViewTests(TestCase):
                     self.assertEqual(r["Access-Control-Allow-Origin"], "*")
                 self.gen.generate_mapfile_all_orgas_xplan.assert_called_once()
 
+    # Testfall: alle orgas https flag.
+    # Erwartung/Absicherung: verwendet assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_all_orgas_https_flag(self):
         cfg = {**settings.XPLANUNG_LIGHT_CONFIG, "mapfile_force_online_resource_https": True}
         with override_settings(XPLANUNG_LIGHT_CONFIG=cfg):
@@ -82,6 +91,9 @@ class OwsViewTests(TestCase):
         metadata_uri = self.gen.generate_mapfile_all_orgas_xplan.call_args.args[1]
         self.assertTrue(metadata_uri.startswith("https://"))
 
+    # Testfall: alle orgas dispatch Fehler.
+    # Erwartung/Absicherung: verwendet assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_all_orgas_dispatch_errors(self):
         url = reverse("plan-map", kwargs={"plantyp": "bplan"})
         for status, text in ((1, "No valid OWS Request!"),
@@ -90,6 +102,9 @@ class OwsViewTests(TestCase):
                 fake_mapscript(self.ms, dispatch=status)
                 self.assertContains(self.client.get(url, GETCAP), text)
 
+    # Testfall: alle orgas mapserver 7 branch.
+    # Erwartung/Absicherung: verwendet assertEqual, assert_not_called.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_all_orgas_mapserver_7_branch(self):
         fake_mapscript(self.ms, version=70000)
         r = self.client.get(reverse("plan-map", kwargs={"plantyp": "bplan"}), GETCAP)
@@ -103,6 +118,9 @@ class OwsViewTests(TestCase):
             {"SERVICE": "WMS", "REQUEST": "GetFeatureInfo", "INFO_FORMAT": "text/html"},
         )
 
+    # Testfall: alle orgas featureinfo html hands over to xplan html.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTemplateUsed, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_all_orgas_featureinfo_html_hands_over_to_xplan_html(self):
         gml = f"<msGMLOutput><bplan_layer><f><id>{self.bplan.id}</id></f></bplan_layer></msGMLOutput>".encode()
         r = self._featureinfo(gml)
@@ -110,12 +128,19 @@ class OwsViewTests(TestCase):
         self.assertTemplateUsed(r, "xplanung_light/xplan_list_html.html")
         self.assertIn("frame-ancestors", r["Content-Security-Policy"])
 
+    # Testfall: alle orgas featureinfo ohne hits rendert leer page.
+    # Erwartung/Absicherung: verwendet assertTemplateUsed.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_all_orgas_featureinfo_without_hits_renders_empty_page(self):
         r = self._featureinfo(b"<msGMLOutput/>")
         self.assertTemplateUsed(r, "xplanung_light/empty_feature_info.html")
 
     # --- ows_beteiligungen ---------------------------------------------------
 
+    # Testfall: ows Beteiligungen sqlite and postgres branches.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Isolation: f'{VIEWS}.connection' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_ows_beteiligungen_sqlite_and_postgres_branches(self):
         url = reverse("beteiligungen-map")
         r = self.client.get(url, GETCAP)
@@ -131,12 +156,18 @@ class OwsViewTests(TestCase):
         self.assertIn("using unique plan_id using srid=25832", loaded)  # PostGIS-SQL
         self.assertIn("host=localhost", loaded)
 
+    # Testfall: ows Beteiligungen ungültig Anfrage.
+    # Erwartung/Absicherung: verwendet assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_ows_beteiligungen_invalid_request(self):
         fake_mapscript(self.ms, dispatch=1)
         self.assertContains(self.client.get(reverse("beteiligungen-map")), "No valid OWS Request!")
 
     # --- ows_bplan_overview --------------------------------------------------
 
+    # Testfall: B-Plan overview mit and ohne proxy.
+    # Erwartung/Absicherung: verwendet assertEqual, assertNotIn, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_overview_with_and_without_proxy(self):
         url = reverse("bplan-overview-map", kwargs={"pk": self.bplan.id})
         with override_settings(REQUESTS_PROXIES={}):
@@ -150,12 +181,18 @@ class OwsViewTests(TestCase):
         self.assertIn("proxy.example", loaded)
         self.assertIn("3128", loaded)
 
+    # Testfall: overview unknown Plan ist 404.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_overview_unknown_plan_is_404(self):
         for name in ("bplan-overview-map", "fplan-overview-map"):
             with self.subTest(name=name):
                 r = self.client.get(reverse(name, kwargs={"pk": 999999}), GETCAP)
                 self.assertEqual(r.status_code, 404)
 
+    # Testfall: overview dispatch Fehler and mapserver 7.
+    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_overview_dispatch_errors_and_mapserver_7(self):
         fplan = FPlan.objects.create(name="FPlan Test", geltungsbereich=self.bplan.geltungsbereich)
         for name, pk in (("bplan-overview-map", self.bplan.id), ("fplan-overview-map", fplan.id)):
@@ -169,6 +206,9 @@ class OwsViewTests(TestCase):
                 self.assertEqual(self.client.get(url, GETCAP).status_code, 200)
     
     # --- ows (pk = Organisation): MapServer-8-Zweig, https, Fehlerzweige ---------
+    # Testfall: ows https flag and mapserver 8 branch.
+    # Erwartung/Absicherung: verwendet assertTrue, assert_called_once, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_ows_https_flag_and_mapserver_8_branch(self):
         cfg = {**settings.XPLANUNG_LIGHT_CONFIG, "mapfile_force_online_resource_https": True}
         url = reverse("ows", kwargs={"pk": self.orga.pk})
@@ -177,6 +217,9 @@ class OwsViewTests(TestCase):
         self.assertTrue(self.gen.generate_mapfile.call_args.args[2].startswith("https://"))
         self.ms.configObj.assert_called_once()
 
+    # Testfall: ows dispatch Fehler.
+    # Erwartung/Absicherung: verwendet assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_ows_dispatch_errors(self):
         url = reverse("ows", kwargs={"pk": self.orga.pk})
         for status, text in ((1, "No valid OWS Request!"), (2, "not successfully processed")):
@@ -185,6 +228,9 @@ class OwsViewTests(TestCase):
                 self.assertContains(self.client.get(url, GETCAP), text)
 
     # --- ows_beteiligungen -----------------------------------------------------
+    # Testfall: ows Beteiligungen https mapserver 7 and Fehlerfall.
+    # Erwartung/Absicherung: verwendet assertIn, assertEqual, assert_not_called, assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_ows_beteiligungen_https_mapserver_7_and_failure(self):
         url = reverse("beteiligungen-map")
         cfg = {**settings.XPLANUNG_LIGHT_CONFIG, "mapfile_force_online_resource_https": True}
@@ -201,6 +247,9 @@ class OwsViewTests(TestCase):
         self.assertContains(self.client.get(url, GETCAP), "not successfully processed")
 
     # --- os.unlink-Fehler der Temp-Konfiguration in allen vier Views ------------
+    # Testfall: tempfile unlink Fehler sind ignored.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_tempfile_unlink_errors_are_ignored(self):
         urls = [
             reverse("beteiligungen-map"),
@@ -213,6 +262,10 @@ class OwsViewTests(TestCase):
                 self.assertEqual(self.client.get(url, GETCAP).status_code, 200)
 
     # --- GetFeatureInfo mit FPlan-Treffern (ows und ows_all_orgas_xplan) --------
+    # Testfall: featureinfo passes ids to xplan html.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Isolation: f'{VIEWS}.xplan_html' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_featureinfo_passes_ids_to_xplan_html(self):
         fplan = FPlan.objects.create(name="F", geltungsbereich=self.bplan.geltungsbereich)
         self.bplan.gemeinde.add(self.orga)
@@ -258,10 +311,17 @@ class OwsViewTests(TestCase):
 
 @override_settings(BKG_GEOCODER_CONFIG={"base_url": "https://geo.example/", "api_key": "KEY"},
                    REQUESTS_PROXIES={})
+# Testklasse: GeocodeBkgTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class GeocodeBkgTests(TestCase):
     def call(self, **params):
         return views.geocodeBkg(RequestFactory().get("/", params))
 
+    # Testfall: filtert params and setzt Standard count.
+    # Erwartung/Absicherung: verwendet assertEqual, assertNotIn.
+    # Isolation: f'{VIEWS}.requests.get' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_filters_params_and_sets_default_count(self):
         with patch(f"{VIEWS}.requests.get") as get:
             get.return_value.json.return_value = {"features": []}
@@ -270,6 +330,10 @@ class GeocodeBkgTests(TestCase):
         self.assertEqual(get.call_args.kwargs["params"], {"query": "Mainz", "count": 20})
         self.assertNotIn("proxies", get.call_args.kwargs)
 
+    # Testfall: verwendet proxy wenn configured.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Isolation: f'{VIEWS}.requests.get' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_uses_proxy_if_configured(self):
         with override_settings(REQUESTS_PROXIES={"http": "http://p.example:1"}), \
              patch(f"{VIEWS}.requests.get") as get:
@@ -277,6 +341,10 @@ class GeocodeBkgTests(TestCase):
             self.call(query="x")
         self.assertEqual(get.call_args.kwargs["proxies"], {"http": "http://p.example:1"})
 
+    # Testfall: upstream Fehler liefert 400.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Isolation: f'{VIEWS}.requests.get' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_upstream_error_returns_400(self):
         with patch(f"{VIEWS}.requests.get", side_effect=requests.ConnectionError):
             self.assertEqual(self.call(query="x").status_code, 400)

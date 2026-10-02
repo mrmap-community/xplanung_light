@@ -45,6 +45,9 @@ def _safe_error_summary(errors):
     return repr(errors)
 
 
+# Testklasse: BeteiligungBeitragToebUpdateAuthorizationBypass.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragToebUpdateAuthorizationBypass(TestCase):
     """
     BeteiligungBeitragToebUpdateView erbt von formset.views.EditCollectionView.
@@ -173,6 +176,9 @@ class BeteiligungBeitragToebUpdateAuthorizationBypass(TestCase):
 
     # --- Hauptbefund: form_collection_valid() prüft nichts -----------------
 
+    # Testfall: Formular collection gültig persists ändert ohne any authorization check.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_form_collection_valid_persists_changes_without_any_authorization_check(self):
         """
         form_collection_valid() selbst enthält weiterhin KEINE eigene
@@ -226,6 +232,9 @@ class BeteiligungBeitragToebUpdateAuthorizationBypass(TestCase):
 
     # --- Kontrollprobe: die Prüfung selbst funktioniert - nur ihr Aufrufort nicht ---
 
+    # Testfall: get Kontext data still correctly blocks unauthorized Benutzer.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_context_data_still_correctly_blocks_unauthorized_user(self):
         """
         Zeigt, dass die Logik in get_context_data() an sich funktioniert -
@@ -236,6 +245,9 @@ class BeteiligungBeitragToebUpdateAuthorizationBypass(TestCase):
         with self.assertRaises(PermissionDenied):
             view.get_context_data()
 
+    # Testfall: get Kontext data erlaubt the actual TöB Berichterstatter.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_context_data_allows_the_actual_toeb_reporter(self):
         view = self._make_view(self.toeb_sachbearbeiter)
         context = view.get_context_data()
@@ -243,6 +255,9 @@ class BeteiligungBeitragToebUpdateAuthorizationBypass(TestCase):
 
     # --- GET über die echte URL: stürzt für Anonyme ab ----------------------
 
+    # Testfall: anonym get ist redirected to Anmeldung.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_get_is_redirected_to_login(self):
         """
         Regressionstest für den Fix: dispatch() prüft jetzt vor dem
@@ -260,6 +275,9 @@ class BeteiligungBeitragToebUpdateAuthorizationBypass(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login/', response.url)
 
+    # Testfall: anonym post ist redirected to Anmeldung and does nicht save.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_post_is_redirected_to_login_and_does_not_save(self):
         """
         Der eigentlich kritische Fall aus dem ursprünglichen Befund: ein

@@ -8,6 +8,9 @@ from xplanung_light.models import FPlan, FPlanBeteiligung, AdministrativeOrganiz
 
 User = get_user_model()
 
+# Testklasse: FPlanBeteiligungViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class FPlanBeteiligungViewTests(TestCase):
 
     def setUp(self):
@@ -40,6 +43,9 @@ class FPlanBeteiligungViewTests(TestCase):
     # 1. LIST- UND FORMULAR-ANSICHTEN (GET)
     # ==============================================================================
 
+    # Testfall: F-Plan Beteiligung auflisten and Formulare get.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_beteiligung_list_and_forms_get(self):
         """Ein Admin kann die FPlan-Verfahrensliste sowie die Formset-Seiten per GET laden."""
         self.client.login(username="fplan_orga_admin", password="password123")
@@ -63,6 +69,9 @@ class FPlanBeteiligungViewTests(TestCase):
     # 2. VERFAHREN LÖSCHEN / STANDARD DELETE (POST)
     # ==============================================================================
 
+    # Testfall: F-Plan Beteiligung löschen Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_beteiligung_delete_success(self):
         """Ein Admin kann ein FPlan-Beteiligungsverfahren erfolgreich löschen."""
         self.client.login(username="fplan_orga_admin", password="password123")

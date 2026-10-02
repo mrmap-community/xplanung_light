@@ -11,6 +11,9 @@ except ImportError:
     except ImportError:
         BPlanTable = None
 
+# Testklasse: XPlanTableBusinessLogicTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanTableBusinessLogicTests(TestCase):
 
     def setUp(self):
@@ -35,6 +38,9 @@ class XPlanTableBusinessLogicTests(TestCase):
         )
         self.bplan_2.gemeinde.add(self.orga)
 
+    # Testfall: B-Plan table instantiation and rows count.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_table_instantiation_and_rows_count(self):
         """Die Tabelle muss sich fehlerfrei initialisieren lassen und die korrekte Zeilenanzahl spiegeln."""
         if not BPlanTable:
@@ -47,6 +53,9 @@ class XPlanTableBusinessLogicTests(TestCase):
         # Verifikation: Die Anzahl der Tabellenzeilen muss exakt mit dem QuerySet übereinstimmen
         self.assertEqual(len(table.rows), 2)
 
+    # Testfall: B-Plan table columns presence.
+    # Erwartung/Absicherung: verwendet assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_table_columns_presence(self):
         """Die Tabelle muss die zentralen Kernspalten für die Anzeige im Frontend deklarieren."""
         if not BPlanTable:

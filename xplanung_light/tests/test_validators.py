@@ -11,6 +11,9 @@ from xplanung_light.validators import (
     geotiff_raster_validator
 )
 
+# Testklasse: XPlanValidatorsTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanValidatorsTests(TestCase):
 
     def setUp(self):
@@ -27,6 +30,8 @@ class XPlanValidatorsTests(TestCase):
     # 1. TESTS FÜR XML / GML INHALTS-VALIDATOREN
     # ==============================================================================
 
+    # Testfall: content Validatoren handle gültig xml GML.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_content_validators_handle_valid_xml_gml(self):
         """Prüft, ob das beigefügte reelle XPlanung 6.0-GML-Original mit deinen Namespaces akzeptiert wird."""
         
@@ -82,6 +87,9 @@ class XPlanValidatorsTests(TestCase):
         except ValidationError as e:
             self.fail(f"fplan_content_validator hat das Original-GML fälschlicherweise abgelehnt: {e}")
 
+    # Testfall: content Validatoren raise Fehler on corrupted binary data.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_content_validators_raise_error_on_corrupted_binary_data(self):
         """Prüft, ob Binärdaten als korruptes XML erkannt werden."""
         corrupted_data = b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01'
@@ -93,6 +101,9 @@ class XPlanValidatorsTests(TestCase):
         with self.assertRaises(ValidationError):
             fplan_content_validator(uploaded_file)
 
+    # Testfall: content Validatoren raise Fehler on leer file.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_content_validators_raise_error_on_empty_file(self):
         """Ein komplett leerer Datei-Upload muss abgefangen werden."""
         empty_file = SimpleUploadedFile("empty.gml", b"", content_type="application/xml")
@@ -104,6 +115,9 @@ class XPlanValidatorsTests(TestCase):
     # 2. TESTS FÜR ARCHIV-VALIDATOREN
     # ==============================================================================
 
+    # Testfall: Upload file Validatoren weist zurück ungültig zip archives.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_upload_file_validators_reject_invalid_zip_archives(self):
         """Fängt das ungeschützte BadZipFile-Verhalten der Archiv-Validatoren ab."""
         fake_zip_data = b'Ich bin gar kein echtes ZIP-Archiv, sondern reiner Text!'
@@ -119,6 +133,9 @@ class XPlanValidatorsTests(TestCase):
     # 3. TESTS FÜR RASTERDATEN-VALIDATOREN
     # ==============================================================================
 
+    # Testfall: geotiff raster Validator weist zurück corrupted image.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_geotiff_raster_validator_rejects_corrupted_image(self):
         """Der Rasterdatei-Validator muss beschädigte oder unlesbare Bilddateien abfangen."""
         bad_tiff_data = b'Geotiff-Anhang-Dummy-Text-ohne-Inhalt'

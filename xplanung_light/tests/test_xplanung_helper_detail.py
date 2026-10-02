@@ -8,6 +8,9 @@ from django.contrib.gis.geos import Polygon, MultiPolygon, GEOSGeometry
 from xplanung_light.helper import xplanung
 
 
+# Testklasse: XPlanungHelperDetailTestCase.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanungHelperDetailTestCase(TransactionTestCase):
     """
     Konkrete Testsuite für die Abdeckung von xplanung_light/helper/xplanung.py.
@@ -72,6 +75,9 @@ class XPlanungHelperDetailTestCase(TransactionTestCase):
     # 2. Geometrie-Handhabung (Polygon vs. MultiPolygon, Coordinate Systems)
     # -------------------------------------------------------------------------
 
+    # Testfall: Geometrie processing Polygon to multipolygon.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_geometry_processing_polygon_to_multipolygon(self):
         """Testet die automatische Konvertierung von Single-Polygonen zu MultiPolygonen."""
         # Testet den Fallback-Branch im Code (if geom.geom_type == 'Polygon' -> MultiPolygon)
@@ -79,6 +85,9 @@ class XPlanungHelperDetailTestCase(TransactionTestCase):
             result = xplanung.normalize_geometry(self.polygon_geom)
             self.assertEqual(result.geom_type, 'MultiPolygon')
 
+    # Testfall: Geometrie processing ungültig srid.
+    # Erwartung/Absicherung: verwendet assertIsNotNone.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_geometry_processing_invalid_srid(self):
         """Testet Transformationen ohne zugewiesenen SRID / EPSG-Code."""
         geom_no_srid = GEOSGeometry(self.poly_wkt)  # SRID ist 0/None
@@ -93,6 +102,9 @@ class XPlanungHelperDetailTestCase(TransactionTestCase):
     # 3. Enum-, Attribut- & Schlüsselwort-Zuordnung (Edge Cases in Schleifen)
     # -------------------------------------------------------------------------
 
+    # Testfall: attribute extraction fehlend optional Felder.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIsNone.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_attribute_extraction_missing_optional_fields(self):
         """Testet Extraktion von Objektattributen, wenn optionale Felder fehlen."""
         incomplete_data = {
@@ -105,6 +117,9 @@ class XPlanungHelperDetailTestCase(TransactionTestCase):
             # Prüft, dass fehlende Felder zu None oder Default-Werten werden, statt abzustürzen
             self.assertIsNone(attributes.get('rechtsstand'))
 
+    # Testfall: enum lookup unknown key.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_enum_lookup_unknown_key(self):
         """Testet die Abfrage eines nicht definierten Enum-Codelisten-Schlüssels."""
         if hasattr(xplanung, 'get_enum_value'):
@@ -117,6 +132,10 @@ class XPlanungHelperDetailTestCase(TransactionTestCase):
     # 4. Datei-I/O und Exceptions (GML aus Datei lesen / Validierung)
     # -------------------------------------------------------------------------
 
+    # Testfall: load GML file nicht found.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Isolation: 'builtins.open' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     @patch("builtins.open", side_effect=FileNotFoundError("Datei nicht gefunden"))
     def test_load_gml_file_not_found(self, mock_file):
         """Testet das Verhalten, wenn eine angegebene GML-Datei nicht existiert."""

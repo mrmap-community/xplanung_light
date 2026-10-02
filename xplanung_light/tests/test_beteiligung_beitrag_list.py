@@ -17,6 +17,9 @@ from xplanung_light.models import (
 
 User = get_user_model()
 
+# Testklasse: BeteiligungBeitragListViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragListViewTests(TestCase):
 
     def setUp(self):
@@ -81,6 +84,9 @@ class BeteiligungBeitragListViewTests(TestCase):
             typ=1000
         )
 
+    # Testfall: B-Plan auflisten View allowed für Gemeinde Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_list_view_allowed_for_gemeinde_admin(self):
         """Ein Admin von Gemeinde A darf die Beiträge des BPlans von Gemeinde A einsehen."""
         self.client.login(username="admin_a", password="password123")
@@ -95,6 +101,9 @@ class BeteiligungBeitragListViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Lärmschutzbeschwerde")
 
+    # Testfall: F-Plan auflisten View allowed für Gemeinde Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_list_view_allowed_for_gemeinde_admin(self):
         """Ein Admin von Gemeinde A darf die Beiträge des FPlans von Gemeinde A einsehen."""
         self.client.login(username="admin_a", password="password123")
@@ -109,6 +118,9 @@ class BeteiligungBeitragListViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Grünflächenerhalt")
 
+    # Testfall: B-Plan auflisten View denied für unauthorized Benutzer.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_list_view_denied_for_unauthorized_user(self):
         """Ein Nutzer ohne Adminrechte für die Gemeinde wird mit 403 abgewiesen."""
         self.client.login(username="normalo", password="password123")
@@ -122,6 +134,9 @@ class BeteiligungBeitragListViewTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: F-Plan auflisten View denied für unauthorized Benutzer.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_list_view_denied_for_unauthorized_user(self):
         """Ein Nutzer ohne Adminrechte wird auch beim FPlan mit 403 blockiert."""
         self.client.login(username="normalo", password="password123")

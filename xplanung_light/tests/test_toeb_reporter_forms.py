@@ -6,6 +6,9 @@ from xplanung_light.forms import ToebUnitCreateForm
 
 User = get_user_model()
 
+# Testklasse: ToebUnitFormValidationTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ToebUnitFormValidationTests(TestCase):
 
     def setUp(self):
@@ -51,6 +54,9 @@ class ToebUnitFormValidationTests(TestCase):
         else:
             self.valid_theme = theme_choices[0][0] if theme_choices else ''
 
+    # Testfall: TöB Einheit Formular happy path.
+    # Erwartung/Absicherung: verwendet assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_unit_form_happy_path(self):
         """Prüft, ob das Formular valide ist, wenn der User zur selben Orga gehört und TÖB-Reporter ist."""
         form_data = {
@@ -64,6 +70,9 @@ class ToebUnitFormValidationTests(TestCase):
         form = ToebUnitCreateForm(data=form_data)
         self.assertTrue(form.is_valid(), form.errors.as_json())
 
+    # Testfall: TöB Einheit Formular fails mit editor aus unterschiedlich Organisation.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_unit_form_fails_with_editor_from_different_organization(self):
         """Das Formular muss fehlschlagen, wenn ein Bearbeiter zu einer anderen Organisation gehört."""
         form_data = {
@@ -83,6 +92,9 @@ class ToebUnitFormValidationTests(TestCase):
             form.non_field_errors()
         )
 
+    # Testfall: TöB Einheit Formular fails wenn editor ist nicht TöB Berichterstatter.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_unit_form_fails_when_editor_is_not_toeb_reporter(self):
         """Das Formular muss fehlschlagen, wenn der User in der Orga ist, aber das Reporter-Flag fehlt."""
         form_data = {

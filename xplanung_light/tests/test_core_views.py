@@ -14,6 +14,9 @@ from xplanung_light.models import (
 
 User = get_user_model()
 
+# Testklasse: CoreViewsBusinessLogicTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class CoreViewsBusinessLogicTests(TestCase):
 
     def setUp(self):
@@ -59,6 +62,9 @@ class CoreViewsBusinessLogicTests(TestCase):
     # 1. STATISCHE & STATISTISCHE VIEWS
     # ==============================================================================
 
+    # Testfall: static info pages accessible.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_static_info_pages_accessible(self):
         """Prüft die fehlerfreie Erreichbarkeit aller statischen Info- und Rechtstexte-Seiten."""
         static_routes = ["home", "about", "datenschutz", "impressum"]
@@ -67,6 +73,9 @@ class CoreViewsBusinessLogicTests(TestCase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
 
+    # Testfall: aggregates statistics View Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_aggregates_statistics_view_success(self):
         """Der Statistik-View muss erreichbar sein und relationale Berechnungen fehlerfrei ausführen."""
         url = reverse("aggregates")
@@ -77,6 +86,9 @@ class CoreViewsBusinessLogicTests(TestCase):
     # 2. ANLAGEN-DOWNLOAD ROUTEN (FILERESPONSE VERARBEITUNG)
     # ==============================================================================
 
+    # Testfall: get B-Plan Anhang Download Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_bplan_attachment_download_success(self):
         """Prüft, ob die Download-Route für BPlan-Anlagen die Datei korrekt ausliefert."""
         self.client.login(username="download_admin", password="password123")
@@ -93,6 +105,9 @@ class CoreViewsBusinessLogicTests(TestCase):
         binary_data = b"".join(response.streaming_content) if hasattr(response, 'streaming_content') else response.content
         self.assertTrue(binary_data.startswith(b'%PDF'))
 
+    # Testfall: get F-Plan Anhang Download Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_fplan_attachment_download_success(self):
         """Prüft, ob die Download-Route für FPlan-Anlagen die Datei korrekt ausliefert."""
         self.client.login(username="download_admin", password="password123")

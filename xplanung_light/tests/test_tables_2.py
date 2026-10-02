@@ -11,8 +11,14 @@ def ns(**kw):
     return SimpleNamespace(**kw)
 
 
+# Testklasse: PlanTableRenderTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class PlanTableRenderTests(SimpleTestCase):
 
+    # Testfall: Status icons.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_status_icons(self):
         for table in (t.BPlanTable([]), t.FPlanTable([]), t.BPlanPublicTable([]), t.FPlanPublicTable([])):
             with self.subTest(table=type(table).__name__):
@@ -24,6 +30,9 @@ class PlanTableRenderTests(SimpleTestCase):
             self.assertIn("fa-check", table.render_public(True))
             self.assertIn("fa-xmark", table.render_public(False))
 
+    # Testfall: zoom and name links.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_zoom_and_name_links(self):
         geometry = GEOSGeometry(
             "POLYGON((0 0, 0 2, 1 2, 1 0, 0 0))", srid=4326)
@@ -36,6 +45,9 @@ class PlanTableRenderTests(SimpleTestCase):
             self.assertIn(reverse(name, kwargs={"pk": 4}), html)
             self.assertIn("A &lt;b&gt;", html)
 
+    # Testfall: count links.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_count_links(self):
         for cls, method, prefix in (
             (t.BPlanTable, "render_count_attachments", "bplanattachment"),
@@ -53,10 +65,16 @@ class PlanTableRenderTests(SimpleTestCase):
                     reverse(f"{prefix}-list", kwargs={"planid": 5}), render(3, ns(id=5)))
 
 
+# Testklasse: BeteiligungTableTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungTableTests(SimpleTestCase):
     TABLES = ((t.BPlanBeteiligungTable, "bplan"),
               (t.FPlanBeteiligungTable, "fplan"))
 
+    # Testfall: count comments.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_count_comments(self):
         for cls, plantyp in self.TABLES:
             with self.subTest(plantyp=plantyp):
@@ -67,6 +85,9 @@ class BeteiligungTableTests(SimpleTestCase):
                 self.assertIn(reverse("beteiligungbeitrag-list",
                               kwargs=kw), table.render_count_comments(2, record))
 
+    # Testfall: Benachrichtigung button.
+    # Erwartung/Absicherung: verwendet assertIn, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_notification_button(self):
         for cls, plantyp in self.TABLES:
             table = cls([])
@@ -86,8 +107,14 @@ class BeteiligungTableTests(SimpleTestCase):
                 self.assertEqual(render(0, toebs=0), "")
 
 
+# Testklasse: OrganizationTableTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class OrganizationTableTests(SimpleTestCase):
 
+    # Testfall: names and ags sind escaped.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_names_and_ags_are_escaped(self):
         for table in (t.AdministrativeOrganizationTable([]), t.AdministrativeOrganizationPublishingTable([])):
             for name_part, ts in (("Teil", "01"), ("", "")):
@@ -101,6 +128,9 @@ class OrganizationTableTests(SimpleTestCase):
                     self.assertIn("&lt;b&gt;", name)
                     self.assertIn("&lt;", ags)
 
+    # Testfall: publishing zählt and links.
+    # Erwartung/Absicherung: verwendet assertIn, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_publishing_counts_and_links(self):
         base = dict(id=3, num_bplan=2, num_fplan=1, num_bplan_public=1, num_fplan_public=1,
                     num_bplan_beteiligung=1, num_fplan_beteiligung=1)
@@ -137,6 +167,9 @@ class OrganizationTableTests(SimpleTestCase):
         self.assertEqual(table.render_num_bplan(empty), "0")
         self.assertEqual(table.render_num_fplan(empty), "0")
 
+    # Testfall: Anfrage für Rolle Administrator table escapes Benutzer data.
+    # Erwartung/Absicherung: verwendet assertIn, assertNotIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_request_for_role_admin_table_escapes_user_data(self):
         user = ns(username="armin", email='"<b>x</b>"@example.org')
         html = str(t.RequestForRoleAdminTable(

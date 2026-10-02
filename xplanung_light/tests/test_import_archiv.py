@@ -65,6 +65,9 @@ def zip_upload(files, filename='archiv.zip', content_type='application/zip'):
     return SimpleUploadedFile(filename, make_zip_bytes(files), content_type=content_type)
 
 
+# Testklasse: XPlanungImportPlanArchiv.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanungImportPlanArchiv(TestCase):
     """
     Tests direkt auf Klassenebene (XPlanung.__init__/get_orgas()/
@@ -91,6 +94,9 @@ class XPlanungImportPlanArchiv(TestCase):
 
     # --- ZIP-Entpacken in XPlanung.__init__ ---------------------------
 
+    # Testfall: zip ohne any GML file raises attributeerror.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_zip_without_any_gml_file_raises_attributeerror(self):
         """
         Enthält das ZIP keine Datei, die auf '.gml' endet UND einen der
@@ -104,6 +110,9 @@ class XPlanungImportPlanArchiv(TestCase):
         with self.assertRaises(AttributeError):
             xplanung.get_orgas()
 
+    # Testfall: zip mit uppercase GML extension ist nicht recognized.
+    # Erwartung/Absicherung: verwendet assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_zip_with_uppercase_gml_extension_is_not_recognized(self):
         """
         __init__() prüft file.filename.endswith('.gml') - case-sensitiv.
@@ -117,6 +126,9 @@ class XPlanungImportPlanArchiv(TestCase):
         with self.assertRaises(AttributeError):
             xplanung.get_orgas()
 
+    # Testfall: zip mit gültig lowercase GML ist extracted and parsed.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_zip_with_valid_lowercase_gml_is_extracted_and_parsed(self):
         """
         Positiv-Gegenprobe zu den beiden Tests oben: ein korrekt benanntes
@@ -133,6 +145,9 @@ class XPlanungImportPlanArchiv(TestCase):
 
     # --- import_plan_archiv(): bisher komplett ungetestete Kernfunktion ----
 
+    # Testfall: Import Plan archiv creates B-Plan mit core Felder.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_import_plan_archiv_creates_bplan_with_core_fields(self):
         name = 'Archiv-Import-Test BPlan'
         upload = zip_upload({'plan.gml': make_bplan_gml(name, nummer='777')})
@@ -147,6 +162,9 @@ class XPlanungImportPlanArchiv(TestCase):
             [('07', '316', '000')],
         )
 
+    # Testfall: Import Plan archiv ohne overwrite does nicht doppelt.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_import_plan_archiv_without_overwrite_does_not_duplicate(self):
         name = 'Archiv-Import-Test Duplicate'
         content = make_bplan_gml(name)
@@ -168,6 +186,9 @@ class XPlanungImportPlanArchiv(TestCase):
         self.assertEqual(BPlan.objects.filter(name=name).count(), 1)
 
 
+# Testklasse: ImportArchivViewFormAndTemplate.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ImportArchivViewFormAndTemplate(TestCase):
     """
     HINWEIS: dieser Test hängt vom aktuellen Stand von
@@ -198,6 +219,9 @@ class ImportArchivViewFormAndTemplate(TestCase):
         )
         self.client.force_login(self.fremder_user)
 
+    # Testfall: Berechtigung denied branch verwendet archiv Formular and template.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_permission_denied_branch_uses_archiv_form_and_template(self):
         upload = zip_upload({'plan.gml': make_bplan_gml('Archiv Permission Test')})
 

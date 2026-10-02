@@ -18,6 +18,9 @@ def geom(model):
     return GEOSGeometry(f"MULTIPOLYGON({RING})" if multi else f"POLYGON{RING}", srid=4326)
 
 
+# Testklasse: FilterTestBase.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class FilterTestBase(TestCase):
 
     def setUp(self):
@@ -44,8 +47,14 @@ class FilterTestBase(TestCase):
         return set(qs.values_list("name", flat=True))
 
 
+# Testklasse: OrganizationQuerysetTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class OrganizationQuerysetTests(FilterTestBase):
 
+    # Testfall: Organisationen.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_organizations(self):
         everyone = {"OG A", "OG B", "OG C"}
         self.assertEqual(self.names(flt.organizations(None)), everyone)
@@ -53,6 +62,9 @@ class OrganizationQuerysetTests(FilterTestBase):
         self.assertEqual(self.names(flt.organizations(self.request_for(self.member))), {"OG A"})
         self.assertEqual(self.names(flt.organizations(self.request_for(self.stranger))), set())
 
+    # Testfall: Plan Organisationen.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_plan_organizations(self):
         for fn in (flt.bplan_organizations, flt.fplan_organizations):
             with self.subTest(fn=fn.__name__):
@@ -63,12 +75,18 @@ class OrganizationQuerysetTests(FilterTestBase):
                 self.assertEqual(self.names(fn(self.request_for(self.stranger))), set())
 
 
+# Testklasse: PlanFilterTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class PlanFilterTests(FilterTestBase):
     CASES = (
         ("B", BPlan, flt.BPlanFilter, flt.BPlanPublicFilter, flt.BPlanFilterHtml, flt.BPlanIdFilter, "bplan_id__in"),
         ("F", FPlan, flt.FPlanFilter, flt.FPlanPublicFilter, flt.FPlanFilterHtml, flt.FPlanIdFilter, "fplan_id__in"),
     )
 
+    # Testfall: filtersets.
+    # Erwartung/Absicherung: verwendet assertEqual, assertNotIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_filtersets(self):
         for prefix, model, filter_cls, public_cls, html_cls, id_cls, id_param in self.CASES:
             pub, intern = f"{prefix} öffentlich", f"{prefix} intern"

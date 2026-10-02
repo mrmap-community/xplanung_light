@@ -16,6 +16,9 @@ from xplanung_light.models import (
 )
 
 
+# Testklasse: BeteiligungBeitragAnhangRedacted.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragAnhangRedacted(TestCase):
     """
     Tests für die Redaktions-/Schwärzungs-Views von Beitrags-Anhängen
@@ -126,16 +129,25 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
 
     # --- Create: Berechtigungen -----------------------------------------
 
+    # Testfall: anonym Benutzer ist redirected to Anmeldung on erstellen.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_is_redirected_to_login_on_create(self):
         response = self.client.get(self._create_url())
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login/', response.url)
 
+    # Testfall: foreign Benutzer cannot open erstellen Formular.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_open_create_form(self):
         self.client.force_login(self.fremder_user)
         response = self.client.get(self._create_url())
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: foreign Benutzer cannot erstellen redacted version via direct post.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_create_redacted_version_via_direct_post(self):
         self.client.force_login(self.fremder_user)
         response = self._post_redacted()
@@ -146,6 +158,9 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
 
     # --- Create: Erfolgsfall + Verknüpfung --------------------------------
 
+    # Testfall: Gemeinde Administrator can erstellen redacted version.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_create_redacted_version(self):
         self.client.force_login(self.gemeinde_admin)
         response = self._post_redacted()
@@ -158,6 +173,9 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
         self.assertTrue(hasattr(anhang, 'redacted_version'))
         self.assertEqual(anhang.redacted_version.anhang_id, anhang.pk)
 
+    # Testfall: erstellen redirects to anhang auflisten of the korrekt Beitrag.
+    # Erwartung/Absicherung: verwendet assertRedirects.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_redirects_to_anhang_list_of_the_correct_beitrag(self):
         self.client.force_login(self.gemeinde_admin)
         response = self._post_redacted()
@@ -171,6 +189,9 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
             }),
         )
 
+    # Testfall: Superuser can erstellen redacted version ohne Gemeinde Administrator Rolle.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_superuser_can_create_redacted_version_without_gemeinde_admin_role(self):
         """check_gemeinde_admin() lässt Superuser unabhängig von Admin-Rollen zu."""
         superuser = User.objects.get(pk=1)  # laut test_initial_data.py: admin, is_superuser
@@ -183,6 +204,9 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
 
     # --- Create: bekannte Lücke - keine Duplikatsprüfung ------------------
 
+    # Testfall: creating second redacted version crashes mit integrity Fehler.
+    # Erwartung/Absicherung: verwendet assertEqual, assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_creating_second_redacted_version_crashes_with_integrity_error(self):
         """
         Dokumentiert eine Lücke: die View prüft vor dem Speichern nicht, ob
@@ -207,24 +231,36 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
 
     # --- Detail: Berechtigungen + Inhalt ----------------------------------
 
+    # Testfall: anonym Benutzer ist redirected to Anmeldung on Detailansicht.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_is_redirected_to_login_on_detail(self):
         redacted = self._make_redacted()
         response = self.client.get(self._detail_url(redacted))
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login/', response.url)
 
+    # Testfall: foreign Benutzer cannot View redacted Detailansicht.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_view_redacted_detail(self):
         redacted = self._make_redacted()
         self.client.force_login(self.fremder_user)
         response = self.client.get(self._detail_url(redacted))
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: Gemeinde Administrator can View redacted Detailansicht.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_view_redacted_detail(self):
         redacted = self._make_redacted()
         self.client.force_login(self.gemeinde_admin)
         response = self.client.get(self._detail_url(redacted))
         self.assertEqual(response.status_code, 200)
 
+    # Testfall: Detailansicht View reports creator aus history.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIsNotNone.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_view_reports_creator_from_history(self):
         """
         Die History-Middleware (simple_history.middleware.HistoryRequestMiddleware,
@@ -242,6 +278,9 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
         self.assertEqual(response.context['bearbeitet_von'], self.gemeinde_admin)
         self.assertIsNotNone(response.context['letzte_aenderung_am'])
 
+    # Testfall: Detailansicht View ohne Anfrage Kontext reports no editor.
+    # Erwartung/Absicherung: verwendet assertIsNotNone, assertIsNone.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_view_without_request_context_reports_no_editor(self):
         """
         _make_redacted() legt den Datensatz direkt per .objects.create() an,
@@ -261,6 +300,9 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
 
     # --- Delete: Berechtigungen + Nebenwirkungen --------------------------
 
+    # Testfall: anonym Benutzer ist redirected to Anmeldung on löschen.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_is_redirected_to_login_on_delete(self):
         redacted = self._make_redacted()
         response = self.client.post(self._delete_url(redacted))
@@ -270,6 +312,9 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
             RedactedBPlanBeteiligungBeitragAnhang.objects.filter(pk=redacted.pk).exists()
         )
 
+    # Testfall: foreign Benutzer cannot löschen redacted version.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_delete_redacted_version(self):
         redacted = self._make_redacted()
         self.client.force_login(self.fremder_user)
@@ -279,6 +324,9 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
             RedactedBPlanBeteiligungBeitragAnhang.objects.filter(pk=redacted.pk).exists()
         )
 
+    # Testfall: Gemeinde Administrator can löschen redacted version.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_delete_redacted_version(self):
         redacted = self._make_redacted()
         self.client.force_login(self.gemeinde_admin)
@@ -289,6 +337,9 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
             RedactedBPlanBeteiligungBeitragAnhang.objects.filter(pk=redacted.pk).exists()
         )
 
+    # Testfall: deleting redacted version does nicht löschen the original anhang.
+    # Erwartung/Absicherung: verwendet assertTrue, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_deleting_redacted_version_does_not_delete_the_original_anhang(self):
         """CASCADE steht auf der Redacted-Seite des OneToOneField - das Original
         darf beim Löschen der geschwärzten Version nicht mit verschwinden."""

@@ -18,6 +18,9 @@ from xplanung_light.models import (
 
 User = get_user_model()
 
+# Testklasse: BeteiligungBeitragDetailViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragDetailViewTests(TestCase):
 
     def setUp(self):
@@ -74,6 +77,9 @@ class BeteiligungBeitragDetailViewTests(TestCase):
     # 1. PFAD: GEMEINDE-ADMINS (HTTP 200)
     # ==============================================================================
 
+    # Testfall: B-Plan Detailansicht View allowed für Gemeinde Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_detail_view_allowed_for_gemeinde_admin(self):
         """Ein zuständiger Gemeinde-Admin kann die BPlan-Beitragsdetails einsehen."""
         self.client.login(username="admin_detail", password="password123")
@@ -89,6 +95,9 @@ class BeteiligungBeitragDetailViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "BPlan Geheimbeschwerde")
 
+    # Testfall: F-Plan Detailansicht View allowed für Gemeinde Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_detail_view_allowed_for_gemeinde_admin(self):
         """Ein zuständiger Gemeinde-Admin kann die FPlan-Beitragsdetails einsehen."""
         self.client.login(username="admin_detail", password="password123")
@@ -108,6 +117,9 @@ class BeteiligungBeitragDetailViewTests(TestCase):
     # 2. PFAD: SESSION-BYPASS FÜR ERSTELLER (HTTP 200)
     # ==============================================================================
 
+    # Testfall: Detailansicht View allowed via session Token für anonym creator.
+    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_view_allowed_via_session_token_for_anonymous_creator(self):
         """Der Ersteller kann anonym zuschauen, wenn seine Session die richtige generic_id hält."""
         # KORREKTUR: beteiligungid hinzugefügt
@@ -130,6 +142,9 @@ class BeteiligungBeitragDetailViewTests(TestCase):
     # 3. PFAD: AUSSCHLUSS UNBEFUGTER (HTTP 404)
     # ==============================================================================
 
+    # Testfall: Detailansicht View liefert 404 für unauthorized Benutzer.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_view_returns_404_for_unauthorized_user(self):
         """Ein unbefugter Nutzer (kein Admin, kein Session-Token) läuft auf einen 404-Fehler."""
         self.client.login(username="unbefugt", password="password123")

@@ -3,6 +3,9 @@ from django.apps import apps
 from xplanung_light.models import AdministrativeOrganization
 from xplanung_light.forms import AdministrativeOrganizationUpdateForm as OrganizationForm
 
+# Testklasse: OrganizationFormBusinessLogicTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class OrganizationFormBusinessLogicTests(TestCase):
 
     def setUp(self):
@@ -32,6 +35,9 @@ class OrganizationFormBusinessLogicTests(TestCase):
             published_data_license=self.license_alt
         )
 
+    # Testfall: Organisation aktualisieren Formular happy path.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_organization_update_form_happy_path(self):
         """Das Formular muss gültige administrative Metadaten erfolgreich entgegennehmen und aktualisieren."""
         form_data = {
@@ -49,6 +55,9 @@ class OrganizationFormBusinessLogicTests(TestCase):
         self.assertEqual(saved_orga.coat_of_arms_url, "https://neustadt.de")
         self.assertEqual(saved_orga.published_data_license.id, self.license_neu.id)
 
+    # Testfall: Organisation aktualisieren Formular fails mit ungültig URL.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_organization_update_form_fails_with_invalid_url(self):
         """Das Formular muss fehlschlagen, wenn eine ungültige URL für das Wappen übergeben wird."""
         form_data = {

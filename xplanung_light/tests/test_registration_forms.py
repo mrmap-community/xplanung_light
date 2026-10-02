@@ -12,6 +12,9 @@ except ImportError:
 
 User = get_user_model()
 
+# Testklasse: RegistrationFormBusinessLogicTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class RegistrationFormBusinessLogicTests(TestCase):
 
     def setUp(self):
@@ -25,6 +28,9 @@ class RegistrationFormBusinessLogicTests(TestCase):
             password="secure_password123"
         )
 
+    # Testfall: Registrierung happy path.
+    # Erwartung/Absicherung: verwendet assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_registration_happy_path(self):
         """Das Formular muss valide sein, wenn alle Daten korrekt und die Passwörter identisch sind."""
         # KORREKTUR: Die Felder heißen 'password1' und 'password2' ohne Unterstrich
@@ -41,6 +47,9 @@ class RegistrationFormBusinessLogicTests(TestCase):
         form = RegistrationForm(data=form_data)
         self.assertTrue(form.is_valid(), form.errors.as_json())
 
+    # Testfall: Registrierung fails wenn passwords do nicht match.
+    # Erwartung/Absicherung: verwendet assertFalse, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_registration_fails_when_passwords_do_not_match(self):
         """Das Formular muss einen Validierungsfehler werfen, wenn die Passwörter nicht übereinstimmen."""
         # KORREKTUR: Auch hier 'password1' und 'password2' ohne Unterstrich nutzen
@@ -61,6 +70,9 @@ class RegistrationFormBusinessLogicTests(TestCase):
             f"Erwarteter Passwort-Mismatch-Fehler nicht gefunden. Gefundene Fehler: {all_errors}"
         )
 
+    # Testfall: Registrierung fails wenn username already exists.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_registration_fails_when_username_already_exists(self):
         """Es darf keine Registrierung mit einem bereits vergebenen Benutzernamen möglich sein."""
         # KORREKTUR: 'password1' und 'password2' ohne Unterstrich nutzen

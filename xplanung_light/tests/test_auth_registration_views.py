@@ -5,6 +5,9 @@ from django.core import mail
 
 User = get_user_model()
 
+# Testklasse: AuthAndRegistrationViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class AuthAndRegistrationViewTests(TestCase):
 
     def setUp(self):
@@ -19,6 +22,9 @@ class AuthAndRegistrationViewTests(TestCase):
     # 1. TESTS FÜR DIE PASSWORT-RESET-PIPELINE
     # ==============================================================================
 
+    # Testfall: Passwort reset View get.
+    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_password_reset_view_get(self):
         """Prüft, ob die Einstiegsseite für den Passwort-Reset erreichbar ist."""
         try:
@@ -33,6 +39,9 @@ class AuthAndRegistrationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "E-Mail")
 
+    # Testfall: Passwort reset trigger E-Mail Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual, assertRedirects, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_password_reset_trigger_email_success(self):
         """Das Absenden einer gültigen E-Mail muss die Reset-Mail triggern und weiterleiten."""
         try:
@@ -70,6 +79,9 @@ class AuthAndRegistrationViewTests(TestCase):
     # 2. TESTS FÜR DIE REGISTRIERUNGS-VIEWS
     # ==============================================================================
 
+    # Testfall: Registrierung View get.
+    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_registration_view_get(self):
         """Prüft, ob das Registrierungsformular für neue Benutzer öffentlich erreichbar ist."""
         registration_url_names = ["registration_register", "register", "user_register", "signup"]

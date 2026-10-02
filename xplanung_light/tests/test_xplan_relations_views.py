@@ -15,6 +15,9 @@ from xplanung_light.models import (
 
 User = get_user_model()
 
+# Testklasse: XPlanRelationsViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanRelationsViewTests(TestCase):
 
     def setUp(self):
@@ -46,6 +49,9 @@ class XPlanRelationsViewTests(TestCase):
             fplan=self.fplan, bekanntmachung_datum=heute, start_datum=morgen, end_datum=in_einem_monat
         )
 
+    # Testfall: xplan relations endpoints accessible.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_xplan_relations_endpoints_accessible(self):
         """Triggert die relationalen Übersichts- und Tabellenendpunkte mit Superuser-Rechten."""
         # KORREKTUR: Login als Superuser

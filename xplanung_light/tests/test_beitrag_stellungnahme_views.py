@@ -16,6 +16,9 @@ from xplanung_light.models import (
 
 User = get_user_model()
 
+# Testklasse: BeitragStellungnahmeViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeitragStellungnahmeViewTests(TestCase):
 
     def setUp(self):
@@ -58,6 +61,9 @@ class BeitragStellungnahmeViewTests(TestCase):
     # 1. LISTE DER STELLUNGNAHMEN (GET)
     # ==============================================================================
 
+    # Testfall: Beitrag stellungnahme auflisten accessible.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_stellungnahme_list_accessible(self):
         """Ein verifizierter Gemeinde-Admin kann die Abwägungsliste aufrufen."""
         self.client.login(username="stellungnahme_admin", password="password123")
@@ -75,6 +81,9 @@ class BeitragStellungnahmeViewTests(TestCase):
     # 2. ABWÄGUNG ERFASSEN / CREATE (POST)
     # ==============================================================================
 
+    # Testfall: Beitrag stellungnahme erstellen Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_stellungnahme_create_success(self):
         """Das Anlegen einer neuen Abwägung muss klappen."""
         self.client.login(username="stellungnahme_admin", password="password123")
@@ -120,6 +129,9 @@ class BeitragStellungnahmeViewTests(TestCase):
     # 3. ABWÄGUNG AKTUALISIEREN / UPDATE (POST)
     # ==============================================================================
 
+    # Testfall: Beitrag stellungnahme aktualisieren Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_stellungnahme_update_success(self):
         """Eine bestehende Abwägung kann modifiziert werden."""
         self.client.login(username="stellungnahme_admin", password="password123")
@@ -159,6 +171,9 @@ class BeitragStellungnahmeViewTests(TestCase):
     # 4. ABWÄGUNG LÖSCHEN / DELETE (POST)
     # ==============================================================================
 
+    # Testfall: Beitrag stellungnahme löschen Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_stellungnahme_delete_success(self):
         """Ein Admin kann eine Abwägung erfolgreich löschen."""
         self.client.login(username="stellungnahme_admin", password="password123")

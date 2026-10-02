@@ -5,6 +5,9 @@ from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.models import AdministrativeOrganization, FPlan
 from xplanung_light.forms import FPlanCreateForm
 
+# Testklasse: FPlanCreateFormTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class FPlanCreateFormTests(TestCase):
 
     def setUp(self):
@@ -21,6 +24,9 @@ class FPlanCreateFormTests(TestCase):
         self.gestern = self.heute - timedelta(days=1)
         self.vor_einem_jahr = self.heute - timedelta(days=365)
 
+    # Testfall: F-Plan erstellen Formular happy path.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual, assertIsInstance.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_create_form_happy_path(self):
         """Das Formular muss valide sein, wenn korrekte FPlan-Daten und eine Geometrie übergeben werden."""
         form_data = {
@@ -51,6 +57,9 @@ class FPlanCreateFormTests(TestCase):
         self.assertEqual(saved_fplan.gemeinde.count(), 1)
         self.assertIsInstance(saved_fplan.geltungsbereich, GEOSGeometry)
 
+    # Testfall: F-Plan erstellen Formular fails ohne required Felder.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_create_form_fails_without_required_fields(self):
         """Das Formular ist ungültig, wenn Name oder Geltungsbereich fehlen."""
         form_data = {

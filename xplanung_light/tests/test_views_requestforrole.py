@@ -13,6 +13,9 @@ User = get_user_model()
 CONFIRM, REFUSE = "requestforrole-confirm", "requestforrole-refuse"
 
 
+# Testklasse: RequestForRoleDecisionTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class RequestForRoleDecisionTests(TestCase):
 
     def setUp(self):
@@ -52,6 +55,9 @@ class RequestForRoleDecisionTests(TestCase):
 
     # --- GET ------------------------------------------------------------------
 
+    # Testfall: get pages render mit Anfrage in Kontext.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_pages_render_with_request_in_context(self):
         req = self.make_request()
         self.client.force_login(self.admin_both)
@@ -63,6 +69,9 @@ class RequestForRoleDecisionTests(TestCase):
 
     # --- Confirm --------------------------------------------------------------
 
+    # Testfall: confirm TöB Anfrage.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse, assertIn, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_confirm_toeb_request(self):
         for user in (self.admin_both, self.root):
             with self.subTest(user=user.username):
@@ -82,6 +91,9 @@ class RequestForRoleDecisionTests(TestCase):
                 self.assertIn(self.org1.name, mail.outbox[0].body)
                 self.assertIn(self.org2.name, mail.outbox[0].body)
 
+    # Testfall: confirm Administrator Rolle updates vorhanden Rolle.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_confirm_admin_role_updates_existing_role(self):
         AdminOrgaUser.objects.create(organization=self.org1, user=self.applicant, is_toeb_reporter=True)
         req = self.make_request("OA")
@@ -92,6 +104,9 @@ class RequestForRoleDecisionTests(TestCase):
         self.assertTrue(role.is_toeb_reporter)                       # bestehendes Flag bleibt erhalten
         self.assertTrue(AdminOrgaUser.objects.get(organization=self.org2, user=self.applicant).is_admin)
 
+    # Testfall: confirm denied wenn nicht Administrator of alle orgas.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assert_untouched.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_confirm_denied_if_not_admin_of_all_orgas(self):
         req = self.make_request("TR")
         r = self.post(CONFIRM, req, self.admin_one)
@@ -99,6 +114,9 @@ class RequestForRoleDecisionTests(TestCase):
         self.assertIn("nicht Administrator", r.content.decode())
         self.assert_untouched(req)
 
+    # Testfall: confirm Administrator Rolle denied für Organisation Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assert_untouched.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_confirm_admin_role_denied_for_orga_admin(self):
         req = self.make_request("OA")
         r = self.post(CONFIRM, req, self.admin_both)
@@ -108,6 +126,9 @@ class RequestForRoleDecisionTests(TestCase):
 
     # --- Refuse ---------------------------------------------------------------
 
+    # Testfall: refuse Anfrage.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_refuse_request(self):
         for user in (self.admin_both, self.root):
             with self.subTest(user=user.username):
@@ -120,6 +141,9 @@ class RequestForRoleDecisionTests(TestCase):
                 self.assertEqual(len(mail.outbox), 1)
                 self.assertIn("Nicht zustaendig", mail.outbox[0].body)   # setzt voraus, dass das Template editing_note zeigt
 
+    # Testfall: refuse denied paths.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assert_untouched.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_refuse_denied_paths(self):
         for who, role, marker in ((self.admin_one, "TR", "nicht Administrator"),
                                   (self.admin_both, "OA", "TOEB-Reporter")):
@@ -131,6 +155,9 @@ class RequestForRoleDecisionTests(TestCase):
                 self.assert_untouched(req)
 
     # --- anonym ---------------------------------------------------------------
+    # Testfall: anonym cannot decide.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assert_untouched.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_decide(self):
         req = self.make_request()
         for name in (CONFIRM, REFUSE):

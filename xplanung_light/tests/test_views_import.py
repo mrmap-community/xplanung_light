@@ -21,6 +21,9 @@ CASES = [
 ]
 
 
+# Testklasse: ImportViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ImportViewTests(TestCase):
 
     def setUp(self):
@@ -43,6 +46,9 @@ class ImportViewTests(TestCase):
             r = self.client.post(reverse(url_name), {"file": SimpleUploadedFile("p.gml", b"<x/>")})
         return r, getattr(xp.return_value, method), [str(m) for m in get_messages(r.wsgi_request)]
 
+    # Testfall: get and ungültig post render Formular.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_and_invalid_post_render_form(self):
         self.client.force_login(self.root)
         for case in CASES:
@@ -50,6 +56,9 @@ class ImportViewTests(TestCase):
                 self.assertEqual(self.client.get(reverse(case[0])).status_code, 200)
                 self.assertEqual(self.client.post(reverse(case[0]), {}).status_code, 200)
 
+    # Testfall: Erfolg für Superuser and Organisation Administrator.
+    # Erwartung/Absicherung: verwendet assertRedirects, assert_called_once, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_success_for_superuser_and_orga_admin(self):
         for case in CASES:
             for user in (self.root, self.admin):
@@ -60,6 +69,9 @@ class ImportViewTests(TestCase):
                         imp.assert_called_once()
                         self.assertTrue(any(word in m for m in msgs), msgs)
 
+    # Testfall: vorhanden Plan ohne overwrite zeigt Fehler.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_existing_plan_without_overwrite_shows_error(self):
         for case in CASES:
             with self.subTest(case=case[0]):
@@ -67,6 +79,9 @@ class ImportViewTests(TestCase):
                 self.assertEqual(r.status_code, 200)
                 self.assertTrue(any("schon vorhanden" in m for m in msgs), msgs)
 
+    # Testfall: nicht Administrator ist denied.
+    # Erwartung/Absicherung: verwendet assertEqual, assert_not_called, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_non_admin_is_denied(self):
         for case in CASES:
             with self.subTest(case=case[0]):
@@ -75,6 +90,9 @@ class ImportViewTests(TestCase):
                 imp.assert_not_called()
                 self.assertTrue(any("nicht Administrator" in m for m in msgs), msgs)
 
+    # Testfall: GML ohne organisations ist denied.
+    # Erwartung/Absicherung: verwendet assertEqual, assert_not_called.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gml_without_organisations_is_denied(self):
         # schlägt bei den _archiv-Views fehl, bis der Guard aus Punkt 1 eingebaut ist
         for case in CASES:
@@ -83,6 +101,9 @@ class ImportViewTests(TestCase):
                 self.assertEqual(r.status_code, 200)
                 imp.assert_not_called()
 
+    # Testfall: ungültig Formular rerenders mit Fehler.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_invalid_form_rerenders_with_errors(self):
         self.client.force_login(self.root)
         for name in ("bplan-import", "fplan-import", "bplan-import-archiv", "fplan-import-archiv"):

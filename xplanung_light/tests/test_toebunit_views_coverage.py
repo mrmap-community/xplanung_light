@@ -26,6 +26,9 @@ from xplanung_light.views.toebunit import (
 User = get_user_model()
 
 
+# Testklasse: ToebUnitCoverageTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ToebUnitCoverageTests(TestCase):
     def setUp(self):
         self.geometry = GEOSGeometry("POLYGON((0 0,0 1,1 1,1 0,0 0))")
@@ -99,6 +102,9 @@ class ToebUnitCoverageTests(TestCase):
     # CreateView.get_form
     # ------------------------------------------------------------------
 
+    # Testfall: erstellen Formular für Superuser zeigt alle Organisationen and reporters.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertNotIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_form_for_superuser_shows_all_organizations_and_reporters(self):
         self.login(self.superuser)
         response = self.client.get(reverse("toebunit-create"))
@@ -112,6 +118,9 @@ class ToebUnitCoverageTests(TestCase):
         self.assertIn(self.reporter_entry.pk, set(form.fields["editors"].queryset.values_list("pk", flat=True)))
         self.assertNotIn(self.non_admin_reporter_entry.pk, set(form.fields["editors"].queryset.values_list("pk", flat=True)))
 
+    # Testfall: erstellen Formular für Administrator only zeigt own Organisation and its reporters.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertNotIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_form_for_admin_only_shows_own_organization_and_its_reporters(self):
         self.login(self.admin)
         response = self.client.get(reverse("toebunit-create"))
@@ -123,6 +132,9 @@ class ToebUnitCoverageTests(TestCase):
         self.assertNotIn(self.other_admin_entry.pk, form.fields["editors"].queryset.values_list("pk", flat=True))
         self.assertNotIn(self.non_admin_reporter_entry.pk, form.fields["editors"].queryset.values_list("pk", flat=True))
 
+    # Testfall: erstellen Formular verwendet leaflet Geometrie widget.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_form_uses_leaflet_geometry_widget(self):
         form = ToebUnitCreateForm()
         request = self.client.request().wsgi_request
@@ -137,10 +149,16 @@ class ToebUnitCoverageTests(TestCase):
     # CreateView.form_valid / success URL
     # ------------------------------------------------------------------
 
+    # Testfall: erstellen Erfolg URL points to auflisten.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_success_url_points_to_list(self):
         view = ToebUnitCreateView()
         self.assertEqual(view.get_success_url(), reverse("toebunit-list"))
 
+    # Testfall: erstellen post by Superuser can assign other Organisation.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_post_by_superuser_can_assign_other_organization(self):
         self.login(self.superuser)
         payload = {
@@ -161,6 +179,9 @@ class ToebUnitCoverageTests(TestCase):
     # UpdateView.get_form / form_valid / get_object
     # ------------------------------------------------------------------
 
+    # Testfall: aktualisieren Formular für Superuser zeigt alle Organisationen.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_form_for_superuser_shows_all_organizations(self):
         self.login(self.superuser)
         response = self.client.get(reverse("toebunit-update", kwargs={"pk": self.unit.pk}))
@@ -171,15 +192,24 @@ class ToebUnitCoverageTests(TestCase):
         self.assertIn(self.other_org.pk, ids)
         self.assertIn(self.other_admin_entry.pk, set(form.fields["editors"].queryset.values_list("pk", flat=True)))
 
+    # Testfall: aktualisieren get Objekt denies Administrator of other Organisation.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_get_object_denies_admin_of_other_organization(self):
         self.login(self.other_admin)
         response = self.client.get(reverse("toebunit-update", kwargs={"pk": self.unit.pk}))
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: aktualisieren Erfolg URL points to auflisten.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_success_url_points_to_list(self):
         view = ToebUnitUpdateView()
         self.assertEqual(view.get_success_url(), reverse("toebunit-list"))
 
+    # Testfall: aktualisieren Formular weist zurück editor aus other Organisation.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_form_rejects_editor_from_other_organization(self):
         form = ToebUnitUpdateForm(
             data={
@@ -196,6 +226,9 @@ class ToebUnitCoverageTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("Alle Sachbearbeiter müssen zur gleichen Organisation gehören.", form.non_field_errors())
 
+    # Testfall: aktualisieren Formular weist zurück editor ohne TöB Berichterstatter Rolle.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_form_rejects_editor_without_toeb_reporter_role(self):
         form = ToebUnitUpdateForm(
             data={
@@ -212,6 +245,9 @@ class ToebUnitCoverageTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("Alle Sachbearbeiter müssen TOEB-Reporter sein.", form.non_field_errors())
 
+    # Testfall: aktualisieren Formular gültig Superuser updates successfully.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_form_valid_superuser_updates_successfully(self):
         self.login(self.superuser)
         payload = {
@@ -238,6 +274,9 @@ class ToebUnitCoverageTests(TestCase):
     # List views
     # ------------------------------------------------------------------
 
+    # Testfall: internal auflisten für Administrator contains only own Organisation.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertNotIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_internal_list_for_admin_contains_only_own_organization(self):
         other_unit = ToebUnit.objects.create(
             organization=self.other_org,
@@ -254,6 +293,9 @@ class ToebUnitCoverageTests(TestCase):
         self.assertIn(self.unit.pk, ids)
         self.assertNotIn(other_unit.pk, ids)
 
+    # Testfall: internal auflisten für Superuser contains alle Organisationen.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_internal_list_for_superuser_contains_all_organizations(self):
         other_unit = ToebUnit.objects.create(
             organization=self.other_org,
@@ -270,6 +312,9 @@ class ToebUnitCoverageTests(TestCase):
         self.assertIn(self.unit.pk, ids)
         self.assertIn(other_unit.pk, ids)
 
+    # Testfall: öffentlich auflisten contains only öffentlich units.
+    # Erwartung/Absicherung: verwendet assertEqual, assertContains, assertNotContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_public_list_contains_only_public_units(self):
         ToebUnit.objects.create(
             organization=self.org,
@@ -288,18 +333,27 @@ class ToebUnitCoverageTests(TestCase):
     # DeleteView
     # ------------------------------------------------------------------
 
+    # Testfall: löschen get Objekt denies Administrator of other Organisation.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_get_object_denies_admin_of_other_organization(self):
         self.login(self.other_admin)
         response = self.client.post(reverse("toebunit-delete", kwargs={"pk": self.unit.pk}))
         self.assertEqual(response.status_code, 403)
         self.assertTrue(ToebUnit.objects.filter(pk=self.unit.pk).exists())
 
+    # Testfall: löschen by Superuser succeeds.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_by_superuser_succeeds(self):
         self.login(self.superuser)
         response = self.client.post(reverse("toebunit-delete", kwargs={"pk": self.unit.pk}), follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(ToebUnit.objects.filter(pk=self.unit.pk).exists())
 
+    # Testfall: löschen Administrator ist blocked wenn B-Plan participation exists.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_admin_is_blocked_when_bplan_participation_exists(self):
         self.login(self.admin)
         with patch.object(BPlanBeteiligung.objects, "filter") as filter_mock:
@@ -310,6 +364,9 @@ class ToebUnitCoverageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(ToebUnit.objects.filter(pk=self.unit.pk).exists())
 
+    # Testfall: löschen Administrator ist blocked wenn F-Plan participation exists.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_admin_is_blocked_when_fplan_participation_exists(self):
         self.login(self.admin)
         with patch.object(BPlanBeteiligung.objects, "filter") as b_filter_mock:
@@ -320,11 +377,17 @@ class ToebUnitCoverageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(ToebUnit.objects.filter(pk=self.unit.pk).exists())
 
+    # Testfall: löschen nicht Administrator liefert ohne deleting.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_non_admin_returns_without_deleting(self):
         self.login(self.reporter)
         response = self.client.post(reverse("toebunit-delete", kwargs={"pk": self.unit.pk}), follow=True)
         self.assertEqual(response.status_code, 403)
         self.assertTrue(ToebUnit.objects.filter(pk=self.unit.pk).exists())
 
+    # Testfall: löschen View Erfolg Nachricht ist defined.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_view_success_message_is_defined(self):
         self.assertEqual(ToebUnitDeleteView.success_message, "TOEB-Stelle wurde gelöscht!")

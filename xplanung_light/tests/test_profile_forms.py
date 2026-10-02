@@ -12,6 +12,9 @@ except ImportError:
 
 User = get_user_model()
 
+# Testklasse: UserProfileFormBusinessLogicTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class UserProfileFormBusinessLogicTests(TestCase):
 
     def setUp(self):
@@ -31,6 +34,9 @@ class UserProfileFormBusinessLogicTests(TestCase):
             password="secure_password123"
         )
 
+    # Testfall: Profil Formular happy path gleich E-Mail.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_profile_form_happy_path_same_email(self):
         """Das Formular muss valide sein, wenn Daten geändert werden, aber die E-Mail gleich bleibt."""
         form_data = {
@@ -48,6 +54,9 @@ class UserProfileFormBusinessLogicTests(TestCase):
         self.assertEqual(saved_user.first_name, "Constanze Maria")
         self.assertEqual(saved_user.email, "conni.owner@kommune.de")
 
+    # Testfall: Profil Formular happy path new unique E-Mail.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_profile_form_happy_path_new_unique_email(self):
         """Das Formular muss valide sein, wenn eine komplett neue, unvergebene E-Mail eingetragen wird."""
         form_data = {
@@ -64,6 +73,9 @@ class UserProfileFormBusinessLogicTests(TestCase):
         saved_user = form.save()
         self.assertEqual(saved_user.email, "conni.neu@kommune.de")
 
+    # Testfall: Profil Formular erlaubt E-Mail change even wenn taken.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_profile_form_allows_email_change_even_if_taken(self):
         """Korrektur: Das Formular lässt die E-Mail-Änderung systemkonform zu, da kein Unique-Check implementiert ist."""
         form_data = {

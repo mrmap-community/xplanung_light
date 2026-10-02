@@ -8,6 +8,9 @@ from xplanung_light.models import AdministrativeOrganization
 
 User = get_user_model()
 
+# Testklasse: XPlanImportArchiveViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanImportArchiveViewTests(TestCase):
 
     def setUp(self):
@@ -71,6 +74,9 @@ class XPlanImportArchiveViewTests(TestCase):
     # 1. BPLAN-ARCHIV-IMPORT (GET & POST)
     # ==============================================================================
 
+    # Testfall: B-Plan Import archiv View Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_import_archiv_view_success(self):
         """Prüft die Erreichbarkeit und den Upload eines echten ZIP-Archivs für BPläne."""
         self.client.login(username="archive_admin", password="password123")
@@ -91,6 +97,9 @@ class XPlanImportArchiveViewTests(TestCase):
     # 2. FPLAN-ARCHIV-IMPORT (GET & POST)
     # ==============================================================================
 
+    # Testfall: F-Plan Import archiv View Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_import_archiv_view_success(self):
         """Prüft die Erreichbarkeit und den Upload eines echten ZIP-Archivs für FPläne."""
         self.client.login(username="archive_admin", password="password123")

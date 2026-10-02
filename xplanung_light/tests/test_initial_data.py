@@ -14,6 +14,9 @@ from django.http import FileResponse, HttpResponse
 # Grundlegende Sanity-Checks auf den Fixtures: Superuser korrekt angelegt,
 # GML-Export/Import-Roundtrip funktioniert, WMS-Capabilities liefern die
 # erwartete Layer-Anzahl.
+# Testklasse: InitialDataIntegrity.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class InitialDataIntegrity(TestCase):
     fixtures = ['user.json',
                 'administrative_organization.json',
@@ -31,6 +34,9 @@ class InitialDataIntegrity(TestCase):
         #print("setUp: Run once for every test method to set up clean data.")
         pass
 
+    # Testfall: wenn Superuser name ist Administrator and id ist 1.
+    # Erwartung/Absicherung: verwendet assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_if_superuser_name_is_admin_and_id_is_1(self):
         # Setzt voraus, dass die user.json-Fixture einen Superuser mit
         # pk=1 und Username 'admin' enthält.
@@ -43,6 +49,9 @@ class InitialDataIntegrity(TestCase):
             test = False
         self.assertTrue(test)
     
+    # Testfall: wenn xplangml Export and Import works.
+    # Erwartung/Absicherung: verwendet assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_if_xplangml_export_and_import_works(self):
         """
         Check ob ein der XPlan-GML Export für einen speziellen Plan (4318) sich wieder als BPlan importieren lässt.
@@ -75,6 +84,9 @@ class InitialDataIntegrity(TestCase):
         #print(str(timestamp_before) + " - " + str(timestamp_after))
         self.assertFalse(timestamp_before == timestamp_after)
         
+    # Testfall: wenn wms capabilities ist created.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_if_wms_capabilities_is_created(self):
         """
         Test ob status = 200 für WMS-Capabilities über mapserver. Außerdem wird die Zahl der Layer für die Organisation geprüft - soll 8.

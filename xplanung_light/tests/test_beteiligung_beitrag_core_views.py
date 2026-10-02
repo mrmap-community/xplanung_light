@@ -17,6 +17,9 @@ from xplanung_light.models import (
 
 User = get_user_model()
 
+# Testklasse: BeteiligungBeitragCoreViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragCoreViewTests(TestCase):
 
     def setUp(self):
@@ -65,6 +68,9 @@ class BeteiligungBeitragCoreViewTests(TestCase):
     # 1. BPLAN: ONLINE-FORMULAR (GET & POST BÜRGER-EINWAND)
     # ==============================================================================
 
+    # Testfall: B-Plan online contribution Formular and Administrator auflisten get.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_online_contribution_form_and_admin_list_get(self):
         """Prüft das Laden des Online-Formulars (Bürger) und der internen Beitragsliste (Admin)."""
         url_create = reverse("beteiligungbeitrag-create", kwargs={
@@ -81,6 +87,9 @@ class BeteiligungBeitragCoreViewTests(TestCase):
         response_list = self.client.get(url_list)
         self.assertEqual(response_list.status_code, 200)
 
+    # Testfall: B-Plan online contribution submit Erfolg.
+    # Erwartung/Absicherung: verwendet assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_online_contribution_submit_success(self):
         """Simuliert das erfolgreiche Absenden einer Online-Stellungnahme durch einen Bürger."""
         url_create = reverse("beteiligungbeitrag-create", kwargs={
@@ -132,6 +141,9 @@ class BeteiligungBeitragCoreViewTests(TestCase):
     # 2. FPLAN: ONLINE-FORMULAR (GET)
     # ==============================================================================
 
+    # Testfall: F-Plan online contribution Formular and Administrator auflisten get.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_online_contribution_form_and_admin_list_get(self):
         """Prüft das Laden des FPlan-Online-Formulars und der internen Beitragsliste."""
         url_create = reverse("beteiligungbeitrag-create", kwargs={
@@ -151,6 +163,9 @@ class BeteiligungBeitragCoreViewTests(TestCase):
     # 3. ABSICHERUNG DER ZUGRIFFSCONSTRAINTS (PERMISSION DENIED PRÜFUNG)
     # ==============================================================================
 
+    # Testfall: Administrator auflisten denied für unauthorized Benutzer.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_list_denied_for_unauthorized_user(self):
         """Ein normaler Bürger darf die behördliche Beitragsliste niemals einsehen."""
         self.client.login(username="buerger_online", password="password123")

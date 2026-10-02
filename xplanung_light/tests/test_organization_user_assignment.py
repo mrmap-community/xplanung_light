@@ -14,6 +14,9 @@ from xplanung_light.forms import OrganizationUserAssignmentFormToebReporter
 
 User = get_user_model()
 
+# Testklasse: OrganizationUserAssignmentFormToebReporterTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class OrganizationUserAssignmentFormToebReporterTests(TestCase):
 
     def setUp(self):
@@ -75,6 +78,9 @@ class OrganizationUserAssignmentFormToebReporterTests(TestCase):
         # Weise die TÖB-Einheit dem laufenden Verfahren zu
         self.beteiligung.assigned_toebs.add(self.toeb_unit)
 
+    # Testfall: save blocks Rolle withdrawal für active procedure Benutzer.
+    # Erwartung/Absicherung: verwendet assertTrue, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_save_blocks_role_withdrawal_for_active_procedure_user(self):
         """Verifiziert, dass das Formular den Rollenentzug blockiert, wenn ein Verfahren läuft."""
         

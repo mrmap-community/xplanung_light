@@ -4,6 +4,9 @@ from django.urls import reverse
 from xplanung_light.models import BPlan
 
 
+# Testklasse: BPlanPublicVisibility.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BPlanPublicVisibility(TestCase):
     """
     Trennung von öffentlicher und interner Plan-Liste.
@@ -23,6 +26,9 @@ class BPlanPublicVisibility(TestCase):
     def setUp(self):
         self.client = Client()
 
+    # Testfall: öffentlich auflisten contains only öffentlich Pläne.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue, assertSetEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_public_list_contains_only_public_plans(self):
         # Die öffentliche Liste darf exakt der Menge der public=True-Pläne
         # entsprechen - kein zusätzlicher, kein fehlender Plan.
@@ -45,6 +51,9 @@ class BPlanPublicVisibility(TestCase):
         self.assertSetEqual(listed_pks, expected_pks)
         self.assertSetEqual(listed_pks & non_public_pks, set())
 
+    # Testfall: nicht öffentlich Plan name ist nicht rendered.
+    # Erwartung/Absicherung: verwendet assertIsNotNone, assertNotContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_non_public_plan_name_is_not_rendered(self):
         """Der Name eines nicht-öffentlichen Plans darf nicht im HTML stehen."""
         non_public_plan = BPlan.objects.filter(public=False).first()
@@ -52,6 +61,9 @@ class BPlanPublicVisibility(TestCase):
         response = self.client.get(reverse('bplan-public-list'))
         self.assertNotContains(response, non_public_plan.name)
 
+    # Testfall: internal auflisten erfordert Anmeldung.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_internal_list_requires_login(self):
         # Anonymer Zugriff auf die interne Liste muss auf den Login umleiten.
         response = self.client.get(reverse('bplan-list'))

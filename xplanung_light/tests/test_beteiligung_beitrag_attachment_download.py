@@ -15,6 +15,9 @@ from xplanung_light.models import (
 )
 
 
+# Testklasse: BeteiligungBeitragAttachmentDownload.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragAttachmentDownload(TestCase):
     """
     Tests für get_beteiligung_beitrag_attachment() / _orig() (views/views.py) -
@@ -107,6 +110,9 @@ class BeteiligungBeitragAttachmentDownload(TestCase):
             # prüfen hier bewusst nur auf die stabile Basisklasse.
     #        self.client.get(self._default_url())
 
+    # Testfall: orig Download succeeds regardless of redacted version.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_orig_download_succeeds_regardless_of_redacted_version(self):
         """
         Gegenprobe: der _orig-Pfad (priorize_redacted=False) greift nie auf
@@ -118,6 +124,9 @@ class BeteiligungBeitragAttachmentDownload(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b''.join(response.streaming_content), b'ungeschwaerzter-inhalt')
 
+    # Testfall: Standard Download serves redacted file wenn one exists.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_default_download_serves_redacted_file_when_one_exists(self):
         """
         Sobald eine geschwärzte Version existiert, funktioniert auch der
@@ -139,6 +148,9 @@ class BeteiligungBeitragAttachmentDownload(TestCase):
 
     # --- Zugriffskontrolle (ergänzend, bisher ebenfalls ungetestet) --------
 
+    # Testfall: foreign Benutzer cannot Download via orig URL.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_download_via_orig_url(self):
         """
         Bewusst über die _orig-URL getestet, damit dieser Test unabhängig
@@ -148,6 +160,9 @@ class BeteiligungBeitragAttachmentDownload(TestCase):
         response = self.client.get(self._orig_url())
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: anonym mit matching session can Download own Anhang.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_with_matching_session_can_download_own_attachment(self):
         """Gast-Zugriff über die in der Session hinterlegte generic_id des
         eigenen Beitrags - siehe beitrag_activate() & Co."""
@@ -158,6 +173,9 @@ class BeteiligungBeitragAttachmentDownload(TestCase):
         response = self.client.get(self._orig_url())
         self.assertEqual(response.status_code, 200)
 
+    # Testfall: anonym mit foreign session gets 401.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_with_foreign_session_gets_401(self):
         """
         Ungewöhnlicher Statuscode für diesen Fall: die View liefert hier

@@ -18,6 +18,9 @@ from xplanung_light.models import (
 
 User = get_user_model()
 
+# Testklasse: BeteiligungBeitragViewsTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragViewsTests(TestCase):
 
     def setUp(self):
@@ -77,6 +80,9 @@ class BeteiligungBeitragViewsTests(TestCase):
     # 1. TESTS FÜR LIST-VIEW & RECHTEPRÜFUNG
     # ==============================================================================
 
+    # Testfall: B-Plan Beitrag auflisten Erfolg für Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_beitrag_list_success_for_admin(self):
         """Ein Gemeinde-Admin kann die Beitragsliste des BPlans einsehen."""
         self.client.login(username="beitrag_admin", password="password123")
@@ -87,6 +93,9 @@ class BeteiligungBeitragViewsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Bedenken zum Lärm")
 
+    # Testfall: F-Plan Beitrag auflisten Erfolg für Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_beitrag_list_success_for_admin(self):
         """Ein Gemeinde-Admin kann die Beitragsliste des FPlans einsehen."""
         self.client.login(username="beitrag_admin", password="password123")
@@ -97,6 +106,9 @@ class BeteiligungBeitragViewsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Bedenken zur Grünfläche")
 
+    # Testfall: Beitrag auflisten denied für stranger.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_list_denied_for_stranger(self):
         """Ein unbefugter Benutzer wird mit HTTP 403 (PermissionDenied) blockiert."""
         self.client.login(username="fremder_user", password="password123")
@@ -110,6 +122,9 @@ class BeteiligungBeitragViewsTests(TestCase):
     # 2. TESTS FÜR AKTIVIERUNG, RÜCKZUG & VERIFIZIERUNG (FUNCTION-BASED-VIEWS)
     # ==============================================================================
 
+    # Testfall: Beitrag activate via E-Mail link.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_activate_via_email_link(self):
         """Der Klick auf den Aktivierungslink schaltet die anonyme Stellungnahme frei."""
         url = reverse("beteiligungbeitrag-activate", kwargs={
@@ -130,6 +145,9 @@ class BeteiligungBeitragViewsTests(TestCase):
         self.bplan_beitrag.refresh_from_db()
         self.assertTrue(self.bplan_beitrag.approved)
 
+    # Testfall: Beitrag withdraw via link.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_withdraw_via_link(self):
         """Der Ersteller kann seinen Beitrag nachträglich als zurückgezogen markieren."""
         url = reverse("beteiligungbeitrag-withdraw", kwargs={
@@ -154,6 +172,9 @@ class BeteiligungBeitragViewsTests(TestCase):
     # 3. TESTS FÜR LÖSCH-ANSICHTEN
     # ==============================================================================
 
+    # Testfall: löschen Beitrag by Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_beitrag_by_admin(self):
         """Ein berechtigter Admin kann einen eingegangenen Beitrag löschen."""
         self.client.login(username="beitrag_admin", password="password123")

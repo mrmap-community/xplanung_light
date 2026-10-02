@@ -5,6 +5,9 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 
 User = get_user_model()
 
+# Testklasse: ViewsErrorHandlingAndPermissionsTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ViewsErrorHandlingAndPermissionsTests(TestCase):
 
     def setUp(self):
@@ -16,6 +19,9 @@ class ViewsErrorHandlingAndPermissionsTests(TestCase):
     # 1. BERECHTIGUNGSPRÜFUNGEN (AUSSCLUSSPRÜFUNG FÜR IMPORTE)
     # ==============================================================================
 
+    # Testfall: B-Plan Import denied für normal Benutzer.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_import_denied_for_normal_user(self):
         """Ein unbefugter Benutzer darf den BPlan-Import nicht erfolgreich ausführen."""
         self.client.login(username="views_normalo", password="password123")
@@ -30,6 +36,9 @@ class ViewsErrorHandlingAndPermissionsTests(TestCase):
         response_post = self.client.post(url, data={"file": fake_file, "confirm": False})
         self.assertIn(response_post.status_code, [200, 403, 302])
 
+    # Testfall: F-Plan Import denied für normal Benutzer.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_import_denied_for_normal_user(self):
         """Ein unbefugter Benutzer darf den FPlan-Import nicht erfolgreich ausführen."""
         self.client.login(username="views_normalo", password="password123")
@@ -46,6 +55,9 @@ class ViewsErrorHandlingAndPermissionsTests(TestCase):
     # 2. FEHLERHAFTE UPLOADS (ABDECKUNG DER FORM_INVALID() ZWEIGE)
     # ==============================================================================
 
+    # Testfall: B-Plan Import Formular ungültig handling.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_import_form_invalid_handling(self):
         """Ein fehlerhafter GML-Upload muss vom View kontrolliert mit Formularfehlern abgefangen werden."""
         self.client.login(username="views_super_admin", password="password123")
@@ -60,6 +72,9 @@ class ViewsErrorHandlingAndPermissionsTests(TestCase):
         response = self.client.post(url, data=payload)
         self.assertEqual(response.status_code, 200)
 
+    # Testfall: F-Plan Import Formular ungültig handling.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_import_form_invalid_handling(self):
         """Ein fehlerhafter FPlan-GML-Upload muss vom View kontrolliert abgefangen werden."""
         self.client.login(username="views_super_admin", password="password123")

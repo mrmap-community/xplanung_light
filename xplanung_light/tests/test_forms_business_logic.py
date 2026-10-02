@@ -6,6 +6,9 @@ from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.models import BPlan, BPlanBeteiligung, BPlanBeteiligungBeitrag, BPlanSpezExterneReferenz
 from xplanung_light.forms import BPlanBeteiligungForm, BPlanSpezExterneReferenzForm
 
+# Testklasse: BPlanFormsBusinessLogicTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BPlanFormsBusinessLogicTests(TestCase):
 
     def setUp(self):
@@ -26,6 +29,9 @@ class BPlanFormsBusinessLogicTests(TestCase):
     # 1. TESTS FÜR BPlanBeteiligungForm (Datum, Typen, Beitragssperren)
     # ==============================================================================
 
+    # Testfall: Beteiligung Formular fails wenn start after end date.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beteiligung_form_fails_when_start_after_end_date(self):
         """Das Formular muss fehlschlagen, wenn das Startdatum nach dem Enddatum liegt."""
         form_data = {
@@ -42,6 +48,9 @@ class BPlanFormsBusinessLogicTests(TestCase):
         self.assertIn('end_datum', form.errors)
         self.assertIn("Das Enddatum darf nicht vor dem Startdatum liegen.", form.errors['end_datum'])
 
+    # Testfall: Beteiligung Formular verhindert type change on aktualisieren.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beteiligung_form_prevents_type_change_on_update(self):
         """Djangos disabled=True ignoriert manipulierte Typänderungen und behält den alten Wert bei."""
         # 1. Bestehende Instanz in der DB anlegen (Typ 1000)
@@ -71,6 +80,9 @@ class BPlanFormsBusinessLogicTests(TestCase):
         saved_instance = form.save(commit=False)
         self.assertEqual(saved_instance.typ, '1000', "Sicherheitsfehler: Der gesperrte Typ wurde überschrieben!")
 
+    # Testfall: Formular verhindert modification wenn contributions exist.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_form_prevents_modification_when_contributions_exist(self):
         """Wenn bereits Beiträge eingegangen sind, darf das Verfahren nicht mehr geändert werden."""
         beteiligung = BPlanBeteiligung.objects.create(
@@ -110,6 +122,9 @@ class BPlanFormsBusinessLogicTests(TestCase):
     # 2. TESTS FÜR BPlanSpezExterneReferenzForm (Rasterkarten-Kopplung)
     # ==============================================================================
 
+    # Testfall: spez externe referenz Formular triggers raster Validator on type 1070.
+    # Erwartung/Absicherung: verwendet assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_spez_externe_referenz_form_triggers_raster_validator_on_type_1070(self):
         """Wenn Typ '1070' (Karte) gewählt ist, muss die angehängte Datei auf Bildintegrität geprüft werden."""
         # Wir übergeben eine korrupte Bilddatei

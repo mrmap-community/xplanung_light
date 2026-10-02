@@ -23,6 +23,9 @@ from xplanung_light.models import (
 )
 
 
+# Testklasse: PermissionTestBase.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class PermissionTestBase(TestCase):
     """Gemeinsame Testgrundlage mit Fixtures, Testbenutzern und Testobjekten."""
     fixtures = [
@@ -194,6 +197,9 @@ class PermissionTestBase(TestCase):
         }
 
 
+# Testklasse: BPlanPermissions.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BPlanPermissions(PermissionTestBase):
     """
     Berechtigungen für Bearbeitung und Löschung eines XPlans.
@@ -206,6 +212,9 @@ class BPlanPermissions(PermissionTestBase):
     - Delete: User muss Admin aller dem Plan zugewiesenen Gemeinden sein.
     """
 
+    # Testfall: anonym Benutzer ist redirected to Anmeldung on aktualisieren.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_is_redirected_to_login_on_update(self):
         """Prüft, dass ein nicht angemeldeter Benutzer beim Aufruf der Planbearbeitung
         zum Login umgeleitet wird.
@@ -216,6 +225,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/accounts/login/", response.url)
 
+    # Testfall: foreign Benutzer cannot aktualisieren Plan.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_update_plan(self):
         """Prüft, dass ein angemeldeter Benutzer ohne passende Gemeinde-Adminrechte den
         Plan nicht bearbeiten darf.
@@ -226,6 +238,9 @@ class BPlanPermissions(PermissionTestBase):
         )
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: foreign Benutzer cannot aktualisieren Plan via direct post.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_update_plan_via_direct_post(self):
         """Prüft, dass die Berechtigungsprüfung auch bei einem direkten POST nicht
         umgangen werden kann.
@@ -237,6 +252,9 @@ class BPlanPermissions(PermissionTestBase):
         )
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: Gemeinde Administrator can open aktualisieren Formular.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_open_update_form(self):
         """Prüft, dass ein berechtigter Gemeinde-Administrator das Bearbeitungsformular
         öffnen darf.
@@ -247,6 +265,9 @@ class BPlanPermissions(PermissionTestBase):
         )
         self.assertEqual(response.status_code, 200)
 
+    # Testfall: Gemeinde Administrator can aktualisieren Plan ohne changing Gemeinden.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_update_plan_without_changing_gemeinden(self):
         """Prüft eine normale Planänderung, bei der die bestehende Gemeinde-Zuweisung
         unverändert bleibt.
@@ -268,6 +289,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertEqual(self.plan.name, old_name + " geändert")
         self.assertEqual(list(self.plan.gemeinde.values_list("pk", flat=True)), [self.gemeinde.pk])
 
+    # Testfall: Administrator cannot add Gemeinde ohne Administrator Rolle.
+    # Erwartung/Absicherung: verwendet assertNotIn, assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_cannot_add_gemeinde_without_admin_role(self):
         """Prüft, dass ein Benutzer keine Gemeinde hinzufügen kann, für die er selbst
         keine Adminrechte besitzt.
@@ -294,6 +318,9 @@ class BPlanPermissions(PermissionTestBase):
         # Validierungsfehler 200 zurückgeben oder mit Redirect arbeiten.
         self.assertIn(response.status_code, {200, 302})
 
+    # Testfall: Administrator can add Gemeinde für which Benutzer ist Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_can_add_gemeinde_for_which_user_is_admin(self):
         """Prüft, dass ein Benutzer eine Gemeinde hinzufügen darf, in der er Administrator ist."""
         neue_gemeinde = self.make_gemeinde("Eigene zweite Gemeinde", 992)
@@ -315,6 +342,9 @@ class BPlanPermissions(PermissionTestBase):
             {self.gemeinde.pk, neue_gemeinde.pk},
         )
 
+    # Testfall: Administrator cannot remove Gemeinde für which Benutzer ist nicht Administrator.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_cannot_remove_gemeinde_for_which_user_is_not_admin(self):
         """Prüft, dass ein Benutzer eine fremde Gemeinde nicht aus dem Plan entfernen kann."""
         fremde_gemeinde = self.make_gemeinde("Fremde Gemeinde", 993)
@@ -336,6 +366,9 @@ class BPlanPermissions(PermissionTestBase):
         )
         self.assertIn(response.status_code, {200, 302})
 
+    # Testfall: anonym Benutzer cannot löschen Plan.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_cannot_delete_plan(self):
         """Prüft den Login-Schutz beim Löschen eines Plans und stellt sicher, dass der
         Plan erhalten bleibt.
@@ -347,6 +380,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertIn("/accounts/login/", response.url)
         self.assertTrue(BPlan.objects.filter(pk=self.PLAN_PK).exists())
 
+    # Testfall: Administrator of only one of two Gemeinden cannot löschen Plan.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_of_only_one_of_two_gemeinden_cannot_delete_plan(self):
         """Prüft die All-Admin-Regel: Bei mehreren Plan-Gemeinden reicht die Adminrolle
         nur in einer Gemeinde nicht aus.
@@ -362,6 +398,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 403)
         self.assertTrue(BPlan.objects.filter(pk=self.PLAN_PK).exists())
 
+    # Testfall: Administrator of alle Gemeinden can löschen Plan.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_of_all_gemeinden_can_delete_plan(self):
         """Prüft, dass ein Benutzer den Plan löschen darf, wenn er in allen
         zugewiesenen Gemeinden Administrator ist.
@@ -379,6 +418,9 @@ class BPlanPermissions(PermissionTestBase):
         self.assertFalse(BPlan.objects.filter(pk=self.PLAN_PK).exists())
 
 
+# Testklasse: FPlanPermissions.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class FPlanPermissions(PermissionTestBase):
     """
     Berechtigungen für Bearbeitung und Löschung eines Flächennutzungsplans (FPlan).
@@ -390,6 +432,9 @@ class FPlanPermissions(PermissionTestBase):
     nicht implizit auf BPlan-spezifische Annahmen angewiesen ist.
     """
 
+    # Testfall: anonym Benutzer ist redirected to Anmeldung on aktualisieren.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_is_redirected_to_login_on_update(self):
         """Prüft, dass ein nicht angemeldeter Benutzer beim Aufruf der FPlan-Bearbeitung
         zum Login umgeleitet wird.
@@ -400,6 +445,9 @@ class FPlanPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/accounts/login/", response.url)
 
+    # Testfall: foreign Benutzer cannot aktualisieren Plan.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_update_plan(self):
         """Prüft, dass ein angemeldeter Benutzer ohne passende Gemeinde-Adminrechte den
         FPlan nicht bearbeiten darf.
@@ -410,6 +458,9 @@ class FPlanPermissions(PermissionTestBase):
         )
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: foreign Benutzer cannot aktualisieren Plan via direct post.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_update_plan_via_direct_post(self):
         """Prüft, dass die Berechtigungsprüfung auch bei einem direkten POST nicht
         umgangen werden kann.
@@ -421,6 +472,9 @@ class FPlanPermissions(PermissionTestBase):
         )
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: Gemeinde Administrator can open aktualisieren Formular.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_open_update_form(self):
         """Prüft, dass ein berechtigter Gemeinde-Administrator das Bearbeitungsformular
         öffnen darf.
@@ -431,6 +485,9 @@ class FPlanPermissions(PermissionTestBase):
         )
         self.assertEqual(response.status_code, 200)
 
+    # Testfall: Gemeinde Administrator can aktualisieren Plan ohne changing Gemeinden.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_update_plan_without_changing_gemeinden(self):
         """Prüft eine normale Planänderung, bei der die bestehende Gemeinde-Zuweisung
         unverändert bleibt.
@@ -452,6 +509,9 @@ class FPlanPermissions(PermissionTestBase):
         self.assertEqual(self.fplan.name, old_name + " geändert")
         self.assertEqual(list(self.fplan.gemeinde.values_list("pk", flat=True)), [self.gemeinde.pk])
 
+    # Testfall: Administrator cannot add Gemeinde ohne Administrator Rolle.
+    # Erwartung/Absicherung: verwendet assertNotIn, assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_cannot_add_gemeinde_without_admin_role(self):
         """Prüft, dass ein Benutzer keine Gemeinde hinzufügen kann, für die er selbst
         keine Adminrechte besitzt.
@@ -478,6 +538,9 @@ class FPlanPermissions(PermissionTestBase):
         # Validierungsfehler 200 zurückgeben oder mit Redirect arbeiten.
         self.assertIn(response.status_code, {200, 302})
 
+    # Testfall: Administrator can add Gemeinde für which Benutzer ist Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_can_add_gemeinde_for_which_user_is_admin(self):
         """Prüft, dass ein Benutzer eine Gemeinde hinzufügen darf, in der er Administrator ist."""
         neue_gemeinde = self.make_gemeinde("Eigene zweite Gemeinde (FPlan)", 1102)
@@ -499,6 +562,9 @@ class FPlanPermissions(PermissionTestBase):
             {self.gemeinde.pk, neue_gemeinde.pk},
         )
 
+    # Testfall: Administrator cannot remove Gemeinde für which Benutzer ist nicht Administrator.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_cannot_remove_gemeinde_for_which_user_is_not_admin(self):
         """Prüft, dass ein Benutzer eine fremde Gemeinde nicht aus dem FPlan entfernen kann."""
         fremde_gemeinde = self.make_gemeinde("Fremde Gemeinde (FPlan)", 1103)
@@ -520,6 +586,9 @@ class FPlanPermissions(PermissionTestBase):
         )
         self.assertIn(response.status_code, {200, 302})
 
+    # Testfall: anonym Benutzer cannot löschen Plan.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_cannot_delete_plan(self):
         """Prüft den Login-Schutz beim Löschen eines FPlans und stellt sicher, dass der
         Plan erhalten bleibt.
@@ -531,6 +600,9 @@ class FPlanPermissions(PermissionTestBase):
         self.assertIn("/accounts/login/", response.url)
         self.assertTrue(FPlan.objects.filter(pk=self.FPLAN_PK).exists())
 
+    # Testfall: Administrator of only one of two Gemeinden cannot löschen Plan.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_of_only_one_of_two_gemeinden_cannot_delete_plan(self):
         """Prüft die All-Admin-Regel: Bei mehreren Plan-Gemeinden reicht die Adminrolle
         nur in einer Gemeinde nicht aus.
@@ -546,6 +618,9 @@ class FPlanPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 403)
         self.assertTrue(FPlan.objects.filter(pk=self.FPLAN_PK).exists())
 
+    # Testfall: Administrator of alle Gemeinden can löschen Plan.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_of_all_gemeinden_can_delete_plan(self):
         """Prüft, dass ein Benutzer den FPlan löschen darf, wenn er in allen
         zugewiesenen Gemeinden Administrator ist.
@@ -563,6 +638,9 @@ class FPlanPermissions(PermissionTestBase):
         self.assertFalse(FPlan.objects.filter(pk=self.FPLAN_PK).exists())
 
 
+# Testklasse: XPlanRelationPermissions.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanRelationPermissions(PermissionTestBase):
     """
     Permission-/IDOR-Tests für die generischen XPlanRelationsViews.
@@ -574,6 +652,9 @@ class XPlanRelationPermissions(PermissionTestBase):
     - Delete verlangt Admin-Rechte für alle dem Plan zugewiesenen Gemeinden.
     """
 
+    # Testfall: foreign Benutzer cannot erstellen relation via direct post.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_create_relation_via_direct_post(self):
         """Prüft, dass eine Relation nicht per direktem POST ohne passende
         Gemeinde-Adminrechte angelegt werden kann.
@@ -590,6 +671,9 @@ class XPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: Gemeinde Administrator can open relation erstellen Formular.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_open_relation_create_form(self):
         """Prüft, dass ein berechtigter Gemeinde-Administrator das Relationsformular öffnen darf."""
         self.client.force_login(self.gemeinde_admin)
@@ -603,6 +687,9 @@ class XPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 200)
 
+    # Testfall: foreign Benutzer cannot aktualisieren relation.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_update_relation(self):
         """Prüft, dass ein fremder Benutzer eine bestehende Relation nicht bearbeiten kann."""
         beteiligung = self.make_toeb_beteiligung(self.plan)
@@ -620,6 +707,9 @@ class XPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: Gemeinde Administrator can open relation aktualisieren Formular.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_open_relation_update_form(self):
         """Prüft, dass ein berechtigter Gemeinde-Administrator das Relationsformular
         zur Bearbeitung öffnen darf.
@@ -639,6 +729,9 @@ class XPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 200)
 
+    # Testfall: relation aktualisieren cannot cross Plan boundary.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_relation_update_cannot_cross_plan_boundary(self):
         """Prüft, dass Plan-ID und Objekt-ID nicht aus unterschiedlichen Plänen
         kombiniert werden können.
@@ -659,6 +752,9 @@ class XPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 404)
 
+    # Testfall: foreign Benutzer cannot löschen relation.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_delete_relation(self):
         """Prüft, dass ein fremder Benutzer eine Relation nicht löschen kann."""
         beteiligung = self.make_toeb_beteiligung(self.plan)
@@ -679,6 +775,9 @@ class XPlanRelationPermissions(PermissionTestBase):
             BPlanBeteiligung.objects.filter(pk=beteiligung.pk).exists()
         )
 
+    # Testfall: relation löschen cannot cross Plan boundary.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_relation_delete_cannot_cross_plan_boundary(self):
         """Prüft, dass beim Löschen einer Relation kein Objekt aus einem anderen Plan
         über eine manipulierte URL erreicht wird.
@@ -702,6 +801,9 @@ class XPlanRelationPermissions(PermissionTestBase):
             BPlanBeteiligung.objects.filter(pk=beteiligung.pk).exists()
         )
 
+    # Testfall: foreign Benutzer cannot erstellen Anhang via direct post.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_create_attachment_via_direct_post(self):
         """Prüft den Berechtigungsschutz beim direkten POST zum Anlegen eines Plan-Anhangs."""
         self.client.force_login(self.fremder_user)
@@ -716,6 +818,9 @@ class XPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: Anhang aktualisieren cannot cross Plan boundary.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_attachment_update_cannot_cross_plan_boundary(self):
         """Prüft, dass ein Anhang aus einem anderen Plan nicht über eine fremde Plan-ID
         bearbeitet werden kann.
@@ -740,6 +845,9 @@ class XPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 404)
 
+    # Testfall: Anhang löschen cannot cross Plan boundary.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_attachment_delete_cannot_cross_plan_boundary(self):
         """Prüft, dass ein Anhang aus einem anderen Plan nicht über eine fremde Plan-ID
         gelöscht werden kann.
@@ -767,6 +875,9 @@ class XPlanRelationPermissions(PermissionTestBase):
             BPlanSpezExterneReferenz.objects.filter(pk=attachment.pk).exists()
         )
 
+    # Testfall: Administrator of only one Plan Gemeinde cannot löschen relation.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_of_only_one_plan_gemeinde_cannot_delete_relation(self):
         """Prüft, dass das Löschen einer generischen XPlan-Relation die Adminrechte für
         alle Plan-Gemeinden erfordert.
@@ -791,6 +902,9 @@ class XPlanRelationPermissions(PermissionTestBase):
             BPlanBeteiligung.objects.filter(pk=beteiligung.pk).exists()
         )
 
+    # Testfall: Administrator of alle Plan Gemeinden can löschen relation.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_of_all_plan_gemeinden_can_delete_relation(self):
         """Prüft, dass die Relation gelöscht werden darf, wenn der Benutzer in allen
         Plan-Gemeinden Administrator ist.
@@ -816,6 +930,9 @@ class XPlanRelationPermissions(PermissionTestBase):
             BPlanBeteiligung.objects.filter(pk=beteiligung.pk).exists()
         )
 
+# Testklasse: FPlanRelationPermissions.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class FPlanRelationPermissions(PermissionTestBase):
     """
     Permission-/IDOR-Tests für die generischen XPlanRelationsViews, hier für FPlan.
@@ -832,6 +949,9 @@ class FPlanRelationPermissions(PermissionTestBase):
     - Delete verlangt Admin-Rechte für alle dem Plan zugewiesenen Gemeinden.
     """
 
+    # Testfall: foreign Benutzer cannot erstellen relation via direct post.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_create_relation_via_direct_post(self):
         """Prüft, dass eine Relation nicht per direktem POST ohne passende
         Gemeinde-Adminrechte angelegt werden kann.
@@ -848,6 +968,9 @@ class FPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: Gemeinde Administrator can open relation erstellen Formular.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_open_relation_create_form(self):
         """Prüft, dass ein berechtigter Gemeinde-Administrator das Relationsformular öffnen darf."""
         self.client.force_login(self.gemeinde_admin)
@@ -861,6 +984,9 @@ class FPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 200)
 
+    # Testfall: foreign Benutzer cannot aktualisieren relation.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_update_relation(self):
         """Prüft, dass ein fremder Benutzer eine bestehende Relation nicht bearbeiten kann."""
         beteiligung = self.make_fplan_toeb_beteiligung(self.fplan)
@@ -878,6 +1004,9 @@ class FPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: Gemeinde Administrator can open relation aktualisieren Formular.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_open_relation_update_form(self):
         """Prüft, dass ein berechtigter Gemeinde-Administrator das Relationsformular
         zur Bearbeitung öffnen darf.
@@ -897,6 +1026,9 @@ class FPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 200)
 
+    # Testfall: relation aktualisieren cannot cross Plan boundary.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_relation_update_cannot_cross_plan_boundary(self):
         """Prüft, dass Plan-ID und Objekt-ID nicht aus unterschiedlichen FPlänen
         kombiniert werden können.
@@ -917,6 +1049,9 @@ class FPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 404)
 
+    # Testfall: foreign Benutzer cannot löschen relation.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_delete_relation(self):
         """Prüft, dass ein fremder Benutzer eine Relation nicht löschen kann."""
         beteiligung = self.make_fplan_toeb_beteiligung(self.fplan)
@@ -937,6 +1072,9 @@ class FPlanRelationPermissions(PermissionTestBase):
             FPlanBeteiligung.objects.filter(pk=beteiligung.pk).exists()
         )
 
+    # Testfall: relation löschen cannot cross Plan boundary.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_relation_delete_cannot_cross_plan_boundary(self):
         """Prüft, dass beim Löschen einer Relation kein Objekt aus einem anderen FPlan
         über eine manipulierte URL erreicht wird.
@@ -960,6 +1098,9 @@ class FPlanRelationPermissions(PermissionTestBase):
             FPlanBeteiligung.objects.filter(pk=beteiligung.pk).exists()
         )
 
+    # Testfall: foreign Benutzer cannot erstellen Anhang via direct post.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_create_attachment_via_direct_post(self):
         """Prüft den Berechtigungsschutz beim direkten POST zum Anlegen eines FPlan-Anhangs."""
         self.client.force_login(self.fremder_user)
@@ -974,6 +1115,9 @@ class FPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
+    # Testfall: Anhang aktualisieren cannot cross Plan boundary.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_attachment_update_cannot_cross_plan_boundary(self):
         """Prüft, dass ein Anhang aus einem anderen FPlan nicht über eine fremde Plan-ID
         bearbeitet werden kann.
@@ -998,6 +1142,9 @@ class FPlanRelationPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 404)
 
+    # Testfall: Anhang löschen cannot cross Plan boundary.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_attachment_delete_cannot_cross_plan_boundary(self):
         """Prüft, dass ein Anhang aus einem anderen FPlan nicht über eine fremde Plan-ID
         gelöscht werden kann.
@@ -1025,6 +1172,9 @@ class FPlanRelationPermissions(PermissionTestBase):
             FPlanSpezExterneReferenz.objects.filter(pk=attachment.pk).exists()
         )
 
+    # Testfall: Administrator of only one Plan Gemeinde cannot löschen relation.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_of_only_one_plan_gemeinde_cannot_delete_relation(self):
         """Prüft, dass das Löschen einer generischen XPlan-Relation die Adminrechte für
         alle Plan-Gemeinden erfordert.
@@ -1049,6 +1199,9 @@ class FPlanRelationPermissions(PermissionTestBase):
             FPlanBeteiligung.objects.filter(pk=beteiligung.pk).exists()
         )
 
+    # Testfall: Administrator of alle Plan Gemeinden can löschen relation.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_of_all_plan_gemeinden_can_delete_relation(self):
         """Prüft, dass die Relation gelöscht werden darf, wenn der Benutzer in allen
         Plan-Gemeinden Administrator ist.

@@ -68,6 +68,9 @@ def upload(content, filename="testplan.gml"):
     )
 
 
+# Testklasse: ImportExportRegressionTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ImportExportRegressionTests(TestCase):
     """
     Wichtige Import/Export-Regressionstests.
@@ -92,6 +95,9 @@ class ImportExportRegressionTests(TestCase):
         self.admin = User.objects.get(username="admin_stadt_neustadt")
         self.client.force_login(self.admin)
 
+    # Testfall: B-Plan GML Export ist well formed and passes Import Validator.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_gml_export_is_well_formed_and_passes_import_validator(self):
         response = self.client.get(
             reverse("bplan-export-xplan-raster-6", args=[4318])
@@ -111,6 +117,9 @@ class ImportExportRegressionTests(TestCase):
                 "abgelehnt: " + "; ".join(error.messages)
             )
 
+    # Testfall: F-Plan GML Export ist well formed and passes Import Validator.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_gml_export_is_well_formed_and_passes_import_validator(self):
         response = self.client.get(
             reverse("fplan-export-xplan-raster-6", args=[631])
@@ -130,6 +139,9 @@ class ImportExportRegressionTests(TestCase):
                 "abgelehnt: " + "; ".join(error.messages)
             )
 
+    # Testfall: B-Plan Import creates Plan mit core Felder.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_import_creates_plan_with_core_fields(self):
         name = "Import-Test BPlan"
         response = self.client.post(
@@ -148,6 +160,9 @@ class ImportExportRegressionTests(TestCase):
         self.assertEqual(plan.xplan_gml_version, "6.0")
         self.assertEqual(list(plan.gemeinde.values_list("ls", "ks", "gs")), [("07", "316", "000")])
 
+    # Testfall: F-Plan Import creates Plan mit core Felder.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_import_creates_plan_with_core_fields(self):
         name = "Import-Test FPlan"
         response = self.client.post(
@@ -166,6 +181,9 @@ class ImportExportRegressionTests(TestCase):
         self.assertEqual(plan.xplan_gml_version, "6.0")
         self.assertEqual(list(plan.gemeinde.values_list("ls", "ks", "gs")), [("07", "316", "000")])
 
+    # Testfall: B-Plan Import ohne confirm does nicht doppelt vorhanden Plan.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_import_without_confirm_does_not_duplicate_existing_plan(self):
         name = "Import-Test Duplicate BPlan"
         content = make_gml("BP_Plan", name)
@@ -185,6 +203,9 @@ class ImportExportRegressionTests(TestCase):
         self.assertEqual(second_response.status_code, 200)
         self.assertEqual(BPlan.objects.filter(name=name).count(), 1)
 
+    # Testfall: B-Plan zip Export contains xplan GML.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIsNone.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_zip_export_contains_xplan_gml(self):
         response = self.client.get(
             reverse("bplan-export-xplan-raster-6-zip", args=[4318])
@@ -202,6 +223,9 @@ class ImportExportRegressionTests(TestCase):
         root = ET.fromstring(archive.read("xplan.gml"))
         self.assertEqual(root.tag, f"{{{XPLAN_NS}}}XPlanAuszug")
 
+    # Testfall: F-Plan zip Export contains xplan GML.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIsNone.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_zip_export_contains_xplan_gml(self):
         response = self.client.get(
             reverse("fplan-export-xplan-raster-6-zip", args=[631])

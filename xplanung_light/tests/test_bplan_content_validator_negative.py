@@ -65,6 +65,9 @@ def upload(xml_string, content_type='text/xml'):
     )
 
 
+# Testklasse: BPlanContentValidatorNegativ.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BPlanContentValidatorNegativ(TestCase):
     """
     Negativtests für bplan_content_validator() - jeder Test löst genau einen
@@ -81,6 +84,9 @@ class BPlanContentValidatorNegativ(TestCase):
 
     # --- Vorprüfungen (vor dem XML-Parsing) --------------------------------
 
+    # Testfall: falscher content type wird abgelehnt.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_falscher_content_type_wird_abgelehnt(self):
         # Vorprüfung noch vor dem XML-Parsing: falscher Content-Type -> sofortige Ablehnung.
         messages = self._get_messages(
@@ -88,6 +94,9 @@ class BPlanContentValidatorNegativ(TestCase):
         )
         self.assertEqual(messages, ["Es handelt sich nicht um eine GML-Datei!"])
 
+    # Testfall: ungueltige utf8 bytes werden abgelehnt.
+    # Erwartung/Absicherung: verwendet assertEqual, assertRaises.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_ungueltige_utf8_bytes_werden_abgelehnt(self):
         # Kaputte Bytes statt gültigem UTF-8 -> eigener Decode-Fehlerpfad.
         upload_file = SimpleUploadedFile(
@@ -102,6 +111,9 @@ class BPlanContentValidatorNegativ(TestCase):
 
     # --- Root-Element / Namespace ------------------------------------------
 
+    # Testfall: nicht unterstuetzter namespace wird abgelehnt.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_nicht_unterstuetzter_namespace_wird_abgelehnt(self):
         # Falscher xplan-Namespace (z.B. altes XPlan 4.0) muss abgelehnt werden.
         messages = self._get_messages(
@@ -111,6 +123,9 @@ class BPlanContentValidatorNegativ(TestCase):
         self.assertIn('wird nicht unterstützt', messages[0])
         self.assertIn('XPlanAuszug', messages[0])
 
+    # Testfall: falsches root element wird abgelehnt.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_falsches_root_element_wird_abgelehnt(self):
         # Analog, aber mit falschem Element-Namen statt falschem Namespace.
         messages = self._get_messages(build_gml(root_tag='EtwasAnderes'))
@@ -119,6 +134,9 @@ class BPlanContentValidatorNegativ(TestCase):
 
     # --- Pflichtfeld gemeinde (korrekt behandelter Fall) --------------------
 
+    # Testfall: fehlende Gemeinde wird mit konkreter meldung abgelehnt.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fehlende_gemeinde_wird_mit_konkreter_meldung_abgelehnt(self):
         # Kein xplan:gemeinde-Block im GML -> spezifische Pflichtfeld-Meldung.
         messages = self._get_messages(build_gml(gemeinden=()))
@@ -126,6 +144,9 @@ class BPlanContentValidatorNegativ(TestCase):
         self.assertIn('gemeinde', messages[0])
         self.assertIn('keine Pflichtelemente', messages[0])
 
+    # Testfall: unbekannte ags wird abgelehnt.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_unbekannte_ags_wird_abgelehnt(self):
         # AGS-Format ok, aber keine passende AdministrativeOrganization in der DB.
         messages = self._get_messages(
@@ -135,6 +156,9 @@ class BPlanContentValidatorNegativ(TestCase):
         self.assertIn('99999999', messages[0])
         self.assertIn('Datenbank gefunden', messages[0])
 
+    # Testfall: gemeindename stimmt nicht mit datenbank ueberein.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeindename_stimmt_nicht_mit_datenbank_ueberein(self):
         # AGS existiert, aber der im GML angegebene Gemeindename passt nicht dazu.
         messages = self._get_messages(
@@ -145,6 +169,9 @@ class BPlanContentValidatorNegativ(TestCase):
 
     # --- Geltungsbereich (korrekt behandelter Fall) -------------------------
 
+    # Testfall: fehlender geltungsbereich wird mit konkreter meldung abgelehnt.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fehlender_geltungsbereich_wird_mit_konkreter_meldung_abgelehnt(self):
         # Kein raeumlicherGeltungsbereich im GML -> eigene, klare Fehlermeldung.
         messages = self._get_messages(build_gml(include_geltungsbereich=False))
@@ -152,6 +179,9 @@ class BPlanContentValidatorNegativ(TestCase):
 
     # --- Bekannte Schwäche der Fehlerbehandlung -----------------------------
 
+    # Testfall: fehlendes pflichtfeld name liefert nur generische fehlermeldung.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fehlendes_pflichtfeld_name_liefert_nur_generische_fehlermeldung(self):
         """
         Dokumentiert eine bestehende Schwäche: root.find(...).text wirft bei
@@ -172,6 +202,9 @@ class BPlanContentValidatorNegativ(TestCase):
             messages, ["XML-Dokument konnte nicht geparsed werden!"],
         )
 
+    # Testfall: fehlendes pflichtfeld planart liefert ebenfalls nur generische meldung.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fehlendes_pflichtfeld_planart_liefert_ebenfalls_nur_generische_meldung(self):
         """Gleiche Schwäche wie oben, für xplan:planArt."""
         messages = self._get_messages(build_gml(include_planart=False))
@@ -181,6 +214,8 @@ class BPlanContentValidatorNegativ(TestCase):
 
     # --- Positiv-Gegenprobe --------------------------------------------------
 
+    # Testfall: gueltiges GML wird nicht abgelehnt.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gueltiges_gml_wird_nicht_abgelehnt(self):
         """
         Kontrollprobe: das in allen anderen Tests als 'Basis' verwendete

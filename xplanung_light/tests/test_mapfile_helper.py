@@ -5,6 +5,9 @@ from xplanung_light.models import BPlan, AdministrativeOrganization
 # Wir importieren das Modul flach, um alle enthaltenen Funktionen direkt zu prüfen
 from xplanung_light.helper import mapfile
 
+# Testklasse: MapfileHelperBusinessLogicTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class MapfileHelperBusinessLogicTests(TestCase):
 
     def setUp(self):
@@ -25,6 +28,9 @@ class MapfileHelperBusinessLogicTests(TestCase):
         )
         self.bplan.gemeinde.add(self.orga)
 
+    # Testfall: mapfile functions execution.
+    # Erwartung/Absicherung: verwendet assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_mapfile_functions_execution(self):
         """Ruft alle im Modul deklarierten Funktionen dynamisch auf, um die Code-Abdeckung zu maximieren."""
         # Wir listen alle im Modul vorhandenen Funktionen auf, die nicht mit '_' beginnen

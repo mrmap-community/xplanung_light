@@ -6,6 +6,9 @@ from xplanung_light.forms import ContactOrganizationCreateForm
 
 User = get_user_model()
 
+# Testklasse: ContactOrganizationViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ContactOrganizationViewTests(TestCase):
 
     def setUp(self):
@@ -45,6 +48,9 @@ class ContactOrganizationViewTests(TestCase):
     # 1. LIST-VIEW & DETAILS
     # ==============================================================================
 
+    # Testfall: contact Organisation auflisten accessible für Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contact_organization_list_accessible_for_admin(self):
         """Ein verifizierter Admin kann die Liste der Kontaktstellen einsehen."""
         self.client.login(username="orga_admin", password="password123")
@@ -58,6 +64,9 @@ class ContactOrganizationViewTests(TestCase):
     # 2. CREATE-VIEW (POST)
     # ==============================================================================
 
+    # Testfall: contact Organisation erstellen Erfolg.
+    # Erwartung/Absicherung: verwendet assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contact_organization_create_success(self):
         """Ein Admin kann erfolgreich eine neue Kontaktstelle für seine Gemeinde anlegen."""
         self.client.login(username="orga_admin", password="password123")
@@ -97,6 +106,9 @@ class ContactOrganizationViewTests(TestCase):
     # 3. UPDATE-VIEW (POST)
     # ==============================================================================
 
+    # Testfall: contact Organisation aktualisieren Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contact_organization_update_success(self):
         """Ein Admin kann die Details einer bestehenden Kontaktstelle modifizieren."""
         self.client.login(username="orga_admin", password="password123")
@@ -126,6 +138,9 @@ class ContactOrganizationViewTests(TestCase):
     # 4. RECHTEPRÜFUNG & AUSSCHLUSS (DELETE)
     # ==============================================================================
 
+    # Testfall: contact Organisation löschen Erfolg für Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contact_organization_delete_success_for_admin(self):
         """Ein Admin darf die Löschseite aufrufen und ein Objekt entfernen."""
         self.client.login(username="orga_admin", password="password123")

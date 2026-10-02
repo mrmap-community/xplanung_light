@@ -12,6 +12,9 @@ except ImportError:
         # Fallback falls die Benennung flach liegt
         BPlanFilter = None
 
+# Testklasse: XPlanFilterBusinessLogicTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanFilterBusinessLogicTests(TestCase):
 
     def setUp(self):
@@ -36,6 +39,9 @@ class XPlanFilterBusinessLogicTests(TestCase):
         )
         self.bplan_nord.gemeinde.add(self.orga)
 
+    # Testfall: B-Plan Filter by name substring.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertNotIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_filter_by_name_substring(self):
         """Der Filter muss Pläne anhand eines Namens-Teilstrings korrekt herausfiltern."""
         if not BPlanFilter:
@@ -55,6 +61,9 @@ class XPlanFilterBusinessLogicTests(TestCase):
         self.assertIn(self.bplan_sonnenhang, filtered_qs)
         self.assertNotIn(self.bplan_nord, filtered_qs)
 
+    # Testfall: B-Plan Filter no results on fantasy Abfrage.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_filter_no_results_on_fantasy_query(self):
         """Wenn nach einem Fantasiewort gefiltert wird, muss das QuerySet leer sein."""
         if not BPlanFilter:
@@ -65,6 +74,9 @@ class XPlanFilterBusinessLogicTests(TestCase):
         
         self.assertEqual(filter_instance.qs.count(), 0)
 
+    # Testfall: B-Plan Filter by exact number.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_filter_by_exact_number(self):
         """Der Filter muss Pläne anhand ihrer exakten Nummer identifizieren."""
         if not BPlanFilter:

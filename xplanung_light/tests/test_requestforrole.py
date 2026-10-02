@@ -14,6 +14,9 @@ from xplanung_light.models import (
 )
 
 
+# Testklasse: RequestForRoleWorkflow.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class RequestForRoleWorkflow(TestCase):
     """
     Tests für den Selbstbedienungs-Workflow zur Rollenvergabe
@@ -117,17 +120,26 @@ class RequestForRoleWorkflow(TestCase):
         """
         return self.client.post(url, data={'editing_note': editing_note})
 
+    # Testfall: anonym post to confirm redirects to Anmeldung.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_post_to_confirm_redirects_to_login(self):
         req = self._make_request()
         r = self._post(self._confirm_url(req))            # den assertRaises-Block ersetzen
         self.assertEqual(r.status_code, 302)
         self.assertIn(settings.LOGIN_URL, r["Location"])  # dasselbe für refuse
 
+    # Testfall: anonym get of pending Anfrage redirects to Anmeldung.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_get_of_pending_request_redirects_to_login(self):
         req = self._make_request()
         r = self.client.get(self._confirm_url(req)) 
         self.assertEqual(r.status_code, 302)       # war 200
 
+    # Testfall: anonym Benutzer can View pending Anfrage details via get.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_can_view_pending_request_details_via_get(self):
         """
         Test ob man an die pending request als anonymous per POST rankommt. Ist jetzt dicht..
@@ -138,6 +150,9 @@ class RequestForRoleWorkflow(TestCase):
 
     # --- Bestätigung: Happy Path + Rollen-Restriktionen --------------------
 
+    # Testfall: org Administrator für alle Organisationen can confirm TöB Berichterstatter Anfrage.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_org_admin_for_all_organizations_can_confirm_toeb_reporter_request(self):
         req = self._make_request(role=RequestForRole.TOEBREPORTER, organizations=[self.gemeinde_a])
         self.client.force_login(self.admin_nur_einer_gemeinde)
@@ -156,6 +171,9 @@ class RequestForRoleWorkflow(TestCase):
         self.assertTrue(orga_user.is_toeb_reporter)
         self.assertFalse(orga_user.is_admin)  # nur die beantragte Rolle wird gesetzt
 
+    # Testfall: org Administrator für only einige Organisationen cannot confirm.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_org_admin_for_only_some_organizations_cannot_confirm(self):
         """Der Antrag betrifft gemeinde_a UND gemeinde_b - der Nutzer ist
         aber nur für gemeinde_a Admin."""
@@ -174,6 +192,9 @@ class RequestForRoleWorkflow(TestCase):
             AdminOrgaUser.objects.filter(user=self.antragsteller, is_toeb_reporter=True).exists()
         )
 
+    # Testfall: org Administrator cannot confirm orgadmin Rolle Anfrage.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_org_admin_cannot_confirm_orgadmin_role_request(self):
         """Org-Admins dürfen laut form_valid() ausschließlich TOEB-Reporter-
         Anträge bearbeiten, niemals Organisationsadmin-Anträge."""
@@ -185,6 +206,9 @@ class RequestForRoleWorkflow(TestCase):
         self.assertEqual(response.status_code, 422)
         self.assertTrue(RequestForRole.objects.filter(pk=req.pk).exists())
 
+    # Testfall: Superuser can confirm orgadmin Rolle Anfrage.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_superuser_can_confirm_orgadmin_role_request(self):
         req = self._make_request(role=RequestForRole.ORGADMIN, organizations=[self.gemeinde_a])
         self.client.force_login(self.superuser)
@@ -196,6 +220,9 @@ class RequestForRoleWorkflow(TestCase):
         orga_user = AdminOrgaUser.objects.get(user=self.antragsteller, organization=self.gemeinde_a)
         self.assertTrue(orga_user.is_admin)
 
+    # Testfall: confirmation sends E-Mail to applicant.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_confirmation_sends_email_to_applicant(self):
         req = self._make_request()
         self.client.force_login(self.admin_nur_einer_gemeinde)
@@ -204,6 +231,10 @@ class RequestForRoleWorkflow(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, [self.antragsteller.email])
 
+    # Testfall: confirmation E-Mail only mentions last Organisation wenn multiple requested.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Isolation: 'xplanung_light.views.views.render_to_string' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_confirmation_email_only_mentions_last_organization_when_multiple_requested(self):
         """
         Bei mehreren beantragten Organisationen landen beide in der Mail - hier
@@ -236,6 +267,9 @@ class RequestForRoleWorkflow(TestCase):
 
     # --- Ablehnung ---------------------------------------------------
 
+    # Testfall: refuse entfernt Anfrage ohne granting any Rolle.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_refuse_removes_request_without_granting_any_role(self):
         req = self._make_request()
         self.client.force_login(self.admin_nur_einer_gemeinde)
@@ -248,6 +282,9 @@ class RequestForRoleWorkflow(TestCase):
             AdminOrgaUser.objects.filter(user=self.antragsteller).exists()
         )
 
+    # Testfall: refuse sends E-Mail to applicant.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_refuse_sends_email_to_applicant(self):
         req = self._make_request()
         self.client.force_login(self.admin_nur_einer_gemeinde)
@@ -256,6 +293,9 @@ class RequestForRoleWorkflow(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, [self.antragsteller.email])
 
+    # Testfall: refuse mit leer editing note ist rejected by Formular validation.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_refuse_with_empty_editing_note_is_rejected_by_form_validation(self):
         """editing_note ist Pflichtfeld - unabhängig von jeder eigenen
         View-Logik scheitert ein leerer Wert schon an der Formularvalidierung."""
@@ -270,6 +310,9 @@ class RequestForRoleWorkflow(TestCase):
 
     # --- get_admin_users_for_all_orgas() -----------------------------
 
+    # Testfall: get Administrator Benutzer für alle orgas erfordert Administrator of every Organisation.
+    # Erwartung/Absicherung: verwendet assertIn, assertNotIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_admin_users_for_all_orgas_requires_admin_of_every_organization(self):
         from xplanung_light.views.requestforrole import RequestForRoleCreateView
 
@@ -282,6 +325,9 @@ class RequestForRoleWorkflow(TestCase):
         self.assertIn(self.admin_beider_gemeinden, admins)
         self.assertNotIn(self.admin_nur_einer_gemeinde, admins)
 
+    # Testfall: creating TöB Berichterstatter Anfrage ccs admins of alle requested Organisationen.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_creating_toeb_reporter_request_ccs_admins_of_all_requested_organizations(self):
         """
         RequestForRoleCreateView ist eine normale Django-CreateView (nicht
@@ -300,6 +346,9 @@ class RequestForRoleWorkflow(TestCase):
 
     # --- Löschung eines eigenen/fremden Antrags -----------------------
 
+    # Testfall: Eigentümer can löschen own Anfrage.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_owner_can_delete_own_request(self):
         """RequestForRoleDeleteView ist ebenfalls eine normale Django-DeleteView."""
         req = self._make_request()
@@ -308,6 +357,9 @@ class RequestForRoleWorkflow(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertFalse(RequestForRole.objects.filter(pk=req.pk).exists())
 
+    # Testfall: foreign Benutzer cannot löschen others Anfrage.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_delete_others_request(self):
         req = self._make_request()
         self.client.force_login(self.admin_nur_einer_gemeinde)

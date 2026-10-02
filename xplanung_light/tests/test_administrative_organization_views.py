@@ -8,6 +8,9 @@ from xplanung_light.models import AdministrativeOrganization, AdminOrgaUser
 
 User = get_user_model()
 
+# Testklasse: AdministrativeOrganizationViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class AdministrativeOrganizationViewTests(TestCase):
 
     def setUp(self):
@@ -51,6 +54,9 @@ class AdministrativeOrganizationViewTests(TestCase):
     # 1. LISTEN- UND METADATEN-ANSICHTEN (GET)
     # ==============================================================================
 
+    # Testfall: Organisation lists and öffentlich catalog accessible.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_organization_lists_and_public_catalog_accessible(self):
         """Prüft die Erreichbarkeit der administrativen Listen und des OpenData-Bereitstellungskatalogs."""
         # 1. Testen des öffentlichen Katalogs
@@ -73,6 +79,9 @@ class AdministrativeOrganizationViewTests(TestCase):
     # 2. ORGANISATIONS-METADATEN AKTUALISIEREN (POST)
     # ==============================================================================
 
+    # Testfall: Organisation aktualisieren metadata Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_organization_update_metadata_success(self):
         """Ein Admin kann die Metadaten (Wappen-URL, Lizenztexte) seiner Orga modifizieren."""
         self.client.login(username="local_orga_admin", password="password123")
@@ -100,6 +109,9 @@ class AdministrativeOrganizationViewTests(TestCase):
     # 3. SELECT2 AUTOCOMPLETE AJAX-SCHNITTSTELLE (GET)
     # ==============================================================================
 
+    # Testfall: administrative Organisation autocomplete ajax.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_administrative_organization_autocomplete_ajax(self):
         """Prüft, ob die Select2-Autocomplete-Schnittstelle korrekte Filterergebnisse liefert."""
         url = reverse("administrativeorganization-autocomplete")

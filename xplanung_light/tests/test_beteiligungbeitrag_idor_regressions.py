@@ -27,6 +27,9 @@ from xplanung_light.models import (
 User = get_user_model()
 
 
+# Testklasse: BeteiligungBeitragIdorRegressionTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragIdorRegressionTests(TestCase):
     """Parent IDs in contribution URLs must be mutually consistent."""
 
@@ -123,6 +126,9 @@ class BeteiligungBeitragIdorRegressionTests(TestCase):
     def setUp(self):
         self.client.force_login(self.admin)
 
+    # Testfall: B-Plan auflisten weist zurück participation aus another Plan.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_list_rejects_participation_from_another_plan(self):
         """A valid participation ID must belong to the plan in the URL."""
         url = reverse(
@@ -136,6 +142,9 @@ class BeteiligungBeitragIdorRegressionTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
+    # Testfall: F-Plan auflisten weist zurück participation aus another Plan.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_list_rejects_participation_from_another_plan(self):
         """The same parent-consistency rule applies to FPlan."""
         url = reverse(
@@ -149,6 +158,9 @@ class BeteiligungBeitragIdorRegressionTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
+    # Testfall: generic aktualisieren weist zurück participation aus another Plan.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_update_rejects_participation_from_another_plan(self):
         url = reverse(
             "beteiligungbeitrag-generic-update",
@@ -162,6 +174,9 @@ class BeteiligungBeitragIdorRegressionTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
+    # Testfall: generic aktualisieren weist zurück contribution aus another participation.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_update_rejects_contribution_from_another_participation(self):
         """A contribution PK alone must not bypass the participation filter."""
         url = reverse(
@@ -176,6 +191,9 @@ class BeteiligungBeitragIdorRegressionTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
+    # Testfall: F-Plan generic aktualisieren weist zurück contribution aus another Plan.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_generic_update_rejects_contribution_from_another_plan(self):
         url = reverse(
             "beteiligungbeitrag-generic-update",

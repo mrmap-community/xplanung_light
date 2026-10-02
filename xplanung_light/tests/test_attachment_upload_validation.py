@@ -10,6 +10,9 @@ import django_clamd.validators as clamd_validators
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz
 
 
+# Testklasse: AttachmentUploadValidation.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class AttachmentUploadValidation(TestCase):
     """
     Was tatsächlich passiert, wenn eine Datei als Plan-Anhang hochgeladen
@@ -59,6 +62,9 @@ class AttachmentUploadValidation(TestCase):
 
     # --- Größenlimit --------------------------------------------------
 
+    # Testfall: oversized Anhang ist accepted server side.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIsNotNone.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_oversized_attachment_is_accepted_server_side(self):
         """
         Dokumentiert eine bestehende Lücke: das Formular wirbt im help_text
@@ -89,6 +95,9 @@ class AttachmentUploadValidation(TestCase):
 
     # --- Dateityp / Endung ---------------------------------------------
 
+    # Testfall: arbitrary file extension ist accepted.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_arbitrary_file_extension_is_accepted(self):
         """
         Dokumentiert dieselbe Art Lücke wie oben, hier für den Dateityp: es
@@ -114,6 +123,9 @@ class AttachmentUploadValidation(TestCase):
 
     # --- Virenscan: Konfigurationsstand dieser Umgebung -----------------
 
+    # Testfall: malware scanning ist disabled in this settings environment.
+    # Erwartung/Absicherung: verwendet assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_malware_scanning_is_disabled_in_this_settings_environment(self):
         """
         Warnender Canary-Test: CLAMD_ENABLED steht in komserv/settings/base.py
@@ -146,6 +158,9 @@ class AttachmentUploadValidation(TestCase):
         scanner.instream.return_value = {'stream': (status, signature)}
         return scanner
 
+    # Testfall: infected file ist rejected wenn scanning ist enabled.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_infected_file_is_rejected_when_scanning_is_enabled(self):
         """
         Prüft die Verdrahtung von validate_file_infection() unabhängig von
@@ -177,6 +192,9 @@ class AttachmentUploadValidation(TestCase):
             ).exists()
         )
 
+    # Testfall: clean file ist accepted wenn scanning ist enabled.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_clean_file_is_accepted_when_scanning_is_enabled(self):
         """
         Positiv-Gegenprobe zum vorigen Test: derselbe Mock-Mechanismus, aber

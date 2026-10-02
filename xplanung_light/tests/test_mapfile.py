@@ -4,6 +4,9 @@ from django.urls import reverse
 # from xplanung_light.models import BPlan
 
 
+# Testklasse: OGCServiceViewsTestCase.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class OGCServiceViewsTestCase(TransactionTestCase):
     """
     Integrationstests für die 3 OGC WMS/WFS Views.
@@ -34,6 +37,9 @@ class OGCServiceViewsTestCase(TransactionTestCase):
     # 1. Test: WMS GetCapabilities
     # -------------------------------------------------------------------------
 
+    # Testfall: wms get capabilities.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_wms_get_capabilities(self):
         """Testet den WMS GetCapabilities-Request über den View."""
         # Ersetzen Sie 'wms_view_name' durch Ihren tatsächlichen URL-Namen
@@ -55,6 +61,9 @@ class OGCServiceViewsTestCase(TransactionTestCase):
     # Testet GetMap, um zu prüfen, ob das erzeugte Mapfile ein Bild rendern kann.
     # Fehler nicht nachvollziehbar - siehe test_initial_data - da klappt das!
 
+    # Testfall: wms get map.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_wms_get_map(self):
         url = reverse('ows', kwargs={'pk': 1531})
         response = self.client.get(url, {
@@ -78,6 +87,9 @@ class OGCServiceViewsTestCase(TransactionTestCase):
     # 3. Test: WFS GetCapabilities & GetFeature OWS pro Orga
     # -------------------------------------------------------------------------
 
+    # Testfall: wfs get capabilities.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_wfs_get_capabilities(self):
         """Testet den WFS GetCapabilities-Request."""
         url = reverse('ows', kwargs={'pk': 1531})
@@ -92,6 +104,9 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         self.assertIn(b'wfs:WFS_Capabilities', response.content)
 
     # Testet GetFeature auf dem WFS Service.
+    # Testfall: wfs get feature.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_wfs_get_feature(self):
         url = reverse('ows', kwargs={'pk': 1531})
         response = self.client.get(url, {
@@ -153,6 +168,9 @@ class OGCServiceViewsTestCase(TransactionTestCase):
     # 5. Test: FPlan Aggregat
     # -------------------------------------------------------------------------
 
+    # Testfall: wms get capabilities F-Plan.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_wms_get_capabilities_fplan(self):
         """Testet den WMS GetCapabilities-Request über den View."""
         url = reverse('plan-map', kwargs={'plantyp': 'fplan'})
@@ -166,6 +184,9 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         self.assertIn('text/xml', response.headers.get('Content-Type', ''))
         self.assertIn(b'WMS_Capabilities', response.content)
 
+    # Testfall: wms get map F-Plan.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_wms_get_map_fplan(self):
         url = reverse('plan-map', kwargs={'plantyp': 'fplan'})
         response = self.client.get(url, {

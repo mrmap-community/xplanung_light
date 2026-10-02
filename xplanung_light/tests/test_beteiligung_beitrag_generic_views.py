@@ -15,6 +15,9 @@ from xplanung_light.models import (
 
 User = get_user_model()
 
+# Testklasse: BeteiligungBeitragGenericViewTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragGenericViewTests(TestCase):
 
     def setUp(self):
@@ -53,6 +56,9 @@ class BeteiligungBeitragGenericViewTests(TestCase):
     # 1. GENERISCHES ERSTELLEN / CREATE-VIEW (GET & DB-PROMOTING)
     # ==============================================================================
 
+    # Testfall: generic erstellen contribution Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_create_contribution_success(self):
         """Ein Sachbearbeiter kann die Erstellungsseite aufrufen und Stellungnahmen einsehen."""
         self.client.login(username="sachbearbeiter_generic", password="password123")
@@ -80,6 +86,9 @@ class BeteiligungBeitragGenericViewTests(TestCase):
     # 2. GENERISCHES BEARBEITEN / UPDATE-VIEW (GET & DB-PROMOTING)
     # ==============================================================================
 
+    # Testfall: generic aktualisieren contribution Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_update_contribution_success(self):
         """Ein Sachbearbeiter kann das Bearbeitungsformular einer Stellungnahme laden."""
         self.client.login(username="sachbearbeiter_generic", password="password123")
@@ -104,6 +113,9 @@ class BeteiligungBeitragGenericViewTests(TestCase):
     # 3. ABSICHERUNG DES FRISTEN-ABBRUCHS
     # ==============================================================================
 
+    # Testfall: generic erstellen fails wenn date after deadline.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_create_fails_if_date_after_deadline(self):
         """Prüft, ob der View im Fehlerfall oder bei Fristenüberschreitung kontrolliert reagiert."""
         self.client.login(username="sachbearbeiter_generic", password="password123")

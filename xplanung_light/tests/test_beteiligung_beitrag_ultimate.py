@@ -32,6 +32,9 @@ from django.core import mail
 User = get_user_model()
 _MEDIA = tempfile.mkdtemp()
 @override_settings(CAPTCHA_TEST_MODE=True, CLAMD_ENABLED=False, MEDIA_ROOT=_MEDIA)
+# Testklasse: BeteiligungBeitragUltimateTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragUltimateTests(TestCase):
 
     @classmethod
@@ -118,6 +121,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
     # BLOCK 1: BÜRGER ONLINE-FORMULAR (GET & AJAX-JSON POSTS)
     # ==============================================================================
 
+    # Testfall: online contribution Formulare get.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_online_contribution_forms_get(self):
         """Sichert die Erreichbarkeit der Bürgermasken für beide Plantypen."""
         url_bplan = reverse("beteiligungbeitrag-create", kwargs={"plantyp": "bplan", "planid": self.bplan.id, "pk": self.bplan_beteiligung.id})
@@ -126,6 +132,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         url_fplan = reverse("beteiligungbeitrag-create", kwargs={"plantyp": "fplan", "planid": self.fplan.id, "pk": self.fplan_beteiligung.id})
         self.assertEqual(self.client.get(url_fplan).status_code, 200)
 
+    # Testfall: B-Plan online contribution submit Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_online_contribution_submit_success(self):
         """Simuliert eine formset-konforme, verschachtelte Onlineabgabe per JSON-Body."""
         url = reverse("beteiligungbeitrag-create", kwargs={"plantyp": "bplan", "planid": self.bplan.id, "pk": self.bplan_beteiligung.id})
@@ -137,6 +146,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         response = self.post_formset(url, formset_dict)
         self.assertEqual(response.status_code, 200)
 
+    # Testfall: F-Plan online contribution submit Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_online_contribution_submit_success(self):
         """Simuliert eine formset-konforme FPlan-Bürgerabgabe per JSON-Body."""
         url = reverse("beteiligungbeitrag-create", kwargs={"plantyp": "fplan", "planid": self.fplan.id, "pk": self.fplan_beteiligung.id})
@@ -148,6 +160,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         response = self.post_formset(url, formset_dict)
         self.assertEqual(response.status_code, 200)
 
+    # Testfall: online contribution fails mit bad captcha.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_online_contribution_fails_with_bad_captcha(self):
         url = reverse("beteiligungbeitrag-create", kwargs={"plantyp": "bplan", "planid": self.bplan.id, "pk": self.bplan_beteiligung.id})
         payload = {
@@ -166,6 +181,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
     # BLOCK 2: INTERNE BEITRAGSLISTEN & RECHTEPRÜFUNGEN (GET)
     # ==============================================================================
 
+    # Testfall: Administrator auflisten Views allowed für Gemeinde Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_list_views_allowed_for_gemeinde_admin(self):
         """Ein verifizierter Gemeinde-Admin kann die internen Beitragslisten einsehen."""
         self.client.login(username="admin_master", password="password123")
@@ -176,6 +194,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         url_fplan = reverse("beteiligungbeitrag-list", kwargs={"plantyp": "fplan", "planid": self.fplan.id, "beteiligungid": self.fplan_beteiligung.id})
         self.assertEqual(self.client.get(url_fplan).status_code, 200)
 
+    # Testfall: Administrator auflisten Views denied für stranger.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_list_views_denied_for_stranger(self):
         """Unbefugte Benutzer werden mit einem HTTP 403 hart abgewiesen."""
         self.client.login(username="joe_stranger", password="password123")
@@ -186,6 +207,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
     # BLOCK 3: BEHÖRDLICHE TÖB-STELLUNGNAHMEN (POST VIA JSON)
     # ==============================================================================
 
+    # Testfall: erstellen TöB Beitrag für B-Plan Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_toeb_beitrag_for_bplan_success(self):
         """Ein berechtigter TÖB-Reporter kann eine Stellungnahme zum BPlan abgeben."""
         self.client.login(username="reporter_master", password="password123")
@@ -195,6 +219,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         response = self.post_formset(url, formset_dict)
         self.assertEqual(response.status_code, 200)
 
+    # Testfall: erstellen TöB Beitrag denied für stranger.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_toeb_beitrag_denied_for_stranger(self):
         """Ein unbefugter Benutzer darf keine TÖB-Stellungnahme einreichen."""
         self.client.login(username="joe_stranger", password="password123")
@@ -204,12 +231,18 @@ class BeteiligungBeitragUltimateTests(TestCase):
     # ==============================================================================
     # BLOCK 4: MANUELLE ERFASSUNG DURCH SACHBEARBEITER (GENERICS)
     # ==============================================================================
+    # Testfall: generic sachbearbeiter Views get accessible.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_sachbearbeiter_views_get_accessible(self):
         """Ein Sachbearbeiter kann die manuellen Erfassungsformulare per GET laden."""
         self.client.login(username="admin_master", password="password123")
         url = reverse("beteiligungbeitrag-generic-create", kwargs={"plantyp": "bplan", "planid": self.bplan.id, "beteiligungid": self.bplan_beteiligung.id})
         self.assertEqual(self.client.get(url).status_code, 200)
 
+    # Testfall: generic erstellen fails on leer post.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_create_fails_on_empty_post(self):
         """Ein leeres AJAX-Absenden bei der manuellen Erfassung wird abgefangen."""
         self.client.login(username="admin_master", password="password123")
@@ -221,6 +254,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
     # ==============================================================================
     # BLOCK 5: FUNKTIONSBASIERTE WORKFLOWS (AKTIVIERUNG & RÜCKZUG)
     # ==============================================================================
+    # Testfall: Beitrag activate via E-Mail link.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_activate_via_email_link(self):
         """Der Klick auf den Aktivierungslink schaltet die anonyme Stellungnahme frei."""
         url = reverse("beteiligungbeitrag-activate", kwargs={"plantyp": "bplan", "planid": self.bplan.id, "beteiligungid": self.bplan_beteiligung.id, "generic_id": str(self.bplan_token)})
@@ -231,6 +267,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.bplan_beitrag.refresh_from_db()
         self.assertTrue(self.bplan_beitrag.approved)
 
+    # Testfall: Beitrag withdraw via link.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_withdraw_via_link(self):
         """Der Ersteller kann seinen Beitrag nachträglich zurückziehen."""
         url = reverse("beteiligungbeitrag-withdraw", kwargs={"plantyp": "bplan", "planid": self.bplan.id, "beteiligungid": self.bplan_beteiligung.id, "generic_id": str(self.bplan_token)})
@@ -244,12 +283,18 @@ class BeteiligungBeitragUltimateTests(TestCase):
     # =========
     # BLOCK 6: DETAILS, LÖSCHUNGEN & PDF-EXPORT (ADMINS)
     # ==============================================================================
+    # Testfall: Beitrag Detailansicht View Erfolg.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_detail_view_success(self):
         """Admins können Beitragsdetails per GET einsehen."""
         self.client.login(username="admin_master", password="password123")
         url = reverse("beteiligungbeitrag-detail", kwargs={"plantyp": "bplan", "planid": self.bplan.id, "beteiligungid": self.bplan_beteiligung.id, "pk": self.bplan_beitrag.id})
         self.assertEqual(self.client.get(url).status_code, 200)
 
+    # Testfall: löschen Beitrag by Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_beitrag_by_admin(self):
         """Ein berechtigter Admin kann einen Beitrag löschen."""
         self.client.login(username="admin_master", password="password123")
@@ -257,6 +302,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.assertEqual(self.client.post(url, follow=True).status_code, 200)
         self.assertFalse(BPlanBeteiligungBeitrag.objects.filter(id=self.bplan_beitrag.id).exists())
 
+    # Testfall: B-Plan PDF Export Erfolg für Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_pdf_export_success_for_admin(self):
         """Ein Admin darf den tabellarischen PDF-Export starten."""
         self.bplan_beitrag.beschreibung = self.tiptap_json
@@ -270,6 +318,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
     # ==============================================================================
     # BLOCK 7: FILE-DOWNLOADS & REVERSE ONE-TO-ONE SAFEGUARD
     # ==============================================================================
+    # Testfall: orig Download succeeds regardless of redacted version.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_orig_download_succeeds_regardless_of_redacted_version(self):
         """Der ungeschwärzte Original-Downloadkanal funktioniert anstandslos."""
         self.client.login(username="admin_master", password="password123")
@@ -279,6 +330,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         #self.assertEqual(b"".join(response.streaming_content), b"ungeschwaerzter-inhalt")
         self.assertEqual(b"".join(response.streaming_content), b"binary-data")
 
+    # Testfall: Standard Download serves redacted file wenn one exists.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_default_download_serves_redacted_file_when_one_exists(self):
         """Sobald eine Schwärzung hinterlegt ist, liefert der Standardpfad das geschwärzte File."""
         RedactedBPlanBeteiligungBeitragAnhang.objects.create(
@@ -291,6 +345,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b"".join(response.streaming_content), b"geschwaerzte-version")
 
+    # Testfall: anonym mit matching session can Download own Anhang.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_with_matching_session_can_download_own_attachment(self):
         """Ein anonymer Bürger darf seine eigenen Anhänge über sein Session-Token downloaden."""
         session = self.client.session
@@ -299,6 +356,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         url = reverse("beteiligung-beitrag-attachment-download-orig", kwargs={"plantyp": "bplan", "pk": self.bplan_anhang.pk})
         self.assertEqual(self.client.get(url).status_code, 200)
 
+    # Testfall: anonym mit foreign session gets 401.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_with_foreign_session_gets_401(self):
         """Ein anonymer Zugriff mit fremder Session blockiert absichtsgemäß mit 401."""
         session = self.client.session
@@ -324,6 +384,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         kw = self._kw(plantyp)
         return reverse("beteiligungbeitrag-list", kwargs={k: kw[k] for k in ("plantyp", "planid", "beteiligungid")})
 
+    # Testfall: activate ohne session redirects to authenticate.
+    # Erwartung/Absicherung: verwendet assertRedirects, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_activate_without_session_redirects_to_authenticate(self):
         r = self.client.get(reverse("beteiligungbeitrag-activate", kwargs=self._kw()))
         self.assertRedirects(r, reverse("beteiligungbeitrag-authenticate", kwargs=self._kw()),
@@ -331,12 +394,18 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.bplan_beitrag.refresh_from_db()
         self.assertFalse(self.bplan_beitrag.approved)
 
+    # Testfall: authenticate falsch E-Mail.
+    # Erwartung/Absicherung: verwendet assertEqual, assertNotIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_authenticate_wrong_email(self):
         r = self.client.post(reverse("beteiligungbeitrag-authenticate", kwargs=self._kw()),
                              {"email": "falsch@example.com"})
         self.assertEqual(r.status_code, 200)
         self.assertNotIn("beitrag_generic_id", self.client.session)
 
+    # Testfall: authenticate right E-Mail setzt session.
+    # Erwartung/Absicherung: verwendet assertRedirects, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_authenticate_right_email_sets_session(self):
         r = self.client.post(
             reverse("beteiligungbeitrag-authenticate", kwargs=self._kw()),
@@ -346,6 +415,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
                             fetch_redirect_response=False)
         self.assertEqual(self.client.session["beitrag_generic_id"], str(self.bplan_token))
 
+    # Testfall: authenticate falsch E-Mail.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue, assertNotIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_authenticate_wrong_email(self):
         r = self.client.post(
             reverse("beteiligungbeitrag-authenticate", kwargs=self._kw()),
@@ -355,6 +427,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.assertTrue(any("E-Mail" in str(m) for m in r.context["messages"]))
         self.assertNotIn("beitrag_generic_id", self.client.session)
     
+    # Testfall: guest Workflow für both plantypes.
+    # Erwartung/Absicherung: verwendet assertTemplateUsed, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_guest_workflow_for_both_plantypes(self):
         for plantyp, beitrag in (("bplan", self.bplan_beitrag), ("fplan", self.fplan_beitrag)):
             with self.subTest(plantyp=plantyp):
@@ -369,6 +444,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
                     beitrag.refresh_from_db()
                     self.assertEqual(getattr(beitrag, field), expected)
 
+    # Testfall: Administrator and Superuser sind redirected to auflisten.
+    # Erwartung/Absicherung: verwendet assertRedirects.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_and_superuser_are_redirected_to_list(self):
         User.objects.create_superuser(username="root", email="root@example.com", password="password123")
         for username in ("admin_master", "root"):
@@ -377,6 +455,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
                 r = self.client.get(reverse("beteiligungbeitrag-activate", kwargs=self._kw()))
                 self.assertRedirects(r, self._list_url(), fetch_redirect_response=False)
 
+    # Testfall: Detailansicht erfordert session or Rolle.
+    # Erwartung/Absicherung: verwendet assertRedirects, assertTemplateUsed.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_requires_session_or_role(self):
         url = reverse("gastbeteiligungbeitrag-detail", kwargs=self._kw())  # URL-Name prüfen
         r = self.client.get(url)
@@ -385,6 +466,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self._as_guest()
         self.assertTemplateUsed(self.client.get(url), "xplanung_light/gastbeteiligungbeitrag_detail.html")
 
+    # Testfall: Anhang Download denied and Superuser.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_attachment_download_denied_and_superuser(self):
         url = reverse("beteiligung-beitrag-attachment-download-orig",
                       kwargs={"plantyp": "bplan", "pk": self.bplan_anhang.pk})
@@ -395,6 +479,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.client.login(username="root", password="password123")
         self.assertEqual(self.client.get(url).status_code, 200)
 
+    # Testfall: withdraw reactivate access paths.
+    # Erwartung/Absicherung: verwendet assertRedirects, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_withdraw_reactivate_access_paths(self):
         User.objects.create_superuser("root", "root@example.com", "password123")
         auth = reverse("beteiligungbeitrag-authenticate", kwargs=self._kw())
@@ -411,17 +498,26 @@ class BeteiligungBeitragUltimateTests(TestCase):
                     self.bplan_beitrag.refresh_from_db()
                     self.assertEqual(self.bplan_beitrag.withdrawn, expected)
 
+    # Testfall: Detailansicht and home für Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_and_home_for_admin(self):
         self.client.login(username="admin_master", password="password123")
         r = self.client.get(reverse("gastbeteiligungbeitrag-detail", kwargs=self._kw()))
         self.assertEqual(r.status_code, 200)
         self.assertEqual(self.client.get(reverse("home")).status_code, 200)
 
+    # Testfall: authenticate get rendert clean Formular.
+    # Erwartung/Absicherung: verwendet assertTemplateUsed, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_authenticate_get_renders_clean_form(self):
         r = self.client.get(reverse("beteiligungbeitrag-authenticate", kwargs=self._kw()))
         self.assertTemplateUsed(r, "xplanung_light/gastbeteiligungbeitrag_authenticate.html")
         self.assertFalse(r.context["form"].errors)   # schlägt vermutlich fehl, siehe unten
 
+    # Testfall: F-Plan Anhang Download für Administrator.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_attachment_download_for_admin(self):
         anhang = FPlanBeteiligungBeitragAnhang.objects.create(
             beitrag=self.fplan_beitrag, name="Skizze", typ="1000",
@@ -432,18 +528,27 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(b"".join(r.streaming_content), b"fplan-data")
 
+    # Testfall: Anhang Download unknown id ist 404.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_attachment_download_unknown_id_is_404(self):
         self.client.login(username="admin_master", password="password123")
         r = self.client.get(reverse("beteiligung-beitrag-attachment-download-orig",
                                     kwargs={"plantyp": "bplan", "pk": 999999}))
         self.assertEqual(r.status_code, 404)   # schlägt aktuell mit DoesNotExist fehl
 
+    # Testfall: Detailansicht für Superuser.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_for_superuser(self):
         User.objects.create_superuser("root", "root@example.com", "password123")
         self.client.login(username="root", password="password123")
         r = self.client.get(reverse("gastbeteiligungbeitrag-detail", kwargs=self._kw()))
         self.assertEqual(r.status_code, 200)
 
+    # Testfall: Standard Download ohne redaction serves original.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_default_download_without_redaction_serves_original(self):
         self.client.login(username="admin_master", password="password123")
         url = reverse("beteiligung-beitrag-attachment-download",
@@ -452,6 +557,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(b"".join(r.streaming_content), b"binary-data")
 
+    # Testfall: Download of fehlend file ist 404.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_download_of_missing_file_is_404(self):
         os.remove(self.bplan_anhang.attachment.path)
         self.client.login(username="admin_master", password="password123")
@@ -466,6 +574,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
                                      "beteiligungid": bet.id, **extra})
 
     # --- TÖB: Erfolgspfad mit DB-Prüfung -------------------------------------
+    # Testfall: TöB erstellen persists Beitrag für both plantypes.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_create_persists_beitrag_for_both_plantypes(self):
         self.client.login(username="reporter_master", password="password123")
         for plantyp, bet, model in (("bplan", self.bplan_beteiligung, BPlanBeteiligungBeitrag),
@@ -486,6 +597,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
                 self.assertEqual(getattr(saved, fk), bet)
 
     # --- TÖB: Rechte für Create und Update -----------------------------------
+    # Testfall: TöB Views Berechtigung matrix.
+    # Erwartung/Absicherung: verwendet assertIn, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_views_permission_matrix(self):
         User.objects.create_superuser("root", "root@example.com", "password123")
         alt = BPlanBeteiligungBeitrag.objects.create(
@@ -509,6 +623,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
                 self.assertIn(self.client.get(url).status_code, (302, 403))   # 500 wäre ein Fund
 
     # --- Probe: fremde und unbekannte TÖB-Einheit ---------------------------
+    # Testfall: TöB erstellen für foreign or unknown Einheit ist denied.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_create_for_foreign_or_unknown_unit_is_denied(self):
         andere = ToebUnit.objects.create(organization=self.behoerde, name="Anderer Fachbereich",
                                          theme="NSLP", public=True)   # reporter_master ist dort kein Editor
@@ -519,6 +636,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
                 self.assertIn(r.status_code, (403, 404))
 
     # --- Generic (Sachbearbeiter): Erfolgspfad --------------------------------
+    # Testfall: generic erstellen speichert Beitrag für both plantypes.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_create_saves_beitrag_for_both_plantypes(self):
         self.client.login(username="admin_master", password="password123")
         common = {"typ": "2000", "eingangsdatum": str(self.heute), "name": "Erika Muster",
@@ -536,6 +656,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
                 self.assertEqual(getattr(saved, f"{plantyp}_beteiligung"), bet)
 
     # weitere TOEB BeteiligungBeitrag Tests
+    # Testfall: TöB erstellen post für foreign Einheit creates nothing.
+    # Erwartung/Absicherung: verwendet assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_create_post_for_foreign_unit_creates_nothing(self):
         andere = ToebUnit.objects.create(organization=self.behoerde, name="Anderer Fachbereich",
                                          theme="NSLP", public=True)
@@ -548,6 +671,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         }, expected=403)
         self.assertFalse(BPlanBeteiligungBeitrag.objects.filter(titel="Fremdstelle").exists())
 
+    # Testfall: TöB erstellen erfordert editor of the addressed assigned Einheit.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_create_requires_editor_of_the_addressed_assigned_unit(self):
         b = ToebUnit.objects.create(organization=self.behoerde, name="Fachbereich B", theme="NSLP", public=True)
         c = ToebUnit.objects.create(organization=self.behoerde, name="Fachbereich C", theme="NSLP", public=True)
@@ -566,6 +692,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
             name="Sachbearbeiter", email="reporter@behoerde.de", toeb=self.toeb_unit,
             typ="1000", eingangsdatum=self.heute, approved=True)
 
+    # Testfall: TöB erstellen ignores foreign Beteiligung in payload.
+    # Erwartung/Absicherung: verwendet assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_create_ignores_foreign_beteiligung_in_payload(self):
         other_plan = BPlan.objects.create(name="Anderer Plan", geltungsbereich=self.bplan.geltungsbereich)
         other = BPlanBeteiligung.objects.create(bplan=other_plan, typ="1000", bekanntmachung_datum=self.gestern,
@@ -578,6 +707,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
             content_type="application/json", HTTP_X_REQUESTED_WITH="XMLHttpRequest")
         self.assertFalse(BPlanBeteiligungBeitrag.objects.filter(titel="Umgeleitet", bplan_beteiligung=other).exists())
 
+    # Testfall: TöB aktualisieren and löschen Randfall cases.
+    # Erwartung/Absicherung: verwendet assertEqual, assertRedirects, assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_update_and_delete_edge_cases(self):
         beitrag = self._make_toeb_beitrag()
         upd = self._toeb_url("beteiligungbeitrag-toeb-update", pk=beitrag.id)
@@ -597,6 +729,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.assertRedirects(r, reverse("toebbeteiligungen-list"), fetch_redirect_response=False)
         self.assertFalse(BPlanBeteiligungBeitrag.objects.filter(pk=beitrag.id).exists())
 
+    # Testfall: TöB aktualisieren and löschen denied für editor of other Einheit.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_update_and_delete_denied_for_editor_of_other_unit(self):
         andere = ToebUnit.objects.create(organization=self.behoerde, name="Anderer Fachbereich",
                                          theme="NSLP", public=True)
@@ -611,6 +746,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.client.post(self._toeb_url("beteiligungbeitrag-toeb-delete", pk=fremd.id))
         self.assertTrue(BPlanBeteiligungBeitrag.objects.filter(pk=fremd.id).exists())
 
+    # Testfall: TöB editor erfordert Rolle in the units Organisation.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_editor_requires_role_in_the_units_organization(self):
         url = self._toeb_url("beteiligungbeitrag-toeb-create", toeb_id=self.toeb_unit.id)
 
@@ -628,6 +766,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
             self.assertEqual(self.client.get(url).status_code, 403)
 
     # Nächste Runde
+    # Testfall: ist TöB editor helper.
+    # Erwartung/Absicherung: verwendet assertFalse, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_is_toeb_editor_helper(self):
         root = User.objects.create_superuser("root2", "root2@example.com", "password123")
         self.assertFalse(is_toeb_editor(AnonymousUser(), self.toeb_unit))
@@ -648,6 +789,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         return reverse("beteiligungbeitrag-create-orga" if "orga_id" in kw else "beteiligungbeitrag-create", kwargs=kw)
 
     # FPlan-Varianten von Update/Delete/Generic-Update, plus Superuser-Pfad der Update-View
+    # Testfall: F-Plan variants of aktualisieren löschen Views.
+    # Erwartung/Absicherung: verwendet assertEqual, assertRedirects, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_variants_of_update_delete_views(self):
         beitrag = FPlanBeteiligungBeitrag.objects.create(
             fplan_beteiligung=self.fplan_beteiligung, titel="TÖB fplan", beschreibung="Text",
@@ -669,6 +813,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.assertFalse(FPlanBeteiligungBeitrag.objects.filter(pk=beitrag.id).exists())
 
     # Bürgerformular: Orga-Route und https-Aktivierungslink
+    # Testfall: citizen erstellen mit Organisation and https activation mail.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_citizen_create_with_orga_and_https_activation_mail(self):
         url = self._citizen_url(orga_id=self.kommune.id)
         r = self.client.get(url)
@@ -703,6 +850,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.assertNotEqual(r.status_code, 200)
     """
 
+    # Testfall: Detailansicht View für Superuser.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_view_for_superuser(self):
         User.objects.create_superuser("root4", "root4@example.com", "password123")
         self.client.login(username="root4", password="password123")
@@ -711,6 +861,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
             "beteiligungid": self.bplan_beteiligung.id, "pk": self.bplan_beitrag.id}))
         self.assertEqual(r.status_code, 200)
 
+    # Testfall: citizen erstellen Beteiligung lookup and typ.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_citizen_create_beteiligung_lookup_and_typ(self):
         bplan_url = reverse("beteiligungbeitrag-create", kwargs={
             "plantyp": "bplan", "planid": self.bplan.id, "pk": self.bplan_beteiligung.id})
@@ -728,6 +881,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         BPlanBeteiligung.objects.all().update(typ="1000")                        # nur die BPlan-Seite erlaubt
         self.assertEqual(self.client.get(fplan_url).status_code, 403)
 
+    # Testfall: citizen erstellen denied wenn nicht open für online Beitrag.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_citizen_create_denied_if_not_open_for_online_beitrag(self):
         url = self._citizen_url()
         payload = json.dumps({"formset_data": self._citizen_payload("Gesperrt")})
@@ -748,6 +904,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
                 self.assertEqual(r.status_code, 403)
                 self.assertFalse(BPlanBeteiligungBeitrag.objects.filter(titel="Gesperrt").exists())
 
+    # Testfall: PDF für Superuser mit rich description.
+    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_pdf_for_superuser_with_rich_description(self):
         rich = {"type": "doc", "content": [
             {"type": "heading", "attrs": {"level": 2}, "content": [{"type": "text", "text": "Ziel"}]},
@@ -771,6 +930,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         self.assertEqual(self.client.get(reverse("beteiligungbeitrag-list-pdf", kwargs=kw_other)).status_code, 404)
         self.assertEqual(self.client.get(reverse("beteiligungbeitrag-list-pdf", kwargs=kw)).status_code, 404)
 
+    # Testfall: PDF nicht available via foreign Plan URL.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_pdf_not_available_via_foreign_plan_url(self):
         orga_b = AdministrativeOrganization.objects.create(name="OG B", ls="07", ks="316", gs="099")
         admin_b = User.objects.create_user("admin_b", password="password123")
@@ -782,6 +944,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
             "plantyp": "bplan", "planid": plan_b.id, "beteiligungid": self.bplan_beteiligung.id})
         self.assertIn(self.client.get(url).status_code, (403, 404))
 
+    # Testfall: Beteiligungen auflisten per Benutzer.
+    # Erwartung/Absicherung: verwendet assertIn, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beteiligungen_list_per_user(self):
         BPlan.objects.filter(pk=self.bplan.pk).update(public=True)
         self.bplan.gemeinde.add(self.kommune)
@@ -800,6 +965,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
         User.objects.create_superuser("root7", "root7@example.com", "password123")
         self.assertIn(self.bplan.name, names("root7"))             # Superuser
         
+    # Testfall: Organisation Beteiligungen auflisten Berechtigungen.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_orga_beteiligungen_list_permissions(self):
         User.objects.create_superuser("root6", "root6@example.com", "password123")
         url = reverse("organization-beteiligungen-list", kwargs={"pk": self.kommune.id})

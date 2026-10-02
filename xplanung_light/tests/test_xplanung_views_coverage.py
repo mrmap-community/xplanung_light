@@ -18,6 +18,9 @@ from django.contrib.messages import middleware
 User = get_user_model()
 
 
+# Testklasse: HashableGemeinde.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class HashableGemeinde:
     def __init__(self, name='Gemeinde', admins=None):
         self.name = name
@@ -34,7 +37,13 @@ class HashableGemeinde:
         return id(self)
 
 
+# Testklasse: QualifyGmlGeometryTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class QualifyGmlGeometryTests(SimpleTestCase):
+    # Testfall: Polygon ist wrapped as MultiSurface.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_polygon_is_wrapped_as_multisurface(self):
         gml = (
             '<gml:Polygon xmlns:gml="http://www.opengis.net/gml/3.2">'
@@ -48,6 +57,9 @@ class QualifyGmlGeometryTests(SimpleTestCase):
         self.assertIn('<gml:surfaceMember>', result)
         self.assertIn('gml:id="GML_', result)
 
+    # Testfall: MultiSurface gets ids für surface and polygons.
+    # Erwartung/Absicherung: verwendet assertIn, assertGreaterEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_multisurface_gets_ids_for_surface_and_polygons(self):
         gml = (
             '<gml:MultiSurface xmlns:gml="http://www.opengis.net/gml/3.2">'
@@ -63,6 +75,9 @@ class QualifyGmlGeometryTests(SimpleTestCase):
         self.assertGreaterEqual(result.count('gml:id="GML_'), 2)
 
 
+# Testklasse: XPlanCreateViewCoverageTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanCreateViewCoverageTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
@@ -70,6 +85,10 @@ class XPlanCreateViewCoverageTests(SimpleTestCase):
         self.request = self.factory.get('/bplan/create/')
         self.request.user = self.user
 
+    # Testfall: get Formular Superuser annotates alle Gemeinden.
+    # Erwartung/Absicherung: verwendet assert_called_once, assert_called_once_with, assertIs, assertIsNotNone.
+    # Isolation: 'xplanung_light.views.xplan.Extent', 'xplanung_light.views.xplan.LeafletWidget' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_form_superuser_annotates_all_gemeinden(self):
         self.request.user = SimpleNamespace(is_superuser=True)
         view = xplan.XPlanCreateView()
@@ -92,6 +111,10 @@ class XPlanCreateViewCoverageTests(SimpleTestCase):
         self.assertIs(result, form)
         self.assertIsNotNone(form.fields['geltungsbereich'].widget)
 
+    # Testfall: get Formular regulär Benutzer filtert Administrator Gemeinden.
+    # Erwartung/Absicherung: verwendet assert_called_once_with.
+    # Isolation: 'xplanung_light.views.xplan.Extent', 'xplanung_light.views.xplan.LeafletWidget' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_form_regular_user_filters_admin_gemeinden(self):
         view = xplan.XPlanCreateView()
         view.request = self.request
@@ -131,6 +154,9 @@ class XPlanCreateViewCoverageTests(SimpleTestCase):
         self.assertEqual(result, 'invalid')
     """
 
+    # Testfall: Formular gültig Superuser delegates.
+    # Erwartung/Absicherung: verwendet assertEqual, assert_called_once_with.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_form_valid_superuser_delegates(self):
         view = xplan.XPlanCreateView()
         view.request = self.factory.post('/')
@@ -142,6 +168,9 @@ class XPlanCreateViewCoverageTests(SimpleTestCase):
             valid.assert_called_once_with(form)
 
 
+# Testklasse: XPlanUpdateViewCoverageTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanUpdateViewCoverageTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
@@ -155,6 +184,10 @@ class XPlanUpdateViewCoverageTests(SimpleTestCase):
             'geltungsbereich': SimpleNamespace(widget=None),
         })
 
+    # Testfall: get Formular Superuser.
+    # Erwartung/Absicherung: verwendet assert_called_once, assert_called_once_with, assertIs.
+    # Isolation: 'xplanung_light.views.xplan.Extent', 'xplanung_light.views.xplan.LeafletWidget' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_form_superuser(self):
         view = xplan.XPlanUpdateView()
         view.request = SimpleNamespace(user=SimpleNamespace(is_superuser=True))
@@ -177,6 +210,10 @@ class XPlanUpdateViewCoverageTests(SimpleTestCase):
             "pk", "name", "name_part", "type")
         self.assertIs(result, form)
 
+    # Testfall: get Formular disables Gemeinde wenn Benutzer ist nicht Administrator für alle.
+    # Erwartung/Absicherung: verwendet assertTrue, assertIn.
+    # Isolation: 'xplanung_light.views.xplan.LeafletWidget' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_form_disables_gemeinde_if_user_is_not_admin_for_all(self):
         bad_gemeinde = SimpleNamespace(
             admin_orga_users=SimpleNamespace(all=lambda: []))
@@ -192,6 +229,10 @@ class XPlanUpdateViewCoverageTests(SimpleTestCase):
         self.assertTrue(form.fields['gemeinde'].disabled)
         self.assertIn('nicht Administrator', form.fields['gemeinde'].label)
 
+    # Testfall: get Formular filtert Gemeinden wenn Benutzer ist Administrator für alle.
+    # Erwartung/Absicherung: verwendet assert_called_once_with.
+    # Isolation: 'xplanung_light.views.xplan.Extent', 'xplanung_light.views.xplan.LeafletWidget' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_form_filters_gemeinden_when_user_is_admin_for_all(self):
         admin_record = SimpleNamespace(user=self.user, is_admin=True)
         gemeinde = SimpleNamespace(
@@ -220,6 +261,9 @@ class XPlanUpdateViewCoverageTests(SimpleTestCase):
             admin_orga_users__is_admin=True,
         )
 
+    # Testfall: Formular gültig weist zurück new nicht Administrator Gemeinde.
+    # Erwartung/Absicherung: verwendet assert_called_once_with, assert_called_once, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_form_valid_rejects_new_non_admin_gemeinde(self):
         existing = HashableGemeinde('Existing')
         new = HashableGemeinde('New')
@@ -256,6 +300,9 @@ class XPlanUpdateViewCoverageTests(SimpleTestCase):
                       str(form.add_error.call_args))
     """
 
+    # Testfall: Formular gültig weist zurück removal of nicht Administrator Gemeinde.
+    # Erwartung/Absicherung: verwendet assert_called_once_with, assert_called_once, assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_form_valid_rejects_removal_of_non_admin_gemeinde(self):
         protected = HashableGemeinde('Protected')
         form = Mock()
@@ -272,6 +319,10 @@ class XPlanUpdateViewCoverageTests(SimpleTestCase):
         self.assertIn('darf nicht entfernt werden',
                       str(form.add_error.call_args))
 
+    # Testfall: Formular gültig setzt dynamic Erfolg Nachricht.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Isolation: 'django.contrib.messages.views.messages.success' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_form_valid_sets_dynamic_success_message(self):
         gemeinde = HashableGemeinde(
             'Gemeinde',
@@ -293,6 +344,10 @@ class XPlanUpdateViewCoverageTests(SimpleTestCase):
         self.assertEqual(view.success_message,
                          'Plan *Mein Plan* aktualisiert!')
 
+    # Testfall: get Objekt ruft auf Gemeinde Administrator check.
+    # Erwartung/Absicherung: verwendet assert_called_once_with, assertIs.
+    # Isolation: 'django.views.generic.detail.SingleObjectMixin.get_object' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_object_calls_gemeinde_admin_check(self):
         view = xplan.XPlanUpdateView()
         obj = object()
@@ -301,6 +356,9 @@ class XPlanUpdateViewCoverageTests(SimpleTestCase):
             self.assertIs(view.get_object(), obj)
         check.assert_called_once_with(obj)
 
+    # Testfall: get QuerySet fügt hinzu count annotations.
+    # Erwartung/Absicherung: verwendet assertIs, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_queryset_adds_count_annotations(self):
         view = xplan.XPlanUpdateView()
         qs = Mock()
@@ -311,7 +369,14 @@ class XPlanUpdateViewCoverageTests(SimpleTestCase):
         self.assertEqual(qs.annotate.call_count, 3)
 
 
+# Testklasse: XPlanDeleteViewCoverageTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanDeleteViewCoverageTests(SimpleTestCase):
+    # Testfall: get Objekt prüft alle Gemeinden.
+    # Erwartung/Absicherung: verwendet assert_called_once_with, assertIs.
+    # Isolation: 'django.views.generic.detail.SingleObjectMixin.get_object' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_object_checks_all_gemeinden(self):
         view = xplan.XPlanDeleteView()
         obj = object()
@@ -320,6 +385,10 @@ class XPlanDeleteViewCoverageTests(SimpleTestCase):
             self.assertIs(view.get_object(), obj)
         check.assert_called_once_with(obj)
 
+    # Testfall: get Erfolg URL points to B-Plan auflisten.
+    # Erwartung/Absicherung: verwendet assertEqual, assert_called_once_with.
+    # Isolation: 'xplanung_light.views.xplan.reverse_lazy' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_success_url_points_to_bplan_list(self):
         view = xplan.XPlanDeleteView()
         with patch('xplanung_light.views.xplan.reverse_lazy', return_value='/bplan/') as reverse_mock:
@@ -327,6 +396,10 @@ class XPlanDeleteViewCoverageTests(SimpleTestCase):
         self.assertEqual(result, '/bplan/')
         reverse_mock.assert_called_once_with('bplan-list')
 
+    # Testfall: Formular gültig deletes Objekt and fügt hinzu Erfolg Nachricht.
+    # Erwartung/Absicherung: verwendet assert_called_once, assertEqual, assert_called_once_with.
+    # Isolation: 'xplanung_light.views.xplan.messages.add_message' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_form_valid_deletes_object_and_adds_success_message(self):
         request = RequestFactory().post('/')
         request.user = SimpleNamespace(is_superuser=True)
@@ -345,22 +418,37 @@ class XPlanDeleteViewCoverageTests(SimpleTestCase):
             request, xplan.messages.SUCCESS, 'Plan Plan X wurde gelöscht!')
 
 
+# Testklasse: XPlanListPaginationTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanListPaginationTests(SimpleTestCase):
+    # Testfall: ungültig per page falls back to ten.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_invalid_per_page_falls_back_to_ten(self):
         view = xplan.XPlanListView()
         view.request = RequestFactory().get('/bplan/', {'per_page': 'abc'})
         self.assertEqual(view.get_table_pagination(Mock()), {'per_page': 10})
 
+    # Testfall: numeric per page ist used.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_numeric_per_page_is_used(self):
         view = xplan.XPlanListView()
         view.request = RequestFactory().get('/bplan/', {'per_page': '50'})
         self.assertEqual(view.get_table_pagination(Mock()), {'per_page': 50})
 
+    # Testfall: Standard per page ist ten.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_default_per_page_is_ten(self):
         view = xplan.XPlanListView()
         view.request = RequestFactory().get('/bplan/')
         self.assertEqual(view.get_table_pagination(Mock()), {'per_page': 10})
 
+    # Testfall: öffentlich auflisten ungültig per page falls back to ten.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_public_list_invalid_per_page_falls_back_to_ten(self):
         view = xplan.XPlanPublicListView()
         view.request = RequestFactory().get(
@@ -368,6 +456,9 @@ class XPlanListPaginationTests(SimpleTestCase):
         self.assertEqual(view.get_table_pagination(Mock()), {'per_page': 10})
 
 
+# Testklasse: XPlanDetailContextTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanDetailContextTests(SimpleTestCase):
     def _fake_ogr(self, extent=(7, 50, 7.01, 50.01)):
         geom = Mock()
@@ -375,6 +466,10 @@ class XPlanDetailContextTests(SimpleTestCase):
         geom.transform = Mock()
         return geom
 
+    # Testfall: Detailansicht Kontext ohne Gemeinde Geometrie setzt none.
+    # Erwartung/Absicherung: verwendet assertIsNone, assertEqual.
+    # Isolation: 'django.views.generic.detail.DetailView.get_context_data', 'xplanung_light.views.xplan.OGRGeometry', 'xplanung_light.views.xplan.CoordTransform' … werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_context_without_gemeinde_geometry_sets_none(self):
         view = xplan.XPlanDetailView()
         plan = SimpleNamespace(
@@ -397,6 +492,10 @@ class XPlanDetailContextTests(SimpleTestCase):
                          6.99, 49.99, 7.02, 50.019999999999996])
         self.assertEqual(len(context['extent']), 4)
 
+    # Testfall: Detailansicht Kontext mit Gemeinde Geometrie setzt extent.
+    # Erwartung/Absicherung: verwendet assertIsNotNone, assertEqual.
+    # Isolation: 'django.views.generic.detail.DetailView.get_context_data', 'xplanung_light.views.xplan.OGRGeometry', 'xplanung_light.views.xplan.CoordTransform' … werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_context_with_gemeinde_geometry_sets_extent(self):
         view = xplan.XPlanDetailView()
         gemeinde_qs = Mock()
@@ -418,7 +517,13 @@ class XPlanDetailContextTests(SimpleTestCase):
         self.assertEqual(len(context['gemeinden_extent']), 4)
 
 
+# Testklasse: XPlanPublicQuerysetTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanPublicQuerysetTests(TestCase):
+    # Testfall: öffentlich QuerySet contains only öffentlich Pläne.
+    # Erwartung/Absicherung: verwendet assertIn, assertNotIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_public_queryset_contains_only_public_plans(self):
         polygon = Polygon.from_bbox((7, 50, 7.01, 50.01))
         public = BPlan.objects.create(

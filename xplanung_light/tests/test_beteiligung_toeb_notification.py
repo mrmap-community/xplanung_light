@@ -15,6 +15,9 @@ from xplanung_light.models import (
 )
 
 
+# Testklasse: BeteiligungToebNotification.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungToebNotification(TestCase):
     """
     Tests für BeteiligungToebNotificationCreateView (views/beteiligungtoebnotification.py) -
@@ -129,6 +132,9 @@ class BeteiligungToebNotification(TestCase):
 
     # --- Zugriffskontrolle -----------------------------------------------
 
+    # Testfall: anonym Benutzer ist redirected to Anmeldung.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_is_redirected_to_login(self):
         """Regressionstest für den LoginRequiredMixin-Fix: anonyme Requests
         dürfen keinen E-Mail-Versand mehr auslösen."""
@@ -143,6 +149,9 @@ class BeteiligungToebNotification(TestCase):
             ).exists()
         )
 
+    # Testfall: angemeldet Benutzer ohne Gemeinde Administrator Rolle ist forbidden.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_authenticated_user_without_gemeinde_admin_role_is_forbidden(self):
         """
         Regressionstest für den GemeindeAdminRequiredMixin-Fix: ein
@@ -161,6 +170,9 @@ class BeteiligungToebNotification(TestCase):
             ).exists()
         )
 
+    # Testfall: foreign Benutzer cannot open erstellen Formular.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_open_create_form(self):
         """check_gemeinde_admin() läuft in get_form_kwargs() - greift also
         auch beim reinen GET, nicht erst beim POST."""
@@ -170,6 +182,9 @@ class BeteiligungToebNotification(TestCase):
 
     # --- E-Mail-Versand: korrekte Empfänger und Inhalt ----------------------
 
+    # Testfall: Benachrichtigung sends E-Mail only to editors mit E-Mail address.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_notification_sends_email_only_to_editors_with_email_address(self):
         self.client.force_login(self.gemeinde_admin)
         self._post()
@@ -177,6 +192,9 @@ class BeteiligungToebNotification(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ['sachbearbeiter@toeb.example.org'])
 
+    # Testfall: Benachrichtigung E-Mail contains the benutzerdefiniert Nachricht.
+    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_notification_email_contains_the_custom_message(self):
         self.client.force_login(self.gemeinde_admin)
         self._post(message='Bitte prüfen Sie die Auswirkungen auf den Grundwasserspiegel.')
@@ -188,11 +206,17 @@ class BeteiligungToebNotification(TestCase):
         html_alternative = gesendete_mail.alternatives[0][0]
         self.assertIn('Grundwasserspiegel', html_alternative)
 
+    # Testfall: Benachrichtigung subject references Beteiligung deadline.
+    # Erwartung/Absicherung: verwendet assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_notification_subject_references_beteiligung_deadline(self):
         self.client.force_login(self.gemeinde_admin)
         self._post()
         self.assertIn(str(self.beteiligung.end_datum), mail.outbox[0].subject)
 
+    # Testfall: Benachrichtigung stores recipient protocol.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_notification_stores_recipient_protocol(self):
         self.client.force_login(self.gemeinde_admin)
         self._post()
@@ -205,6 +229,9 @@ class BeteiligungToebNotification(TestCase):
         self.assertEqual(protokoll_eintrag['name'], str(self.toeb))
         self.assertEqual(protokoll_eintrag['email'], ['sachbearbeiter@toeb.example.org'])
 
+    # Testfall: Benachrichtigung setzt start and end timestamps.
+    # Erwartung/Absicherung: verwendet assertIsNotNone, assertGreaterEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_notification_sets_start_and_end_timestamps(self):
         self.client.force_login(self.gemeinde_admin)
         self._post()
@@ -217,6 +244,9 @@ class BeteiligungToebNotification(TestCase):
 
     # --- Zeitfenster ---------------------------------------------------
 
+    # Testfall: Benachrichtigung before bekanntmachung datum ist rejected.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_notification_before_bekanntmachung_datum_is_rejected(self):
         self.client.force_login(self.gemeinde_admin)
         heute = datetime.date.today()
@@ -233,6 +263,9 @@ class BeteiligungToebNotification(TestCase):
             ).exists()
         )
 
+    # Testfall: Benachrichtigung after end datum ist rejected.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_notification_after_end_datum_is_rejected(self):
         self.client.force_login(self.gemeinde_admin)
         heute = datetime.date.today()
@@ -246,6 +279,9 @@ class BeteiligungToebNotification(TestCase):
 
     # --- Auswahl nicht zugewiesener TOEBs ------------------------------
 
+    # Testfall: selecting TöB nicht assigned to Beteiligung ist rejected.
+    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_selecting_toeb_not_assigned_to_beteiligung_is_rejected(self):
         """
         Das Formular begrenzt die gültigen Auswahlmöglichkeiten auf

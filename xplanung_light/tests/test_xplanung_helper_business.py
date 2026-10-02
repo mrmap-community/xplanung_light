@@ -4,6 +4,9 @@ from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.models import AdministrativeOrganization
 from xplanung_light.helper import xplanung
 
+# Testklasse: XPlanungHelperBusinessLogicTests.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanungHelperBusinessLogicTests(TestCase):
 
     def setUp(self):
@@ -52,6 +55,9 @@ class XPlanungHelperBusinessLogicTests(TestCase):
         )
         self.fplan_gml_content = self.bplan_gml_content.replace(b'xplan:BP_Plan', b'xplan:FP_Plan')
 
+    # Testfall: GML parsing functions execution.
+    # Erwartung/Absicherung: verwendet assertTrue.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gml_parsing_functions_execution(self):
         """Durchläuft alle ausführbaren Parsing-Methoden im xplanung-Helper zur Coverage-Sicherung."""
         callable_attributes = [

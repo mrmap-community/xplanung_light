@@ -12,6 +12,9 @@ from xplanung_light.forms import (
 )
 
 
+# Testklasse: BeteiligungBeitragAttachmentValidation.
+# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
+# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragAttachmentValidation(SimpleTestCase):
     """Tests für die als Anlage zu einem Beteiligungsbeitrag möglichen Dateien."""
 
@@ -38,6 +41,9 @@ class BeteiligungBeitragAttachmentValidation(SimpleTestCase):
             "typ": "1000",
         }
 
+    # Testfall: B-Plan Anhang akzeptiert clean file.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_attachment_accepts_clean_file(self):
         upload = SimpleUploadedFile(
             "stellungnahme.txt",
@@ -52,6 +58,9 @@ class BeteiligungBeitragAttachmentValidation(SimpleTestCase):
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data["attachment"].name, "stellungnahme.txt")
 
+    # Testfall: B-Plan Anhang weist zurück infected file.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_attachment_rejects_infected_file(self):
         upload = SimpleUploadedFile(
             "eicar_test.txt",
@@ -67,6 +76,9 @@ class BeteiligungBeitragAttachmentValidation(SimpleTestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("attachment", form.errors)
 
+    # Testfall: F-Plan Anhang akzeptiert clean file.
+    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_attachment_accepts_clean_file(self):
         upload = SimpleUploadedFile(
             "karte.txt",
@@ -81,6 +93,9 @@ class BeteiligungBeitragAttachmentValidation(SimpleTestCase):
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data["attachment"].name, "karte.txt")
 
+    # Testfall: F-Plan Anhang weist zurück infected file.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_attachment_rejects_infected_file(self):
         upload = SimpleUploadedFile(
             "eicar_test.txt",
@@ -96,20 +111,32 @@ class BeteiligungBeitragAttachmentValidation(SimpleTestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("attachment", form.errors)
 
+    # Testfall: B-Plan Anhang erfordert a file.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_attachment_requires_a_file(self):
         form = BPlanBeteiligungBeitragAnhangForm(data=self._form_data())
         self.assertFalse(form.is_valid())
         self.assertIn("attachment", form.errors)
 
+    # Testfall: F-Plan Anhang erfordert a file.
+    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_attachment_requires_a_file(self):
         form = FPlanBeteiligungBeitragAnhangForm(data=self._form_data())
         self.assertFalse(form.is_valid())
         self.assertIn("attachment", form.errors)
 
+    # Testfall: B-Plan Anhang collection erlaubt at most four Anhänge.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_attachment_collection_allows_at_most_four_attachments(self):
         self.assertEqual(BPlanBeteiligungBeitragAnhangCollection.max_siblings, 4)
         self.assertEqual(BPlanBeteiligungBeitragAnhangCollection.min_siblings, 0)
 
+    # Testfall: F-Plan Anhang collection erlaubt at most four Anhänge.
+    # Erwartung/Absicherung: verwendet assertEqual.
+    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_attachment_collection_allows_at_most_four_attachments(self):
         self.assertEqual(FPlanBeteiligungBeitragAnhangCollection.max_siblings, 4)
         self.assertEqual(FPlanBeteiligungBeitragAnhangCollection.min_siblings, 0)
