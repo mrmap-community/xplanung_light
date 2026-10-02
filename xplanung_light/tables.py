@@ -2,7 +2,7 @@ import django_tables2 as tables
 from django_tables2.utils import A
 from .models import BPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, BPlanBeteiligung, ContactOrganization, Uvp, FPlanUvp, ToebUnit
 from .models import FPlan, FPlanBeteiligung, FPlanSpezExterneReferenz, BPlanBeteiligungBeitrag, FPlanBeteiligungBeitrag, RequestForRole
-from .models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme 
+from .models import BPlanBeitragStellungnahme, FPlanBeitragStellungnahme
 from .models import ConsentOption, BPlanBeteiligungToebNotification, FPlanBeteiligungToebNotification
 from .models import BPlanBeteiligungBeitragAnhang, FPlanBeteiligungBeitragAnhang
 from django.urls import reverse
@@ -10,24 +10,34 @@ from django.utils.html import format_html
 from django.contrib.gis.gdal import OGRGeometry
 
 
+def notification_button(plantyp, record, value):
+    if record.typ not in ('2000', '20001'):
+        return format_html('')
+    url = reverse('beteiligungnotification-list', kwargs={
+        'plantyp': plantyp, 'planid': getattr(record, plantyp).id, 'beteiligungid': record.id})
+    if record.status in (1, 2):
+        if record.count_toebs <= 0:
+            return format_html('')
+        if value == 0:
+            return format_html('<a class="btn btn-success" role="button" href="{}">Benachrichtigen</a>', url)
+        return format_html('<a class="btn btn-warning" role="button" href="{}">Benachrichtigen ({})</a>', url, value)
+    if value > 0:
+        return format_html('<a class="btn btn-secondary" role="button" href="{}">Benachrichtigungen ({})</a>', url, value)
+    return format_html('')
+
+
 class AdministrativeOrganizationTable(tables.Table):
-    edit = tables.LinkColumn('organization-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    #delete = tables.LinkColumn('contactorganization-delete', text='Löschen', args=[A('pk')], \
+    edit = tables.LinkColumn('organization-update', verbose_name='', text='Bearbeiten', args=[A('pk')],
+                             orderable=False, empty_values=())
+    # delete = tables.LinkColumn('contactorganization-delete', text='Löschen', args=[A('pk')], \
     #                  orderable=False, empty_values=())
 
     def render_ags(self, record):
-        if record.ts:
-            return format_html(record.ags + ' - ' + record.ts)
-        else:
-            return format_html(record.ags)
-        
+        return format_html('{} - {}', record.ags, record.ts) if record.ts else format_html('{}', record.ags)
+
     def render_name(self, record):
-        if record.name_part:
-            return format_html(record.name + ' - ' + record.name_part)
-        else:
-            return format_html(record.name)
-        
+        return format_html('{} - {}', record.name, record.name_part) if record.name_part else format_html('{}', record.name)
+
     class Meta:
         model = AdministrativeOrganization
         template_name = "django_tables2/bootstrap5.html"
@@ -35,10 +45,11 @@ class AdministrativeOrganizationTable(tables.Table):
 
 
 class ContactOrganizationTable(tables.Table):
-    edit = tables.LinkColumn('contact-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    delete = tables.LinkColumn('contact-delete', verbose_name='', text='Löschen', args=[A('pk')], \
-                         orderable=False, empty_values=())
+    edit = tables.LinkColumn('contact-update', verbose_name='', text='Bearbeiten', args=[A('pk')],
+                             orderable=False, empty_values=())
+    delete = tables.LinkColumn('contact-delete', verbose_name='', text='Löschen', args=[A('pk')],
+                               orderable=False, empty_values=())
+
     class Meta:
         model = ContactOrganization
         template_name = "django_tables2/bootstrap5.html"
@@ -47,25 +58,28 @@ class ContactOrganizationTable(tables.Table):
 
 class ToebUnitTable(tables.Table):
     last_changed = tables.Column(verbose_name='Letzte Änderung')
-    edit = tables.LinkColumn('toebunit-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    delete = tables.LinkColumn('toebunit-delete', verbose_name='', text='Löschen', args=[A('pk')], \
-                         orderable=False, empty_values=())
+    edit = tables.LinkColumn('toebunit-update', verbose_name='', text='Bearbeiten', args=[A('pk')],
+                             orderable=False, empty_values=())
+    delete = tables.LinkColumn('toebunit-delete', verbose_name='', text='Löschen', args=[A('pk')],
+                               orderable=False, empty_values=())
+
     class Meta:
         model = ToebUnit
         template_name = "django_tables2/bootstrap5.html"
-        fields = ['id', 'last_changed', 'public', 'organization', 'name', 'theme', 'editors', 'edit', 'delete']
+        fields = ['id', 'last_changed', 'public', 'organization',
+                  'name', 'theme', 'editors', 'edit', 'delete']
 
 
 class ToebUnitPublicTable(tables.Table):
     last_changed = tables.Column(verbose_name='Letzte Änderung')
-    #edit = tables.LinkColumn('toebunit-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
+    # edit = tables.LinkColumn('toebunit-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
     #                     orderable=False, empty_values=())
-    #delete = tables.LinkColumn('toebunit-delete', verbose_name='', text='Löschen', args=[A('pk')], \
+    # delete = tables.LinkColumn('toebunit-delete', verbose_name='', text='Löschen', args=[A('pk')], \
     #                     orderable=False, empty_values=())
-    #karte = tables.TemplateColumn(verbose_name='Zuständigkeit', template_code=u"""<button type="button" class="btn btn-transparent" data-bs-toggle="modal" 
-    #                              data-bs-target="#exampleModal" data-bs-title="Übersichtskarte" 
+    # karte = tables.TemplateColumn(verbose_name='Zuständigkeit', template_code=u"""<button type="button" class="btn btn-transparent" data-bs-toggle="modal"
+    #                              data-bs-target="#exampleModal" data-bs-title="Übersichtskarte"
     #                              data-bs-geojson="{{ record.geometry.geojson }}"><i title="Übersichtskarte" class="fa-regular fa-map"></i></button>""")
+
     class Meta:
         model = ToebUnit
         template_name = "django_tables2/bootstrap5.html"
@@ -73,37 +87,39 @@ class ToebUnitPublicTable(tables.Table):
 
 
 class BPlanSpezExterneReferenzTable(tables.Table):
-    edit = tables.LinkColumn('bplanattachment-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
-                         orderable=False, empty_values=())
-    delete = tables.LinkColumn('bplanattachment-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')], \
-                         orderable=False, empty_values=())
+    edit = tables.LinkColumn('bplanattachment-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')],
+                             orderable=False, empty_values=())
+    delete = tables.LinkColumn('bplanattachment-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')],
+                               orderable=False, empty_values=())
     attachment = tables.Column(verbose_name="Ablage", orderable=False)
-    download = tables.LinkColumn('bplanattachment-download', verbose_name='', text='Download', args=[A('pk')], \
-                         orderable=False, empty_values=())
+    download = tables.LinkColumn('bplanattachment-download', verbose_name='', text='Download', args=[A('pk')],
+                                 orderable=False, empty_values=())
     name = tables.Column(verbose_name="Name/Bezeichnung")
     typ = tables.Column(verbose_name="Art des Dokuments")
 
     class Meta:
         model = BPlanSpezExterneReferenz
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "public",  "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
+        fields = ("id", "public",  "name", "typ", "aus_archiv",
+                  "attachment", "download", "edit", "delete")
 
 
 class FPlanSpezExterneReferenzTable(tables.Table):
-    edit = tables.LinkColumn('fplanattachment-update', verbose_name='', text='Bearbeiten', args=[A('fplan.id'), A('pk')], \
-                         orderable=False, empty_values=())
-    delete = tables.LinkColumn('fplanattachment-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')], \
-                         orderable=False, empty_values=())
+    edit = tables.LinkColumn('fplanattachment-update', verbose_name='', text='Bearbeiten', args=[A('fplan.id'), A('pk')],
+                             orderable=False, empty_values=())
+    delete = tables.LinkColumn('fplanattachment-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')],
+                               orderable=False, empty_values=())
     attachment = tables.Column(verbose_name="Ablage", orderable=False)
-    download = tables.LinkColumn('fplanattachment-download', verbose_name='', text='Download', args=[A('pk')], \
-                         orderable=False, empty_values=())
+    download = tables.LinkColumn('fplanattachment-download', verbose_name='', text='Download', args=[A('pk')],
+                                 orderable=False, empty_values=())
     name = tables.Column(verbose_name="Name/Bezeichnung")
     typ = tables.Column(verbose_name="Art des Dokuments")
 
     class Meta:
         model = FPlanSpezExterneReferenz
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "public", "name", "typ", "aus_archiv", "attachment", "download", "edit", "delete")
+        fields = ("id", "public", "name", "typ", "aus_archiv",
+                  "attachment", "download", "edit", "delete")
 
 
 class BPlanBeteiligungBeitragAnhangTable(tables.Table):
@@ -112,16 +128,16 @@ class BPlanBeteiligungBeitragAnhangTable(tables.Table):
     """
     attachment = tables.LinkColumn(
         "beteiligung-beitrag-attachment-download-orig",
-        verbose_name = A('Datei'),
-        args = ["bplan", A('pk')],
+        verbose_name=A('Datei'),
+        args=["bplan", A('pk')],
         orderable=False,
         empty_values=()
     )
     name = tables.Column(verbose_name="Name/Bezeichnung")
     typ = tables.Column(verbose_name="Art des Dokuments")
-    #redacted_document_id = tables.Column(verbose_name="Geschwärztes Dokument ID")
-    #has_redacted_version = tables.TemplateColumn(verbose_name="",  template_code=u"""{% if record.has_redacted_version == True %}<i class="fa-regular fa-eye-slash"></i>{% endif %}""")
-    redacted_document = tables.columns.TemplateColumn(verbose_name = "Geschwärzte Version", template_code=u"""{% if record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-detail' plantyp=plantyp generic_id=record.redacted_document_generic_id %}">Anzeigen</a>{% endif %}
+    # redacted_document_id = tables.Column(verbose_name="Geschwärztes Dokument ID")
+    # has_redacted_version = tables.TemplateColumn(verbose_name="",  template_code=u"""{% if record.has_redacted_version == True %}<i class="fa-regular fa-eye-slash"></i>{% endif %}""")
+    redacted_document = tables.columns.TemplateColumn(verbose_name="Geschwärzte Version", template_code=u"""{% if record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-detail' plantyp=plantyp generic_id=record.redacted_document_generic_id %}">Anzeigen</a>{% endif %}
     {% if record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-delete' plantyp=plantyp generic_id=record.redacted_document_generic_id %}">Löschen</a>{% endif %}
     {% if not record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-create' plantyp=plantyp anhang_generic_id=record.generic_id %}">Anlegen</a>{% endif %}
     """)
@@ -129,15 +145,16 @@ class BPlanBeteiligungBeitragAnhangTable(tables.Table):
     class Meta:
         model = BPlanBeteiligungBeitragAnhang
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "name", "typ", "attachment")#, "has_redacted_version", "redacted_document_id")
+        # , "has_redacted_version", "redacted_document_id")
+        fields = ("id", "name", "typ", "attachment")
 
 
 class FPlanBeteiligungBeitragAnhangTable(BPlanBeteiligungBeitragAnhangTable):
 
     attachment = tables.LinkColumn(
         "beteiligung-beitrag-attachment-download-orig",
-        verbose_name = A('Datei'),
-        args = ["fplan", A('pk')],
+        verbose_name=A('Datei'),
+        args=["fplan", A('pk')],
         orderable=False,
         empty_values=()
     )
@@ -151,21 +168,22 @@ class BPlanBeteiligungBeitragAnhangTable2(tables.Table):
     Tabelle zur Anzeige der Anlagen eines Beteiligungsbeitrags. Hier kann der Sachbearbeiter eine geschwärzte Version hinzufügen.
 
     """
-    #edit = tables.LinkColumn('bplanattachment-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
+    # edit = tables.LinkColumn('bplanattachment-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
     #                     orderable=False, empty_values=())
-    #delete = tables.LinkColumn('bplanattachment-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')], \
+    # delete = tables.LinkColumn('bplanattachment-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')], \
     #                     orderable=False, empty_values=())
     # add redacted version
     # delete redacted version
     # show redacted version
 
     attachment = tables.Column(verbose_name="Anlage", orderable=False)
-    #download = tables.LinkColumn('bplanattachment-download', verbose_name='', text='Download', args=[A('pk')], \
+    # download = tables.LinkColumn('bplanattachment-download', verbose_name='', text='Download', args=[A('pk')], \
     #                     orderable=False, empty_values=())
     name = tables.Column(verbose_name="Name/Bezeichnung")
     typ = tables.Column(verbose_name="Art des Dokuments")
-    redacted_document_id = tables.Column(verbose_name="Geschwärztes Dokument ID")
-    redacted_document = tables.columns.TemplateColumn(verbose_name = "Geschwärztes Dokument", template_code=u"""{% if record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-detail' plantyp=plantyp planid=plan.id beteiligungid=beteiligungid beitragid=beitragid anhangid=record.id pk=record.redacted_document_id %}">Anzeigen</a>{% endif %}
+    redacted_document_id = tables.Column(
+        verbose_name="Geschwärztes Dokument ID")
+    redacted_document = tables.columns.TemplateColumn(verbose_name="Geschwärztes Dokument", template_code=u"""{% if record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-detail' plantyp=plantyp planid=plan.id beteiligungid=beteiligungid beitragid=beitragid anhangid=record.id pk=record.redacted_document_id %}">Anzeigen</a>{% endif %}
     {% if record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-delete' plantyp=plantyp planid=plan.id beteiligungid=beteiligungid beitragid=beitragid anhangid=record.id pk=record.redacted_document_id %}">Löschen</a>{% endif %}
     {% if not record.redacted_document_id %}<a href="{% url 'beteiligungbeitraganhangredacted-create' plantyp=plantyp planid=plan.id beteiligungid=beteiligungid beitragid=beitragid anhangid=record.id %}">Anlegen</a>{% endif %}
     """)
@@ -173,7 +191,8 @@ class BPlanBeteiligungBeitragAnhangTable2(tables.Table):
     class Meta:
         model = BPlanBeteiligungBeitragAnhang
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "name", "typ", "attachment", "has_redacted_version", "redacted_document_id")
+        fields = ("id", "name", "typ", "attachment",
+                  "has_redacted_version", "redacted_document_id")
 
 
 class FPlanBeteiligungBeitragAnhangTable2(BPlanBeteiligungBeitragAnhangTable):
@@ -182,49 +201,57 @@ class FPlanBeteiligungBeitragAnhangTable2(BPlanBeteiligungBeitragAnhangTable):
 
 class BeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
-    end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
-    #days_left = tables.columns.TemplateColumn(template_code=u"""{{ record.days_left }}""", orderable=False, verbose_name='Tage bis Fristablauf')
+    end_datum = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
+    # days_left = tables.columns.TemplateColumn(template_code=u"""{{ record.days_left }}""", orderable=False, verbose_name='Tage bis Fristablauf')
     progress = tables.columns.TemplateColumn(template_code=u"""<div class="progress">
         <div class="progress-bar" role="progressbar" style="width: {% widthratio record.days_passed record.days_total 100 %}%" aria-valuenow="{{ record.days_passed }}" aria-valuemin="0" aria-valuemax="{{ record.days_total }}">{{ record.days_left }}</div>
     </div>""", verbose_name="Tage bis Fristablauf", orderable=False)
-    xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan" %}<a href="{% url 'bplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
+    xplan_name = tables.columns.TemplateColumn(
+        template_code=u"""{% if record.plantyp == "BPlan" %}<a href="{% url 'bplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }}</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
     typ = tables.Column(verbose_name='Typ des Verfahrens')
-    plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
+    plantyp = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
     gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
   <a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a><br />{% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
-    bearbeiten = tables.columns.TemplateColumn(verbose_name = "", template_code=u"""{% if not user.is_anonymous %}<a href="{% if record.plantyp == 'BPlan' %}{% url 'bplanbeteiligung-update' planid=record.xplan_id pk=record.id %}{% endif %}{% if record.plantyp == 'FPlan' %}{% url 'fplanbeteiligung-update' planid=record.xplan_id pk=record.id %}{% endif %}">Bearbeiten</a>{% endif %}""")
-    alle_verfahren = tables.columns.TemplateColumn(verbose_name = "", template_code=u"""{% if not user.is_anonymous %}<a href="{% if record.plantyp == 'BPlan' %}{% url 'bplanbeteiligung-list' planid=record.xplan_id %}{% endif %}{% if record.plantyp == 'FPlan' %}{% url 'fplanbeteiligung-list' planid=record.xplan_id %}{% endif %}">Alle Verfahren</a>{% endif %}""")
-    
-    #Problem: Man kann im view nicht über Relationen gehen - alles was man braucht, muss man vor dem union ziehen, bzw. als JSON rausgeben!
-    
+    bearbeiten = tables.columns.TemplateColumn(
+        verbose_name="", template_code=u"""{% if not user.is_anonymous %}<a href="{% if record.plantyp == 'BPlan' %}{% url 'bplanbeteiligung-update' planid=record.xplan_id pk=record.id %}{% endif %}{% if record.plantyp == 'FPlan' %}{% url 'fplanbeteiligung-update' planid=record.xplan_id pk=record.id %}{% endif %}">Bearbeiten</a>{% endif %}""")
+    alle_verfahren = tables.columns.TemplateColumn(
+        verbose_name="", template_code=u"""{% if not user.is_anonymous %}<a href="{% if record.plantyp == 'BPlan' %}{% url 'bplanbeteiligung-list' planid=record.xplan_id %}{% endif %}{% if record.plantyp == 'FPlan' %}{% url 'fplanbeteiligung-list' planid=record.xplan_id %}{% endif %}">Alle Verfahren</a>{% endif %}""")
+
+    # Problem: Man kann im view nicht über Relationen gehen - alles was man braucht, muss man vor dem union ziehen, bzw. als JSON rausgeben!
 
     class Meta:
-        #model = BPlanBeteiligung
+        # model = BPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
-        #fields = ("end_datum", "plantyp")
+        # fields = ("end_datum", "plantyp")
 
 
 class ToebUnitBeteiligungenTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
     beteiligung_id = tables.Column(verbose_name='ID')
     beitrag_erfasst = tables.BooleanColumn(verbose_name='Erfasst')
-    end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
+    end_datum = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende der Frist')
     status = tables.columns.TemplateColumn(template_code=u"""
                                            {% if record.status == 0 %}<span class="badge rounded-pill bg-secondary">Unbekannt</span>{% endif %}
                                            {% if record.status == 1 %}<span class="badge rounded-pill bg-warning">Bekanntgegeben</span>{% endif %}
                                            {% if record.status == 2 %}<span class="badge rounded-pill bg-success">Aktiv</span>{% endif %}
                                            {% if record.status == 3 %}<span class="badge rounded-pill bg-dark">Abgelaufen</span>{% endif %}
                                            """, orderable=True, verbose_name='Status')
-    #plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
-    xplan_name = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }} ({{ record.plantyp }})</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }} ({{ record.plantyp }})</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
+    # plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
+    xplan_name = tables.columns.TemplateColumn(
+        template_code=u"""{% if record.plantyp == "BPlan"%}<a href="{% url 'bplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }} ({{ record.plantyp }})</a>{% endif%}{% if record.plantyp == "FPlan"%}<a href="{% url 'fplan-detail' pk=record.xplan_id %}">{{ record.xplan_name }} ({{ record.plantyp }})</a>{% endif%}""", orderable=True, verbose_name='Name des Plans')
     beteiligung_typ = tables.columns.TemplateColumn(verbose_name='Verfahren', template_code=u"""{% if record.beteiligung_typ == '2000' %}Träger öffentlicher Belange{% endif %}
                                                                                                          {% if record.beteiligung_typ == '20001' %}Frühzeitige Trägerbeteiligung{% endif %}""")
     gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
                                               <a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a><br />
                                               {% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
-    toeb_unit_name = tables.columns.TemplateColumn(verbose_name='TOEB', template_code=u"""{{ record.toeb_unit_orga_name }} - {{ record.toeb_unit_name }} ({{ record.toeb_unit_id }})""")
-    #toeb_unit_id = tables.Column(verbose_name='TOEB ID')
-    count_beitrag_attachments = tables.TemplateColumn(verbose_name='Anlagen', template_code=u"""{% if record.count_beitrag_attachments > 0 %}{{ record.count_beitrag_attachments }}{% endif %}""")
+    toeb_unit_name = tables.columns.TemplateColumn(
+        verbose_name='TOEB', template_code=u"""{{ record.toeb_unit_orga_name }} - {{ record.toeb_unit_name }} ({{ record.toeb_unit_id }})""")
+    # toeb_unit_id = tables.Column(verbose_name='TOEB ID')
+    count_beitrag_attachments = tables.TemplateColumn(
+        verbose_name='Anlagen', template_code=u"""{% if record.count_beitrag_attachments > 0 %}{{ record.count_beitrag_attachments }}{% endif %}""")
     edit = tables.TemplateColumn(verbose_name='', template_code=u"""{% if record.count_beitrag == 0 and record.status == 2 %}
                                           <a href="{% url 'beteiligungbeitrag-toeb-create' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id toeb_id=record.toeb_unit_id %}">Anlegen</a>
                                           {% else %}
@@ -238,66 +265,75 @@ class ToebUnitBeteiligungenTable(tables.Table):
                                           {% endif %}
                                           {% endif %}
                                           {% endif %}""", orderable=True)
-    
+
     delete = tables.TemplateColumn(verbose_name='', template_code=u"""
                                           {% if record.count_beitrag == 1 and record.status == 2 %}
                                           <a href="{% url 'beteiligungbeitrag-toeb-delete' plantyp=record.plantyp|lower planid=record.xplan_id beteiligungid=record.beteiligung_id pk=record.beitrag_ids.0.id %}">Löschen</a>
                                           {% else %}
-                                          {% endif %}""", orderable=True)  
-    #Problem: Man kann im view nicht über Relationen gehen - alles was man braucht, muss man vor dem union ziehen, bzw. als JSON rausgeben!
-    
+                                          {% endif %}""", orderable=True)
+    # Problem: Man kann im view nicht über Relationen gehen - alles was man braucht, muss man vor dem union ziehen, bzw. als JSON rausgeben!
 
     class Meta:
-        #model = BPlanBeteiligung
+        # model = BPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
-        #fields = ("end_datum", "plantyp")
+        # fields = ("end_datum", "plantyp")
 
 
 class BeteiligungenOrgaTable(tables.Table):
     # https://stackoverflow.com/questions/31932529/how-to-call-a-non-model-field-in-django-tables2
-    end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='End Datum')
-    typ =  tables.columns.TemplateColumn(template_code=u"""{{ record.get_typ_display }}""", orderable=True, verbose_name='Art des Verfahrens')
-    xplan_name = tables.columns.TemplateColumn(template_code=u"""{{ record.xplan_name }}""", orderable=True, verbose_name='Name des Plans')
-    plantyp = tables.columns.TemplateColumn(template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
-    #gemeinde = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}{{ record.bplan.gemeinde.all|join:"; " }}{% endif%}{% if record.plantyp == "FPlan"%}{{ record.fplan.gemeinde.all|join:"; " }}{% endif%}""", orderable=False, verbose_name='Gemeinden')
-    id = tables.columns.TemplateColumn('<a href=" {% if record.plantyp == "BPlan" %}{% url "bplanbeteiligung-update" planid=record.xplan_id pk=record.id %}{% else %}{% url "fplanbeteiligung-update" planid=record.xplan_id pk=record.id %}{% endif %}">Bearbeiten</a>', orderable=True, verbose_name='')
-    beteiligungen = tables.columns.TemplateColumn('<a href=" {% if record.plantyp == "BPlan" %}{% url "bplanbeteiligung-list" planid=record.xplan_id %}{% else %}{% url "fplanbeteiligung-list" planid=record.xplan_id %}{% endif %}">Alle Beteiligungen</a>', orderable=True, verbose_name='')
-    #gemeinde = tables.columns.TemplateColumn(template_code=u"""{{ record.gemeinde }}""", orderable=True, verbose_name='Gemeinde')
-    
+    end_datum = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='End Datum')
+    typ = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.get_typ_display }}""", orderable=True, verbose_name='Art des Verfahrens')
+    xplan_name = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.xplan_name }}""", orderable=True, verbose_name='Name des Plans')
+    plantyp = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
+    # gemeinde = tables.columns.TemplateColumn(template_code=u"""{% if record.plantyp == "BPlan"%}{{ record.bplan.gemeinde.all|join:"; " }}{% endif%}{% if record.plantyp == "FPlan"%}{{ record.fplan.gemeinde.all|join:"; " }}{% endif%}""", orderable=False, verbose_name='Gemeinden')
+    id = tables.columns.TemplateColumn(
+        '<a href=" {% if record.plantyp == "BPlan" %}{% url "bplanbeteiligung-update" planid=record.xplan_id pk=record.id %}{% else %}{% url "fplanbeteiligung-update" planid=record.xplan_id pk=record.id %}{% endif %}">Bearbeiten</a>', orderable=True, verbose_name='')
+    beteiligungen = tables.columns.TemplateColumn(
+        '<a href=" {% if record.plantyp == "BPlan" %}{% url "bplanbeteiligung-list" planid=record.xplan_id %}{% else %}{% url "fplanbeteiligung-list" planid=record.xplan_id %}{% endif %}">Alle Beteiligungen</a>', orderable=True, verbose_name='')
+    # gemeinde = tables.columns.TemplateColumn(template_code=u"""{{ record.gemeinde }}""", orderable=True, verbose_name='Gemeinde')
 
     class Meta:
         template_name = "django_tables2/bootstrap5.html"
-        
+
 
 class BPlanBeteiligungTable(tables.Table):
 
-    edit = tables.LinkColumn('bplanbeteiligung-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
-                         orderable=False, empty_values=())
-    delete = tables.LinkColumn('bplanbeteiligung-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')], \
-                         orderable=False, empty_values=())
-    #delete_recursive_history = tables.LinkColumn('bplanbeteiligung-delete-recursive-history', verbose_name='', text='Vollständig löschen', args=[A('bplan.id'), A('pk')], \
+    edit = tables.LinkColumn('bplanbeteiligung-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')],
+                             orderable=False, empty_values=())
+    delete = tables.LinkColumn('bplanbeteiligung-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')],
+                               orderable=False, empty_values=())
+    # delete_recursive_history = tables.LinkColumn('bplanbeteiligung-delete-recursive-history', verbose_name='', text='Vollständig löschen', args=[A('bplan.id'), A('pk')], \
     #                     orderable=False, empty_values=())
-    #attachment = tables.Column(verbose_name="Ablage", orderable=False)
-    #download = tables.LinkColumn('bplanbeteiligung-download', text='Download', args=[A('pk')], \
+    # attachment = tables.Column(verbose_name="Ablage", orderable=False)
+    # download = tables.LinkColumn('bplanbeteiligung-download', text='Download', args=[A('pk')], \
     #                     orderable=False, empty_values=())
-    #name = tables.Column(verbose_name="Name/Bezeichnung")
-    #comments = tables.LinkColumn('bplanbeteiligung-update', verbose_name='', text='Beiträge/Kommentare', args=[A('bplan.id'), A('pk')], \
+    # name = tables.Column(verbose_name="Name/Bezeichnung")
+    # comments = tables.LinkColumn('bplanbeteiligung-update', verbose_name='', text='Beiträge/Kommentare', args=[A('bplan.id'), A('pk')], \
     #                     orderable=False, empty_values=())
-    count_comments = tables.Column(verbose_name="Kommentare/Beiträge", accessor='count_comments', orderable=False)
+    count_comments = tables.Column(
+        verbose_name="Kommentare/Beiträge", accessor='count_comments', orderable=False)
     count_toebs = tables.Column(verbose_name="# TOEBs", accessor='count_toebs')
-    count_notifications = tables.Column(verbose_name="", accessor='count_notifications')
-                                           
+    count_notifications = tables.Column(
+        verbose_name="", accessor='count_notifications')
+
     typ = tables.Column(verbose_name="Art der Beteiligung")
-    end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende')
-    start_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.start_datum }}""", orderable=True, verbose_name='Beginn')
-    bekanntmachung_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.bekanntmachung_datum }}""", orderable=True, verbose_name='Bekanntmachung')
+    end_datum = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende')
+    start_datum = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.start_datum }}""", orderable=True, verbose_name='Beginn')
+    bekanntmachung_datum = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.bekanntmachung_datum }}""", orderable=True, verbose_name='Bekanntmachung')
     status = tables.columns.TemplateColumn(template_code=u"""
                                            {% if record.status == 0 %}<span class="badge rounded-pill bg-secondary">Unbekannt</span>{% endif %}
                                            {% if record.status == 1 %}<span class="badge rounded-pill bg-warning">Bekanntgegeben</span>{% endif %}
                                            {% if record.status == 2 %}<span class="badge rounded-pill bg-success">Aktiv</span>{% endif %}
                                            {% if record.status == 3 %}<span class="badge rounded-pill bg-dark">Abgelaufen</span>{% endif %}
                                            """, orderable=True, verbose_name='Status')
-
+    """
     def render_count_notifications(self, value, record):
         if (record.typ == '2000' or record.typ == '20001'):
             if record.status in [1, 2]:
@@ -305,38 +341,48 @@ class BPlanBeteiligungTable(tables.Table):
                     if value == 0:
                         return format_html('<a class="btn btn-success" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigen" + '</a>')
                     if value > 0:
-                        return format_html('<a class="btn btn-warning" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigen (" + str(value) +')</a>')
+                        return format_html('<a class="btn btn-warning" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigen (" + str(value) + ')</a>')
             else:
                 if value > 0:
-                    return format_html('<a class="btn btn-secondary" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigungen (" + str(value) +')</a>')
+                    return format_html('<a class="btn btn-secondary" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigungen (" + str(value) + ')</a>')
                 return format_html('')
         else:
             return format_html('')
-    
+    """
+
+    def render_count_notifications(self, value, record):
+        return notification_button('bplan', record, value)
+
     def render_count_comments(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('beteiligungbeitrag-generic-create', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('beteiligungbeitrag-generic-create', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' + str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('beteiligungbeitrag-list', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('beteiligungbeitrag-list', kwargs={'plantyp': 'bplan', 'planid': record.bplan.id, 'beteiligungid': record.id}) + '">' + str(value) + '</a>')
 
     class Meta:
         model = BPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "status", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "count_comments", "count_toebs", "count_notifications", "edit", "delete", )# "delete_recursive_history")
+        fields = ("id", "status", "bekanntmachung_datum", "typ", "start_datum", "end_datum", "count_comments",
+                  "count_toebs", "count_notifications", "edit", "delete", )  # "delete_recursive_history")
 
-   
+
 class FPlanBeteiligungTable(tables.Table):
 
-    edit = tables.LinkColumn('fplanbeteiligung-update', verbose_name='', text='Bearbeiten', args=[A('fplan.id'), A('pk')], \
-                         orderable=False, empty_values=())
-    delete = tables.LinkColumn('fplanbeteiligung-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')], \
-                         orderable=False, empty_values=())
-    count_comments = tables.Column(verbose_name="Kommentare/Beiträge", accessor='count_comments', orderable=False)
+    edit = tables.LinkColumn('fplanbeteiligung-update', verbose_name='', text='Bearbeiten', args=[A('fplan.id'), A('pk')],
+                             orderable=False, empty_values=())
+    delete = tables.LinkColumn('fplanbeteiligung-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')],
+                               orderable=False, empty_values=())
+    count_comments = tables.Column(
+        verbose_name="Kommentare/Beiträge", accessor='count_comments', orderable=False)
     count_toebs = tables.Column(verbose_name="# TOEBs", accessor='count_toebs')
-    count_notifications = tables.Column(verbose_name="", accessor='count_notifications')
-    end_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende')
-    start_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.start_datum }}""", orderable=True, verbose_name='Beginn')
-    bekanntmachung_datum = tables.columns.TemplateColumn(template_code=u"""{{ record.bekanntmachung_datum }}""", orderable=True, verbose_name='Bekanntmachung')                
+    count_notifications = tables.Column(
+        verbose_name="", accessor='count_notifications')
+    end_datum = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.end_datum }}""", orderable=True, verbose_name='Ende')
+    start_datum = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.start_datum }}""", orderable=True, verbose_name='Beginn')
+    bekanntmachung_datum = tables.columns.TemplateColumn(
+        template_code=u"""{{ record.bekanntmachung_datum }}""", orderable=True, verbose_name='Bekanntmachung')
     typ = tables.Column(verbose_name="Art der Beteiligung")
     status = tables.columns.TemplateColumn(template_code=u"""
                                            {% if record.status == 0 %}<span class="badge rounded-pill bg-secondary">Unbekannt</span>{% endif %}
@@ -347,10 +393,11 @@ class FPlanBeteiligungTable(tables.Table):
 
     def render_count_comments(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('beteiligungbeitrag-generic-create', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('beteiligungbeitrag-generic-create', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' + str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('beteiligungbeitrag-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('beteiligungbeitrag-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' + str(value) + '</a>')
 
+    """
     def render_count_notifications(self, value, record):
         if (record.typ == '2000' or record.typ == '20001'):
             if record.status in [1, 2]:
@@ -358,46 +405,55 @@ class FPlanBeteiligungTable(tables.Table):
                     if value == 0:
                         return format_html('<a class="btn btn-success" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigen" + '</a>')
                     if value > 0:
-                        return format_html('<a class="btn btn-warning" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigen (" + str(value) +')</a>')
+                        return format_html('<a class="btn btn-warning" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigen (" + str(value) + ')</a>')
             else:
                 if value > 0:
-                    return format_html('<a class="btn btn-secondary" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigungen (" + str(value) +')</a>')
+                    return format_html('<a class="btn btn-secondary" role="button" href="' + reverse('beteiligungnotification-list', kwargs={'plantyp': 'fplan', 'planid': record.fplan.id, 'beteiligungid': record.id}) + '">' + "Benachrichtigungen (" + str(value) + ')</a>')
                 return format_html('')
         else:
             return format_html('')
-    
+    """
+
+    def render_count_notifications(self, value, record):
+        return notification_button('fplan', record, value)
+
     class Meta:
         model = FPlanBeteiligung
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "status", "bekanntmachung_datum", "typ", "start_datum", "count_comments", "count_toebs", "count_notifications", "end_datum", "edit", "delete")
+        fields = ("id", "status", "bekanntmachung_datum", "typ", "start_datum", "count_comments",
+                  "count_toebs", "count_notifications", "end_datum", "edit", "delete")
 
 
 class BPlanBeteiligungBeitragTable(tables.Table):
 
-    id = tables.LinkColumn('beteiligungbeitrag-detail', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')])
+    id = tables.LinkColumn('beteiligungbeitrag-detail', args=['bplan', A(
+        'bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')])
     last_changed = tables.Column(verbose_name='Letzte Änderung')
-    
+
     edit = tables.TemplateColumn(
         verbose_name="",
         template_code='''{% if record.typ == '1000' %}{% else %}<a href="{% url 'beteiligungbeitrag-generic-update' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id pk=record.id %}">Bearbeiten</a>{% endif %}''',
     )
-    
-    count_stellungnahmen = tables.LinkColumn('beitragstellungnahme-list', verbose_name='Stellungnahmen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], empty_values=())
-    #attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "bplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
-    count_attachments = tables.LinkColumn('beteiligungbeitraganhang-list', verbose_name='Anlagen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], \
-                         orderable=False, empty_values=())
-    delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], \
-                         orderable=False, empty_values=())
-    
+
+    count_stellungnahmen = tables.LinkColumn('beitragstellungnahme-list', verbose_name='Stellungnahmen', args=[
+                                             'bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')], empty_values=())
+    # attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "bplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
+    count_attachments = tables.LinkColumn('beteiligungbeitraganhang-list', verbose_name='Anlagen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')],
+                                          orderable=False, empty_values=())
+    delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['bplan', A('bplan_beteiligung__bplan__id'), A('bplan_beteiligung__id'), A('pk')],
+                               orderable=False, empty_values=())
+
     class Meta:
         model = BPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("id", "last_changed", "eingangsdatum", "titel", "typ", "toeb", "name", "email", "approved", "withdrawn", "count_attachments", "count_stellungnahmen", "edit", "delete")
+        fields = ("id", "last_changed", "eingangsdatum", "titel", "typ", "toeb", "name", "email",
+                  "approved", "withdrawn", "count_attachments", "count_stellungnahmen", "edit", "delete")
 
 
 class FPlanBeteiligungBeitragTable(tables.Table):
 
-    id = tables.LinkColumn('beteiligungbeitrag-detail', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')])
+    id = tables.LinkColumn('beteiligungbeitrag-detail', args=['fplan', A(
+        'fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')])
     last_changed = tables.Column(verbose_name='Letzte Änderung')
     """
     beschreibung = tables.TemplateColumn(
@@ -408,17 +464,19 @@ class FPlanBeteiligungBeitragTable(tables.Table):
         verbose_name="",
         template_code='''{% if record.typ == '1000' %}{% else %}<a href="{% url 'beteiligungbeitrag-generic-update' plantyp=plantyp planid=plan.id beteiligungid=beteiligung.id pk=record.id %}">Bearbeiten</a>{% endif %}''',
     )
-    count_stellungnahmen = tables.LinkColumn('beitragstellungnahme-list', verbose_name='Stellungnahmen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], empty_values=())
-    #attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "fplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
-    count_attachments = tables.LinkColumn('beteiligungbeitraganhang-list', verbose_name='Anlagen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], \
-                             orderable=False, empty_values=())
-    delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], \
-                         orderable=False, empty_values=())
-    
+    count_stellungnahmen = tables.LinkColumn('beitragstellungnahme-list', verbose_name='Stellungnahmen', args=[
+                                             'fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')], empty_values=())
+    # attachments = tables.ManyToManyColumn(verbose_name="Anlagen", transform=lambda anhang: anhang.name, linkify_item=("beteiligung-beitrag-attachment-download", {"plantyp": "fplan", "pk": tables.A('pk')}))# Wichtig: Accessor liefert pk des jeweiligen items!
+    count_attachments = tables.LinkColumn('beteiligungbeitraganhang-list', verbose_name='Anlagen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')],
+                                          orderable=False, empty_values=())
+    delete = tables.LinkColumn('beteiligungbeitrag-delete', verbose_name='', text='Löschen', args=['fplan', A('fplan_beteiligung__fplan__id'), A('fplan_beteiligung__id'), A('pk')],
+                               orderable=False, empty_values=())
+
     class Meta:
         model = FPlanBeteiligungBeitrag
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("id", "last_changed", "eingangsdatum", "titel", "typ", "name", "email", "approved", "withdrawn", "count_attachments", "count_stellungnahmen", "delete")
+        fields = ("id", "last_changed", "eingangsdatum", "titel", "typ", "name", "email",
+                  "approved", "withdrawn", "count_attachments", "count_stellungnahmen", "delete")
 
 
 class BPlanBeitragStellungnahmeTable(tables.Table):
@@ -433,22 +491,26 @@ class BPlanBeitragStellungnahmeTable(tables.Table):
     stellungnahme = tables.TemplateColumn(
         template_code='''{% load richtext %}{% render_richtext record.stellungnahme %}''',
     )
-    edit = tables.LinkColumn('beitragstellungnahme-update', verbose_name='', text='Bearbeiten', kwargs={'plantyp': 'bplan', 'planid': A('beitrag__bplan_beteiligung__bplan__id'), 'beteiligungid': A('beitrag__bplan_beteiligung__id'), 'beitragid': A('beitrag__id'), 'pk': A('pk')}, orderable=False, empty_values=())
-    delete = tables.LinkColumn('beitragstellungnahme-delete', verbose_name='', text='Löschen', kwargs={'plantyp': 'bplan', 'planid': A('beitrag__bplan_beteiligung__bplan__id'), 'beteiligungid': A('beitrag__bplan_beteiligung__id'), 'beitragid': A('beitrag__id'), 'pk': A('pk')}, orderable=False, empty_values=())
-
+    edit = tables.LinkColumn('beitragstellungnahme-update', verbose_name='', text='Bearbeiten', kwargs={'plantyp': 'bplan', 'planid': A(
+        'beitrag__bplan_beteiligung__bplan__id'), 'beteiligungid': A('beitrag__bplan_beteiligung__id'), 'beitragid': A('beitrag__id'), 'pk': A('pk')}, orderable=False, empty_values=())
+    delete = tables.LinkColumn('beitragstellungnahme-delete', verbose_name='', text='Löschen', kwargs={'plantyp': 'bplan', 'planid': A(
+        'beitrag__bplan_beteiligung__bplan__id'), 'beteiligungid': A('beitrag__bplan_beteiligung__id'), 'beitragid': A('beitrag__id'), 'pk': A('pk')}, orderable=False, empty_values=())
 
     class Meta:
         model = BPlanBeitragStellungnahme
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("id", "last_changed", "bezug_beitrag", "stellungnahme", "beruecksichtigung", "edit", "delete")
+        fields = ("id", "last_changed", "bezug_beitrag",
+                  "stellungnahme", "beruecksichtigung", "edit", "delete")
 
 
 """
 Tabellen für die TOEB-Notifications 
 BPlanBeteiligungToebNotificationTable, FPlanBeteiligungToebNotificationTable, 
 """
+
+
 class BPlanBeteiligungToebNotificationTable(tables.Table):
-    
+
     class Meta:
         model = BPlanBeteiligungToebNotification
         template_name = "django_tables2/bootstrap5.html"
@@ -456,90 +518,94 @@ class BPlanBeteiligungToebNotificationTable(tables.Table):
 
 
 class FPlanBeteiligungToebNotificationTable(tables.Table):
-    
+
     class Meta:
         model = FPlanBeteiligungToebNotification
         template_name = "django_tables2/bootstrap5.html"
         fields = ("id", "last_changed", "message", "protocol")
 
 
-
 class FPlanBeitragStellungnahmeTable(BPlanBeitragStellungnahmeTable):
 
-    edit = tables.LinkColumn('beitragstellungnahme-update', verbose_name='', text='Bearbeiten', kwargs={'plantyp': 'fplan', 'planid': A('beitrag__fplan_beteiligung__fplan__id'), 'beteiligungid': A('beitrag__fplan_beteiligung__id'), 'beitragid': A('beitrag__id'), 'pk': A('pk')}, orderable=False, empty_values=())
-    delete = tables.LinkColumn('beitragstellungnahme-delete', verbose_name='', text='Löschen', kwargs={'plantyp': 'fplan', 'planid': A('beitrag__fplan_beteiligung__fplan__id'), 'beteiligungid': A('beitrag__fplan_beteiligung__id'), 'beitragid': A('beitrag__id'), 'pk': A('pk')}, orderable=False, empty_values=())
-
+    edit = tables.LinkColumn('beitragstellungnahme-update', verbose_name='', text='Bearbeiten', kwargs={'plantyp': 'fplan', 'planid': A(
+        'beitrag__fplan_beteiligung__fplan__id'), 'beteiligungid': A('beitrag__fplan_beteiligung__id'), 'beitragid': A('beitrag__id'), 'pk': A('pk')}, orderable=False, empty_values=())
+    delete = tables.LinkColumn('beitragstellungnahme-delete', verbose_name='', text='Löschen', kwargs={'plantyp': 'fplan', 'planid': A(
+        'beitrag__fplan_beteiligung__fplan__id'), 'beteiligungid': A('beitrag__fplan_beteiligung__id'), 'beitragid': A('beitrag__id'), 'pk': A('pk')}, orderable=False, empty_values=())
 
     class Meta:
         model = FPlanBeitragStellungnahme
-        #template_name = "django_tables2/bootstrap5.html"
-        fields = ("id", "last_changed", "bezug_beitrag", "stellungnahme", "beruecksichtigung", "edit", "delete")
+        # template_name = "django_tables2/bootstrap5.html"
+        fields = ("id", "last_changed", "bezug_beitrag",
+                  "stellungnahme", "beruecksichtigung", "edit", "delete")
 
 
 class RequestForRoleTable(tables.Table):
 
-    delete = tables.LinkColumn('requestforrole-delete', verbose_name='', text='Löschen', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    #owned_by_user = tables.Column(verbose_name="Antragsteller")
+    delete = tables.LinkColumn('requestforrole-delete', verbose_name='', text='Löschen', args=[A('pk')],
+                               orderable=False, empty_values=())
+    # owned_by_user = tables.Column(verbose_name="Antragsteller")
 
-    #def render_owned_by_user(self, value, record):
+    # def render_owned_by_user(self, value, record):
     #    return format_html('Nutzername: ' + record.owned_by_user.username + '<br>' + 'EMail: ' + record.owned_by_user.email + '<br>' + 'Telefon: ')
 
     class Meta:
         model = RequestForRole
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "last_changed", "role", "organizations", "delete")
+        fields = ("id", "last_changed", "role", "organizations", "delete")
 
 
 class RequestForRoleAdminTable(tables.Table):
 
-    delete = tables.LinkColumn('requestforrole-delete', verbose_name='', text='Löschen', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    confirm = tables.LinkColumn('requestforrole-confirm', verbose_name='', text='Bestätigen', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    refuse = tables.LinkColumn('requestforrole-refuse', verbose_name='', text='Zurückweisen', args=[A('pk')], \
-                         orderable=False, empty_values=())
+    delete = tables.LinkColumn('requestforrole-delete', verbose_name='', text='Löschen', args=[A('pk')],
+                               orderable=False, empty_values=())
+    confirm = tables.LinkColumn('requestforrole-confirm', verbose_name='', text='Bestätigen', args=[A('pk')],
+                                orderable=False, empty_values=())
+    refuse = tables.LinkColumn('requestforrole-refuse', verbose_name='', text='Zurückweisen', args=[A('pk')],
+                               orderable=False, empty_values=())
     owned_by_user = tables.Column(verbose_name="Antragsteller")
-    role =  tables.Column(verbose_name="Rolle")
+    role = tables.Column(verbose_name="Rolle")
 
     def render_owned_by_user(self, value, record):
-        return format_html('Nutzername: ' + record.owned_by_user.username + '<br>' + 'EMail: ' + record.owned_by_user.email + '<br>' + 'Telefon: ')
+        return format_html('Nutzername: {}<br>EMail: {}<br>Telefon: ', record.owned_by_user.username, record.owned_by_user.email)
 
     class Meta:
         model = RequestForRole
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "last_changed", "owned_by_user", "role", "organizations", "confirm", "refuse", "delete")
+        fields = ("id", "last_changed", "owned_by_user", "role",
+                  "organizations", "confirm", "refuse", "delete")
 
 
 class UvpTable(tables.Table):
 
-    edit = tables.LinkColumn('uvp-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')], \
-                         orderable=False, empty_values=())
-    delete = tables.LinkColumn('uvp-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')], \
-                         orderable=False, empty_values=())
+    edit = tables.LinkColumn('uvp-update', verbose_name='', text='Bearbeiten', args=[A('bplan.id'), A('pk')],
+                             orderable=False, empty_values=())
+    delete = tables.LinkColumn('uvp-delete', verbose_name='', text='Löschen', args=[A('bplan.id'), A('pk')],
+                               orderable=False, empty_values=())
     typ = tables.Column(verbose_name="Kategorie gem. UVPG Anlage 1")
 
     class Meta:
         model = Uvp
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "uvp_vp", "uvp", "typ", "uvp_beginn_datum", "uvp_ende_datum", "edit", "delete")
+        fields = ("id", "uvp_vp", "uvp", "typ", "uvp_beginn_datum",
+                  "uvp_ende_datum", "edit", "delete")
 
 
 class FPlanUvpTable(tables.Table):
 
-    edit = tables.LinkColumn('fplan-uvp-update', verbose_name='', text='Bearbeiten', args=[A('fplan.id'), A('pk')], \
-                         orderable=False, empty_values=())
-    delete = tables.LinkColumn('fplan-uvp-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')], \
-                         orderable=False, empty_values=())
+    edit = tables.LinkColumn('fplan-uvp-update', verbose_name='', text='Bearbeiten', args=[A('fplan.id'), A('pk')],
+                             orderable=False, empty_values=())
+    delete = tables.LinkColumn('fplan-uvp-delete', verbose_name='', text='Löschen', args=[A('fplan.id'), A('pk')],
+                               orderable=False, empty_values=())
     typ = tables.Column(verbose_name="Typ der Umweltprüfung")
-    #uvp = tables.Column(verbose_name="Umweltprüfung durchgeführt")
+    # uvp = tables.Column(verbose_name="Umweltprüfung durchgeführt")
     uvp_beginn_datum = tables.Column(verbose_name="Beginn Umweltprüfung")
     uvp_ende_datum = tables.Column(verbose_name="Ende Umweltprüfung")
 
     class Meta:
         model = FPlanUvp
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "uvp", "typ", "uvp_beginn_datum", "uvp_ende_datum", "edit", "delete")
+        fields = ("id", "uvp", "typ", "uvp_beginn_datum",
+                  "uvp_ende_datum", "edit", "delete")
 
 
 class BPlanTable(tables.Table):
@@ -554,27 +620,32 @@ class BPlanTable(tables.Table):
     iso_metadata = tables.LinkColumn('bplan-export-iso19139', verbose_name='Geo-Metadaten', text='Exportieren', args=[A('pk')], \
                          orderable=False, empty_values=())
     """
-    edit = tables.LinkColumn('bplan-update', verbose_name="", text='Bearbeiten', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    delete = tables.LinkColumn('bplan-delete', verbose_name="", text='Löschen', args=[A('pk')], \
-                         orderable=False, empty_values=())
+    edit = tables.LinkColumn('bplan-update', verbose_name="", text='Bearbeiten', args=[A('pk')],
+                             orderable=False, empty_values=())
+    delete = tables.LinkColumn('bplan-delete', verbose_name="", text='Löschen', args=[A('pk')],
+                               orderable=False, empty_values=())
     planart = tables.Column(verbose_name="Planart")
-    zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
-    count_attachments = tables.Column(verbose_name="Anlagen", accessor='count_attachments', orderable=False)
-    count_beteiligungen = tables.Column(verbose_name="Beteiligungen", accessor='count_beteiligungen', orderable=False)
-    count_uvps = tables.Column(verbose_name="UVPs", accessor='count_uvps', orderable=False)
-    detail = tables.LinkColumn('bplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
-                         orderable=False, empty_values=())
+    zoom = tables.Column(
+        verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
+    count_attachments = tables.Column(
+        verbose_name="Anlagen", accessor='count_attachments', orderable=False)
+    count_beteiligungen = tables.Column(
+        verbose_name="Beteiligungen", accessor='count_beteiligungen', orderable=False)
+    count_uvps = tables.Column(
+        verbose_name="UVPs", accessor='count_uvps', orderable=False)
+    detail = tables.LinkColumn('bplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')],
+                               orderable=False, empty_values=())
     # manytomany relations are handled automatically!
-    #gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
-    xplangml = tables.Column(verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
+    # gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
+    xplangml = tables.Column(
+        verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
 
     def render_xplangml(self, value, record):
         if value:
             return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
         else:
             return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
-        
+
     def render_public(self, value):
         if value:
             return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
@@ -586,25 +657,25 @@ class BPlanTable(tables.Table):
         extent = ogr_geom.extent
         # lat/lon !
         return format_html('<i class="fa fa-search-plus" aria-hidden="true" onclick="mapGlobal.fitBounds([[{}, {}], [{}, {}]]);"></i>', extent[1], extent[0], extent[3], extent[2])
-    
+
     def render_count_attachments(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('bplanattachment-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('bplanattachment-create', kwargs={'planid': record.id}) + '">' + str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('bplanattachment-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
-        
+            return format_html('<a href="' + reverse('bplanattachment-list', kwargs={'planid': record.id}) + '">' + str(value) + '</a>')
+
     def render_count_beteiligungen(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('bplanbeteiligung-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('bplanbeteiligung-create', kwargs={'planid': record.id}) + '">' + str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('bplanbeteiligung-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
-        
+            return format_html('<a href="' + reverse('bplanbeteiligung-list', kwargs={'planid': record.id}) + '">' + str(value) + '</a>')
+
     def render_count_uvps(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('uvp-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('uvp-create', kwargs={'planid': record.id}) + '">' + str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('uvp-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
-        
+            return format_html('<a href="' + reverse('uvp-list', kwargs={'planid': record.id}) + '">' + str(value) + '</a>')
+
     """
     geojson = Column(
         accessor=A('geojson'),
@@ -616,22 +687,25 @@ class BPlanTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "public", "inkrafttretens_datum", "nummer", "name", "gemeinde", "planart", "count_attachments", "count_beteiligungen", "count_uvps", "detail", "xplangml", "edit", "delete")
+        fields = ("zoom", "last_changed", "public", "inkrafttretens_datum", "nummer", "name", "gemeinde", "planart",
+                  "count_attachments", "count_beteiligungen", "count_uvps", "detail", "xplangml", "edit", "delete")
 
 
 class BPlanPublicTable(tables.Table):
-    #last_changed = tables.Column(verbose_name="Letzte Änderung")
+    # last_changed = tables.Column(verbose_name="Letzte Änderung")
 
     planart = tables.Column(verbose_name="Planart")
     name = tables.Column(verbose_name="Name")
     nummer = tables.Column(verbose_name="Nummer")
-    zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
-    #detail = tables.LinkColumn('bplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
+    zoom = tables.Column(
+        verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
+    # detail = tables.LinkColumn('bplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
     #                     orderable=False, empty_values=())
     # manytomany relations are handled automatically!
-    #gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
-    xplangml = tables.Column(verbose_name="XPlanung Hochgeladen", accessor='xplan_gml', empty_values=())
-    
+    # gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
+    xplangml = tables.Column(
+        verbose_name="XPlanung Hochgeladen", accessor='xplan_gml', empty_values=())
+
     def render_xplangml(self, value, record):
         if value == None:
             return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
@@ -639,12 +713,11 @@ class BPlanPublicTable(tables.Table):
             return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
         else:
             return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
-    
+
     def render_name(self, value, record):
         if value:
             return format_html('<a href="' + reverse('bplan-detail', kwargs={'pk': record.id}) + '" target="_blank">{}</a>', value)
-        pass
-        
+
     def render_zoom(self, value):
         ogr_geom = OGRGeometry(str(value), srs=4326)
         extent = ogr_geom.extent
@@ -654,27 +727,33 @@ class BPlanPublicTable(tables.Table):
     class Meta:
         model = BPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "inkrafttretens_datum", "name", "nummer", "gemeinde", "planart", "xplangml")
+        fields = ("zoom", "inkrafttretens_datum", "name",
+                  "nummer", "gemeinde", "planart", "xplangml")
 
 
 class FPlanTable(tables.Table):
     public = tables.Column(verbose_name="Öffentlich")
     last_changed = tables.Column(verbose_name="Letzte Änderung")
-    edit = tables.LinkColumn('fplan-update', verbose_name="", text='Bearbeiten', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    delete = tables.LinkColumn('fplan-delete', verbose_name="", text='Löschen', args=[A('pk')], \
-                         orderable=False, empty_values=())
+    edit = tables.LinkColumn('fplan-update', verbose_name="", text='Bearbeiten', args=[A('pk')],
+                             orderable=False, empty_values=())
+    delete = tables.LinkColumn('fplan-delete', verbose_name="", text='Löschen', args=[A('pk')],
+                               orderable=False, empty_values=())
     planart = tables.Column(verbose_name="Planart")
-    zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
-    count_attachments = tables.Column(verbose_name="Anlagen", accessor='count_attachments', orderable=False)
-    count_beteiligungen = tables.Column(verbose_name="Beteiligungen", accessor='count_beteiligungen', orderable=False)
-    count_uvps = tables.Column(verbose_name="Umweltprüfungen", accessor='count_uvps', orderable=False)
-    #count_uvps = tables.Column(verbose_name="UVPs", accessor='count_uvps', orderable=False)
-    detail = tables.LinkColumn('fplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')], \
-                         orderable=False, empty_values=())
+    zoom = tables.Column(
+        verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
+    count_attachments = tables.Column(
+        verbose_name="Anlagen", accessor='count_attachments', orderable=False)
+    count_beteiligungen = tables.Column(
+        verbose_name="Beteiligungen", accessor='count_beteiligungen', orderable=False)
+    count_uvps = tables.Column(
+        verbose_name="Umweltprüfungen", accessor='count_uvps', orderable=False)
+    # count_uvps = tables.Column(verbose_name="UVPs", accessor='count_uvps', orderable=False)
+    detail = tables.LinkColumn('fplan-detail', verbose_name='Details', text='Anzeigen', args=[A('pk')],
+                               orderable=False, empty_values=())
     # manytomany relations are handled automatically!
-    #gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
-    xplangml = tables.Column(verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
+    # gemeinde = tables.Column(verbose_name="Gemeinde(n)", accessor='gemeinde', orderable=False)
+    xplangml = tables.Column(
+        verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
 
     def render_xplangml(self, value, record):
         if value:
@@ -693,50 +772,51 @@ class FPlanTable(tables.Table):
         extent = ogr_geom.extent
         # lat/lon !
         return format_html('<i class="fa fa-search-plus" aria-hidden="true" onclick="mapGlobal.fitBounds([[{}, {}], [{}, {}]]);"></i>', extent[1], extent[0], extent[3], extent[2])
-    
+
     def render_count_attachments(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('fplanattachment-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('fplanattachment-create', kwargs={'planid': record.id}) + '">' + str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('fplanattachment-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
-        
+            return format_html('<a href="' + reverse('fplanattachment-list', kwargs={'planid': record.id}) + '">' + str(value) + '</a>')
+
     def render_count_beteiligungen(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('fplanbeteiligung-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('fplanbeteiligung-create', kwargs={'planid': record.id}) + '">' + str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('fplanbeteiligung-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
-        
+            return format_html('<a href="' + reverse('fplanbeteiligung-list', kwargs={'planid': record.id}) + '">' + str(value) + '</a>')
+
     def render_count_uvps(self, value, record):
         if value == 0:
-            return format_html('<a href="' + reverse('fplan-uvp-create', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
+            return format_html('<a href="' + reverse('fplan-uvp-create', kwargs={'planid': record.id}) + '">' + str(value) + '</a>')
         else:
-            return format_html('<a href="' + reverse('fplan-uvp-list', kwargs={'planid': record.id}) + '">' +  str(value) + '</a>')
-    
+            return format_html('<a href="' + reverse('fplan-uvp-list', kwargs={'planid': record.id}) + '">' + str(value) + '</a>')
 
     class Meta:
         model = FPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "last_changed", "public", "aufstellungsbeschluss_datum", "nummer", "name","gemeinde", "planart", "count_attachments", "count_beteiligungen", "count_uvps", "detail", "xplangml", "edit", "delete")
+        fields = ("zoom", "last_changed", "public", "aufstellungsbeschluss_datum", "nummer", "name", "gemeinde",
+                  "planart", "count_attachments", "count_beteiligungen", "count_uvps", "detail", "xplangml", "edit", "delete")
 
 
 class FPlanPublicTable(tables.Table):
     name = tables.Column(verbose_name="Name")
     nummer = tables.Column(verbose_name="Nummer")
     planart = tables.Column(verbose_name="Planart")
-    zoom = tables.Column(verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
-    xplangml = tables.Column(verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
+    zoom = tables.Column(
+        verbose_name="", accessor='geltungsbereich', orderable=False, empty_values=())
+    xplangml = tables.Column(
+        verbose_name="XPlan-GML Hochgeladen", accessor='xplan_gml', empty_values=())
 
     def render_name(self, value, record):
         if value:
             return format_html('<a href="' + reverse('fplan-detail', kwargs={'pk': record.id}) + '" target="_blank">{}</a>', value)
-        pass
 
     def render_xplangml(self, value, record):
         if value:
             return format_html('<i class="fa fa-check" aria-hidden="true"></i>')
         else:
             return format_html('<i class="fa-solid fa-xmark" aria-hidden="true"></i>')
-        
+
     def render_zoom(self, value):
         ogr_geom = OGRGeometry(str(value), srs=4326)
         extent = ogr_geom.extent
@@ -744,40 +824,42 @@ class FPlanPublicTable(tables.Table):
         return format_html('<i class="fa fa-search-plus" aria-hidden="true" onclick="mapGlobal.fitBounds([[{}, {}], [{}, {}]]);"></i>', extent[1], extent[0], extent[3], extent[2])
 
     class Meta:
-        model = BPlan
+        model = FPlan
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "zoom", "wirksamkeits_datum", "name", "nummer", "gemeinde", "planart", "xplangml")
+        fields = ("zoom", "wirksamkeits_datum", "name",
+                  "nummer", "gemeinde", "planart", "xplangml")
 
 
 class AdministrativeOrganizationPublishingTable(tables.Table):
     name = tables.Column(verbose_name="Gebietskörperschaft")
     num_bplan = tables.Column(verbose_name="BPläne")
     num_bplan_public = tables.Column(verbose_name="öffentliche BPläne")
-    #TODO: auch Zahl der FPläne anzeigen - Link auf Services nur dann anzeigen, wenn Pläne existieren
+    # TODO: auch Zahl der FPläne anzeigen - Link auf Services nur dann anzeigen, wenn Pläne existieren
     num_fplan = tables.Column(verbose_name="FPläne")
     num_fplan_public = tables.Column(verbose_name="öffentliche FPläne")
-    #Laufende Verfahren
-    laufende_verfahren = tables.Column(verbose_name='Laufende Verfahren', orderable=False, empty_values=())
-    #laufende_verfahren = tables.Column(verbose_name="Laufende Verfahren")
-   
-    wms = tables.LinkColumn('ows', text='WMS', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    wfs = tables.LinkColumn('ows', text='WFS', args=[A('pk')], \
-                         orderable=False, empty_values=())
+    # Laufende Verfahren
+    laufende_verfahren = tables.Column(
+        verbose_name='Laufende Verfahren', orderable=False, empty_values=())
+    # laufende_verfahren = tables.Column(verbose_name="Laufende Verfahren")
+
+    wms = tables.LinkColumn('ows', text='WMS', args=[A('pk')],
+                            orderable=False, empty_values=())
+    wfs = tables.LinkColumn('ows', text='WFS', args=[A('pk')],
+                            orderable=False, empty_values=())
     ags = tables.Column(verbose_name="Auskunft", orderable=False)
 
     def render_ags(self, record):
-        url = reverse('organization-bauleitplanung-list', kwargs={'pk': record.id})
+        url = reverse('organization-bauleitplanung-list',
+                      kwargs={'pk': record.id})
         if record.ts:
             return format_html('<a href="{}">{}</a>', url, record.ags + ' - ' + record.ts)
         else:
             return format_html('<a href="{}">{}</a>', url, record.ags)
-        
+
     def render_name(self, record):
         if record.name_part:
-            return format_html(record.name + ' - ' + record.name_part)
-        else:
-            return format_html(record.name)
+            return format_html('{} - {}', record.name, record.name_part)
+        return format_html('{}', record.name)
 
     def render_num_bplan(self, record):
         if not record.num_bplan == 0:
@@ -792,7 +874,7 @@ class AdministrativeOrganizationPublishingTable(tables.Table):
             return format_html('<a href="{}?gemeinde={}">{}</a>', url, record.id, record.num_fplan)
         else:
             return format_html('{}', record.num_fplan)
-        
+
     def render_num_bplan_public(self, record):
         if not record.num_bplan_public == 0:
             url = reverse('bplan-list')
@@ -811,25 +893,26 @@ class AdministrativeOrganizationPublishingTable(tables.Table):
     def render_wms(self, record):
         url = reverse('ows', kwargs={'pk': record.id})
         return format_html('<a href="{}?REQUEST=GetCapabilities&SERVICE=WMS">{}</a>', url, 'WMS GetCapabilities')
-    
+
     def render_wfs(self, record):
         url = reverse('ows', kwargs={'pk': record.id})
         return format_html('<a href="{}?REQUEST=GetCapabilities&SERVICE=WFS">{}</a>', url, 'WFS GetCapabilities')
-    
+
     def render_laufende_verfahren(self, record):
-        url = reverse('organization-beteiligungen-list', kwargs={'pk': record.id})
+        url = reverse('organization-beteiligungen-list',
+                      kwargs={'pk': record.id})
         sum_laufende_verfahren = record.num_bplan_beteiligung + record.num_fplan_beteiligung
-        #return format_html('<a href="{}">{}</a>', url, sum_laufende_verfahren)
+        # return format_html('<a href="{}">{}</a>', url, sum_laufende_verfahren)
         if not sum_laufende_verfahren == 0:
             return format_html('<a href="{}">{}</a>', url, sum_laufende_verfahren)
         else:
             return format_html('{}', 0)
-    
 
     class Meta:
         model = AdministrativeOrganization
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("name", "ags", "num_bplan", "num_bplan_public", "num_fplan", "num_fplan_public", "laufende_verfahren", "wms", "wfs", )
+        fields = ("name", "ags", "num_bplan", "num_bplan_public", "num_fplan",
+                  "num_fplan_public", "laufende_verfahren", "wms", "wfs", )
 
 
 class AdministrativeOrganizationPublishingPublicTable(AdministrativeOrganizationPublishingTable):
@@ -850,34 +933,34 @@ class AdministrativeOrganizationPublishingPublicTable(AdministrativeOrganization
             return format_html('<a href="{}?gemeinde={}&is_public=on">{}</a>', url, record.id, record.num_fplan_public)
         else:
             return format_html('{}', record.num_fplan_public)
-        
+
     def render_laufende_verfahren(self, record):
-        #url = reverse('organization-beteiligungen-list', kwargs={'pk': record.id})
+        # url = reverse('organization-beteiligungen-list', kwargs={'pk': record.id})
         sum_laufende_verfahren = record.num_bplan_beteiligung + record.num_fplan_beteiligung
-        #return format_html('<a href="{}">{}</a>', url, sum_laufende_verfahren)
-        #if not sum_laufende_verfahren == 0:
+        # return format_html('<a href="{}">{}</a>', url, sum_laufende_verfahren)
+        # if not sum_laufende_verfahren == 0:
         #    return format_html('<a href="{}">{}</a>', url, sum_laufende_verfahren)
-        #else:
+        # else:
         return format_html('{}', sum_laufende_verfahren)
-        
 
     class Meta:
         model = AdministrativeOrganization
         template_name = "django_tables2/bootstrap5.html"
-        fields = ("name", "ags", "num_bplan_public", "num_fplan_public", "laufende_verfahren", "wms", "wfs", )
+        fields = ("name", "ags", "num_bplan_public",
+                  "num_fplan_public", "laufende_verfahren", "wms", "wfs", )
 
 
 class ConsentOptionTable(tables.Table):
 
-    edit = tables.LinkColumn('consentoption-update', verbose_name='', text='Bearbeiten', args=[A('pk')], \
-                         orderable=False, empty_values=())
-    delete = tables.LinkColumn('consentoption-delete', verbose_name='', text='Löschen', args=[A('pk')], \
-                         orderable=False, empty_values=())
+    edit = tables.LinkColumn('consentoption-update', verbose_name='', text='Bearbeiten', args=[A('pk')],
+                             orderable=False, empty_values=())
+    delete = tables.LinkColumn('consentoption-delete', verbose_name='', text='Löschen', args=[A('pk')],
+                               orderable=False, empty_values=())
     type = tables.Column(verbose_name="Rolle")
     title = tables.Column(verbose_name="Titel")
-    
+
     class Meta:
         model = ConsentOption
         template_name = "django_tables2/bootstrap5.html"
-        fields = ( "id", "type", "title", "mandatory", "opt_out", "valid_from", "valid_until", "validity_period", "edit", "delete")
-    
+        fields = ("id", "type", "title", "mandatory", "opt_out",
+                  "valid_from", "valid_until", "validity_period", "edit", "delete")
