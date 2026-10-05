@@ -1296,7 +1296,9 @@ def beitrag_activate(request, **kwargs):
     # Aktivieren des Beitrags
 
     beitrag = beitrag_model.objects.get(generic_id=kwargs['generic_id'])
-    if request.method == "POST":
+    # TODO - Wenn wir auf Formular basierte Schalter umsteigen müssen zuerst die Tests angepasst werden
+    # test_beteiligung_beitrag_ultimate.py test_beteiligung_workflow.py test_beteiligung_beitrag_views.py
+    if request.method == "POST" or request.method == "GET":
         if beitrag.approved == False:
             beitrag.approved = True
             beitrag.save()
@@ -1332,9 +1334,11 @@ def beitrag_withdraw(request, **kwargs):
     :param kwargs: Description
     """
     if request.method == "POST":
-        print("POST")
+        # print("POST")
+        pass
     if request.method == "GET":
-        print("GET")
+        # print("GET")
+        pass
     # Switch für den Plantyp
     gemeinden = None
     if kwargs['plantyp'] == 'bplan':
