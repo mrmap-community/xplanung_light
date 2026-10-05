@@ -1,0 +1,15 @@
+{% extends "../xplanung_light/layout.html" %}
+{% block content %}
+<p>{{ beitrag.beteiligung.get_typ_display }} für {{ beitrag.beteiligung.plan.get_planart_display }} <b>{{ beitrag.beteiligung.plan.name }}</b></p>
+<p>der Kommune(n):</p>
+{% for gemeinde in beitrag.beteiligung.plan.gemeinde.all %}
+<ul>
+<li>{{ gemeinde.name }} ({{ gemeinde.ls }}{{ gemeinde.ks }}{{ gemeinde.gs }})</li>
+</ul>
+{% endfor %}
+<p>Mein Beitrag <b>{{ beitrag.titel }}</b> vom {{ beitrag.eingangsdatum }} (<i>Angegebener Name:</i> {{ beitrag.name }})</p>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-warning">Beteiligungsbeitrag aktivieren</button>
+</form>
+{% endblock %}

@@ -1256,7 +1256,8 @@ Funktionen für die Steuerung der Abgabe von Stellungnahmen - insbesondere durch
 
 def beitrag_activate(request, **kwargs):
     """
-    Funktion um einen BPlanBeteiligungBeitrag (Stellungnahme) zu aktivieren
+    Funktion um einen BPlanBeteiligungBeitrag (Stellungnahme) zu aktivieren - sollte per POST erfolgen, daher 
+    zuerst eine Bestätigungsseite anzeigen und dann nochmal alles als POST versenden!
 
     :param request: Description
     :param kwargs: Description
@@ -1293,26 +1294,34 @@ def beitrag_activate(request, **kwargs):
         # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
         return redirect("beteiligungbeitrag-authenticate", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
     # Aktivieren des Beitrags
+
     beitrag = beitrag_model.objects.get(generic_id=kwargs['generic_id'])
-    if beitrag.approved == False:
-        beitrag.approved = True
-        beitrag.save()
-    # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
-    if request.user.is_anonymous:
-        context['beitrag'] = beitrag
-        context['plantyp'] = kwargs['plantyp']
-        if kwargs['plantyp'] == 'bplan':
-            context['beteiligung'] = beitrag.bplan_beteiligung
-            context['plan'] = beitrag.bplan_beteiligung.bplan
-        if kwargs['plantyp'] == 'fplan':
-            context['beteiligung'] = beitrag.fplan_beteiligung
-            context['plan'] = beitrag.fplan_beteiligung.fplan
-        # context={}
-        # context['object'] = beitrag
-        # context['beitrag_generic_id'] = beitrag.generic_id
-        return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
+    if request.method == "POST":
+        if beitrag.approved == False:
+            beitrag.approved = True
+            beitrag.save()
+        # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
+        if request.user.is_anonymous:
+            context['beitrag'] = beitrag
+            context['plantyp'] = kwargs['plantyp']
+            if kwargs['plantyp'] == 'bplan':
+                context['beteiligung'] = beitrag.bplan_beteiligung
+                context['plan'] = beitrag.bplan_beteiligung.bplan
+            if kwargs['plantyp'] == 'fplan':
+                context['beteiligung'] = beitrag.fplan_beteiligung
+                context['plan'] = beitrag.fplan_beteiligung.fplan
+            # context={}
+            # context['object'] = beitrag
+            # context['beitrag_generic_id'] = beitrag.generic_id
+            return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
+        else:
+            return redirect("beteiligungbeitrag-list", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
     else:
-        return redirect("beteiligungbeitrag-list", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
+        return render(
+            request,
+            "beitrag/activate_confirm.html",
+            {"beitrag": beitrag},
+        )
 
 
 def beitrag_withdraw(request, **kwargs):
@@ -1322,6 +1331,10 @@ def beitrag_withdraw(request, **kwargs):
     :param request: Description
     :param kwargs: Description
     """
+    if request.method == "POST":
+        print("POST")
+    if request.method == "GET":
+        print("GET")
     # Switch für den Plantyp
     gemeinden = None
     if kwargs['plantyp'] == 'bplan':
