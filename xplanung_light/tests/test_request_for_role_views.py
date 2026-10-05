@@ -1,3 +1,5 @@
+"""Tests der Views für Rollenanträge: Anlegen, Listen, Bestätigen, Ablehnen und Löschen."""
+
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -5,10 +7,8 @@ from xplanung_light.models import AdministrativeOrganization, RequestForRole, Ad
 
 User = get_user_model()
 
-# Testklasse: RequestForRoleViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class RequestForRoleViewTests(TestCase):
+    """Lebenszyklus eines Rollenantrags."""
 
     def setUp(self):
         # 1. Test-Kommune anlegen
@@ -31,9 +31,6 @@ class RequestForRoleViewTests(TestCase):
     # 1. LIST-VIEWS & ERSTELLUNG (GET/POST)
     # ==============================================================================
 
-    # Testfall: Anfrage für Rolle erstellen and auflisten Views.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_request_for_role_create_and_list_views(self):
         """Prüft das Erstellen eines Antrags und die eigene Antragsliste des Nutzers."""
         self.client.login(username="antragsteller", password="password123")
@@ -58,9 +55,6 @@ class RequestForRoleViewTests(TestCase):
         
         self.assertTrue(RequestForRole.objects.filter(owned_by_user=self.applicant, role="TR").exists())
 
-    # Testfall: Anfrage für Rolle Administrator auflisten accessible.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_request_for_role_admin_list_accessible(self):
         """Der Zentral-Admin muss die globale Antragsliste einsehen können."""
         self.client.login(username="zentral_admin", password="password123")
@@ -73,9 +67,6 @@ class RequestForRoleViewTests(TestCase):
     # 2. ANTRAG GENEHMIGEN (CONFIRM)
     # ==============================================================================
 
-    # Testfall: Anfrage für Rolle confirm Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_request_for_role_confirm_success(self):
         """Das Bestätigen eines Antrags fügt den User hinzu und entfernt den verarbeiteten Antrag."""
         self.client.login(username="zentral_admin", password="password123")
@@ -102,9 +93,6 @@ class RequestForRoleViewTests(TestCase):
     # 3. ANTRAG ABLEHNEN (REFUSE)
     # ==============================================================================
 
-    # Testfall: Anfrage für Rolle refuse Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_request_for_role_refuse_success(self):
         """Das Ablehnen entfernt den verarbeiteten Antrag und gewährt keine Rechte."""
         self.client.login(username="zentral_admin", password="password123")
@@ -131,9 +119,6 @@ class RequestForRoleViewTests(TestCase):
     # 4. ANTRAG LÖSCHEN / ZURÜCKZIEHEN
     # ==============================================================================
 
-    # Testfall: Anfrage für Rolle löschen.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_request_for_role_delete(self):
         """Ein Antragsteller kann seinen eigenen offenen Antrag löschen/zurückziehen."""
         self.client.login(username="antragsteller", password="password123")

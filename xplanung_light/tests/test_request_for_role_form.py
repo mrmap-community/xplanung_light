@@ -1,11 +1,11 @@
+"""Tests des Formulars für Rollenanträge."""
+
 from django.test import TestCase
 from xplanung_light.models import AdministrativeOrganization, RequestForRole
 from xplanung_light.forms import RequestForRoleCreateForm
 
-# Testklasse: RequestForRoleCreateFormTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class RequestForRoleCreateFormTests(TestCase):
+    """Gültige und ungültige Rollenanträge."""
 
     def setUp(self):
         # Wir legen zwei Gebietskörperschaften an, die im Formular ausgewählt werden können
@@ -22,9 +22,6 @@ class RequestForRoleCreateFormTests(TestCase):
             gs="001"
         )
 
-    # Testfall: Anfrage für Rolle happy path.
-    # Erwartung/Absicherung: verwendet assertTrue, assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_request_for_role_happy_path(self):
         """Das Formular muss valide sein, wenn eine erlaubte Rolle und Organisationen gewählt werden."""
         form_data = {
@@ -43,9 +40,6 @@ class RequestForRoleCreateFormTests(TestCase):
         self.assertEqual(saved_request.organizations.count(), 2)
         self.assertIn(self.orga_a, saved_request.organizations.all())
 
-    # Testfall: Anfrage für Rolle fails ohne Organisationen.
-    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_request_for_role_fails_without_organizations(self):
         """Das Formular ist invalid und wirft einen Fehler, wenn keine Organisation ausgewählt wurde."""
         form_data = {

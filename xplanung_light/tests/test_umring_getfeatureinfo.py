@@ -1,3 +1,12 @@
+"""
+Tests für GetFeatureInfo auf dem Umring-Layer (BPlan.<AGS>.0): Der ows-View fängt die HTML-
+Anfrage ab, liest die Plan-IDs aus der MapServer-Antwort und rendert eine eigene Seite. Echter
+MapServer, keine Mocks.
+
+Zusätzlich prüft ein kleiner Checker, dass das erzeugte HTML wohlgeformt ist (alle Tags
+geschlossen, richtig verschachtelt).
+"""
+
 import unittest
 from html.parser import HTMLParser
 from urllib.parse import urlencode
@@ -27,9 +36,6 @@ OPTIONAL_END_TAGS = {
 }
 
 
-# Testklasse: WellFormednessChecker.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class WellFormednessChecker(HTMLParser):
     """
     Minimaler Wohlgeformtheits-Check: alle nicht-void Elemente müssen wieder
@@ -78,9 +84,6 @@ class WellFormednessChecker(HTMLParser):
 
 
 @unittest.skipUnless(MAPSCRIPT_AVAILABLE, "mapscript ist nicht installiert")
-# Testklasse: UmringLayerGetFeatureInfo.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class UmringLayerGetFeatureInfo(TransactionTestCase):
     """
     GetFeatureInfo auf den Umringlayer (BPlan.<ags>.0).
@@ -110,6 +113,7 @@ class UmringLayerGetFeatureInfo(TransactionTestCase):
     PLAN_PK = 4318
 
     def setUp(self):
+        """Lädt Organisation und Plan und bildet den Layernamen aus der AGS."""
         self.client = Client()
         self.orga = AdministrativeOrganization.objects.get(pk=self.ORGA_PK)
         self.plan = BPlan.objects.get(pk=self.PLAN_PK)
@@ -142,13 +146,22 @@ class UmringLayerGetFeatureInfo(TransactionTestCase):
         )
 
     def _point_in_plan(self):
+        """Liefert einen Punkt (lon, lat), der sicher innerhalb des Geltungsbereichs liegt."""
         point = self.plan.geltungsbereich.point_on_surface
         return point.x, point.y
 
-    # Testfall: featureinfo on Plan liefert wellformed html.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_featureinfo_on_plan_returns_wellformed_html(self):
+        """
+        Was wird geprüft:
+            GetFeatureInfo an einem Punkt im Plan.
+
+        Warum:
+            Die Seite wird im Geoportal in einen Iframe eingebunden; abgeschnittenes oder
+            kaputtes HTML würde dort die Darstellung zerstören.
+
+        Erwartung:
+            Status 200, Inhaltstyp HTML und keine Fehler im Wohlgeformtheits-Check.
+        """
         # Treffer mitten im Plan: die zurückgegebene HTML-Seite muss
         # wohlgeformt sein (kein abgeschnittenes/kaputtes Template).
         lon, lat = self._point_in_plan()
@@ -162,18 +175,22 @@ class UmringLayerGetFeatureInfo(TransactionTestCase):
         errors = WellFormednessChecker().check(html)
         self.assertEqual(errors, [], "HTML der FeatureInfo ist nicht wohlgeformt: %s" % errors)
 
-    # Testfall: featureinfo on Plan contains the Plan.
-    # Erwartung/Absicherung: verwendet assertContains.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_featureinfo_on_plan_contains_the_plan(self):
+        """
+        Was wird geprüft:
+            Dieselbe Anfrage, Inhalt der Seite.
+
+        Warum:
+            Die Seite soll den Plan zeigen, der an dem Punkt liegt.
+
+        Erwartung:
+            Der Planname steht in der Antwort.
+        """
         # Der Plan-Name muss tatsächlich im HTML auftauchen, nicht nur eine leere Seite.
         lon, lat = self._point_in_plan()
         response = self._getfeatureinfo(lon, lat)
         self.assertContains(response, self.plan.name)
 
-    # Testfall: featureinfo setzt cors and frame ancestors header.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_featureinfo_sets_cors_and_frame_ancestors_header(self):
         """Die Infoseite wird im Geoportal in einem iframe eingebunden."""
         lon, lat = self._point_in_plan()
@@ -181,9 +198,6 @@ class UmringLayerGetFeatureInfo(TransactionTestCase):
         self.assertEqual(response['Access-Control-Allow-Origin'], '*')
         self.assertIn('frame-ancestors', response['Content-Security-Policy'])
 
-    # Testfall: featureinfo outside any Plan liefert leer page.
-    # Erwartung/Absicherung: verwendet assertEqual, assertNotIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_featureinfo_outside_any_plan_returns_empty_page(self):
         """Weit außerhalb: valides HTML, aber ohne Plan."""
         response = self._getfeatureinfo(5.0, 49.0)
@@ -194,9 +208,6 @@ class UmringLayerGetFeatureInfo(TransactionTestCase):
         self.assertEqual(errors, [], "HTML der leeren FeatureInfo ist nicht wohlgeformt: %s" % errors)
         self.assertNotIn(self.plan.name, html)
 
-    # Testfall: nicht öffentlich Plan ist nicht exposed via featureinfo.
-    # Erwartung/Absicherung: verwendet assertNotContains.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_non_public_plan_is_not_exposed_via_featureinfo(self):
         """
         Der Umringlayer filtert auf public=true - ein nicht-öffentlicher Plan

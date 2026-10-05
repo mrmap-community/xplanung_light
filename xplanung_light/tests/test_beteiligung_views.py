@@ -1,3 +1,5 @@
+"""Tests der Beteiligungslisten und des PDF-Exports."""
+
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -14,10 +16,8 @@ from xplanung_light.models import (
 
 User = get_user_model()
 
-# Testklasse: BeteiligungViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungViewTests(TestCase):
+    """Erreichbarkeit der öffentlichen und internen Listen und des PDF-Exports."""
 
     def setUp(self):
         # 1. Geometrie und Fristen aufsetzen
@@ -66,9 +66,6 @@ class BeteiligungViewTests(TestCase):
     # 1. LISTEN-ANSICHTEN (GET)
     # ==============================================================================
 
-    # Testfall: öffentlich and internal Beteiligung lists accessible.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_public_and_internal_beteiligung_lists_accessible(self):
         """Prüft die fehlerfreie Erreichbarkeit der verschiedenen Beteiligungslisten."""
         # 1. Öffentliche Gesamtliste (kein Login erforderlich)
@@ -92,9 +89,6 @@ class BeteiligungViewTests(TestCase):
     # 2. DYNAMISCHER PDF-EXPORT (GET STREAM)
     # ==============================================================================
 
-    # Testfall: Beteiligung contributions PDF Export Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beteiligung_contributions_pdf_export_success(self):
         """Prüft, ob die PDF-Schnittstelle die Übersicht erfolgreich als Binär-Stream ausgibt."""
         self.client.login(username="beteiligung_admin", password="password123")

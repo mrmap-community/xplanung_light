@@ -1,3 +1,5 @@
+"""Tests des Formulars zum Anlegen eines Bebauungsplans."""
+
 from django.test import TestCase
 from django.utils import timezone
 from datetime import timedelta
@@ -5,10 +7,8 @@ from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.models import AdministrativeOrganization, BPlan
 from xplanung_light.forms import BPlanCreateForm
 
-# Testklasse: BPlanCreateFormTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BPlanCreateFormTests(TestCase):
+    """Gültige und ungültige Eingaben des BPlan-Formulars."""
 
     def setUp(self):
         # 1. Erstelle eine Beispiel-Kommune für das ManyToMany-Feld 'gemeinde'
@@ -25,9 +25,6 @@ class BPlanCreateFormTests(TestCase):
         self.gestern = self.heute - timedelta(days=1)
         self.vor_einem_jahr = self.heute - timedelta(days=365)
 
-    # Testfall: B-Plan erstellen Formular happy path.
-    # Erwartung/Absicherung: verwendet assertTrue, assertEqual, assertIsInstance.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_create_form_happy_path(self):
         """Das Formular muss valide sein, wenn alle Pflichtdaten und eine gültige Geometrie übergeben werden."""
         form_data = {
@@ -60,9 +57,6 @@ class BPlanCreateFormTests(TestCase):
         # Prüfen, ob die Geometrie korrekt verarbeitet wurde
         self.assertIsInstance(saved_bplan.geltungsbereich, GEOSGeometry)
 
-    # Testfall: B-Plan erstellen Formular fails ohne required Felder.
-    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_create_form_fails_without_required_fields(self):
         """Das Formular ist invalid und blockiert das Speichern, wenn zwingende Felder fehlen."""
         form_data = {

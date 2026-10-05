@@ -1,3 +1,11 @@
+"""
+Abdeckungstests für die Views der Kontaktstellen (ContactOrganization): Anlegen, Bearbeiten,
+Liste und Löschen.
+
+Regeln: Eine Gemeinde hat höchstens eine Kontaktstelle. Normale Nutzer sehen und bearbeiten nur
+Kontaktstellen von Gemeinden, in denen sie Administrator sind; Superuser sehen alles.
+"""
+
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -24,11 +32,17 @@ from xplanung_light.views.contactorganization import (
 User = get_user_model()
 
 
-# Testklasse: ContactOrganizationCoverageTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ContactOrganizationCoverageTests(TestCase):
+    """
+    Rechte und Formularlogik der Kontaktstellen.
+
+    Ausgangslage (setUp): drei Gemeinden (A Bauamt Musterstadt, B Fremde Kommune, C Dritte
+    Kommune). admin_user ist Administrator von A, other_user hat keine Rolle, dazu ein
+    Superuser. Die Kontaktstelle Zentrale Auskunftsstelle Bau gehört zu Gemeinde A.
+    """
+
     def setUp(self):
+        """Legt Gemeinden, Nutzer mit Rollen und die Kontaktstelle der Gemeinde A an."""
         self.orga_a = AdministrativeOrganization.objects.create(
             name="Bauamt Musterstadt", ls="07", ks="111", gs="000"
         )
@@ -66,14 +80,21 @@ class ContactOrganizationCoverageTests(TestCase):
         self.factory = RequestFactory()
 
     def login(self, username, password="password123"):
+        """Meldet den Nutzer mit Passwort an und prüft, dass die Anmeldung geklappt hat."""
         self.assertTrue(self.client.login(username=username, password=password))
 
     def _request(self, user, method="get", path="/"):
+        """Baut einen Request für die angegebene Methode und Adresse mit gesetztem Nutzer."""
         request = getattr(self.factory, method.lower())(path)
         request.user = user
         return request
 
     def _create_form(self, gemeinden):
+        """
+        Liefert ein gültig befülltes Anlegen-Formular für die übergebenen Gemeinden. Die Auswahl
+        wird auf alle Gemeinden erweitert, damit das Formular die Prüfung besteht und die View
+        sie übernimmt.
+        """
         form = ContactOrganizationCreateForm(
             data={
                 "name": "Neue Kontaktstelle",
@@ -91,6 +112,7 @@ class ContactOrganizationCoverageTests(TestCase):
         return form
 
     def _update_form(self, gemeinden, name="Geänderte Kontaktstelle"):
+        """Dasselbe für das Bearbeiten-Formular; der Name ist einstellbar."""
         form = ContactOrganizationUpdateForm(
             data={
                 "name": name,
@@ -112,10 +134,19 @@ class ContactOrganizationCoverageTests(TestCase):
     # CREATE: get_form branches
     # ------------------------------------------------------------------
 
-    # Testfall: erstellen get Formular filtert to Administrator Organisationen and excludes vorhanden contacts.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertNotIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_get_form_filters_to_admin_organizations_and_excludes_existing_contacts(self):
+        """
+        Was wird geprüft:
+            Das Anlegen-Formular für einen Administrator der Gemeinden A und B.
+
+        Warum:
+            Zur Auswahl stehen nur Gemeinden, in denen er Administrator ist und die noch
+            keine Kontaktstelle haben.
+
+        Erwartung:
+            Nur B ist wählbar; A hat schon eine Kontaktstelle und C gehört nicht zu seinen
+            Gemeinden.
+        """
         AdminOrgaUser.objects.create(
             organization=self.orga_b, user=self.admin_user, is_admin=True
         )
@@ -129,10 +160,17 @@ class ContactOrganizationCoverageTests(TestCase):
         self.assertNotIn(self.orga_a.pk, ids)
         self.assertNotIn(self.orga_c.pk, ids)
 
-    # Testfall: erstellen get Formular Superuser can see unassigned Organisationen.
-    # Erwartung/Absicherung: verwendet assertEqual, assertNotIn, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_get_form_superuser_can_see_unassigned_organizations(self):
+        """
+        Was wird geprüft:
+            Das Anlegen-Formular für einen Superuser.
+
+        Warum:
+            Superuser dürfen für jede Gemeinde ohne Kontaktstelle anlegen.
+
+        Erwartung:
+            B und C sind wählbar, A (hat schon eine Kontaktstelle) nicht.
+        """
         self.login("super")
 
         response = self.client.get(reverse("contact-create"))
@@ -147,10 +185,18 @@ class ContactOrganizationCoverageTests(TestCase):
     # CREATE: form_valid branches
     # ------------------------------------------------------------------
 
-    # Testfall: erstellen Formular gültig weist zurück Organisation mit vorhanden contact.
-    # Erwartung/Absicherung: verwendet assertEqual, assert_called_once_with, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_form_valid_rejects_organization_with_existing_contact(self):
+        """
+        Was wird geprüft:
+            Ein POST wählt die Gemeinde A, die schon eine Kontaktstelle hat.
+
+        Warum:
+            Absicherung gegen manipulierte Formulardaten: pro Gemeinde nur eine
+            Kontaktstelle.
+
+        Erwartung:
+            form_invalid() wird aufgerufen und der Fehler hängt am Feld gemeinde.
+        """
         request = self._request(self.superuser, "post", reverse("contact-create"))
         view = ContactOrganizationCreateView()
         view.setup(request)
@@ -163,10 +209,17 @@ class ContactOrganizationCoverageTests(TestCase):
         parent.assert_called_once_with(form)
         self.assertIn("gemeinde", form.errors)
 
-    # Testfall: erstellen Formular gültig weist zurück nicht Administrator Organisation.
-    # Erwartung/Absicherung: verwendet assertEqual, assert_called_once_with, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_form_valid_rejects_non_admin_organization(self):
+        """
+        Was wird geprüft:
+            Ein Administrator wählt die Gemeinde B, in der er keine Rechte hat.
+
+        Warum:
+            Absicherung gegen manipulierte Formulardaten.
+
+        Erwartung:
+            form_invalid() wird aufgerufen und der Fehler hängt am Feld gemeinde.
+        """
         request = self._request(self.admin_user, "post", reverse("contact-create"))
         view = ContactOrganizationCreateView()
         view.setup(request)
@@ -179,10 +232,17 @@ class ContactOrganizationCoverageTests(TestCase):
         parent.assert_called_once_with(form)
         self.assertIn("gemeinde", form.errors)
 
-    # Testfall: erstellen Formular gültig erlaubt Administrator Organisation.
-    # Erwartung/Absicherung: verwendet assertEqual, assert_called_once_with.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_form_valid_allows_admin_organization(self):
+        """
+        Was wird geprüft:
+            Ein Administrator wählt die Gemeinde C, in der er Administrator ist.
+
+        Warum:
+            Der erlaubte Weg darf nicht blockiert werden.
+
+        Erwartung:
+            Der Aufruf wird an die Basisklasse weitergereicht (gemockt, Ergebnis valid).
+        """
         request = self._request(self.admin_user, "post", reverse("contact-create"))
         view = ContactOrganizationCreateView()
         view.setup(request)
@@ -201,10 +261,17 @@ class ContactOrganizationCoverageTests(TestCase):
     # UPDATE: get_form branches
     # ------------------------------------------------------------------
 
-    # Testfall: aktualisieren get Formular Superuser verwendet full QuerySet.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_get_form_superuser_uses_full_queryset(self):
+        """
+        Was wird geprüft:
+            Das Bearbeiten-Formular für einen Superuser.
+
+        Warum:
+            Superuser dürfen die Gemeindezuordnung frei ändern.
+
+        Erwartung:
+            Das Feld gemeinde ist nicht gesperrt; A und B stehen zur Auswahl.
+        """
         self.login("super")
 
         response = self.client.get(
@@ -217,10 +284,18 @@ class ContactOrganizationCoverageTests(TestCase):
         self.assertIn(self.orga_a.pk, ids)
         self.assertIn(self.orga_b.pk, ids)
 
-    # Testfall: aktualisieren get Formular Administrator can edit wenn Administrator of alle aktuell Organisationen.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_get_form_admin_can_edit_when_admin_of_all_current_organizations(self):
+        """
+        Was wird geprüft:
+            Das Bearbeiten-Formular für einen Administrator, der in allen Gemeinden der
+            Kontaktstelle Administrator ist.
+
+        Warum:
+            Dann darf er die Zuordnung ändern.
+
+        Erwartung:
+            Das Feld ist nicht gesperrt und trägt die normale Beschriftung.
+        """
         AdminOrgaUser.objects.create(
             organization=self.orga_b, user=self.admin_user, is_admin=True
         )
@@ -237,10 +312,17 @@ class ContactOrganizationCoverageTests(TestCase):
             field.label, ContactOrganizationUpdateForm.base_fields["gemeinde"].label
         )
 
-    # Testfall: aktualisieren get Formular disables Gemeinde wenn Administrator of only einige aktuell Organisationen.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_get_form_disables_gemeinde_when_admin_of_only_some_current_organizations(self):
+        """
+        Was wird geprüft:
+            Die Kontaktstelle gehört zu A und B, der Nutzer ist aber nur in A Administrator.
+
+        Warum:
+            Wer nicht für alle Gemeinden zuständig ist, darf die Zuordnung nicht ändern.
+
+        Erwartung:
+            Das Feld gemeinde ist gesperrt und die Beschriftung enthält nicht editierbar.
+        """
         AdminOrgaUser.objects.create(
             organization=self.orga_b, user=self.other_user, is_admin=True
         )
@@ -255,10 +337,18 @@ class ContactOrganizationCoverageTests(TestCase):
         self.assertTrue(field.disabled)
         self.assertIn("nicht editierbar", field.label)
 
-    # Testfall: aktualisieren get Formular fügt hinzu unassigned Administrator Organisation to QuerySet.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_get_form_adds_unassigned_admin_organization_to_queryset(self):
+        """
+        Was wird geprüft:
+            Ein Administrator von A und B bearbeitet die Kontaktstelle von A.
+
+        Warum:
+            Neben den eigenen aktuellen Gemeinden soll er weitere, noch freie Gemeinden
+            zuordnen können.
+
+        Erwartung:
+            A (aktuell) und B (frei, Administrator) stehen zur Auswahl.
+        """
         AdminOrgaUser.objects.create(
             organization=self.orga_b, user=self.admin_user, is_admin=True
         )
@@ -276,10 +366,18 @@ class ContactOrganizationCoverageTests(TestCase):
     # UPDATE: form_valid / get_object branches
     # ------------------------------------------------------------------
 
-    # Testfall: aktualisieren Formular gültig weist zurück nicht Administrator selected Organisation.
-    # Erwartung/Absicherung: verwendet assertEqual, assert_called_once_with, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_form_valid_rejects_non_admin_selected_organization(self):
+        """
+        Was wird geprüft:
+            Beim Speichern wird die Gemeinde B gewählt, in der der Nutzer kein Administrator
+            ist.
+
+        Warum:
+            Absicherung gegen manipulierte Formulardaten.
+
+        Erwartung:
+            form_invalid() wird aufgerufen und der Fehler hängt am Feld gemeinde.
+        """
         request = self._request(self.admin_user, "post", reverse("contact-update", kwargs={"pk": self.contact.pk}))
         view = ContactOrganizationUpdateView()
         view.setup(request, pk=self.contact.pk)
@@ -292,21 +390,35 @@ class ContactOrganizationCoverageTests(TestCase):
         parent.assert_called_once_with(form)
         self.assertIn("gemeinde", form.errors)
 
-    # Testfall: aktualisieren get Objekt denies Benutzer who ist Administrator of none of the Organisationen.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_get_object_denies_user_who_is_admin_of_none_of_the_organizations(self):
+        """
+        Was wird geprüft:
+            Ein Nutzer ohne Administratorrolle öffnet das Bearbeiten-Formular.
+
+        Warum:
+            Nur Verantwortliche der Gemeinden dürfen die Kontaktstelle ändern.
+
+        Erwartung:
+            Status 403.
+        """
         self.login("other")
         response = self.client.get(
             reverse("contact-update", kwargs={"pk": self.contact.pk})
         )
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: aktualisieren Formular gültig Superuser setzt Erfolg Nachricht.
-    # Erwartung/Absicherung: verwendet assert_called_once_with, assertEqual.
-    # Isolation: 'django.contrib.messages.success' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_form_valid_superuser_sets_success_message(self):
+        """
+        Was wird geprüft:
+            Ein Superuser speichert eine Kontaktstelle unter neuem Namen.
+
+        Warum:
+            Die Erfolgsmeldung soll den Namen nennen.
+
+        Erwartung:
+            Die Meldung lautet Kontaktorganisation *Superuser Änderung* aktualisiert! und
+            der Aufruf geht an die Basisklasse.
+        """
         request = self._request(self.superuser, "post", reverse("contact-update", kwargs={"pk": self.contact.pk}))
         view = ContactOrganizationUpdateView()
         view.setup(request, pk=self.contact.pk)
@@ -328,10 +440,18 @@ class ContactOrganizationCoverageTests(TestCase):
     # LIST: both queryset branches
     # ------------------------------------------------------------------
 
-    # Testfall: auflisten QuerySet für nicht Administrator contains only contacts of Administrator Organisationen.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertNotIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_list_queryset_for_non_admin_contains_only_contacts_of_admin_organizations(self):
+        """
+        Was wird geprüft:
+            Die Liste für einen Administrator, bei zusätzlich vorhandener Kontaktstelle
+            einer fremden Gemeinde.
+
+        Warum:
+            Nutzer sollen nur ihre Kontaktstellen sehen.
+
+        Erwartung:
+            Die eigene Kontaktstelle ist enthalten, die fremde nicht.
+        """
         other_contact = ContactOrganization.objects.create(
             name="Andere Kontaktstelle",
             phone="111",
@@ -347,10 +467,14 @@ class ContactOrganizationCoverageTests(TestCase):
         self.assertIn(self.contact.name, names)
         self.assertNotIn(other_contact.name, names)
 
-    # Testfall: auflisten QuerySet für Superuser contains alle contacts.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_list_queryset_for_superuser_contains_all_contacts(self):
+        """
+        Was wird geprüft:
+            Die Liste für einen Superuser.
+
+        Erwartung:
+            Beide Kontaktstellen sind enthalten.
+        """
         other_contact = ContactOrganization.objects.create(
             name="Andere Kontaktstelle",
             phone="111",
@@ -370,21 +494,33 @@ class ContactOrganizationCoverageTests(TestCase):
     # DELETE: permission branches
     # ------------------------------------------------------------------
 
-    # Testfall: löschen get Objekt denies nicht Administrator.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_get_object_denies_non_admin(self):
+        """
+        Was wird geprüft:
+            Ein Nutzer ohne Administratorrolle öffnet die Löschen-Ansicht.
+
+        Erwartung:
+            Status 403.
+        """
         self.login("other")
         response = self.client.get(
             reverse("contact-delete", kwargs={"pk": self.contact.pk})
         )
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: löschen Formular gültig redirects mit warning wenn nicht Administrator of alle.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue, assert_called_once.
-    # Isolation: 'xplanung_light.views.contactorganization.messages.add_message' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_form_valid_redirects_with_warning_if_not_admin_of_all(self):
+        """
+        Was wird geprüft:
+            form_valid() der Löschen-Ansicht für einen Nutzer, der nicht Administrator aller
+            Gemeinden ist.
+
+        Warum:
+            Absicherung, falls der Zugriffsschutz in get_object umgangen wird.
+
+        Erwartung:
+            Weiterleitung auf die Liste, die Kontaktstelle bleibt bestehen und es wird eine
+            Meldung angelegt.
+        """
         request = self._request(self.other_user, "post", reverse("contact-delete", kwargs={"pk": self.contact.pk}))
         view = ContactOrganizationDeleteView()
         view.setup(request, pk=self.contact.pk)
@@ -398,10 +534,14 @@ class ContactOrganizationCoverageTests(TestCase):
         self.assertTrue(ContactOrganization.objects.filter(pk=self.contact.pk).exists())
         add_message.assert_called_once()
 
-    # Testfall: löschen Superuser can löschen.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_superuser_can_delete(self):
+        """
+        Was wird geprüft:
+            Ein Superuser löscht die Kontaktstelle.
+
+        Erwartung:
+            Status 200 nach der Weiterleitung und die Kontaktstelle existiert nicht mehr.
+        """
         self.login("super")
         response = self.client.post(
             reverse("contact-delete", kwargs={"pk": self.contact.pk}), follow=True

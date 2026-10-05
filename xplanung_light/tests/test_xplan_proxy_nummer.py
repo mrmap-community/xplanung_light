@@ -1,3 +1,11 @@
+"""
+Tests für das Überschreiben der Plannummer im exportierten GML.
+
+Ein per GML hochgeladener Plan wird beim Export nicht neu erzeugt. Das gespeicherte Original-GML
+wird von proxy_bplan_gml() mit den aktuellen Datenbankwerten überschrieben; die Nummer wird
+überschrieben, der Name bewusst nicht.
+"""
+
 import xml.etree.ElementTree as ET
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -52,9 +60,6 @@ GML_TEMPLATE = """<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 """
 
 
-# Testklasse: XPlanProxyNummerUeberschreiben.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanProxyNummerUeberschreiben(TestCase):
     """
     Ein per GML hochgeladener Plan wird beim Export nicht neu erzeugt, sondern
@@ -76,6 +81,7 @@ class XPlanProxyNummerUeberschreiben(TestCase):
                 ]
 
     def setUp(self):
+        """Meldet den Gemeinde-Administrator an."""
         self.client = Client()
         # Die importierten Testpläne sind standardmäßig privat. Verwende den
         # in den Fixtures angelegten Gemeinde-Admin direkt, damit der Test
@@ -87,6 +93,7 @@ class XPlanProxyNummerUeberschreiben(TestCase):
     # --- Hilfsfunktionen --------------------------------------------------
 
     def _build_gml(self, plan_name, nummer=None):
+        """Baut ein Test-GML mit Planname und optionaler Nummer (None lässt das Element weg)."""
         if nummer is None:
             nummer_element = '<!-- keine nummer angegeben -->'
         else:
@@ -123,10 +130,19 @@ class XPlanProxyNummerUeberschreiben(TestCase):
 
     # --- Tests ------------------------------------------------------------
 
-    # Testfall: geaenderte nummer wird im GML ausgeliefert.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_geaenderte_nummer_wird_im_gml_ausgeliefert(self):
+        """
+        Was wird geprüft:
+            Die Nummer wird in der Datenbank von 100 auf 999 geändert und der Plan dann
+            exportiert.
+
+        Warum:
+            Der Export muss die aktuelle Nummer zeigen, nicht die aus dem ursprünglichen
+            Upload.
+
+        Erwartung:
+            Es gibt genau ein xplan:nummer unterhalb von BP_Plan und es lautet 999.
+        """
         # Kernfall: DB-Nummer ändern, Original-GML muss beim Export
         # mit der neuen Nummer überschrieben werden.
         plan = self._import_gml('Testplan Proxy Nummer', nummer='100')
@@ -144,9 +160,6 @@ class XPlanProxyNummerUeberschreiben(TestCase):
         )
         self.assertEqual(nummer_elemente[0].text, '999')
 
-    # Testfall: nummer wird ergaenzt wenn im original GML nicht vorhanden.
-    # Erwartung/Absicherung: verwendet assertFalse, assertIn, assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_nummer_wird_ergaenzt_wenn_im_original_gml_nicht_vorhanden(self):
         """
         Ohne xplan:nummer im Original muss der Proxy das Element einfügen -
@@ -171,9 +184,6 @@ class XPlanProxyNummerUeberschreiben(TestCase):
         )
         self.assertEqual(bplan_element.find('xplan:nummer', NS).text, '42')
 
-    # Testfall: nummer im bereich wird nicht veraendert.
-    # Erwartung/Absicherung: verwendet assertNotEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_nummer_im_bereich_wird_nicht_veraendert(self):
         """
         Der XPath muss trennscharf sein: xplan:nummer gibt es auch im
@@ -194,9 +204,6 @@ class XPlanProxyNummerUeberschreiben(TestCase):
                 "Die Plannummer wurde fälschlich in den BP_Bereich geschrieben",
             )
 
-    # Testfall: original GML in der db bleibt unveraendert.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_original_gml_in_der_db_bleibt_unveraendert(self):
         """Der Proxy arbeitet auf einer Kopie - das Original bleibt erhalten."""
         plan = self._import_gml('Testplan Original unveraendert', nummer='100')
@@ -210,9 +217,6 @@ class XPlanProxyNummerUeberschreiben(TestCase):
         self.assertEqual(gespeichert, original)
         self.assertIn('<xplan:nummer>100</xplan:nummer>', gespeichert)
 
-    # Testfall: name wird bewusst nicht ueberschrieben.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_name_wird_bewusst_nicht_ueberschrieben(self):
         """
         Im bplan_attribute_array steht 'name' auf overwrite=False - der Name

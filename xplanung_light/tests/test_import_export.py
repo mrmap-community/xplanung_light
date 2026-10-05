@@ -1,3 +1,9 @@
+"""
+Regressionstests für Import und Export von Plänen im Format XPlanung-GML: Der Export liefert
+wohlgeformtes, wieder importierbares GML, der Import legt die erwarteten Daten an, und ein
+erneuter Import ohne Bestätigung erzeugt keinen zweiten Plan.
+"""
+
 import io
 import zipfile
 import xml.etree.ElementTree as ET
@@ -35,6 +41,10 @@ GEOMETRIE = """<gml:Polygon srsName="EPSG:25832" gml:id="GML_geltungsbereich">
 
 
 def make_gml(plan_element, name, nummer="2099"):
+    """
+    Erzeugt ein minimales XPlanung-GML (Version 6.0) mit dem angegebenen Planelement (BP_Plan
+    oder FP_Plan), Name und Nummer für die Gemeinde 07316000.
+    """
     return f"""<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <xplan:XPlanAuszug
     xmlns:xplan="{XPLAN_NS}"
@@ -61,6 +71,7 @@ def make_gml(plan_element, name, nummer="2099"):
 
 
 def upload(content, filename="testplan.gml"):
+    """Verpackt GML-Text als hochgeladene Datei mit dem Inhaltstyp application/gml."""
     return SimpleUploadedFile(
         filename,
         content.encode("utf-8"),
@@ -68,18 +79,12 @@ def upload(content, filename="testplan.gml"):
     )
 
 
-# Testklasse: ImportExportRegressionTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ImportExportRegressionTests(TestCase):
     """
-    Wichtige Import/Export-Regressionstests.
+    Round-Trip-Tests für BPlan und FPlan.
 
-    Schwerpunkt:
-    - direkter GML-Export liefert wohlgeformtes, importierbares XPlanGML
-    - BPlan- und FPlan-Import legen die erwarteten Daten an
-    - ein erneuter Import ohne confirm erzeugt keinen zweiten Plan
-    - ZIP-Export enthält die exportierte GML
+    Ausgangslage (setUp): Fixtures für Nutzer, Organisationen, einen BPlan (4318) und einen
+    FPlan (631); angemeldet ist der Gemeinde-Administrator admin_stadt_neustadt.
     """
 
     fixtures = [
@@ -91,14 +96,25 @@ class ImportExportRegressionTests(TestCase):
     ]
 
     def setUp(self):
+        """Meldet den Gemeinde-Administrator an."""
         self.client = Client()
         self.admin = User.objects.get(username="admin_stadt_neustadt")
         self.client.force_login(self.admin)
 
-    # Testfall: B-Plan GML Export ist well formed and passes Import Validator.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_gml_export_is_well_formed_and_passes_import_validator(self):
+        """
+        Was wird geprüft:
+            Der GML-Export des BPlans wird abgerufen und wieder durch den Import-Validator
+            geschickt.
+
+        Warum:
+            Exportierte Dateien müssen sich ohne Handarbeit wieder importieren lassen
+            (Round-Trip).
+
+        Erwartung:
+            Status 200, Content-Type application/xml, Wurzel ist XPlanAuszug im XPlanung-
+            Namensraum, und der Validator lehnt die Datei nicht ab.
+        """
         response = self.client.get(
             reverse("bplan-export-xplan-raster-6", args=[4318])
         )
@@ -117,10 +133,14 @@ class ImportExportRegressionTests(TestCase):
                 "abgelehnt: " + "; ".join(error.messages)
             )
 
-    # Testfall: F-Plan GML Export ist well formed and passes Import Validator.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_gml_export_is_well_formed_and_passes_import_validator(self):
+        """
+        Was wird geprüft:
+            Dasselbe für den FPlan.
+
+        Erwartung:
+            Wie beim BPlan; der FPlan-Validator akzeptiert den Export.
+        """
         response = self.client.get(
             reverse("fplan-export-xplan-raster-6", args=[631])
         )
@@ -139,10 +159,18 @@ class ImportExportRegressionTests(TestCase):
                 "abgelehnt: " + "; ".join(error.messages)
             )
 
-    # Testfall: B-Plan Import creates Plan mit core Felder.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_import_creates_plan_with_core_fields(self):
+        """
+        Was wird geprüft:
+            Der Import einer BPlan-GML-Datei.
+
+        Warum:
+            Die wichtigsten Felder müssen aus der Datei in die Datenbank übernommen werden.
+
+        Erwartung:
+            Weiterleitung (302); der Plan hat Nummer 2099, Planart 1000, GML-Version 6.0 und
+            die Gemeinde 07/316/000.
+        """
         name = "Import-Test BPlan"
         response = self.client.post(
             reverse("bplan-import"),
@@ -160,10 +188,14 @@ class ImportExportRegressionTests(TestCase):
         self.assertEqual(plan.xplan_gml_version, "6.0")
         self.assertEqual(list(plan.gemeinde.values_list("ls", "ks", "gs")), [("07", "316", "000")])
 
-    # Testfall: F-Plan Import creates Plan mit core Felder.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_import_creates_plan_with_core_fields(self):
+        """
+        Was wird geprüft:
+            Der Import einer FPlan-GML-Datei.
+
+        Erwartung:
+            Wie beim BPlan.
+        """
         name = "Import-Test FPlan"
         response = self.client.post(
             reverse("fplan-import"),
@@ -181,10 +213,19 @@ class ImportExportRegressionTests(TestCase):
         self.assertEqual(plan.xplan_gml_version, "6.0")
         self.assertEqual(list(plan.gemeinde.values_list("ls", "ks", "gs")), [("07", "316", "000")])
 
-    # Testfall: B-Plan Import ohne confirm does nicht doppelt vorhanden Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_import_without_confirm_does_not_duplicate_existing_plan(self):
+        """
+        Was wird geprüft:
+            Dieselbe Datei wird zweimal importiert, beim zweiten Mal ohne Überschreiben-
+            Bestätigung.
+
+        Warum:
+            Ein erneuter Import darf keinen doppelten Plan erzeugen.
+
+        Erwartung:
+            Erster Import: 302 und ein Plan. Zweiter Import: 200 (Formular erscheint erneut)
+            und weiter genau ein Plan.
+        """
         name = "Import-Test Duplicate BPlan"
         content = make_gml("BP_Plan", name)
 
@@ -203,10 +244,18 @@ class ImportExportRegressionTests(TestCase):
         self.assertEqual(second_response.status_code, 200)
         self.assertEqual(BPlan.objects.filter(name=name).count(), 1)
 
-    # Testfall: B-Plan zip Export contains xplan GML.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIsNone.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_zip_export_contains_xplan_gml(self):
+        """
+        Was wird geprüft:
+            Der ZIP-Export des BPlans.
+
+        Warum:
+            Das Archiv muss die GML-Datei als xplan.gml enthalten.
+
+        Erwartung:
+            Das ZIP ist unbeschädigt, enthält genau eine GML-Datei namens xplan.gml, und
+            diese hat XPlanAuszug als Wurzel.
+        """
         response = self.client.get(
             reverse("bplan-export-xplan-raster-6-zip", args=[4318])
         )
@@ -223,10 +272,14 @@ class ImportExportRegressionTests(TestCase):
         root = ET.fromstring(archive.read("xplan.gml"))
         self.assertEqual(root.tag, f"{{{XPLAN_NS}}}XPlanAuszug")
 
-    # Testfall: F-Plan zip Export contains xplan GML.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIsNone.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_zip_export_contains_xplan_gml(self):
+        """
+        Was wird geprüft:
+            Dasselbe für den FPlan.
+
+        Erwartung:
+            Wie beim BPlan.
+        """
         response = self.client.get(
             reverse("fplan-export-xplan-raster-6-zip", args=[631])
         )

@@ -1,3 +1,5 @@
+"""Tests der Formulare für Umweltprüfungen (UVP) von BPlan und FPlan."""
+
 from django.test import TestCase
 from django.utils import timezone
 from datetime import timedelta
@@ -5,10 +7,8 @@ from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.models import BPlan, FPlan, Uvp, FPlanUvp
 from xplanung_light.forms import UvpForm, FPlanUvpForm
 
-# Testklasse: UvpFormsBusinessLogicTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class UvpFormsBusinessLogicTests(TestCase):
+    """Gültige und ungültige Eingaben der UVP-Formulare."""
 
     def setUp(self):
         # Basis-Geometrie für NOT NULL Constraints der Pläne
@@ -26,9 +26,6 @@ class UvpFormsBusinessLogicTests(TestCase):
     # 1. TESTS FÜR UvpForm (BPlan-Kontext)
     # ==============================================================================
 
-    # Testfall: uvp Formular happy path.
-    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_uvp_form_happy_path(self):
         """Das UvpForm muss valide sein, wenn korrekte Daten übergeben werden."""
         form_data = {
@@ -50,9 +47,6 @@ class UvpFormsBusinessLogicTests(TestCase):
         self.assertEqual(saved_uvp.bplan.id, self.bplan.id)
         self.assertEqual(saved_uvp.typ, "18_7_1")
 
-    # Testfall: uvp Formular ungültig date format.
-    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_uvp_form_invalid_date_format(self):
         """Das Formular muss fehlschlagen, wenn ein ungültiges Datumsformat übergeben wird."""
         form_data = {
@@ -70,9 +64,6 @@ class UvpFormsBusinessLogicTests(TestCase):
     # 2. TESTS FÜR FPlanUvpForm (FPlan-Kontext / Strategische Umweltprüfung)
     # ==============================================================================
 
-    # Testfall: F-Plan uvp Formular happy path.
-    # Erwartung/Absicherung: verwendet assertTrue, assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_uvp_form_happy_path(self):
         """Das FPlanUvpForm muss valide sein und die angepassten Labels/Hilfetexte nutzen."""
         form_data = {
@@ -97,9 +88,6 @@ class UvpFormsBusinessLogicTests(TestCase):
         self.assertEqual(saved_fplan_uvp.fplan.id, self.fplan.id)
         self.assertEqual(saved_fplan_uvp.typ, "1000")
 
-    # Testfall: F-Plan uvp Formular ungültig typ choice.
-    # Erwartung/Absicherung: verwendet assertFalse, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_uvp_form_invalid_typ_choice(self):
         """Das Formular muss fehlschlagen, wenn ein ungültiger Choice-Wert übergeben wird."""
         form_data = {

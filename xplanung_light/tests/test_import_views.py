@@ -1,3 +1,5 @@
+"""Tests der Importseiten für BPlan und FPlan (GML-Datei hochladen)."""
+
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -6,10 +8,8 @@ from xplanung_light.models import AdministrativeOrganization, BPlan, FPlan
 
 User = get_user_model()
 
-# Testklasse: XPlanImportViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanImportViewTests(TestCase):
+    """Import einer gültigen GML-Datei durch einen Administrator."""
 
     def setUp(self):
         # 1. Wir legen die im XML referenzierte Gemeinde in der DB an
@@ -55,9 +55,6 @@ class XPlanImportViewTests(TestCase):
     # 1. BPLAN-IMPORT (GET & POST FILE UPLOAD)
     # ==============================================================================
 
-    # Testfall: B-Plan Import View get and post Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_import_view_get_and_post_success(self):
         """Ein Administrator kann die BPlan-Importseite aufrufen und eine valide GML-Datei hochladen."""
         self.client.login(username="import_admin", password="password123")
@@ -81,9 +78,6 @@ class XPlanImportViewTests(TestCase):
     # 2. FPLAN-IMPORT (GET & POST FILE UPLOAD)
     # ==============================================================================
 
-    # Testfall: F-Plan Import View get and post Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_import_view_get_and_post_success(self):
         """Ein Administrator kann die FPlan-Importseite aufrufen und eine valide GML-Datei hochladen."""
         self.client.login(username="import_admin", password="password123")

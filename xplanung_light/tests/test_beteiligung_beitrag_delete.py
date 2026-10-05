@@ -1,3 +1,5 @@
+"""Tests zum Löschen von Beiträgen durch Gemeinde-Administratoren."""
+
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -17,10 +19,8 @@ from xplanung_light.models import (
 
 User = get_user_model()
 
-# Testklasse: BeteiligungBeitragDeleteViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragDeleteViewTests(TestCase):
+    """Löschen von BPlan- und FPlan-Beiträgen und Zugriffsschutz."""
 
     def setUp(self):
         # WKT-Geometrie & Fristendaten für den Verarbeitungs-Happy-Path
@@ -75,9 +75,6 @@ class BeteiligungBeitragDeleteViewTests(TestCase):
             typ=1000
         )
 
-    # Testfall: löschen B-Plan Beitrag by Administrator Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertRedirects, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_bplan_beitrag_by_admin_success(self):
         """Ein verifizierter Gemeinde-Admin kann einen BPlan-Beitrag erfolgreich löschen."""
         self.client.login(username="admin_delete", password="password123")
@@ -105,9 +102,6 @@ class BeteiligungBeitragDeleteViewTests(TestCase):
         # DB-Check: Der Datensatz muss gelöscht sein
         self.assertFalse(BPlanBeteiligungBeitrag.objects.filter(id=self.bplan_beitrag.id).exists())
 
-    # Testfall: löschen F-Plan Beitrag by Administrator Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_fplan_beitrag_by_admin_success(self):
         """Ein verifizierter Gemeinde-Admin kann einen FPlan-Beitrag erfolgreich löschen."""
         self.client.login(username="admin_delete", password="password123")
@@ -130,9 +124,6 @@ class BeteiligungBeitragDeleteViewTests(TestCase):
         # DB-Check
         self.assertFalse(FPlanBeteiligungBeitrag.objects.filter(id=self.fplan_beitrag.id).exists())
 
-    # Testfall: löschen Beitrag denied für stranger.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_beitrag_denied_for_stranger(self):
         """Ein fremder Nutzer ohne Admin-Rechte der Gemeinde wird mit HTTP 403 blockiert."""
         self.client.login(username="stranger", password="password123")

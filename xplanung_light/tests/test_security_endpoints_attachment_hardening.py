@@ -1,8 +1,9 @@
-"""Security regression tests for direct object/download/export endpoints.
+"""
+Sicherheits-Regressionstests für direkt aufgerufene URLs (Detailseiten, Exporte, Downloads nicht
+öffentlicher Pläne) sowie für den Download von Beitrags-Anhängen.
 
-These tests intentionally exercise URLs directly instead of relying on the
-navigation/UI. They are meant to catch IDOR and accidental publication when a
-private plan is addressed by a hand-crafted URL.
+Der erste Teil entspricht test_security_endpoints.py; neu sind die Tests für Beitrags-Anhänge
+(Original, geschwärzte Fassung, Gast-Session).
 """
 
 import datetime
@@ -25,11 +26,16 @@ from xplanung_light.models import (
 )
 from xplanung_light.models import RedactedBPlanBeteiligungBeitragAnhang
 
-# Testklasse: PrivatePlanEndpointSecurity.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class PrivatePlanEndpointSecurity(TestCase):
-    """Direct URLs must not expose a private plan to unauthorized users."""
+    """
+    Direkt aufgerufene URLs dürfen einen privaten Plan und fremde Anhänge nicht Unbefugten
+    zeigen.
+
+    Ausgangslage: Fixtures für Nutzer, Organisationen, einen BPlan (4318) und einen FPlan (631),
+    beide für diese Tests auf nicht öffentlich gesetzt. Nutzer: admin (admin_stadt_neustadt) und
+    ein Fremder, der Administrator einer anderen Organisation ist, die mit den Plänen nichts zu
+    tun hat.
+    """
 
     fixtures = [
         "user.json",
@@ -79,154 +85,290 @@ class PrivatePlanEndpointSecurity(TestCase):
     def setUp(self):
         self.client = Client()
 
-    # Testfall: anonym cannot open nicht öffentlich B-Plan Detailansicht directly.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_open_private_bplan_detail_directly(self):
+        """
+        Was wird geprüft:
+            Ohne Anmeldung ruft die Detailseite eines nicht öffentlichen BPlans direkt per
+            URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 401 (nicht angemeldet).
+        """
         response = self.client.get(reverse("bplan-detail", args=[self.bplan.pk]))
         self.assertEqual(response.status_code, 401)
 
-    # Testfall: foreign Benutzer cannot open nicht öffentlich B-Plan Detailansicht directly.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_open_private_bplan_detail_directly(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Nutzer einer fremden Organisation ruft die Detailseite eines
+            nicht öffentlichen BPlans direkt per URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 403 (angemeldet, aber ohne Berechtigung).
+        """
         self.client.force_login(self.foreign_user)
         response = self.client.get(reverse("bplan-detail", args=[self.bplan.pk]))
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: anonym cannot open nicht öffentlich F-Plan Detailansicht directly.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_open_private_fplan_detail_directly(self):
+        """
+        Was wird geprüft:
+            Ohne Anmeldung ruft die Detailseite eines nicht öffentlichen FPlans direkt per
+            URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 401 (nicht angemeldet).
+        """
         response = self.client.get(reverse("fplan-detail", args=[self.fplan.pk]))
         self.assertEqual(response.status_code, 401)
 
-    # Testfall: foreign Benutzer cannot open nicht öffentlich F-Plan Detailansicht directly.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_open_private_fplan_detail_directly(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Nutzer einer fremden Organisation ruft die Detailseite eines
+            nicht öffentlichen FPlans direkt per URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 403 (angemeldet, aber ohne Berechtigung).
+        """
         self.client.force_login(self.foreign_user)
         response = self.client.get(reverse("fplan-detail", args=[self.fplan.pk]))
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: anonym cannot Export nicht öffentlich B-Plan as GML.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_export_private_bplan_as_gml(self):
+        """
+        Was wird geprüft:
+            Ohne Anmeldung ruft den XPlanung-GML-Export eines nicht öffentlichen BPlans
+            direkt per URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 401 (nicht angemeldet).
+        """
         response = self.client.get(
             reverse("bplan-export-xplan-raster-6", args=[self.bplan.pk])
         )
         self.assertEqual(response.status_code, 401)
 
-    # Testfall: foreign Benutzer cannot Export nicht öffentlich B-Plan as GML.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_export_private_bplan_as_gml(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Nutzer einer fremden Organisation ruft den XPlanung-GML-Export
+            eines nicht öffentlichen BPlans direkt per URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 403 (angemeldet, aber ohne Berechtigung).
+        """
         self.client.force_login(self.foreign_user)
         response = self.client.get(
             reverse("bplan-export-xplan-raster-6", args=[self.bplan.pk])
         )
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: anonym cannot Export nicht öffentlich B-Plan as zip.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_export_private_bplan_as_zip(self):
+        """
+        Was wird geprüft:
+            Ohne Anmeldung ruft den ZIP-Export eines nicht öffentlichen BPlans direkt per
+            URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 401 (nicht angemeldet).
+        """
         response = self.client.get(
             reverse("bplan-export-xplan-raster-6-zip", args=[self.bplan.pk])
         )
         self.assertEqual(response.status_code, 401)
 
-    # Testfall: foreign Benutzer cannot Export nicht öffentlich B-Plan as zip.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_export_private_bplan_as_zip(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Nutzer einer fremden Organisation ruft den ZIP-Export eines
+            nicht öffentlichen BPlans direkt per URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 403 (angemeldet, aber ohne Berechtigung).
+        """
         self.client.force_login(self.foreign_user)
         response = self.client.get(
             reverse("bplan-export-xplan-raster-6-zip", args=[self.bplan.pk])
         )
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: anonym cannot Export nicht öffentlich B-Plan as iso19139.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_export_private_bplan_as_iso19139(self):
+        """
+        Was wird geprüft:
+            Ohne Anmeldung ruft die ISO-19139-Metadaten eines nicht öffentlichen BPlans
+            direkt per URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 401 (nicht angemeldet).
+        """
         response = self.client.get(
             reverse("bplan-export-iso19139", args=[self.bplan.pk])
         )
         self.assertEqual(response.status_code, 401)
 
-    # Testfall: foreign Benutzer cannot Export nicht öffentlich B-Plan as iso19139.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_export_private_bplan_as_iso19139(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Nutzer einer fremden Organisation ruft die ISO-19139-Metadaten
+            eines nicht öffentlichen BPlans direkt per URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 403 (angemeldet, aber ohne Berechtigung).
+        """
         self.client.force_login(self.foreign_user)
         response = self.client.get(
             reverse("bplan-export-iso19139", args=[self.bplan.pk])
         )
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: anonym cannot Export nicht öffentlich F-Plan as GML.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_export_private_fplan_as_gml(self):
+        """
+        Was wird geprüft:
+            Ohne Anmeldung ruft den XPlanung-GML-Export eines nicht öffentlichen FPlans
+            direkt per URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 401 (nicht angemeldet).
+        """
         response = self.client.get(
             reverse("fplan-export-xplan-raster-6", args=[self.fplan.pk])
         )
         self.assertEqual(response.status_code, 401)
 
-    # Testfall: foreign Benutzer cannot Export nicht öffentlich F-Plan as GML.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_export_private_fplan_as_gml(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Nutzer einer fremden Organisation ruft den XPlanung-GML-Export
+            eines nicht öffentlichen FPlans direkt per URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 403 (angemeldet, aber ohne Berechtigung).
+        """
         self.client.force_login(self.foreign_user)
         response = self.client.get(
             reverse("fplan-export-xplan-raster-6", args=[self.fplan.pk])
         )
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: anonym cannot Export nicht öffentlich F-Plan as zip.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_export_private_fplan_as_zip(self):
+        """
+        Was wird geprüft:
+            Ohne Anmeldung ruft den ZIP-Export eines nicht öffentlichen FPlans direkt per
+            URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 401 (nicht angemeldet).
+        """
         response = self.client.get(
             reverse("fplan-export-xplan-raster-6-zip", args=[self.fplan.pk])
         )
         self.assertEqual(response.status_code, 401)
 
-    # Testfall: foreign Benutzer cannot Export nicht öffentlich F-Plan as zip.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_export_private_fplan_as_zip(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Nutzer einer fremden Organisation ruft den ZIP-Export eines
+            nicht öffentlichen FPlans direkt per URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 403 (angemeldet, aber ohne Berechtigung).
+        """
         self.client.force_login(self.foreign_user)
         response = self.client.get(
             reverse("fplan-export-xplan-raster-6-zip", args=[self.fplan.pk])
         )
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: anonym cannot Export nicht öffentlich F-Plan as iso19139.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_export_private_fplan_as_iso19139(self):
+        """
+        Was wird geprüft:
+            Ohne Anmeldung ruft die ISO-19139-Metadaten eines nicht öffentlichen FPlans
+            direkt per URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 401 (nicht angemeldet).
+        """
         response = self.client.get(
             reverse("fplan-export-iso19139", args=[self.fplan.pk])
         )
         self.assertEqual(response.status_code, 401)
 
-    # Testfall: foreign Benutzer cannot Export nicht öffentlich F-Plan as iso19139.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_export_private_fplan_as_iso19139(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Nutzer einer fremden Organisation ruft die ISO-19139-Metadaten
+            eines nicht öffentlichen FPlans direkt per URL auf.
+
+        Warum:
+            Wer die URL kennt oder errät, darf einen nicht öffentlichen Plan nicht abrufen.
+
+        Erwartung:
+            Status 403 (angemeldet, aber ohne Berechtigung).
+        """
         self.client.force_login(self.foreign_user)
         response = self.client.get(
             reverse("fplan-export-iso19139", args=[self.fplan.pk])
         )
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: foreign Benutzer cannot Download nicht öffentlich B-Plan Anhang.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_download_private_bplan_attachment(self):
+        """
+        Was wird geprüft:
+            Ein Nutzer einer fremden Organisation lädt einen nicht öffentlichen Anhang eines
+            BPlans herunter.
+
+        Warum:
+            Nicht öffentliche Anlagen dürfen nur Verantwortliche des Plans abrufen.
+
+        Erwartung:
+            Status 403.
+        """
         attachment = BPlanSpezExterneReferenz.objects.create(
             bplan=self.bplan,
             name="private-security-test.txt",
@@ -244,10 +386,14 @@ class PrivatePlanEndpointSecurity(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: anonym cannot Download nicht öffentlich B-Plan Anhang.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_download_private_bplan_attachment(self):
+        """
+        Was wird geprüft:
+            Dasselbe ohne Anmeldung.
+
+        Erwartung:
+            Status 401.
+        """
         attachment = BPlanSpezExterneReferenz.objects.create(
             bplan=self.bplan,
             name="private-security-test-anonymous.txt",
@@ -264,10 +410,18 @@ class PrivatePlanEndpointSecurity(TestCase):
         )
         self.assertEqual(response.status_code, 401)
 
-    # Testfall: foreign Benutzer cannot Download nicht öffentlich F-Plan Anhang.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_download_private_fplan_attachment(self):
+        """
+        Was wird geprüft:
+            Ein Nutzer einer fremden Organisation lädt einen nicht öffentlichen Anhang eines
+            FPlans herunter.
+
+        Warum:
+            Der FPlan hat eigene Anhang-Modelle und eine eigene Download-Route.
+
+        Erwartung:
+            Status 403.
+        """
         attachment = FPlanSpezExterneReferenz.objects.create(
             fplan=self.fplan,
             name="private-security-test.txt",
@@ -285,11 +439,19 @@ class PrivatePlanEndpointSecurity(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: foreign Benutzer cannot Download other contribution Anhang via session id.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_download_other_contribution_attachment_via_session_id(self):
-        """A guest session for contribution A must not authorize attachment B."""
+        """
+        Was wird geprüft:
+            Ein Gast, in dessen Session das Token von Beitrag A steht, ruft den Anhang von
+            Beitrag B ab.
+
+        Warum:
+            Ein Gast-Token darf nur die Anhänge des eigenen Beitrags freigeben, nicht die
+            anderer Beiträge desselben Verfahrens.
+
+        Erwartung:
+            Status 401.
+        """
         today = datetime.date.today()
         beteiligung = BPlanBeteiligung.objects.create(
             bplan=self.bplan,
@@ -341,6 +503,11 @@ class PrivatePlanEndpointSecurity(TestCase):
         self.assertEqual(response.status_code, 401)
 
     def _create_bplan_attachment(self, beitrag=None, filename="attachment.txt", content=b"secret"):
+        """
+        Legt einen Anhang an einem Beitrag an. Ohne übergebenen Beitrag werden vorher eine
+        laufende Beteiligung und ein freigeschalteter Online-Beitrag erzeugt. Dateiname und
+        Inhalt sind einstellbar (Standardinhalt: secret).
+        """
         today = datetime.date.today()
         if beitrag is None:
             beteiligung = BPlanBeteiligung.objects.create(
@@ -373,10 +540,17 @@ class PrivatePlanEndpointSecurity(TestCase):
             ),
         )
 
-    # Testfall: contribution Anhang Administrator can Download original.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contribution_attachment_admin_can_download_original(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator lädt das Original eines Beitrags-Anhangs herunter.
+
+        Warum:
+            Verantwortliche brauchen den ungeschwärzten Inhalt zur Prüfung der Beiträge.
+
+        Erwartung:
+            Status 200 und genau die hochgeladenen Bytes.
+        """
         attachment = self._create_bplan_attachment()
 
         self.client.force_login(self.admin)
@@ -390,10 +564,17 @@ class PrivatePlanEndpointSecurity(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b"".join(response.streaming_content), b"secret")
 
-    # Testfall: contribution Anhang foreign Benutzer ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contribution_attachment_foreign_user_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Fremder lädt den Original-Anhang eines Beitrags herunter.
+
+        Warum:
+            Anhänge können persönliche Daten enthalten.
+
+        Erwartung:
+            Status 403.
+        """
         attachment = self._create_bplan_attachment()
 
         self.client.force_login(self.foreign_user)
@@ -406,10 +587,18 @@ class PrivatePlanEndpointSecurity(TestCase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: contribution Anhang guest mit matching session can Download.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contribution_attachment_guest_with_matching_session_can_download(self):
+        """
+        Was wird geprüft:
+            Ein Gast, dessen Session das Token des eigenen Beitrags enthält, lädt den Anhang
+            herunter.
+
+        Warum:
+            Bürger sollen ihre eigenen Unterlagen auch ohne Konto abrufen können.
+
+        Erwartung:
+            Status 200 und die hochgeladenen Bytes.
+        """
         attachment = self._create_bplan_attachment()
 
         session = self.client.session
@@ -426,10 +615,18 @@ class PrivatePlanEndpointSecurity(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b"".join(response.streaming_content), b"secret")
 
-    # Testfall: contribution Anhang guest mit falsch session ist unauthorized.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contribution_attachment_guest_with_wrong_session_is_unauthorized(self):
+        """
+        Was wird geprüft:
+            Ein Gast mit dem Token eines anderen Beitrags desselben Plans ruft den Anhang
+            ab.
+
+        Warum:
+            Ein beliebiges Token darf nicht reichen.
+
+        Erwartung:
+            Status 401.
+        """
         attachment = self._create_bplan_attachment()
 
         other_beteiligung = BPlanBeteiligung.objects.create(
@@ -464,10 +661,18 @@ class PrivatePlanEndpointSecurity(TestCase):
 
         self.assertEqual(response.status_code, 401)
 
-    # Testfall: contribution Anhang prefers redacted version für normal Download.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contribution_attachment_prefers_redacted_version_for_normal_download(self):
+        """
+        Was wird geprüft:
+            Der Standard-Download eines Anhangs, zu dem eine geschwärzte Fassung existiert.
+
+        Warum:
+            Persönliche Daten sollen standardmäßig nicht ausgeliefert werden, wenn es eine
+            geschwärzte Fassung gibt.
+
+        Erwartung:
+            Status 200 und der Inhalt der geschwärzten Datei (REDACTED).
+        """
         attachment = self._create_bplan_attachment(
             filename="original.txt",
             content=b"ORIGINAL",
@@ -493,10 +698,22 @@ class PrivatePlanEndpointSecurity(TestCase):
         self.assertEqual(b"".join(response.streaming_content), b"REDACTED")
         self.assertTrue(redacted.pk)
 
-    # Testfall: contribution Anhang original endpoint bypasses redacted version only für authorized Benutzer.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_contribution_attachment_original_endpoint_bypasses_redacted_version_only_for_authorized_user(self):
+        """
+        Was wird geprüft:
+            Der Original-Download eines Anhangs mit geschwärzter Fassung, abgerufen als
+            Administrator.
+
+        Warum:
+            Verantwortliche müssen trotz Schwärzung an das Original kommen.
+
+        Erwartung:
+            Status 200 und der Originalinhalt (ORIGINAL).
+
+        Hinweis:
+            Der Name verspricht auch die Gegenprobe für Unberechtigte; geprüft wird hier nur
+            der Administrator. Die Sperre für Unbefugte decken die Tests darüber ab.
+        """
         attachment = self._create_bplan_attachment(
             filename="original.txt",
             content=b"ORIGINAL",

@@ -1,3 +1,5 @@
+"""Tests der Verwaltung von Einwilligungstexten (ConsentOption)."""
+
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -7,10 +9,8 @@ from xplanung_light.models import ConsentOption
 
 User = get_user_model()
 
-# Testklasse: ConsentOptionViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ConsentOptionViewTests(TestCase):
+    """Liste, Formulare und Löschen von Einwilligungen durch einen Administrator."""
 
     def setUp(self):
         # 1. Fristendaten aufsetzen
@@ -36,9 +36,6 @@ class ConsentOptionViewTests(TestCase):
     # 1. LISTEN- UND FORMULAR-ANSICHTEN (GET)
     # ==============================================================================
 
-    # Testfall: consent option auflisten and Formulare get.
-    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_consent_option_list_and_forms_get(self):
         """Ein Administrator kann die Einwilligungsliste sowie die Create/Update-Seiten per GET laden."""
         self.client.login(username="super_admin", password="password123")
@@ -63,9 +60,6 @@ class ConsentOptionViewTests(TestCase):
     # 2. EINWILLIGUNG ENTFERNEN / DELETE (POST)
     # ==============================================================================
 
-    # Testfall: consent option löschen Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_consent_option_delete_success(self):
         """Ein Admin kann eine Einwilligung erfolgreich über den DeleteView entfernen."""
         self.client.login(username="super_admin", password="password123")

@@ -1,3 +1,17 @@
+"""
+Erweiterte Rechte- und Verknüpfungstests für Beiträge, Stellungnahmen und Anhänge (BPlan und
+FPlan, je zwei Klassen).
+
+Zwei Fragen stehen im Mittelpunkt: 1. Grenzen der Verknüpfungskette Plan, Beteiligung, Beitrag,
+Anhang oder Stellungnahme: Ein Nutzer, der für Plan A berechtigt ist, darf nie über frei
+kombinierte IDs in der URL ein Objekt von Plan B erreichen (404). 2. Rechte: Ein angemeldeter
+Fremder ohne Rolle erhält überall 403, auch bei direktem POST; ein Administrator mindestens
+einer Gemeinde des Plans darf lesen, anlegen, ändern und löschen.
+
+Hinweis: Einige Fälle (zum Beispiel Löschen über fremden Plan oder das Formular der manuellen
+Erfassung über fremde Beteiligung) kommen in mehreren Klassen oder zweimal in einer Klasse vor.
+"""
+
 from django.test import Client
 from django.urls import reverse
 from datetime import date
@@ -12,24 +26,28 @@ from xplanung_light.models import (
 from .test_permissions import PermissionTestBase
 
 
-# Testklasse: PlanReferenceBoundaryPermissions.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class PlanReferenceBoundaryPermissions(PermissionTestBase):
     """
-    Regressionstests für die Beziehungskette
+    Verknüpfungskette beim BPlan: Objekte eines anderen Plans sind über die URL nicht
+    erreichbar.
 
-        planid -> beteiligung -> beitrag -> anhang/stellungnahme
-
-    Ziel: Ein Benutzer, der auf Plan A berechtigt ist, darf niemals ein
-    darunter liegendes Objekt von Plan B über frei kombinierbare URL-IDs
-    erreichen.
+    Die Tests legen einen zweiten Plan derselben Gemeinde an. Der angemeldete Administrator hat
+    damit an sich Zugriff auf beide Pläne; ein 404 beweist also, dass nur die Kombination der
+    IDs in der URL nicht zusammenpasst.
     """
 
-    # Testfall: generic erstellen foreign Benutzer gets 403.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_create_foreign_user_gets_403(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Fremder öffnet das Formular zur manuellen Erfassung eines
+            Beitrags beim BPlan.
+
+        Warum:
+            Nur Verantwortliche der Gemeinde dürfen Beiträge von Hand erfassen.
+
+        Erwartung:
+            Status 403.
+        """
         # Fremder Nutzer (kein Admin der Plan-Gemeinde) darf das
         # Create-Formular für einen Beitrag nicht einmal per GET aufrufen.
         beteiligung = self.make_beteiligung(self.plan)
@@ -49,10 +67,17 @@ class PlanReferenceBoundaryPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: generic erstellen foreign Benutzer cannot post.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_create_foreign_user_cannot_post(self):
+        """
+        Was wird geprüft:
+            Derselbe Fremde sendet direkt einen leeren POST an die manuelle Erfassung.
+
+        Warum:
+            Auch ohne das Formular zu öffnen darf nichts passieren.
+
+        Erwartung:
+            Status 403.
+        """
         # Gleiche Sperre auch für den direkten POST (falls jemand das
         # GET überspringt und das Formular selbst zusammenbaut).
         beteiligung = self.make_beteiligung(self.plan)
@@ -73,10 +98,18 @@ class PlanReferenceBoundaryPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: generic erstellen weist zurück Beteiligung aus other Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_create_rejects_beteiligung_from_other_plan(self):
+        """
+        Was wird geprüft:
+            Der Administrator öffnet die manuelle Erfassung mit BPlan-ID von Plan A und der
+            Beteiligung von Plan B.
+
+        Warum:
+            Die Beteiligung muss zum Plan in der URL gehören.
+
+        Erwartung:
+            Status 404.
+        """
         # Prüft: planid zeigt auf self.plan, beteiligungid aber auf
         # eine Beteiligung von other_plan -> muss abgelehnt werden (404).
         # (Die fehlende Assertion wurde ergänzt, siehe Verbesserungsvorschlag 1.)
@@ -101,10 +134,18 @@ class PlanReferenceBoundaryPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 404)
 
-    # Testfall: beteiligungbeitrag auflisten cannot cross Plan boundary.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beteiligungbeitrag_list_cannot_cross_plan_boundary(self):
+        """
+        Was wird geprüft:
+            Die Beitragsliste mit der Beteiligung eines anderen Plans.
+
+        Warum:
+            Über eine fremde Beteiligungs-ID darf die Liste eines anderen Plans nicht
+            erscheinen.
+
+        Erwartung:
+            Status 404.
+        """
         # Liste über die Beteiligung eines anderen Plans aufrufen -> 404,
         # obwohl der Admin für seinen eigenen Plan berechtigt wäre.
         other_plan = self.make_bplan("Anderer Listenplan", self.gemeinde)
@@ -127,6 +168,7 @@ class PlanReferenceBoundaryPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 404)
 
     def make_beitrag_for_plan(self, plan):
+        """Legt zum BPlan eine Beteiligung und einen Beitrag an."""
         # Hilfsfunktion: legt Beteiligung + Beitrag für den übergebenen Plan an.
         # (BPlanBeteiligungBeitrag ist bereits oben im Modul importiert -
         # der lokale Re-Import war redundant und wurde entfernt.)
@@ -144,10 +186,17 @@ class PlanReferenceBoundaryPermissions(PermissionTestBase):
             withdrawn=False,
         )
 
-    # Testfall: beteiligungbeitrag löschen cannot cross Plan boundary.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beteiligungbeitrag_delete_cannot_cross_plan_boundary(self):
+        """
+        Was wird geprüft:
+            Ein Beitrag von Plan B wird über eine URL mit der Plan-ID von Plan A gelöscht.
+
+        Warum:
+            Löschen darf nur gelingen, wenn Plan, Beteiligung und Beitrag zusammenpassen.
+
+        Erwartung:
+            Status 404 und der Beitrag bleibt bestehen.
+        """
         # Löschen über die falsche Plan/Beteiligung-Kombination -> 404,
         # der fremde Beitrag muss danach noch existieren.
         other_plan = self.make_bplan("Anderer Delete-Plan", self.gemeinde)
@@ -173,34 +222,17 @@ class PlanReferenceBoundaryPermissions(PermissionTestBase):
             type(other_beitrag).objects.filter(pk=other_beitrag.pk).exists()
         )
 
-    # Testfall: generic Beitrag erstellen cannot mix Plan and Beteiligung.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
-    def test_generic_beitrag_create_cannot_mix_plan_and_beteiligung(self):
-        # Wie test_generic_create_rejects_beteiligung_from_other_plan, aber
-        # diesmal MIT der erwarteten 404-Assertion.
-        other_plan = self.make_bplan("Anderer Create-Plan", self.gemeinde)
-        other_beteiligung = self.make_beteiligung(other_plan)
-
-        self.client.force_login(self.gemeinde_admin)
-
-        response = self.client.get(
-            reverse(
-                "beteiligungbeitrag-generic-create",
-                kwargs={
-                    "plantyp": "bplan",
-                    "planid": self.PLAN_PK,
-                    "beteiligungid": other_beteiligung.pk,
-                },
-            )
-        )
-
-        self.assertEqual(response.status_code, 404)
-
-    # Testfall: generic Beitrag aktualisieren cannot cross Plan boundary.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_beitrag_update_cannot_cross_plan_boundary(self):
+        """
+        Was wird geprüft:
+            Das Bearbeiten-Formular eines Beitrags von Plan B über die URL von Plan A.
+
+        Warum:
+            Bearbeiten darf nur gelingen, wenn Plan, Beteiligung und Beitrag zusammenpassen.
+
+        Erwartung:
+            Status 404.
+        """
         # Update-Formular über eine falsche Plan/Beitrag-Kombination -> 404.
         other_plan = self.make_bplan("Anderer Update-Plan", self.gemeinde)
         other_beitrag = self.make_beitrag_for_plan(other_plan)
@@ -222,13 +254,21 @@ class PlanReferenceBoundaryPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 404)
 
-    # Testfall: stellungnahme auflisten cannot cross Plan boundary.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_list_cannot_cross_plan_boundary(self):
+        """
+        Was wird geprüft:
+            Die Stellungnahmeliste eines Beitrags von Plan B über die URL von Plan A.
+
+        Warum:
+            Stellungnahmen (Abwägung) dürfen nicht über fremde Pläne erreichbar sein.
+
+        Erwartung:
+            Status 404 und die Stellungnahme bleibt bestehen.
+        """
         # Stellungnahme über einen fremden Plan aufrufen -> 404, Stellungnahme
         # bleibt in der DB unangetastet.
-        other_plan = self.make_bplan("Anderer Stellungnahme-Plan", self.gemeinde)
+        other_plan = self.make_bplan(
+            "Anderer Stellungnahme-Plan", self.gemeinde)
         other_beitrag = self.make_beitrag_for_plan(other_plan)
         statement = BPlanBeitragStellungnahme.objects.create(
             beitrag=other_beitrag,
@@ -254,10 +294,18 @@ class PlanReferenceBoundaryPermissions(PermissionTestBase):
             BPlanBeitragStellungnahme.objects.filter(pk=statement.pk).exists()
         )
 
-    # Testfall: anhang auflisten cannot cross Plan boundary.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anhang_list_cannot_cross_plan_boundary(self):
+        """
+        Was wird geprüft:
+            Die Anhangliste eines Beitrags von Plan B über die URL von Plan A.
+
+        Warum:
+            Anhänge können persönliche Daten enthalten und dürfen nicht über fremde Pläne
+            erreichbar sein.
+
+        Erwartung:
+            Status 404 und der Anhang bleibt bestehen.
+        """
         # Anhangsliste über einen fremden Plan aufrufen -> 404, der Anhang
         # bleibt in der DB erhalten.
         other_plan = self.make_bplan("Anderer Anhang-Plan", self.gemeinde)
@@ -288,24 +336,18 @@ class PlanReferenceBoundaryPermissions(PermissionTestBase):
         )
 
 
-# Testklasse: BeitragStellungnahmePermissions.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeitragStellungnahmePermissions(PermissionTestBase):
     """
-    Zusätzliche Permission-/IDOR-Regressionstests für
-    Beteiligungsbeiträge und Stellungnahmen.
+    Rechte rund um Beiträge, Stellungnahmen und Anhänge beim BPlan.
 
-    Erwartete Berechtigungslogik:
-    - Ein Admin mindestens einer Plan-Gemeinde darf relationale Unterobjekte
-      (Beiträge/Stellungnahmen) lesen, anlegen, ändern und löschen.
-    - Plan/Beteiligung/Beitrag dürfen über URL-IDs nicht beliebig kombiniert
-      werden.
-    - Eine Stellungnahme gehört immer genau zu dem Beitrag, der über die
-      URL-Kette Plan -> Beteiligung -> Beitrag aufgelöst wurde.
+    Erwartet: Ein Administrator mindestens einer Gemeinde des Plans darf Beiträge und
+    Stellungnahmen lesen, anlegen, ändern und löschen. Ein angemeldeter Fremder erhält 403, auch
+    bei direktem POST. Plan, Beteiligung und Beitrag müssen in der URL zusammenpassen, sonst
+    404.
     """
 
     def make_beitrag(self, beteiligung):
+        """Legt einen Beitrag an der übergebenen Beteiligung an."""
         # Hilfsfunktion: legt einen bereits freigeschalteten Beitrag zu
         # einer vorhandenen Beteiligung an.
         return BPlanBeteiligungBeitrag.objects.create(
@@ -321,12 +363,14 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
         )
 
     def make_beitrag_for_plan(self, plan):
+        """Legt zum BPlan eine Beteiligung und einen Beitrag an."""
         # Hilfsfunktion: Beteiligung + Beitrag in einem Schritt für den Plan anlegen.
         beteiligung = self.make_toeb_beteiligung(plan)
         return self.make_beitrag(beteiligung)
 
     @staticmethod
     def make_stellungnahme(beitrag):
+        """Legt eine leere Stellungnahme (leerer Rich-Text) zu einem Beitrag an."""
         # Hilfsfunktion: legt eine leere Stellungnahme zu einem Beitrag an.
         # Gültiges RichText-Dokument für render_richtext in der Tabelle.
         empty_richtext = '{"type":"doc","content":[]}'
@@ -338,6 +382,7 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
         )
 
     def beitrag_url_kwargs(self, plan, beitrag):
+        """URL-Parameter für Plan, Beteiligung und Beitrag."""
         # Hilfsfunktion: baut die URL-kwargs für Beitrags-Views zusammen.
         return {
             "plantyp": "bplan",
@@ -347,6 +392,10 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
         }
 
     def stellungnahme_url_kwargs(self, plan, beitrag, stellungnahme=None):
+        """
+        URL-Parameter für Plan, Beteiligung und Beitrag, bei einer Stellungnahme zusätzlich
+        deren pk.
+        """
         # Hilfsfunktion: baut die URL-kwargs für Stellungnahme-Views zusammen.
         kwargs = {
             "plantyp": "bplan",
@@ -362,10 +411,17 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
     # Beiträge: List
     # ------------------------------------------------------------------
 
-    # Testfall: Beitrag auflisten foreign Benutzer get ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_list_foreign_user_get_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Fremder öffnet die Beitragsliste einer Beteiligung.
+
+        Warum:
+            Beiträge enthalten persönliche Daten.
+
+        Erwartung:
+            Status 403.
+        """
     # Fremder Nutzer darf die Beitragsliste nicht sehen (403).
         beteiligung = self.make_toeb_beteiligung(self.plan)
         self.client.force_login(self.fremder_user)
@@ -383,10 +439,14 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: Beitrag auflisten Administrator get ist allowed.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_list_admin_get_is_allowed(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator öffnet die Beitragsliste.
+
+        Erwartung:
+            Status 200.
+        """
     # Gemeinde-Admin darf die Beitragsliste sehen (200).
         beitrag = self.make_beitrag_for_plan(self.plan)
         self.client.force_login(self.gemeinde_admin)
@@ -408,10 +468,17 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
     # Beiträge: Create
     # ------------------------------------------------------------------
 
-    # Testfall: Beitrag erstellen foreign Benutzer direct post ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_create_foreign_user_direct_post_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder sendet einen leeren POST an die manuelle Erfassung.
+
+        Warum:
+            Auch der direkte POST muss gesperrt sein.
+
+        Erwartung:
+            Status 403.
+        """
     # Direkter POST ohne GET zuvor - fremder Nutzer darf trotzdem nichts anlegen.
         beteiligung = self.make_toeb_beteiligung(self.plan)
         self.client.force_login(self.fremder_user)
@@ -430,10 +497,18 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: Beitrag generic erstellen cross Plan ist 404.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_generic_create_cross_plan_is_404(self):
+        """
+        Was wird geprüft:
+            Der Administrator öffnet die manuelle Erfassung mit der Beteiligung eines
+            anderen Plans.
+
+        Warum:
+            Plan und Beteiligung müssen zusammenpassen.
+
+        Erwartung:
+            Status 404.
+        """
     # planid gehört zu self.plan, beteiligungid zu other_plan -> 404.
         other_plan = self.make_bplan("Anderer Create-Plan", self.gemeinde)
         other_beteiligung = self.make_toeb_beteiligung(other_plan)
@@ -456,10 +531,14 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
     # Beiträge: Update
     # ------------------------------------------------------------------
 
-    # Testfall: Beitrag aktualisieren foreign Benutzer get ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_update_foreign_user_get_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder öffnet das Bearbeiten-Formular eines Beitrags.
+
+        Erwartung:
+            Status 403.
+        """
     # Fremder Nutzer darf das Update-Formular nicht per GET öffnen.
         beitrag = self.make_beitrag_for_plan(self.plan)
         self.client.force_login(self.fremder_user)
@@ -478,10 +557,17 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: Beitrag aktualisieren foreign Benutzer direct post ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_update_foreign_user_direct_post_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder sendet einen POST an das Bearbeiten-Formular.
+
+        Warum:
+            Auch der direkte POST muss gesperrt sein.
+
+        Erwartung:
+            Status 403.
+        """
     # Gleiche Sperre auch für den direkten POST.
         beitrag = self.make_beitrag_for_plan(self.plan)
         self.client.force_login(self.fremder_user)
@@ -505,10 +591,17 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
     # Beiträge: Delete
     # ------------------------------------------------------------------
 
-    # Testfall: Beitrag löschen foreign Benutzer direct post ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_delete_foreign_user_direct_post_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder löscht einen Beitrag per POST.
+
+        Warum:
+            Löschen ist die weitreichendste Aktion.
+
+        Erwartung:
+            Status 403 und der Beitrag bleibt bestehen.
+        """
     # Fremder Nutzer darf den Beitrag nicht löschen - Beitrag bleibt erhalten.
         beitrag = self.make_beitrag_for_plan(self.plan)
         self.client.force_login(self.fremder_user)
@@ -530,10 +623,19 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
             BPlanBeteiligungBeitrag.objects.filter(pk=beitrag.pk).exists()
         )
 
-    # Testfall: Beitrag löschen Administrator of one Plan Gemeinde ist allowed.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_delete_admin_of_one_plan_gemeinde_is_allowed(self):
+        """
+        Was wird geprüft:
+            Der Plan gehört zwei Gemeinden, der Administrator ist nur in einer davon
+            Administrator und löscht einen Beitrag.
+
+        Warum:
+            Für Rechte an Beiträgen genügt die Administratorrolle in einer der Gemeinden des
+            Plans.
+
+        Erwartung:
+            Weiterleitung (302) und der Beitrag existiert nicht mehr.
+        """
     # Admin, der nur für eine von mehreren Plan-Gemeinden zuständig ist, darf trotzdem löschen.
         second_gemeinde = self.make_gemeinde("Zweite Gemeinde", 1201)
         self.plan.gemeinde.add(second_gemeinde)
@@ -564,10 +666,14 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
     # Stellungnahmen: List
     # ------------------------------------------------------------------
 
-    # Testfall: stellungnahme auflisten foreign Benutzer get ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_list_foreign_user_get_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder öffnet die Liste der Stellungnahmen zu einem Beitrag.
+
+        Erwartung:
+            Status 403.
+        """
     # Fremder Nutzer darf die Stellungnahmeliste nicht sehen.
         beitrag = self.make_beitrag_for_plan(self.plan)
         self.make_stellungnahme(beitrag)
@@ -582,10 +688,14 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: stellungnahme auflisten Administrator get ist allowed.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_list_admin_get_is_allowed(self):
+        """
+        Was wird geprüft:
+            Der Administrator öffnet die Stellungnahmeliste.
+
+        Erwartung:
+            Status 200.
+        """
     # Gemeinde-Admin darf die Stellungnahmeliste sehen.
         beitrag = self.make_beitrag_for_plan(self.plan)
         self.make_stellungnahme(beitrag)
@@ -600,10 +710,17 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: stellungnahme auflisten falsch Beteiligung ist 404.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_list_wrong_beteiligung_is_404(self):
+        """
+        Was wird geprüft:
+            Die Stellungnahmeliste mit der ID einer anderen Beteiligung desselben Plans.
+
+        Warum:
+            Beitrag und Beteiligung müssen zusammenpassen.
+
+        Erwartung:
+            Status 404.
+        """
     # beteiligungid passt nicht zum Beitrag (falsche Beteiligung desselben Plans) -> 404.
         beitrag = self.make_beitrag_for_plan(self.plan)
         other_beteiligung = self.make_toeb_beteiligung(self.plan)
@@ -628,10 +745,14 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
     # Stellungnahmen: Create
     # ------------------------------------------------------------------
 
-    # Testfall: stellungnahme erstellen foreign Benutzer get ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_create_foreign_user_get_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder öffnet das Formular zum Anlegen einer Stellungnahme.
+
+        Erwartung:
+            Status 403.
+        """
     # Fremder Nutzer darf das Create-Formular für Stellungnahmen nicht öffnen.
         beitrag = self.make_beitrag_for_plan(self.plan)
         self.client.force_login(self.fremder_user)
@@ -645,10 +766,17 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: stellungnahme erstellen foreign Benutzer direct post ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_create_foreign_user_direct_post_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder sendet einen POST zum Anlegen einer Stellungnahme.
+
+        Warum:
+            Auch der direkte POST muss gesperrt sein.
+
+        Erwartung:
+            Status 403.
+        """
     # Gleiche Sperre auch für den direkten POST.
         beitrag = self.make_beitrag_for_plan(self.plan)
         self.client.force_login(self.fremder_user)
@@ -663,12 +791,21 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: stellungnahme erstellen cross Plan ist 404.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_create_cross_plan_is_404(self):
+        """
+        Was wird geprüft:
+            Der Administrator legt eine Stellungnahme zu einem Beitrag eines anderen Plans
+            über die URL von Plan A an.
+
+        Warum:
+            Plan und Beitrag müssen zusammenpassen.
+
+        Erwartung:
+            Status 404.
+        """
     # beitragid gehört zu einem anderen Plan als planid -> 404.
-        other_plan = self.make_bplan("Anderer Stellungnahme-Create-Plan", self.gemeinde)
+        other_plan = self.make_bplan(
+            "Anderer Stellungnahme-Create-Plan", self.gemeinde)
         other_beitrag = self.make_beitrag_for_plan(other_plan)
         self.client.force_login(self.gemeinde_admin)
 
@@ -690,10 +827,14 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
     # Stellungnahmen: Update
     # ------------------------------------------------------------------
 
-    # Testfall: stellungnahme aktualisieren foreign Benutzer get ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_update_foreign_user_get_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder öffnet das Bearbeiten-Formular einer Stellungnahme.
+
+        Erwartung:
+            Status 403.
+        """
     # Fremder Nutzer darf das Update-Formular nicht öffnen.
         beitrag = self.make_beitrag_for_plan(self.plan)
         statement = self.make_stellungnahme(beitrag)
@@ -710,10 +851,14 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: stellungnahme aktualisieren foreign Benutzer direct post ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_update_foreign_user_direct_post_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder sendet einen POST an das Bearbeiten-Formular einer Stellungnahme.
+
+        Erwartung:
+            Status 403.
+        """
     # Gleiche Sperre auch für den direkten POST.
         beitrag = self.make_beitrag_for_plan(self.plan)
         statement = self.make_stellungnahme(beitrag)
@@ -731,12 +876,21 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: stellungnahme aktualisieren cannot cross contribution boundary.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_update_cannot_cross_contribution_boundary(self):
+        """
+        Was wird geprüft:
+            Eine Stellungnahme von Beitrag B (anderer Plan) wird über die URL eines eigenen
+            Beitrags bearbeitet.
+
+        Warum:
+            Stellungnahme und Beitrag in der URL müssen zusammenpassen.
+
+        Erwartung:
+            Status 404.
+        """
     # pk der Stellungnahme gehört zu einem Beitrag eines anderen Plans -> 404.
-        other_plan = self.make_bplan("Anderer Stellungnahme-Update-Plan", self.gemeinde)
+        other_plan = self.make_bplan(
+            "Anderer Stellungnahme-Update-Plan", self.gemeinde)
         other_beitrag = self.make_beitrag_for_plan(other_plan)
         statement = self.make_stellungnahme(other_beitrag)
 
@@ -762,10 +916,14 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
     # Stellungnahmen: Delete
     # ------------------------------------------------------------------
 
-    # Testfall: stellungnahme löschen foreign Benutzer direct post ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_delete_foreign_user_direct_post_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder löscht eine Stellungnahme per POST.
+
+        Erwartung:
+            Status 403 und die Stellungnahme bleibt bestehen.
+        """
     # Fremder Nutzer darf nicht löschen - Stellungnahme bleibt erhalten.
         beitrag = self.make_beitrag_for_plan(self.plan)
         statement = self.make_stellungnahme(beitrag)
@@ -785,12 +943,21 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
             BPlanBeitragStellungnahme.objects.filter(pk=statement.pk).exists()
         )
 
-    # Testfall: stellungnahme löschen Administrator of one Plan Gemeinde ist allowed.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_delete_admin_of_one_plan_gemeinde_is_allowed(self):
+        """
+        Was wird geprüft:
+            Der Plan gehört zwei Gemeinden, der Administrator ist nur in einer Administrator
+            und löscht eine Stellungnahme.
+
+        Warum:
+            Auch hier genügt die Rolle in einer der Gemeinden.
+
+        Erwartung:
+            Weiterleitung (302) und die Stellungnahme existiert nicht mehr.
+        """
     # Admin einer von mehreren Plan-Gemeinden darf die Stellungnahme löschen.
-        second_gemeinde = self.make_gemeinde("Zweite Stellungnahme-Gemeinde", 1202)
+        second_gemeinde = self.make_gemeinde(
+            "Zweite Stellungnahme-Gemeinde", 1202)
         self.plan.gemeinde.add(second_gemeinde)
 
         beitrag = self.make_beitrag_for_plan(self.plan)
@@ -811,12 +978,21 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
             BPlanBeitragStellungnahme.objects.filter(pk=statement.pk).exists()
         )
 
-    # Testfall: stellungnahme löschen cannot cross contribution boundary.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_delete_cannot_cross_contribution_boundary(self):
+        """
+        Was wird geprüft:
+            Eine Stellungnahme von Beitrag B (anderer Plan) wird über die URL eines eigenen
+            Beitrags gelöscht.
+
+        Warum:
+            Löschen darf nur gelingen, wenn die Kette zusammenpasst.
+
+        Erwartung:
+            Status 404 und die Stellungnahme bleibt bestehen.
+        """
     # Löschen über die falsche Beitrag-Kombination -> 404, Stellungnahme bleibt erhalten.
-        other_plan = self.make_bplan("Anderer Stellungnahme-Delete-Plan", self.gemeinde)
+        other_plan = self.make_bplan(
+            "Anderer Stellungnahme-Delete-Plan", self.gemeinde)
         other_beitrag = self.make_beitrag_for_plan(other_plan)
         statement = self.make_stellungnahme(other_beitrag)
 
@@ -841,37 +1017,17 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
             BPlanBeitragStellungnahme.objects.filter(pk=statement.pk).exists()
         )
 
-    # Testfall: foreign Benutzer cannot löschen beteiligungbeitrag.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
-    def test_foreign_user_cannot_delete_beteiligungbeitrag(self):
-    # Fremder Nutzer darf den Beitrag nicht löschen (403), Beitrag bleibt erhalten.
-        beteiligung = self.make_toeb_beteiligung(self.plan)
-        beitrag = self.make_beitrag(beteiligung)
-
-        self.client.force_login(self.fremder_user)
-
-        response = self.client.post(
-            reverse(
-                "beteiligungbeitrag-delete",
-                kwargs={
-                    "plantyp": "bplan",
-                    "planid": self.plan.pk,
-                    "beteiligungid": beteiligung.pk,
-                    "pk": beitrag.pk,
-                },
-            )
-        )
-
-        self.assertEqual(response.status_code, 403)
-        self.assertTrue(
-            BPlanBeteiligungBeitrag.objects.filter(pk=beitrag.pk).exists()
-        )
-
-    # Testfall: Administrator of one Plan Gemeinde can löschen beteiligungbeitrag.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_of_one_plan_gemeinde_can_delete_beteiligungbeitrag(self):
+        """
+        Was wird geprüft:
+            Der Administrator der Gemeinde löscht einen Beitrag.
+
+        Warum:
+            Der erlaubte Weg darf nicht blockiert sein.
+
+        Erwartung:
+            Weiterleitung (302) und der Beitrag existiert nicht mehr.
+        """
     # Admin der (einzigen) Plan-Gemeinde darf den Beitrag löschen.
         beteiligung = self.make_toeb_beteiligung(self.plan)
         beitrag = self.make_beitrag(beteiligung)
@@ -896,10 +1052,21 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
             BPlanBeteiligungBeitrag.objects.filter(pk=beitrag.pk).exists()
         )
 
-    # Testfall: beteiligungbeitrag cannot cross Plan boundary.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beteiligungbeitrag_cannot_cross_plan_boundary(self):
+        """
+        Was wird geprüft:
+            Ein Beitrag eines anderen Plans wird über die URL von Plan A gelöscht.
+
+        Warum:
+            Löschen darf nur gelingen, wenn Plan, Beteiligung und Beitrag zusammenpassen.
+
+        Erwartung:
+            Status 404 und der Beitrag bleibt bestehen.
+
+        Hinweis:
+            Entspricht test_beteiligungbeitrag_delete_cannot_cross_plan_boundary der anderen
+            Klasse.
+        """
     # planid korrekt, aber beteiligungid/pk gehören zu einem anderen Plan -> 404.
         anderer_plan = self.make_bplan(
             "Anderer Testplan",
@@ -933,25 +1100,29 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
             ).exists()
         )
 
-# Testklasse: FPlanReferenceBoundaryPermissions.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
+
 class FPlanReferenceBoundaryPermissions(PermissionTestBase):
     """
-    FPlan-Variante von PlanReferenceBoundaryPermissions. Regressionstests
-    für die Beziehungskette
+    Verknüpfungskette beim FPlan: Objekte eines anderen Plans sind über die URL nicht
+    erreichbar.
 
-        planid -> beteiligung -> beitrag -> anhang/stellungnahme
-
-    Ziel: Ein Benutzer, der auf Plan A berechtigt ist, darf niemals ein
-    darunter liegendes Objekt von Plan B über frei kombinierbare URL-IDs
-    erreichen.
+    Die Tests legen einen zweiten Plan derselben Gemeinde an. Der angemeldete Administrator hat
+    damit an sich Zugriff auf beide Pläne; ein 404 beweist also, dass nur die Kombination der
+    IDs in der URL nicht zusammenpasst.
     """
 
-    # Testfall: generic erstellen foreign Benutzer gets 403.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_create_foreign_user_gets_403(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Fremder öffnet das Formular zur manuellen Erfassung eines
+            Beitrags beim FPlan.
+
+        Warum:
+            Nur Verantwortliche der Gemeinde dürfen Beiträge von Hand erfassen.
+
+        Erwartung:
+            Status 403.
+        """
         # Fremder Nutzer (kein Admin der Plan-Gemeinde) darf das
         # Create-Formular für einen Beitrag nicht einmal per GET aufrufen.
         beteiligung = self.make_fplan_beteiligung(self.fplan)
@@ -971,10 +1142,17 @@ class FPlanReferenceBoundaryPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: generic erstellen foreign Benutzer cannot post.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_create_foreign_user_cannot_post(self):
+        """
+        Was wird geprüft:
+            Derselbe Fremde sendet direkt einen leeren POST an die manuelle Erfassung.
+
+        Warum:
+            Auch ohne das Formular zu öffnen darf nichts passieren.
+
+        Erwartung:
+            Status 403.
+        """
         # Gleiche Sperre auch für den direkten POST (falls jemand das
         # GET überspringt und das Formular selbst zusammenbaut).
         beteiligung = self.make_fplan_beteiligung(self.fplan)
@@ -995,10 +1173,18 @@ class FPlanReferenceBoundaryPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: generic erstellen weist zurück Beteiligung aus other Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_create_rejects_beteiligung_from_other_plan(self):
+        """
+        Was wird geprüft:
+            Der Administrator öffnet die manuelle Erfassung mit FPlan-ID von Plan A und der
+            Beteiligung von Plan B.
+
+        Warum:
+            Die Beteiligung muss zum Plan in der URL gehören.
+
+        Erwartung:
+            Status 404.
+        """
         # Prüft: planid zeigt auf self.fplan, beteiligungid aber auf
         # eine Beteiligung von other_plan -> muss abgelehnt werden (404).
         # (Die fehlende Assertion wurde ergänzt, siehe Verbesserungsvorschlag 1.)
@@ -1023,10 +1209,18 @@ class FPlanReferenceBoundaryPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 404)
 
-    # Testfall: beteiligungbeitrag auflisten cannot cross Plan boundary.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beteiligungbeitrag_list_cannot_cross_plan_boundary(self):
+        """
+        Was wird geprüft:
+            Die Beitragsliste mit der Beteiligung eines anderen Plans.
+
+        Warum:
+            Über eine fremde Beteiligungs-ID darf die Liste eines anderen Plans nicht
+            erscheinen.
+
+        Erwartung:
+            Status 404.
+        """
         # Liste über die Beteiligung eines anderen Plans aufrufen -> 404,
         # obwohl der Admin für seinen eigenen Plan berechtigt wäre.
         other_plan = self.make_fplan("Anderer Listenplan", self.gemeinde)
@@ -1049,6 +1243,7 @@ class FPlanReferenceBoundaryPermissions(PermissionTestBase):
         self.assertEqual(response.status_code, 404)
 
     def make_beitrag_for_plan(self, plan):
+        """Legt zum FPlan eine Beteiligung und einen Beitrag an."""
         # Hilfsfunktion: legt Beteiligung + Beitrag für den übergebenen Plan an.
         # (FPlanBeteiligungBeitrag ist bereits oben im Modul importiert -
         # der lokale Re-Import war redundant und wurde entfernt.)
@@ -1066,10 +1261,17 @@ class FPlanReferenceBoundaryPermissions(PermissionTestBase):
             withdrawn=False,
         )
 
-    # Testfall: beteiligungbeitrag löschen cannot cross Plan boundary.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beteiligungbeitrag_delete_cannot_cross_plan_boundary(self):
+        """
+        Was wird geprüft:
+            Ein Beitrag von Plan B wird über eine URL mit der Plan-ID von Plan A gelöscht.
+
+        Warum:
+            Löschen darf nur gelingen, wenn Plan, Beteiligung und Beitrag zusammenpassen.
+
+        Erwartung:
+            Status 404 und der Beitrag bleibt bestehen.
+        """
         # Löschen über die falsche Plan/Beteiligung-Kombination -> 404,
         # der fremde Beitrag muss danach noch existieren.
         other_plan = self.make_fplan("Anderer Delete-Plan", self.gemeinde)
@@ -1095,10 +1297,22 @@ class FPlanReferenceBoundaryPermissions(PermissionTestBase):
             type(other_beitrag).objects.filter(pk=other_beitrag.pk).exists()
         )
 
-    # Testfall: generic Beitrag erstellen cannot mix Plan and Beteiligung.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_beitrag_create_cannot_mix_plan_and_beteiligung(self):
+        """
+        Was wird geprüft:
+            Die manuelle Erfassung mit Plan A in der URL und der Beteiligung von Plan B.
+
+        Warum:
+            Absicherung gegen vermischte IDs.
+
+        Erwartung:
+            Status 404.
+
+        Hinweis:
+            Inhaltlich identisch mit
+            test_generic_create_rejects_beteiligung_from_other_plan; kann zusammengelegt
+            werden.
+        """
         # Wie test_generic_create_rejects_beteiligung_from_other_plan, aber
         # diesmal MIT der erwarteten 404-Assertion.
         other_plan = self.make_fplan("Anderer Create-Plan", self.gemeinde)
@@ -1119,10 +1333,17 @@ class FPlanReferenceBoundaryPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 404)
 
-    # Testfall: generic Beitrag aktualisieren cannot cross Plan boundary.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_beitrag_update_cannot_cross_plan_boundary(self):
+        """
+        Was wird geprüft:
+            Das Bearbeiten-Formular eines Beitrags von Plan B über die URL von Plan A.
+
+        Warum:
+            Bearbeiten darf nur gelingen, wenn Plan, Beteiligung und Beitrag zusammenpassen.
+
+        Erwartung:
+            Status 404.
+        """
         # Update-Formular über eine falsche Plan/Beitrag-Kombination -> 404.
         other_plan = self.make_fplan("Anderer Update-Plan", self.gemeinde)
         other_beitrag = self.make_beitrag_for_plan(other_plan)
@@ -1144,13 +1365,21 @@ class FPlanReferenceBoundaryPermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 404)
 
-    # Testfall: stellungnahme auflisten cannot cross Plan boundary.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_list_cannot_cross_plan_boundary(self):
+        """
+        Was wird geprüft:
+            Die Stellungnahmeliste eines Beitrags von Plan B über die URL von Plan A.
+
+        Warum:
+            Stellungnahmen (Abwägung) dürfen nicht über fremde Pläne erreichbar sein.
+
+        Erwartung:
+            Status 404 und die Stellungnahme bleibt bestehen.
+        """
         # Stellungnahme über einen fremden Plan aufrufen -> 404, Stellungnahme
         # bleibt in der DB unangetastet.
-        other_plan = self.make_fplan("Anderer Stellungnahme-Plan", self.gemeinde)
+        other_plan = self.make_fplan(
+            "Anderer Stellungnahme-Plan", self.gemeinde)
         other_beitrag = self.make_beitrag_for_plan(other_plan)
         statement = FPlanBeitragStellungnahme.objects.create(
             beitrag=other_beitrag,
@@ -1176,10 +1405,18 @@ class FPlanReferenceBoundaryPermissions(PermissionTestBase):
             FPlanBeitragStellungnahme.objects.filter(pk=statement.pk).exists()
         )
 
-    # Testfall: anhang auflisten cannot cross Plan boundary.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anhang_list_cannot_cross_plan_boundary(self):
+        """
+        Was wird geprüft:
+            Die Anhangliste eines Beitrags von Plan B über die URL von Plan A.
+
+        Warum:
+            Anhänge können persönliche Daten enthalten und dürfen nicht über fremde Pläne
+            erreichbar sein.
+
+        Erwartung:
+            Status 404 und der Anhang bleibt bestehen.
+        """
         # Anhangsliste über einen fremden Plan aufrufen -> 404, der Anhang
         # bleibt in der DB erhalten.
         other_plan = self.make_fplan("Anderer Anhang-Plan", self.gemeinde)
@@ -1210,27 +1447,18 @@ class FPlanReferenceBoundaryPermissions(PermissionTestBase):
         )
 
 
-
-
-# Testklasse: FPlanBeitragStellungnahmePermissions.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
     """
-    FPlan-Variante von BeitragStellungnahmePermissions. Zusätzliche
-    Permission-/IDOR-Regressionstests für Beteiligungsbeiträge und
-    Stellungnahmen.
+    Rechte rund um Beiträge, Stellungnahmen und Anhänge beim FPlan.
 
-    Erwartete Berechtigungslogik:
-    - Ein Admin mindestens einer Plan-Gemeinde darf relationale Unterobjekte
-      (Beiträge/Stellungnahmen) lesen, anlegen, ändern und löschen.
-    - Plan/Beteiligung/Beitrag dürfen über URL-IDs nicht beliebig kombiniert
-      werden.
-    - Eine Stellungnahme gehört immer genau zu dem Beitrag, der über die
-      URL-Kette Plan -> Beteiligung -> Beitrag aufgelöst wurde.
+    Erwartet: Ein Administrator mindestens einer Gemeinde des Plans darf Beiträge und
+    Stellungnahmen lesen, anlegen, ändern und löschen. Ein angemeldeter Fremder erhält 403, auch
+    bei direktem POST. Plan, Beteiligung und Beitrag müssen in der URL zusammenpassen, sonst
+    404.
     """
 
     def make_beitrag(self, beteiligung):
+        """Legt einen Beitrag an der übergebenen Beteiligung an."""
         # Hilfsfunktion: legt einen bereits freigeschalteten Beitrag zu
         # einer vorhandenen Beteiligung an.
         return FPlanBeteiligungBeitrag.objects.create(
@@ -1246,12 +1474,14 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
         )
 
     def make_beitrag_for_plan(self, plan):
+        """Legt zum FPlan eine Beteiligung und einen Beitrag an."""
         # Hilfsfunktion: Beteiligung + Beitrag in einem Schritt für den Plan anlegen.
         beteiligung = self.make_fplan_toeb_beteiligung(plan)
         return self.make_beitrag(beteiligung)
 
     @staticmethod
     def make_stellungnahme(beitrag):
+        """Legt eine leere Stellungnahme (leerer Rich-Text) zu einem Beitrag an."""
         # Hilfsfunktion: legt eine leere Stellungnahme zu einem Beitrag an.
         # Gültiges RichText-Dokument für render_richtext in der Tabelle.
         empty_richtext = '{"type":"doc","content":[]}'
@@ -1263,6 +1493,7 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
         )
 
     def beitrag_url_kwargs(self, plan, beitrag):
+        """URL-Parameter für Plan, Beteiligung und Beitrag."""
         # Hilfsfunktion: baut die URL-kwargs für Beitrags-Views zusammen.
         return {
             "plantyp": "fplan",
@@ -1272,6 +1503,10 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
         }
 
     def stellungnahme_url_kwargs(self, plan, beitrag, stellungnahme=None):
+        """
+        URL-Parameter für Plan, Beteiligung und Beitrag, bei einer Stellungnahme zusätzlich
+        deren pk.
+        """
         # Hilfsfunktion: baut die URL-kwargs für Stellungnahme-Views zusammen.
         kwargs = {
             "plantyp": "fplan",
@@ -1287,10 +1522,17 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
     # Beiträge: List
     # ------------------------------------------------------------------
 
-    # Testfall: Beitrag auflisten foreign Benutzer get ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_list_foreign_user_get_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Fremder öffnet die Beitragsliste einer Beteiligung.
+
+        Warum:
+            Beiträge enthalten persönliche Daten.
+
+        Erwartung:
+            Status 403.
+        """
     # Fremder Nutzer darf die Beitragsliste nicht sehen (403).
         beteiligung = self.make_fplan_toeb_beteiligung(self.fplan)
         self.client.force_login(self.fremder_user)
@@ -1308,10 +1550,14 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: Beitrag auflisten Administrator get ist allowed.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_list_admin_get_is_allowed(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator öffnet die Beitragsliste.
+
+        Erwartung:
+            Status 200.
+        """
     # Gemeinde-Admin darf die Beitragsliste sehen (200).
         beitrag = self.make_beitrag_for_plan(self.fplan)
         self.client.force_login(self.gemeinde_admin)
@@ -1333,10 +1579,17 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
     # Beiträge: Create
     # ------------------------------------------------------------------
 
-    # Testfall: Beitrag erstellen foreign Benutzer direct post ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_create_foreign_user_direct_post_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder sendet einen leeren POST an die manuelle Erfassung.
+
+        Warum:
+            Auch der direkte POST muss gesperrt sein.
+
+        Erwartung:
+            Status 403.
+        """
     # Direkter POST ohne GET zuvor - fremder Nutzer darf trotzdem nichts anlegen.
         beteiligung = self.make_fplan_toeb_beteiligung(self.fplan)
         self.client.force_login(self.fremder_user)
@@ -1355,10 +1608,18 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: Beitrag generic erstellen cross Plan ist 404.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_generic_create_cross_plan_is_404(self):
+        """
+        Was wird geprüft:
+            Der Administrator öffnet die manuelle Erfassung mit der Beteiligung eines
+            anderen Plans.
+
+        Warum:
+            Plan und Beteiligung müssen zusammenpassen.
+
+        Erwartung:
+            Status 404.
+        """
     # planid gehört zu self.fplan, beteiligungid zu other_plan -> 404.
         other_plan = self.make_fplan("Anderer Create-Plan", self.gemeinde)
         other_beteiligung = self.make_fplan_toeb_beteiligung(other_plan)
@@ -1381,10 +1642,14 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
     # Beiträge: Update
     # ------------------------------------------------------------------
 
-    # Testfall: Beitrag aktualisieren foreign Benutzer get ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_update_foreign_user_get_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder öffnet das Bearbeiten-Formular eines Beitrags.
+
+        Erwartung:
+            Status 403.
+        """
     # Fremder Nutzer darf das Update-Formular nicht per GET öffnen.
         beitrag = self.make_beitrag_for_plan(self.fplan)
         self.client.force_login(self.fremder_user)
@@ -1403,10 +1668,17 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: Beitrag aktualisieren foreign Benutzer direct post ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_update_foreign_user_direct_post_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder sendet einen POST an das Bearbeiten-Formular.
+
+        Warum:
+            Auch der direkte POST muss gesperrt sein.
+
+        Erwartung:
+            Status 403.
+        """
     # Gleiche Sperre auch für den direkten POST.
         beitrag = self.make_beitrag_for_plan(self.fplan)
         self.client.force_login(self.fremder_user)
@@ -1430,10 +1702,17 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
     # Beiträge: Delete
     # ------------------------------------------------------------------
 
-    # Testfall: Beitrag löschen foreign Benutzer direct post ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_delete_foreign_user_direct_post_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder löscht einen Beitrag per POST.
+
+        Warum:
+            Löschen ist die weitreichendste Aktion.
+
+        Erwartung:
+            Status 403 und der Beitrag bleibt bestehen.
+        """
     # Fremder Nutzer darf den Beitrag nicht löschen - Beitrag bleibt erhalten.
         beitrag = self.make_beitrag_for_plan(self.fplan)
         self.client.force_login(self.fremder_user)
@@ -1455,10 +1734,19 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
             FPlanBeteiligungBeitrag.objects.filter(pk=beitrag.pk).exists()
         )
 
-    # Testfall: Beitrag löschen Administrator of one Plan Gemeinde ist allowed.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beitrag_delete_admin_of_one_plan_gemeinde_is_allowed(self):
+        """
+        Was wird geprüft:
+            Der Plan gehört zwei Gemeinden, der Administrator ist nur in einer davon
+            Administrator und löscht einen Beitrag.
+
+        Warum:
+            Für Rechte an Beiträgen genügt die Administratorrolle in einer der Gemeinden des
+            Plans.
+
+        Erwartung:
+            Weiterleitung (302) und der Beitrag existiert nicht mehr.
+        """
     # Admin, der nur für eine von mehreren Plan-Gemeinden zuständig ist, darf trotzdem löschen.
         second_gemeinde = self.make_gemeinde("Zweite Gemeinde (FPlan)", 1301)
         self.fplan.gemeinde.add(second_gemeinde)
@@ -1489,10 +1777,14 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
     # Stellungnahmen: List
     # ------------------------------------------------------------------
 
-    # Testfall: stellungnahme auflisten foreign Benutzer get ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_list_foreign_user_get_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder öffnet die Liste der Stellungnahmen zu einem Beitrag.
+
+        Erwartung:
+            Status 403.
+        """
     # Fremder Nutzer darf die Stellungnahmeliste nicht sehen.
         beitrag = self.make_beitrag_for_plan(self.fplan)
         self.make_stellungnahme(beitrag)
@@ -1507,10 +1799,14 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: stellungnahme auflisten Administrator get ist allowed.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_list_admin_get_is_allowed(self):
+        """
+        Was wird geprüft:
+            Der Administrator öffnet die Stellungnahmeliste.
+
+        Erwartung:
+            Status 200.
+        """
     # Gemeinde-Admin darf die Stellungnahmeliste sehen.
         beitrag = self.make_beitrag_for_plan(self.fplan)
         self.make_stellungnahme(beitrag)
@@ -1525,10 +1821,17 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: stellungnahme auflisten falsch Beteiligung ist 404.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_list_wrong_beteiligung_is_404(self):
+        """
+        Was wird geprüft:
+            Die Stellungnahmeliste mit der ID einer anderen Beteiligung desselben Plans.
+
+        Warum:
+            Beitrag und Beteiligung müssen zusammenpassen.
+
+        Erwartung:
+            Status 404.
+        """
     # beteiligungid passt nicht zum Beitrag (falsche Beteiligung desselben Plans) -> 404.
         beitrag = self.make_beitrag_for_plan(self.fplan)
         other_beteiligung = self.make_fplan_toeb_beteiligung(self.fplan)
@@ -1553,10 +1856,14 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
     # Stellungnahmen: Create
     # ------------------------------------------------------------------
 
-    # Testfall: stellungnahme erstellen foreign Benutzer get ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_create_foreign_user_get_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder öffnet das Formular zum Anlegen einer Stellungnahme.
+
+        Erwartung:
+            Status 403.
+        """
     # Fremder Nutzer darf das Create-Formular für Stellungnahmen nicht öffnen.
         beitrag = self.make_beitrag_for_plan(self.fplan)
         self.client.force_login(self.fremder_user)
@@ -1570,10 +1877,17 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: stellungnahme erstellen foreign Benutzer direct post ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_create_foreign_user_direct_post_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder sendet einen POST zum Anlegen einer Stellungnahme.
+
+        Warum:
+            Auch der direkte POST muss gesperrt sein.
+
+        Erwartung:
+            Status 403.
+        """
     # Gleiche Sperre auch für den direkten POST.
         beitrag = self.make_beitrag_for_plan(self.fplan)
         self.client.force_login(self.fremder_user)
@@ -1588,12 +1902,21 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: stellungnahme erstellen cross Plan ist 404.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_create_cross_plan_is_404(self):
+        """
+        Was wird geprüft:
+            Der Administrator legt eine Stellungnahme zu einem Beitrag eines anderen Plans
+            über die URL von Plan A an.
+
+        Warum:
+            Plan und Beitrag müssen zusammenpassen.
+
+        Erwartung:
+            Status 404.
+        """
     # beitragid gehört zu einem anderen Plan als planid -> 404.
-        other_plan = self.make_fplan("Anderer Stellungnahme-Create-Plan", self.gemeinde)
+        other_plan = self.make_fplan(
+            "Anderer Stellungnahme-Create-Plan", self.gemeinde)
         other_beitrag = self.make_beitrag_for_plan(other_plan)
         self.client.force_login(self.gemeinde_admin)
 
@@ -1615,10 +1938,14 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
     # Stellungnahmen: Update
     # ------------------------------------------------------------------
 
-    # Testfall: stellungnahme aktualisieren foreign Benutzer get ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_update_foreign_user_get_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder öffnet das Bearbeiten-Formular einer Stellungnahme.
+
+        Erwartung:
+            Status 403.
+        """
     # Fremder Nutzer darf das Update-Formular nicht öffnen.
         beitrag = self.make_beitrag_for_plan(self.fplan)
         statement = self.make_stellungnahme(beitrag)
@@ -1635,10 +1962,14 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: stellungnahme aktualisieren foreign Benutzer direct post ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_update_foreign_user_direct_post_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder sendet einen POST an das Bearbeiten-Formular einer Stellungnahme.
+
+        Erwartung:
+            Status 403.
+        """
     # Gleiche Sperre auch für den direkten POST.
         beitrag = self.make_beitrag_for_plan(self.fplan)
         statement = self.make_stellungnahme(beitrag)
@@ -1656,12 +1987,21 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
 
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: stellungnahme aktualisieren cannot cross contribution boundary.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_update_cannot_cross_contribution_boundary(self):
+        """
+        Was wird geprüft:
+            Eine Stellungnahme von Beitrag B (anderer Plan) wird über die URL eines eigenen
+            Beitrags bearbeitet.
+
+        Warum:
+            Stellungnahme und Beitrag in der URL müssen zusammenpassen.
+
+        Erwartung:
+            Status 404.
+        """
     # pk der Stellungnahme gehört zu einem Beitrag eines anderen Plans -> 404.
-        other_plan = self.make_fplan("Anderer Stellungnahme-Update-Plan", self.gemeinde)
+        other_plan = self.make_fplan(
+            "Anderer Stellungnahme-Update-Plan", self.gemeinde)
         other_beitrag = self.make_beitrag_for_plan(other_plan)
         statement = self.make_stellungnahme(other_beitrag)
 
@@ -1687,10 +2027,14 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
     # Stellungnahmen: Delete
     # ------------------------------------------------------------------
 
-    # Testfall: stellungnahme löschen foreign Benutzer direct post ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_delete_foreign_user_direct_post_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Fremder löscht eine Stellungnahme per POST.
+
+        Erwartung:
+            Status 403 und die Stellungnahme bleibt bestehen.
+        """
     # Fremder Nutzer darf nicht löschen - Stellungnahme bleibt erhalten.
         beitrag = self.make_beitrag_for_plan(self.fplan)
         statement = self.make_stellungnahme(beitrag)
@@ -1710,12 +2054,21 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
             FPlanBeitragStellungnahme.objects.filter(pk=statement.pk).exists()
         )
 
-    # Testfall: stellungnahme löschen Administrator of one Plan Gemeinde ist allowed.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_delete_admin_of_one_plan_gemeinde_is_allowed(self):
+        """
+        Was wird geprüft:
+            Der Plan gehört zwei Gemeinden, der Administrator ist nur in einer Administrator
+            und löscht eine Stellungnahme.
+
+        Warum:
+            Auch hier genügt die Rolle in einer der Gemeinden.
+
+        Erwartung:
+            Weiterleitung (302) und die Stellungnahme existiert nicht mehr.
+        """
     # Admin einer von mehreren Plan-Gemeinden darf die Stellungnahme löschen.
-        second_gemeinde = self.make_gemeinde("Zweite Stellungnahme-Gemeinde (FPlan)", 1302)
+        second_gemeinde = self.make_gemeinde(
+            "Zweite Stellungnahme-Gemeinde (FPlan)", 1302)
         self.fplan.gemeinde.add(second_gemeinde)
 
         beitrag = self.make_beitrag_for_plan(self.fplan)
@@ -1736,12 +2089,21 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
             FPlanBeitragStellungnahme.objects.filter(pk=statement.pk).exists()
         )
 
-    # Testfall: stellungnahme löschen cannot cross contribution boundary.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_stellungnahme_delete_cannot_cross_contribution_boundary(self):
+        """
+        Was wird geprüft:
+            Eine Stellungnahme von Beitrag B (anderer Plan) wird über die URL eines eigenen
+            Beitrags gelöscht.
+
+        Warum:
+            Löschen darf nur gelingen, wenn die Kette zusammenpasst.
+
+        Erwartung:
+            Status 404 und die Stellungnahme bleibt bestehen.
+        """
     # Löschen über die falsche Beitrag-Kombination -> 404, Stellungnahme bleibt erhalten.
-        other_plan = self.make_fplan("Anderer Stellungnahme-Delete-Plan", self.gemeinde)
+        other_plan = self.make_fplan(
+            "Anderer Stellungnahme-Delete-Plan", self.gemeinde)
         other_beitrag = self.make_beitrag_for_plan(other_plan)
         statement = self.make_stellungnahme(other_beitrag)
 
@@ -1766,10 +2128,17 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
             FPlanBeitragStellungnahme.objects.filter(pk=statement.pk).exists()
         )
 
-    # Testfall: foreign Benutzer cannot löschen beteiligungbeitrag.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_delete_beteiligungbeitrag(self):
+        """
+        Was wird geprüft:
+            Ein Fremder löscht einen Beitrag über die normale Löschen-Ansicht.
+
+        Warum:
+            Doppelt zu test_beitrag_delete_foreign_user_direct_post_is_forbidden.
+
+        Erwartung:
+            Status 403 und der Beitrag bleibt bestehen.
+        """
     # Fremder Nutzer darf den Beitrag nicht löschen (403), Beitrag bleibt erhalten.
         beteiligung = self.make_fplan_toeb_beteiligung(self.fplan)
         beitrag = self.make_beitrag(beteiligung)
@@ -1793,10 +2162,17 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
             FPlanBeteiligungBeitrag.objects.filter(pk=beitrag.pk).exists()
         )
 
-    # Testfall: Administrator of one Plan Gemeinde can löschen beteiligungbeitrag.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_admin_of_one_plan_gemeinde_can_delete_beteiligungbeitrag(self):
+        """
+        Was wird geprüft:
+            Der Administrator der Gemeinde löscht einen Beitrag.
+
+        Warum:
+            Der erlaubte Weg darf nicht blockiert sein.
+
+        Erwartung:
+            Weiterleitung (302) und der Beitrag existiert nicht mehr.
+        """
     # Admin der (einzigen) Plan-Gemeinde darf den Beitrag löschen.
         beteiligung = self.make_fplan_toeb_beteiligung(self.fplan)
         beitrag = self.make_beitrag(beteiligung)
@@ -1821,10 +2197,21 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
             FPlanBeteiligungBeitrag.objects.filter(pk=beitrag.pk).exists()
         )
 
-    # Testfall: beteiligungbeitrag cannot cross Plan boundary.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_beteiligungbeitrag_cannot_cross_plan_boundary(self):
+        """
+        Was wird geprüft:
+            Ein Beitrag eines anderen Plans wird über die URL von Plan A gelöscht.
+
+        Warum:
+            Löschen darf nur gelingen, wenn Plan, Beteiligung und Beitrag zusammenpassen.
+
+        Erwartung:
+            Status 404 und der Beitrag bleibt bestehen.
+
+        Hinweis:
+            Entspricht test_beteiligungbeitrag_delete_cannot_cross_plan_boundary der anderen
+            Klasse.
+        """
     # planid korrekt, aber beteiligungid/pk gehören zu einem anderen Plan -> 404.
         anderer_plan = self.make_fplan(
             "Anderer Testplan",

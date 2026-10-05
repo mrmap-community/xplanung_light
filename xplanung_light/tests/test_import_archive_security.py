@@ -1,11 +1,9 @@
-"""Security and robustness regression tests for ZIP/XPlan archive imports.
+"""
+Sicherheits- und Robustheitstests für den Import von ZIP-Archiven mit XPlanung-GML.
 
-Focus:
-- ZIP archive validation before the import helper is used
-- exactly one GML document per archive
-- archive must contain a GML document
-- malformed ZIPs are rejected instead of being imported
-- both BPlan and FPlan archive-import views enforce municipality-admin access
+Schwerpunkte: Das ZIP wird vor dem Import validiert, es muss genau ein GML-Dokument enthalten,
+defekte ZIP-Dateien werden nicht importiert, und beide Archiv-Import-Views verlangen
+Administratorrechte für die Gemeinden aus dem GML.
 """
 
 import io
@@ -40,6 +38,10 @@ GEOMETRIE = """<gml:Polygon srsName="EPSG:25832" gml:id="GML_geltungsbereich">
 
 
 def make_plan_gml(name="ZIP-Security-Test", plan_tag="BP_Plan"):
+    """
+    Erzeugt ein minimales XPlanung-GML (UTF-8) mit Name, Nummer, Geltungsbereich und Gemeinde.
+    plan_tag ist BP_Plan oder FP_Plan.
+    """
     return f"""<?xml version="1.0" encoding="utf-8"?>
 <xplan:XPlanAuszug xmlns:xplan="{XPLAN_NS}" xmlns:gml="{GML_NS}">
   <gml:featureMember>
@@ -61,6 +63,10 @@ def make_plan_gml(name="ZIP-Security-Test", plan_tag="BP_Plan"):
 
 
 def make_zip(files):
+    """
+    Packt die übergebenen Dateien (Name -> Inhalt) in ein ZIP im Speicher und liefert dessen
+    Bytes.
+    """
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for filename, data in files.items():
@@ -72,6 +78,7 @@ def make_zip(files):
 
 
 def upload_zip(files, name="archive.zip"):
+    """Verpackt ein ZIP als hochgeladene Datei, wie sie ein Formular liefert."""
     return SimpleUploadedFile(
         name,
         make_zip(files),
@@ -79,11 +86,12 @@ def upload_zip(files, name="archive.zip"):
     )
 
 
-# Testklasse: ArchiveValidatorSecurityTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ArchiveValidatorSecurityTests(TestCase):
-    """The upload validators must reject structurally unsafe archives."""
+    """
+    Die Upload-Validatoren müssen strukturell unsichere Archive ablehnen.
+
+    setUp: legt die Gemeinde an, die im Test-GML genannt wird (Neustadt an der Weinstraße).
+    """
 
     def setUp(self):
         AdministrativeOrganization.objects.get_or_create(
@@ -93,28 +101,47 @@ class ArchiveValidatorSecurityTests(TestCase):
             name=GEMEINDE_NAME,
         )
 
-    # Testfall: B-Plan archive erfordert at least one GML.
-    # Erwartung/Absicherung: verwendet assertRaises.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_archive_requires_at_least_one_gml(self):
+        """
+        Was wird geprüft:
+            Ein ZIP ohne GML-Datei beim BPlan-Validator.
+
+        Warum:
+            Ohne Plandokument gibt es nichts zu importieren.
+
+        Erwartung:
+            ValidationError.
+        """
         upload = upload_zip({"readme.txt": b"no GML here"})
 
         with self.assertRaises(ValidationError):
             bplan_upload_file_validator(upload)
 
-    # Testfall: F-Plan archive erfordert at least one GML.
-    # Erwartung/Absicherung: verwendet assertRaises.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_archive_requires_at_least_one_gml(self):
+        """
+        Was wird geprüft:
+            Dasselbe für den FPlan-Validator.
+
+        Erwartung:
+            ValidationError.
+        """
         upload = upload_zip({"readme.txt": b"no GML here"})
 
         with self.assertRaises(ValidationError):
             fplan_upload_file_validator(upload)
 
-    # Testfall: B-Plan archive weist zurück multiple GML files.
-    # Erwartung/Absicherung: verwendet assertRaises.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_archive_rejects_multiple_gml_files(self):
+        """
+        Was wird geprüft:
+            Ein ZIP mit zwei GML-Dateien beim BPlan-Validator.
+
+        Warum:
+            Pro Archiv ist genau ein Plan erlaubt; sonst wäre unklar, welcher importiert
+            wird.
+
+        Erwartung:
+            ValidationError.
+        """
         upload = upload_zip({
             "one.gml": make_plan_gml("one"),
             "two.gml": make_plan_gml("two"),
@@ -123,10 +150,14 @@ class ArchiveValidatorSecurityTests(TestCase):
         with self.assertRaises(ValidationError):
             bplan_upload_file_validator(upload)
 
-    # Testfall: F-Plan archive weist zurück multiple GML files.
-    # Erwartung/Absicherung: verwendet assertRaises.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_archive_rejects_multiple_gml_files(self):
+        """
+        Was wird geprüft:
+            Dasselbe für den FPlan-Validator.
+
+        Erwartung:
+            ValidationError.
+        """
         upload = upload_zip({
             "one.gml": make_plan_gml("one", "FP_Plan"),
             "two.gml": make_plan_gml("two", "FP_Plan"),
@@ -135,9 +166,17 @@ class ArchiveValidatorSecurityTests(TestCase):
         with self.assertRaises(ValidationError):
             fplan_upload_file_validator(upload)
 
-    # Testfall: B-Plan archive mit gültig single GML ist accepted.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_archive_with_valid_single_gml_is_accepted(self):
+        """
+        Was wird geprüft:
+            Gegenprobe: ein ZIP mit genau einer gültigen BPlan-GML.
+
+        Warum:
+            Die Ablehnungen oben dürfen keine gültigen Archive treffen.
+
+        Erwartung:
+            Keine Ausnahme.
+        """
         upload = upload_zip({
             "plan.gml": make_plan_gml("single-valid"),
         })
@@ -147,9 +186,14 @@ class ArchiveValidatorSecurityTests(TestCase):
         except ValidationError as exc:
             self.fail(f"valid BPlan ZIP was rejected: {exc}")
 
-    # Testfall: F-Plan archive mit gültig single GML ist accepted.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_archive_with_valid_single_gml_is_accepted(self):
+        """
+        Was wird geprüft:
+            Gegenprobe für den FPlan.
+
+        Erwartung:
+            Keine Ausnahme.
+        """
         upload = upload_zip({
             "plan.gml": make_plan_gml("single-valid-fplan", "FP_Plan"),
         })
@@ -159,10 +203,21 @@ class ArchiveValidatorSecurityTests(TestCase):
         except ValidationError as exc:
             self.fail(f"valid FPlan ZIP was rejected: {exc}")
 
-    # Testfall: malformed B-Plan zip ist nicht silently accepted.
-    # Erwartung/Absicherung: verwendet assertRaises.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_malformed_bplan_zip_is_not_silently_accepted(self):
+        """
+        Was wird geprüft:
+            Eine Datei, die gar kein ZIP ist, beim BPlan-Validator.
+
+        Warum:
+            Defekte Archive dürfen nicht stillschweigend akzeptiert werden.
+
+        Erwartung:
+            zipfile.BadZipFile.
+
+        Hinweis:
+            Der Validator fängt diese Ausnahme nicht ab, sie erreicht den Aufrufer. Der Test
+            hält dieses Verhalten fest.
+        """
         upload = SimpleUploadedFile(
             "broken.zip",
             b"this is not a ZIP archive",
@@ -172,10 +227,14 @@ class ArchiveValidatorSecurityTests(TestCase):
         with self.assertRaises(zipfile.BadZipFile):
             bplan_upload_file_validator(upload)
 
-    # Testfall: malformed F-Plan zip ist nicht silently accepted.
-    # Erwartung/Absicherung: verwendet assertRaises.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_malformed_fplan_zip_is_not_silently_accepted(self):
+        """
+        Was wird geprüft:
+            Dasselbe für den FPlan-Validator.
+
+        Erwartung:
+            zipfile.BadZipFile.
+        """
         upload = SimpleUploadedFile(
             "broken.zip",
             b"this is not a ZIP archive",
@@ -186,11 +245,12 @@ class ArchiveValidatorSecurityTests(TestCase):
             fplan_upload_file_validator(upload)
 
 
-# Testklasse: ArchiveImportAuthorizationTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ArchiveImportAuthorizationTests(TestCase):
-    """Archive imports must require admin rights for every referenced municipality."""
+    """
+    Archiv-Importe verlangen Administratorrechte für jede Gemeinde aus dem GML.
+
+    setUp: ein angemeldeter Fremder ohne Rolle und die Gemeinde aus dem Test-GML.
+    """
 
     def setUp(self):
         self.foreign_user = User.objects.create_user(
@@ -207,10 +267,20 @@ class ArchiveImportAuthorizationTests(TestCase):
             name=GEMEINDE_NAME,
         )
 
-    # Testfall: foreign Benutzer cannot Import archive.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTemplateUsed, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_import_archive(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Fremder lädt ein gültiges Archiv für BPlan und FPlan hoch.
+
+        Warum:
+            Regressionstest: Der Zugriffs-verweigert-Zweig zeigte das falsche Formular, und
+            bei einem GML ohne Organisation fehlte die Sperre ganz. Importe sind nur für
+            Administratoren der genannten Gemeinden erlaubt.
+
+        Erwartung:
+            Status 200 mit dem Archiv-Formular und dem passenden Template, es wird kein Plan
+            angelegt, und die Meldung nennt nicht Administrator.
+        """
         cases = (
             ("bplan-import-archiv", "BPlanImportArchivForm", "xplanung_light/bplan_import_archiv.html", "BP_Plan", BPlan),
             ("fplan-import-archiv", "FPlanImportArchivForm", "xplanung_light/fplan_import_archiv.html", "FP_Plan", FPlan),

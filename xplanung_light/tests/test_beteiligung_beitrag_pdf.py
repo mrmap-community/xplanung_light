@@ -1,3 +1,5 @@
+"""Tests des PDF-Exports aller Beiträge einer Beteiligung."""
+
 import json
 from django.test import TestCase
 from django.urls import reverse
@@ -18,10 +20,8 @@ from xplanung_light.models import (
 
 User = get_user_model()
 
-# Testklasse: BeteiligungBeitragListPdfViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragListPdfViewTests(TestCase):
+    """PDF-Export für BPlan und FPlan und der Zugriffsschutz."""
 
     def setUp(self):
         # 1. Gemeinsame Dummy-Geometrie und Datumsfelder
@@ -99,9 +99,6 @@ class BeteiligungBeitragListPdfViewTests(TestCase):
     # 1. ERFOLGSFÄLLE FÜR GEMEINDE-ADMINS
     # ==============================================================================
 
-    # Testfall: B-Plan PDF Export Erfolg für Administrator.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_pdf_export_success_for_admin(self):
         """Ein Admin darf den PDF-Export des BPlans aufrufen und erhält eine PDF-Datei."""
         self.client.login(username="admin_pdf", password="password123")
@@ -120,9 +117,6 @@ class BeteiligungBeitragListPdfViewTests(TestCase):
         binary_content = b"".join(response.streaming_content)
         self.assertTrue(binary_content.startswith(b'%PDF'))
 
-    # Testfall: F-Plan PDF Export Erfolg für Administrator.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_pdf_export_success_for_admin(self):
         """Ein Admin darf den PDF-Export des FPlans aufrufen und erhält eine PDF-Datei."""
         self.client.login(username="admin_pdf", password="password123")
@@ -145,9 +139,6 @@ class BeteiligungBeitragListPdfViewTests(TestCase):
     # 2. AUSSCHLUSS UNBEFUGTER USER
     # ==============================================================================
 
-    # Testfall: PDF Export denied für unauthorized Benutzer.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_pdf_export_denied_for_unauthorized_user(self):
         """Ein Nutzer ohne Adminrechte wird beim Aufruf des PDF-Exports mit HTTP 403 blockiert."""
         self.client.login(username="normalo_pdf", password="password123")

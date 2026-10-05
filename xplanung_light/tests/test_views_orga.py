@@ -1,3 +1,8 @@
+"""
+Tests für Organisations-Views und die Registrierung in views/views.py: Verbandsgemeinden, Karte
+der Ortsgemeinden, Übersicht der Bauleitplanung einer Gemeinde und register.
+"""
+
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
@@ -14,56 +19,94 @@ User = get_user_model()
 from captcha.models import CaptchaStore
 
 def captcha_fields():
+    """
+    Legt einen gültigen Captcha-Eintrag an und liefert die beiden Formularfelder (captcha_0 =
+    Schlüssel, captcha_1 = richtige Antwort). Funktioniert unabhängig von CAPTCHA_TEST_MODE.
+    """
     key = CaptchaStore.generate_key()
     return {"captcha_0": key, "captcha_1": CaptchaStore.objects.get(hashkey=key).response}
 
 
 def geom(model, field):
-    """Passende Geometrie für das Feld (Polygon oder MultiPolygon)."""
+    """Liefert ein Quadrat als Polygon oder MultiPolygon, je nach Typ des Geometriefeldes."""
     ring = "((0 0, 0 1, 1 1, 1 0, 0 0))"
     is_multi = model._meta.get_field(field).geom_type == "MULTIPOLYGON"
     return GEOSGeometry(f"MULTIPOLYGON({ring})" if is_multi else f"POLYGON{ring}", srid=4326)
 
 
-# Testklasse: OrgaViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class OrgaViewTests(TestCase):
+    """
+    Views zu Organisationen.
+
+    setUp: die Verbandsgemeinde VG Schilda (gs=000) und die Ortsgemeinde OG Schilda (gs=001, mit
+    Geometrie), beide mit vs=01.
+    """
 
     def setUp(self):
         self.vg = Orga.objects.create(name="VG Schilda", ls="07", ks="316", vs="01", gs="000")
         self.og = Orga.objects.create(name="OG Schilda", ls="07", ks="316", vs="01", gs="001",
                                       geometry=geom(Orga, "geometry"))
 
-    # Testfall: vg auflisten only verbandsgemeinden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_vg_list_only_verbandsgemeinden(self):
+        """
+        Was wird geprüft:
+            Die Liste der Verbandsgemeinden.
+
+        Warum:
+            Ortsgemeinden dürfen dort nicht auftauchen.
+
+        Erwartung:
+            Status 200; die Liste enthält genau VG Schilda.
+        """
         r = self.client.get(reverse("vg-list"))
         self.assertEqual(r.status_code, 200)
         self.assertEqual([o.name for o in r.context["verbandsgemeinden"]], ["VG Schilda"])
 
-    # Testfall: childs map verbandsgemeinde lists ortsgemeinden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_childs_map_verbandsgemeinde_lists_ortsgemeinden(self):
+        """
+        Was wird geprüft:
+            Die Karte der Ortsgemeinden einer Verbandsgemeinde.
+
+        Warum:
+            Die Karte soll alle zugehörigen Ortsgemeinden als GeoJSON anzeigen.
+
+        Erwartung:
+            Das GeoJSON enthält genau das Feature OG Schilda.
+        """
         r = self.client.get(reverse("childs-map", kwargs={"pk": self.vg.pk}))
         self.assertEqual(r.status_code, 200)
         features = r.context["geojson"]["features"]
         self.assertEqual([f["properties"]["name"] for f in features], ["OG Schilda"])
 
-    # Testfall: childs map für nicht verbandsgemeinde ist leer nicht 500.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_childs_map_for_non_verbandsgemeinde_is_empty_not_500(self):
+        """
+        Was wird geprüft:
+            Die Karte für eine Organisation, die keine Verbandsgemeinde ist.
+
+        Warum:
+            Regressionstest: Früher führte das zu einem UnboundLocalError (500), weil die
+            Variablen für Ortsgemeinden und GeoJSON nicht gesetzt wurden.
+
+        Erwartung:
+            Status 200 mit leerer Feature-Liste.
+        """
         r = self.client.get(reverse("childs-map", kwargs={"pk": self.og.pk}))
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.context["geojson"]["features"], [])
 
-    # Testfall: bauleitplanung Organisation html.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bauleitplanung_orga_html(self):
+        """
+        Was wird geprüft:
+            Die Übersicht der Bauleitplanung einer Gemeinde mit einem öffentlichen BPlan und
+            FPlan, die jeweils eine laufende Beteiligung haben.
+
+        Warum:
+            Die Seite soll laufende Beteiligungen und die öffentlichen Pläne der Gemeinde
+            zeigen.
+
+        Erwartung:
+            Zwei Beteiligungen sowie genau der BPlan und der FPlan im Kontext.
+        """
         heute = timezone.now().date()
         gestern, in_30 = heute - timedelta(days=1), heute + timedelta(days=30)
         bplan = BPlan.objects.create(name="B", public=True, inkrafttretens_datum=gestern,
@@ -83,29 +126,50 @@ class OrgaViewTests(TestCase):
         self.assertEqual(list(r.context["fplaene"]), [fplan])
 
 
-# Testklasse: RegisterTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class RegisterTests(TestCase):
+    """Registrierung neuer Nutzer über die View register (mit Captcha)."""
 
-    # Testfall: get rendert Formular.
-    # Erwartung/Absicherung: verwendet assertTemplateUsed.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_get_renders_form(self):
+        """
+        Was wird geprüft:
+            GET auf die Registrierungsseite.
+
+        Erwartung:
+            Das Template registration/register.html wird verwendet.
+        """
         self.assertTemplateUsed(self.client.get(reverse("register")), "registration/register.html")
 
-    # Testfall: ungültig post rerenders Formular.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_invalid_post_rerenders_form(self):
+        """
+        Was wird geprüft:
+            POST ohne Daten.
+
+        Warum:
+            Ungültige Eingaben dürfen keinen Nutzer anlegen.
+
+        Erwartung:
+            Status 200 und Formularfehler.
+        """
         r = self.client.post(reverse("register"), {})
         self.assertEqual(r.status_code, 200)
         self.assertTrue(r.context["form"].errors)
 
-    # Testfall: gültig post creates Benutzer and logs in.
-    # Erwartung/Absicherung: verwendet assertEqual, assertRedirects, assertTrue, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_valid_post_creates_user_and_logs_in(self):
+        """
+        Was wird geprüft:
+            Gültige Registrierung mit korrektem Captcha.
+
+        Warum:
+            Der neue Nutzer soll direkt angemeldet sein.
+
+        Erwartung:
+            Weiterleitung auf die Startseite, Nutzer existiert, die Session enthält eine
+            Nutzer-ID.
+
+        Hinweis:
+            Das Formular verlangt ein Captcha, deshalb kommen die Felder aus
+            captcha_fields().
+        """
         data = {"username": "neuer_user", "email": "neu@example.com",
                 "password1": "Sup3r-geheim-pw!", "password2": "Sup3r-geheim-pw!"}
         r = self.client.post(reverse("register"), {**data, **captcha_fields()})

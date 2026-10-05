@@ -1,3 +1,5 @@
+"""Tests der Umweltprüfungen (UVP) eines Flächennutzungsplans."""
+
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -8,10 +10,8 @@ from xplanung_light.models import FPlan, FPlanUvp, AdministrativeOrganization, A
 
 User = get_user_model()
 
-# Testklasse: FPlanUvpViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class FPlanUvpViewTests(TestCase):
+    """Liste, Anlegen, Ändern und Löschen von FPlan-UVPs."""
 
     def setUp(self):
         # 1. Basis-Geometrie und Fristen
@@ -41,9 +41,6 @@ class FPlanUvpViewTests(TestCase):
     # 1. FPLAN-UVP-LISTE (GET)
     # ==============================================================================
 
-    # Testfall: F-Plan uvp auflisten View accessible.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_uvp_list_view_accessible(self):
         """Ein verifizierter Gemeinde-Admin kann die UVP-Liste des FPlans aufrufen."""
         self.client.login(username="fplan_uvp_orga_admin", password="password123")
@@ -56,9 +53,6 @@ class FPlanUvpViewTests(TestCase):
     # 2. FPLAN-UVP ANLEGEN / CREATE (POST)
     # ==============================================================================
 
-    # Testfall: F-Plan uvp erstellen Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_uvp_create_success(self):
         """Das Anlegen einer neuen FPlan-Umweltprüfung über den View muss erfolgreich sein."""
         self.client.login(username="fplan_uvp_orga_admin", password="password123")
@@ -81,9 +75,6 @@ class FPlanUvpViewTests(TestCase):
     # 3. FPLAN-UVP AKTUALISIEREN / UPDATE (POST)
     # ==============================================================================
 
-    # Testfall: F-Plan uvp aktualisieren Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_uvp_update_success(self):
         """Metadaten einer bestehenden FPlan-Umweltprüfung können modifiziert werden."""
         self.client.login(username="fplan_uvp_orga_admin", password="password123")
@@ -107,9 +98,6 @@ class FPlanUvpViewTests(TestCase):
     # 4. FPLAN-UVP ENTFERNEN / DELETE (POST)
     # ==============================================================================
 
-    # Testfall: F-Plan uvp löschen Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_uvp_delete_success(self):
         """Ein Admin kann eine zugeordnete FPlan-Umweltprüfung erfolgreich über POST löschen."""
         self.client.login(username="fplan_uvp_orga_admin", password="password123")

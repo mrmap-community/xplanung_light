@@ -1,3 +1,8 @@
+"""
+Tests für die Plan-Views in views/xplan.py (BPlan und FPlan nutzen dieselben Basisklassen):
+Formulare, Listen, Detailseite, XML-Kontext und ZIP-Export.
+"""
+
 import tempfile
 import shutil
 import zipfile
@@ -22,12 +27,17 @@ _MEDIA = tempfile.mkdtemp()
 
 
 def geom(model, field, ring):
+    """Erzeugt aus einem Ringtext (WKT) Polygon oder MultiPolygon passend zum Geometriefeld."""
     multi = model._meta.get_field(field).geom_type == "MULTIPOLYGON"
     return GEOSGeometry(f"MULTIPOLYGON({ring})" if multi else f"POLYGON{ring}", srid=4326)
 
 
 def post_data(plan, form_fields, gemeinde):
-    """POST-Daten aus einem bestehenden Plan, beschränkt auf die Felder des Formulars."""
+    """
+    Baut POST-Daten aus einem bestehenden Plan, beschränkt auf die Felder des Formulars. Leere
+    Werte werden weggelassen, Geometrien als EWKT übergeben, Häkchenfelder als on; die Gemeinden
+    werden aus der Liste gesetzt.
+    """
     data = {}
     for name, value in model_to_dict(plan).items():
         if name not in form_fields or name == "gemeinde" or value in (None, ""):
@@ -44,10 +54,15 @@ def post_data(plan, form_fields, gemeinde):
 
 
 @override_settings(MEDIA_ROOT=_MEDIA)
-# Testklasse: XPlanViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanViewTests(TestCase):
+    """
+    Verhalten der Plan-Views für beide Plantypen.
+
+    setUp: Organisation OG A (Geometrie höher als breit) mit Administrator admin_a, Organisation
+    OG B ohne Geometrie, ein Superuser, und je ein öffentlicher Plan mit dreieckigem
+    Geltungsbereich (weniger als fünf Stützpunkte) in OG A. Dateien landen in einem temporären
+    MEDIA_ROOT.
+    """
 
     @classmethod
     def tearDownClass(cls):
@@ -70,10 +85,19 @@ class XPlanViewTests(TestCase):
             plan.gemeinde.add(self.orga)
             self.plans[plantyp] = plan
 
-    # Testfall: erstellen Formular get für Superuser and Administrator.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_form_get_for_superuser_and_admin(self):
+        """
+        Was wird geprüft:
+            GET auf das Anlegen-Formular für Superuser und Organisations-Administrator
+            (BPlan und FPlan).
+
+        Warum:
+            Beide Rollen müssen Pläne anlegen können; die Karte benötigt zusätzliche
+            Hintergrund- und Overlay-Layer.
+
+        Erwartung:
+            Status 200; further_base_layers und overlay_layers stehen im Kontext.
+        """
         cfg = {**settings.XPLANUNG_LIGHT_CONFIG,
                "further_base_layers": [], "overlay_layers": []}
         for plantyp in self.plans:
@@ -85,11 +109,18 @@ class XPlanViewTests(TestCase):
                     self.assertIn("further_base_layers", r.context)
                     self.assertIn("overlay_layers", r.context)
 
-    # rot bis Bug 1 behoben ist
-    # Testfall: aktualisieren Formular get hat layers and history.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_form_get_has_layers_and_history(self):
+        """
+        Was wird geprüft:
+            GET auf das Bearbeiten-Formular.
+
+        Warum:
+            Regressionstest: Die Update-View hatte get_context_data doppelt; die zweite
+            Fassung überschrieb die erste, und die Layer fehlten im Kontext.
+
+        Erwartung:
+            Status 200; further_base_layers und letzte_aenderung_am stehen im Kontext.
+        """
         cfg = {**settings.XPLANUNG_LIGHT_CONFIG,
                "further_base_layers": [], "overlay_layers": []}
         self.client.login(username="admin_a", password="pw")
@@ -101,10 +132,20 @@ class XPlanViewTests(TestCase):
                 self.assertIn("further_base_layers", r.context)
                 self.assertIn("letzte_aenderung_am", r.context)
 
-    # Testfall: lists für nicht Superuser and öffentlich.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_lists_for_non_superuser_and_public(self):
+        """
+        Was wird geprüft:
+            Planliste eines Organisations-Administrators und öffentliche Liste ohne
+            Anmeldung.
+
+        Warum:
+            Nutzer sollen nur ihre eigenen Pläne verwalten, Besucher alle öffentlichen
+            sehen.
+
+        Erwartung:
+            Der Administrator sieht genau seinen Plan; die öffentliche Liste hat einen
+            Marker.
+        """
         for plantyp, plan in self.plans.items():
             with self.subTest(plantyp=plantyp):
                 self.client.login(username="admin_a", password="pw")
@@ -118,10 +159,18 @@ class XPlanViewTests(TestCase):
                 self.assertEqual(len(r.context["markers"]["features"]), 1)
 
     # ein 500 wäre die Mixin-Reihenfolge
-    # Testfall: anonym cannot use management Views.
-    # Erwartung/Absicherung: verwendet assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_cannot_use_management_views(self):
+        """
+        Was wird geprüft:
+            Anonymer Zugriff auf Liste, Anlegen, Bearbeiten und Löschen.
+
+        Warum:
+            Die Reihenfolge der Mixins entscheidet, ob ein Serverfehler (500) statt der
+            Anmeldeaufforderung entsteht.
+
+        Erwartung:
+            Weiterleitung oder 401/403, nie ein Serverfehler.
+        """
         for plantyp, plan in self.plans.items():
             for name, kw in ((f"{plantyp}-list", {}), (f"{plantyp}-create", {}),
                              (f"{plantyp}-update", {"pk": plan.pk}), (f"{plantyp}-delete", {"pk": plan.pk})):
@@ -129,10 +178,18 @@ class XPlanViewTests(TestCase):
                     self.assertIn(self.client.get(
                         reverse(name, kwargs=kw)).status_code, (302, 401, 403))
 
-    # Testfall: Detailansicht Gemeinden extent.
-    # Erwartung/Absicherung: verwendet assertIsNotNone, assertIsNone.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_gemeinden_extent(self):
+        """
+        Was wird geprüft:
+            Detailseite: Ausdehnung der zugeordneten Gemeinden für die Karte.
+
+        Warum:
+            Gemeinden ohne Geometrie dürfen die Seite nicht zerstören.
+
+        Erwartung:
+            Mit OG A (hat Geometrie) gibt es eine Ausdehnung, mit OG B (ohne Geometrie)
+            None.
+        """
         for plantyp, plan in self.plans.items():
             with self.subTest(plantyp=plantyp):
                 url = reverse(f"{plantyp}-detail", kwargs={"pk": plan.pk})
@@ -146,6 +203,7 @@ class XPlanViewTests(TestCase):
 
     # --- XML-Kontext und ZIP -------------------------------------------------------
     def make_attachment(self, plantyp, typ, public=True, name="a.pdf"):
+        """Legt einen Anhang des angegebenen Typs und Sichtbarkeit am Plan des Plantyps an."""
         model, fk = (BPlanSpezExterneReferenz, "bplan") if plantyp == "bplan" else (
             FPlanSpezExterneReferenz, "fplan")
         # TODO: weitere Pflichtfelder wie in PlanAttachmentTests.make ergänzen
@@ -154,15 +212,24 @@ class XPlanViewTests(TestCase):
 
     @staticmethod
     def anonymous_request():
+        """Liefert einen GET-Request mit anonymem Benutzer."""
         request = RequestFactory().get("/")
         request.user = AnonymousUser()
         return request
 
-    # rot bis Bug 3 behoben ist
-    # Testfall: ref scan ist found regardless of Anhang order.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_ref_scan_is_found_regardless_of_attachment_order(self):
+        """
+        Was wird geprüft:
+            Kontext der XML-Detailansicht mit Rasterscan (Typ 99999) und einem weiteren
+            Anhang, der danach kommt.
+
+        Warum:
+            Regressionstest: Die Schleife setzte ref_scan bei jedem späteren Anhang anderen
+            Typs wieder auf None.
+
+        Erwartung:
+            ref_scan ist der Scan und bereich_0_uuid ist gesetzt.
+        """
         for plantyp, view_cls in (("bplan", XPlanDetailXPlanLightView), ("fplan", FPlanDetailXPlanLightView)):
             with self.subTest(plantyp=plantyp):
                 scan = self.make_attachment(plantyp, "99999", name="scan.tif")
@@ -175,10 +242,17 @@ class XPlanViewTests(TestCase):
                 self.assertEqual(context["ref_scan"], scan)
                 self.assertIn("bereich_0_uuid", context)
 
-    # Testfall: zip contains öffentlich Anhänge only.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_zip_contains_public_attachments_only(self):
+        """
+        Was wird geprüft:
+            ZIP-Export mit einem öffentlichen und einem internen Anhang (anonym abgerufen).
+
+        Warum:
+            Interne Anhänge dürfen nie in ein öffentlich abrufbares Archiv gelangen.
+
+        Erwartung:
+            Status 200; das ZIP enthält xplan.gml und nur den öffentlichen Anhang.
+        """
         for plantyp, view_cls in (("bplan", XPlanDetailXPlanLightZipView), ("fplan", FPlanDetailXPlanLightZipView)):
             with self.subTest(plantyp=plantyp):
                 self.make_attachment(plantyp, "1000", name="oeffentlich.pdf")
@@ -193,11 +267,20 @@ class XPlanViewTests(TestCase):
                 self.assertEqual(len(names), 2)
                 self.assertIn("xplan.gml", names)
 
-    # rot bis Bug 2 behoben ist
-    # Testfall: aktualisieren mit foreign Gemeinde on Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_with_foreign_gemeinde_on_plan(self):
+        """
+        Was wird geprüft:
+            Ein Administrator von OG A speichert einen Plan, der zusätzlich der fremden
+            Gemeinde OG B gehört, und ändert nur den Namen.
+
+        Warum:
+            Regressionstest: Fremde Gemeinden wurden als Änderung gewertet, sodass solche
+            Pläne nie gespeichert werden konnten.
+
+        Erwartung:
+            Weiterleitung nach dem Speichern, neuer Name, beide Gemeinden bleiben
+            zugeordnet.
+        """
         plan = self.plans["bplan"]
         # admin_a ist dort kein Admin
         plan.gemeinde.add(self.flat)
@@ -213,10 +296,19 @@ class XPlanViewTests(TestCase):
         self.assertEqual(plan.name, "Neuer Name")
         self.assertEqual(set(plan.gemeinde.all()), {self.orga, self.flat})
 
-    # Testfall: erstellen post as Organisation Administrator.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_post_as_orga_admin(self):
+        """
+        Was wird geprüft:
+            Anlegen eines Plans per POST als Organisations-Administrator, einmal mit eigener
+            und einmal mit fremder Gemeinde.
+
+        Warum:
+            Nutzer dürfen nur für Gemeinden planen, die sie verwalten.
+
+        Erwartung:
+            Eigene Gemeinde: Weiterleitung und Plan existiert. Fremde Gemeinde: Formular
+            wird erneut angezeigt (200), nichts wird angelegt.
+        """
         self.client.login(username="admin_a", password="pw")
         for plantyp, plan in self.plans.items():
             with self.subTest(plantyp=plantyp):

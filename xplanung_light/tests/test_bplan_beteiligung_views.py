@@ -1,3 +1,5 @@
+"""Tests der Beteiligungsverfahren eines Bebauungsplans: Liste, Formulare und Löschen."""
+
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -8,10 +10,8 @@ from xplanung_light.models import BPlan, BPlanBeteiligung, AdministrativeOrganiz
 
 User = get_user_model()
 
-# Testklasse: BPlanBeteiligungViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BPlanBeteiligungViewTests(TestCase):
+    """Verwaltung von BPlan-Beteiligungsverfahren durch einen Administrator."""
 
     def setUp(self):
         # 1. Basis-Geometrie und Fristen
@@ -43,9 +43,6 @@ class BPlanBeteiligungViewTests(TestCase):
     # 1. LIST- UND FORMULAR-ANSICHTEN (GET)
     # ==============================================================================
 
-    # Testfall: B-Plan Beteiligung auflisten and Formulare get.
-    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_beteiligung_list_and_forms_get(self):
         """Ein Admin kann die Verfahrensliste sowie die Formset-Create/Update-Seiten per GET laden."""
         self.client.login(username="bplan_orga_admin", password="password123")
@@ -67,9 +64,6 @@ class BPlanBeteiligungViewTests(TestCase):
     # 2. VERFAHREN LÖSCHEN / STANDARD DELETE (POST)
     # ==============================================================================
 
-    # Testfall: B-Plan Beteiligung standard löschen Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_beteiligung_standard_delete_success(self):
         """Ein Admin kann ein Beteiligungsverfahren über den Standard-DeleteView entfernen."""
         self.client.login(username="bplan_orga_admin", password="password123")
@@ -87,9 +81,6 @@ class BPlanBeteiligungViewTests(TestCase):
     # 3. HISTORIE LÖSCHEN / RECURSIVE HISTORY DELETE (POST)
     # ==============================================================================
 
-    # Testfall: B-Plan Beteiligung recursive history löschen Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_beteiligung_recursive_history_delete_success(self):
         """Der Custom-View bereinigt das Verfahren und löscht rekursiv alle historischen Datensätze."""
         self.client.login(username="bplan_orga_admin", password="password123")

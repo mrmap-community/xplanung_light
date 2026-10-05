@@ -1,3 +1,5 @@
+"""Tests der Verwaltung von Nutzerrollen in Organisationen (Administratoren, TÖB-Reporter)."""
+
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -5,10 +7,8 @@ from xplanung_light.models import AdministrativeOrganization, AdminOrgaUser
 
 User = get_user_model()
 
-# Testklasse: OrganizationUserFormViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class OrganizationUserFormViewTests(TestCase):
+    """Rollen-Zuweisung über die Organisations-Views."""
 
     def setUp(self):
         # 1. Test-Kommune anlegen
@@ -32,9 +32,6 @@ class OrganizationUserFormViewTests(TestCase):
     # 1. TEST FÜR OrganizationUserFormViewAdmin (Zuweisung Gemeinde-Admins)
     # ==============================================================================
 
-    # Testfall: manage Organisation Benutzer Administrator get and post.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_manage_organization_users_admin_get_and_post(self):
         """Ein Superuser darf die Admin-Zuweisung aufrufen und neue Admins deklarieren."""
         self.client.login(username="master_admin", password="password123")
@@ -63,9 +60,6 @@ class OrganizationUserFormViewTests(TestCase):
     # 2. TEST FÜR OrganizationUserFormViewToebReporter (Zuweisung TÖB-Reporter)
     # ==============================================================================
 
-    # Testfall: manage Organisation Benutzer TöB Berichterstatter get and post.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_manage_organization_users_toeb_reporter_get_and_post(self):
         """Ein zuständiger Orga-Admin darf TÖB-Reporter für seine Kommune verwalten."""
         self.client.login(username="local_admin", password="password123")
@@ -92,9 +86,6 @@ class OrganizationUserFormViewTests(TestCase):
     # 3. TEST FÜR UserOrganizationFormViewRoles (Rollen-Übersichts-View)
     # ==============================================================================
 
-    # Testfall: Benutzer Organisation Rollen get accessible.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_users_organization_roles_get_accessible(self):
         """Prüft, ob der Rollen-Zuweisungs-View für den Admin erreichbar ist."""
         self.client.login(username="master_admin", password="password123")

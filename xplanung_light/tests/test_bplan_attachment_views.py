@@ -1,3 +1,5 @@
+"""Tests der Anlagen (Dateien) eines Bebauungsplans: Liste, Hochladen, Ändern, Löschen."""
+
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -7,10 +9,8 @@ from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, Administrativ
 
 User = get_user_model()
 
-# Testklasse: BPlanSpezExterneReferenzViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BPlanSpezExterneReferenzViewTests(TestCase):
+    """Anlagenverwaltung eines BPlans durch einen Gemeinde-Administrator."""
 
     def setUp(self):
         # 1. Basis-Geometrie für BPlan
@@ -39,9 +39,6 @@ class BPlanSpezExterneReferenzViewTests(TestCase):
     # 1. ANLAGEN-LISTE (GET)
     # ==============================================================================
 
-    # Testfall: B-Plan Anhang auflisten View accessible.
-    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_attachment_list_view_accessible(self):
         """Ein verifizierter Gemeinde-Admin kann die Anlagenliste des BPlans aufrufen."""
         self.client.login(username="orga_admin", password="password123")
@@ -55,9 +52,6 @@ class BPlanSpezExterneReferenzViewTests(TestCase):
     # 2. ANLAGE HOCHLADEN / CREATE (POST)
     # ==============================================================================
 
-    # Testfall: B-Plan Anhang erstellen Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_attachment_create_success(self):
         """Das Hochladen einer neuen Textanlage (z.B. Satzungstext) muss erfolgreich durchgehen."""
         self.client.login(username="orga_admin", password="password123")
@@ -83,9 +77,6 @@ class BPlanSpezExterneReferenzViewTests(TestCase):
     # 3. ANLAGE AKTUALISIEREN / UPDATE (POST)
     # ==============================================================================
 
-    # Testfall: B-Plan Anhang aktualisieren Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_attachment_update_success(self):
         """Metadaten einer bestehenden Anlage (z.B. Name) können modifiziert werden."""
         self.client.login(username="orga_admin", password="password123")
@@ -113,9 +104,6 @@ class BPlanSpezExterneReferenzViewTests(TestCase):
     # 4. ANLAGE ENTFERNEN / DELETE (POST)
     # ==============================================================================
 
-    # Testfall: B-Plan Anhang löschen Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_attachment_delete_success(self):
         """Ein Admin kann eine zugeordnete Anlage erfolgreich aus dem BPlan entfernen."""
         self.client.login(username="orga_admin", password="password123")

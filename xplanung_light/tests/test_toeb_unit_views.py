@@ -1,3 +1,5 @@
+"""Tests der Views für TÖB-Einheiten (Fachstellen): Listen, Anlegen, Ändern und Löschen."""
+
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -7,10 +9,8 @@ from xplanung_light.forms import ToebUnitCreateForm
 
 User = get_user_model()
 
-# Testklasse: ToebUnitViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ToebUnitViewTests(TestCase):
+    """Verwaltung der Fachstellen."""
 
     def setUp(self):
         # 1. Basis-Geometrie für den Zuständigkeitsbereich
@@ -49,9 +49,6 @@ class ToebUnitViewTests(TestCase):
     # 1. LISTEN-ANSICHTEN (GET)
     # ==============================================================================
 
-    # Testfall: TöB Einheit lists accessible.
-    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_unit_lists_accessible(self):
         """Prüft die Erreichbarkeit der internen und der öffentlichen Fachstellen-Listen."""
         public_url = reverse("toebunitpublic-list")
@@ -68,9 +65,6 @@ class ToebUnitViewTests(TestCase):
     # 2. TÖB ANLEGEN / CREATE (POST)
     # ==============================================================================
 
-    # Testfall: TöB Einheit erstellen Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_unit_create_success(self):
         """Das Anlegen einer neuen TÖB-Fachstelle mitsamt Geometrie und Editor muss erfolgreich sein."""
         self.client.login(username="toeb_orga_admin", password="password123")
@@ -95,9 +89,6 @@ class ToebUnitViewTests(TestCase):
     # 3. TÖB AKTUALISIEREN / UPDATE (POST)
     # ==============================================================================
 
-    # Testfall: TöB Einheit aktualisieren Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_unit_update_success(self):
         """Metadaten und Zuständigkeiten einer TÖB-Fachstelle können modifiziert werden."""
         self.client.login(username="toeb_orga_admin", password="password123")
@@ -125,9 +116,6 @@ class ToebUnitViewTests(TestCase):
     # 4. TÖB ENTFERNEN / DELETE (POST)
     # ==============================================================================
 
-    # Testfall: TöB Einheit löschen Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_toeb_unit_delete_success(self):
         """Ein Admin kann eine Fachstelle erfolgreich aus dem System löschen."""
         self.client.login(username="toeb_orga_admin", password="password123")

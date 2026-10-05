@@ -1,3 +1,8 @@
+"""
+Einfache Tests für die Tabelle BPlanTable (tables.py): Initialisierung, Zeilenzahl und Spalten.
+Die Render-Methoden der Tabellen werden in test_tables_2.py geprüft.
+"""
+
 from django.test import TestCase
 from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.models import BPlan, AdministrativeOrganization
@@ -11,10 +16,12 @@ except ImportError:
     except ImportError:
         BPlanTable = None
 
-# Testklasse: XPlanTableBusinessLogicTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XPlanTableBusinessLogicTests(TestCase):
+    """
+    Grundfunktionen der BPlan-Tabelle.
+
+    setUp: eine Organisation und zwei BPläne mit einfacher Geometrie.
+    """
 
     def setUp(self):
         # Basis-Geometrie und Orga anlegen
@@ -38,9 +45,6 @@ class XPlanTableBusinessLogicTests(TestCase):
         )
         self.bplan_2.gemeinde.add(self.orga)
 
-    # Testfall: B-Plan table instantiation and rows count.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_table_instantiation_and_rows_count(self):
         """Die Tabelle muss sich fehlerfrei initialisieren lassen und die korrekte Zeilenanzahl spiegeln."""
         if not BPlanTable:
@@ -53,9 +57,6 @@ class XPlanTableBusinessLogicTests(TestCase):
         # Verifikation: Die Anzahl der Tabellenzeilen muss exakt mit dem QuerySet übereinstimmen
         self.assertEqual(len(table.rows), 2)
 
-    # Testfall: B-Plan table columns presence.
-    # Erwartung/Absicherung: verwendet assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_table_columns_presence(self):
         """Die Tabelle muss die zentralen Kernspalten für die Anzeige im Frontend deklarieren."""
         if not BPlanTable:
@@ -65,6 +66,8 @@ class XPlanTableBusinessLogicTests(TestCase):
 
         # KORREKTUR: Direkte Prüfung gegen das Spaltenobjekt (ohne .keys()), 
         # da django-tables2 das 'in'-Pattern nativ unterstützt.
+        # Hinweis: Die Bedingung ist fast immer wahr (len(table.columns) > 0 genügt). Der Test fällt nur auf,
+        # wenn die Tabelle gar keine Spalten hat.
         self.assertTrue(
             "name" in table.columns or "nummer" in table.columns or len(table.columns) > 0,
             "Es konnten keine Spalten im Tabellen-Layout verifiziert werden."

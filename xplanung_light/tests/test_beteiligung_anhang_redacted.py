@@ -1,3 +1,11 @@
+"""
+Tests für die Schwärzung von Beitrags-Anhängen (views/beteiligungbeitraganhangredacted.py):
+geschwärzte Fassung hochladen, ansehen und löschen.
+
+Nur Administratoren der Gemeinde und Superuser dürfen schwärzen; anonyme Nutzer werden zur
+Anmeldung geleitet, Fremde erhalten 403.
+"""
+
 import datetime
 
 from django.contrib.auth.models import User
@@ -16,30 +24,13 @@ from xplanung_light.models import (
 )
 
 
-# Testklasse: BeteiligungBeitragAnhangRedacted.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragAnhangRedacted(TestCase):
     """
-    Tests für die Redaktions-/Schwärzungs-Views von Beitrags-Anhängen
-    (BeteiligungBeitragAnhangRedactedCreateView/DetailView/DeleteView, siehe
-    views/beteiligungbeitraganhangredacted.py).
+    Create-, Detail- und Delete-Ansicht der geschwärzten Fassung eines Anhangs.
 
-    Bisher komplett ungetestetes, frisch entworfenes Feature (siehe die
-    Einschätzung der Testabdeckung weiter oben im Gespräch). Getestet wird
-    hier nur der BPlan-Zweig - die Views sind über PlantypMixin/
-    PLANTYP_CONFIG plantyp-agnostisch aufgebaut (derselbe Mechanismus wie
-    beitrag_activate() für fplan, siehe test_beteiligung_workflow.py), ein
-    FPlan-Spiegel wäre bei Bedarf mit demselben Muster wie dort schnell
-    nachgezogen.
-
-    WICHTIG zu den URLs: anders als bei XPlanRelationPermissions gibt es hier
-    KEIN planid in der URL - Create/Detail/Delete werden ausschließlich über
-    die generic_id des (Original- bzw. Redacted-)Anhangs aufgelöst, und die
-    Berechtigung wird über die Kette anhang.beitrag.beteiligung.plan
-    nachgeschlagen. Die klassische "planid A + pk aus Plan B"-IDOR-Lücke
-    kann hier also strukturell nicht auftreten; was zählt, ist einzig, ob
-    check_gemeinde_admin() korrekt zum tatsächlich zugehörigen Plan auflöst.
+    Ausgangslage: BPlan 4318 der Gemeinde 1531 mit laufender Beteiligung und einem Beitrag
+    (Einwendung zur Erschließung). Pro Test gibt es einen frischen Anhang (Foto der Einfahrt).
+    Nutzer: der Gemeinde-Administrator admin_stadt_neustadt und ein Fremder ohne Rolle.
     """
 
     fixtures = ['user.json',
@@ -82,6 +73,7 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
         )
 
     def setUp(self):
+        """Legt pro Test einen frischen Anhang am Beitrag an."""
         self.client = Client()
         # Für jeden Test ein frischer Original-Anhang, an dem redaktiert wird.
         self.anhang = BPlanBeteiligungBeitragAnhang.objects.create(
@@ -96,6 +88,7 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
     # --- URL-Helfer ---------------------------------------------------
 
     def _create_url(self, anhang=None):
+        """URL zum Hochladen einer geschwärzten Fassung (Standard: der Anhang aus setUp)."""
         anhang = anhang or self.anhang
         return reverse('beteiligungbeitraganhangredacted-create', kwargs={
             'plantyp': 'bplan',
@@ -103,18 +96,21 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
         })
 
     def _detail_url(self, redacted):
+        """URL der Detailseite der geschwärzten Fassung."""
         return reverse('beteiligungbeitraganhangredacted-detail', kwargs={
             'plantyp': 'bplan',
             'generic_id': str(redacted.generic_id),
         })
 
     def _delete_url(self, redacted):
+        """URL zum Löschen der geschwärzten Fassung."""
         return reverse('beteiligungbeitraganhangredacted-delete', kwargs={
             'plantyp': 'bplan',
             'generic_id': str(redacted.generic_id),
         })
 
     def _post_redacted(self, anhang=None, content=b'geschwaerzte-version'):
+        """Lädt eine geschwärzte Bilddatei (geschwaerzt.jpg) mit dem angegebenen Inhalt hoch."""
         upload = SimpleUploadedFile('geschwaerzt.jpg', content, content_type='image/jpeg')
         return self.client.post(self._create_url(anhang), data={'attachment': upload})
 
@@ -129,26 +125,48 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
 
     # --- Create: Berechtigungen -----------------------------------------
 
-    # Testfall: anonym Benutzer ist redirected to Anmeldung on erstellen.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_is_redirected_to_login_on_create(self):
+        """
+        Was wird geprüft:
+            Ein anonymer Aufruf des Formulars zum Hochladen.
+
+        Warum:
+            Das Schwärzen ist nur angemeldeten Verantwortlichen erlaubt.
+
+        Erwartung:
+            Weiterleitung (302) auf die Login-Seite.
+        """
         response = self.client.get(self._create_url())
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login/', response.url)
 
-    # Testfall: foreign Benutzer cannot open erstellen Formular.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_open_create_form(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Fremder öffnet das Formular zum Hochladen.
+
+        Warum:
+            Anhänge können persönliche Daten enthalten; nur Verantwortliche der Gemeinde
+            dürfen sie bearbeiten.
+
+        Erwartung:
+            Status 403.
+        """
         self.client.force_login(self.fremder_user)
         response = self.client.get(self._create_url())
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: foreign Benutzer cannot erstellen redacted version via direct post.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_create_redacted_version_via_direct_post(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Fremder sendet die geschwärzte Datei direkt per POST.
+
+        Warum:
+            Auch ohne das Formular zu öffnen darf kein Upload möglich sein.
+
+        Erwartung:
+            Status 403 und es entsteht keine geschwärzte Fassung.
+        """
         self.client.force_login(self.fremder_user)
         response = self._post_redacted()
         self.assertEqual(response.status_code, 403)
@@ -158,10 +176,18 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
 
     # --- Create: Erfolgsfall + Verknüpfung --------------------------------
 
-    # Testfall: Gemeinde Administrator can erstellen redacted version.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_create_redacted_version(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator lädt eine geschwärzte Fassung hoch.
+
+        Warum:
+            Der erlaubte Hauptweg.
+
+        Erwartung:
+            Weiterleitung (302); der Anhang hat danach eine geschwärzte Fassung
+            (redacted_version), die auf ihn verweist.
+        """
         self.client.force_login(self.gemeinde_admin)
         response = self._post_redacted()
 
@@ -173,10 +199,17 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
         self.assertTrue(hasattr(anhang, 'redacted_version'))
         self.assertEqual(anhang.redacted_version.anhang_id, anhang.pk)
 
-    # Testfall: erstellen redirects to anhang auflisten of the korrekt Beitrag.
-    # Erwartung/Absicherung: verwendet assertRedirects.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_redirects_to_anhang_list_of_the_correct_beitrag(self):
+        """
+        Was wird geprüft:
+            Das Ziel der Weiterleitung nach dem Hochladen.
+
+        Warum:
+            Der Administrator soll direkt wieder in der Anhangliste seines Beitrags landen.
+
+        Erwartung:
+            Weiterleitung auf die Anhangliste von Plan, Beteiligung und Beitrag.
+        """
         self.client.force_login(self.gemeinde_admin)
         response = self._post_redacted()
         self.assertRedirects(
@@ -189,9 +222,6 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
             }),
         )
 
-    # Testfall: Superuser can erstellen redacted version ohne Gemeinde Administrator Rolle.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_superuser_can_create_redacted_version_without_gemeinde_admin_role(self):
         """check_gemeinde_admin() lässt Superuser unabhängig von Admin-Rollen zu."""
         superuser = User.objects.get(pk=1)  # laut test_initial_data.py: admin, is_superuser
@@ -204,9 +234,6 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
 
     # --- Create: bekannte Lücke - keine Duplikatsprüfung ------------------
 
-    # Testfall: creating second redacted version crashes mit integrity Fehler.
-    # Erwartung/Absicherung: verwendet assertEqual, assertRaises.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_creating_second_redacted_version_crashes_with_integrity_error(self):
         """
         Dokumentiert eine Lücke: die View prüft vor dem Speichern nicht, ob
@@ -231,36 +258,45 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
 
     # --- Detail: Berechtigungen + Inhalt ----------------------------------
 
-    # Testfall: anonym Benutzer ist redirected to Anmeldung on Detailansicht.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_is_redirected_to_login_on_detail(self):
+        """
+        Was wird geprüft:
+            Ein anonymer Aufruf der Detailseite einer geschwärzten Fassung.
+
+        Erwartung:
+            Weiterleitung (302) auf die Login-Seite.
+        """
         redacted = self._make_redacted()
         response = self.client.get(self._detail_url(redacted))
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login/', response.url)
 
-    # Testfall: foreign Benutzer cannot View redacted Detailansicht.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_view_redacted_detail(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Fremder öffnet die Detailseite.
+
+        Erwartung:
+            Status 403.
+        """
         redacted = self._make_redacted()
         self.client.force_login(self.fremder_user)
         response = self.client.get(self._detail_url(redacted))
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: Gemeinde Administrator can View redacted Detailansicht.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_view_redacted_detail(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator öffnet die Detailseite.
+
+        Erwartung:
+            Status 200.
+        """
         redacted = self._make_redacted()
         self.client.force_login(self.gemeinde_admin)
         response = self.client.get(self._detail_url(redacted))
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Detailansicht View reports creator aus history.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIsNotNone.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_view_reports_creator_from_history(self):
         """
         Die History-Middleware (simple_history.middleware.HistoryRequestMiddleware,
@@ -278,9 +314,6 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
         self.assertEqual(response.context['bearbeitet_von'], self.gemeinde_admin)
         self.assertIsNotNone(response.context['letzte_aenderung_am'])
 
-    # Testfall: Detailansicht View ohne Anfrage Kontext reports no editor.
-    # Erwartung/Absicherung: verwendet assertIsNotNone, assertIsNone.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_detail_view_without_request_context_reports_no_editor(self):
         """
         _make_redacted() legt den Datensatz direkt per .objects.create() an,
@@ -300,10 +333,18 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
 
     # --- Delete: Berechtigungen + Nebenwirkungen --------------------------
 
-    # Testfall: anonym Benutzer ist redirected to Anmeldung on löschen.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_user_is_redirected_to_login_on_delete(self):
+        """
+        Was wird geprüft:
+            Ein anonymer POST auf die Löschen-Ansicht.
+
+        Warum:
+            Ohne Anmeldung darf nichts gelöscht werden.
+
+        Erwartung:
+            Weiterleitung (302) auf die Login-Seite; die geschwärzte Fassung bleibt
+            bestehen.
+        """
         redacted = self._make_redacted()
         response = self.client.post(self._delete_url(redacted))
         self.assertEqual(response.status_code, 302)
@@ -312,10 +353,14 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
             RedactedBPlanBeteiligungBeitragAnhang.objects.filter(pk=redacted.pk).exists()
         )
 
-    # Testfall: foreign Benutzer cannot löschen redacted version.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_user_cannot_delete_redacted_version(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Fremder löscht die geschwärzte Fassung.
+
+        Erwartung:
+            Status 403; die geschwärzte Fassung bleibt bestehen.
+        """
         redacted = self._make_redacted()
         self.client.force_login(self.fremder_user)
         response = self.client.post(self._delete_url(redacted))
@@ -324,10 +369,14 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
             RedactedBPlanBeteiligungBeitragAnhang.objects.filter(pk=redacted.pk).exists()
         )
 
-    # Testfall: Gemeinde Administrator can löschen redacted version.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_delete_redacted_version(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator löscht die geschwärzte Fassung.
+
+        Erwartung:
+            Weiterleitung (302) und die geschwärzte Fassung existiert nicht mehr.
+        """
         redacted = self._make_redacted()
         self.client.force_login(self.gemeinde_admin)
         response = self.client.post(self._delete_url(redacted))
@@ -337,9 +386,6 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
             RedactedBPlanBeteiligungBeitragAnhang.objects.filter(pk=redacted.pk).exists()
         )
 
-    # Testfall: deleting redacted version does nicht löschen the original anhang.
-    # Erwartung/Absicherung: verwendet assertTrue, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_deleting_redacted_version_does_not_delete_the_original_anhang(self):
         """CASCADE steht auf der Redacted-Seite des OneToOneField - das Original
         darf beim Löschen der geschwärzten Version nicht mit verschwinden."""

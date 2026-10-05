@@ -1,4 +1,10 @@
-"""Regression tests for the distinction between superusers and municipality admins."""
+"""
+Regressionstests für den Unterschied zwischen Superusern und Gemeinde-Administratoren bei nicht
+öffentlichen Plänen (BPlan und FPlan).
+
+Beide Rollen sollen Detailseiten, Exporte und Bearbeitungsformulare nutzen können. Ein Nutzer
+mit bloßem Staff-Status ohne diese Rollen darf es nicht.
+"""
 
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
@@ -7,10 +13,16 @@ from django.urls import reverse
 from xplanung_light.models import AdministrativeOrganization, BPlan, FPlan
 
 
-# Testklasse: SuperuserVsGemeindeAdminPermissions.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class SuperuserVsGemeindeAdminPermissions(TestCase):
+    """
+    Berechtigungen für nicht öffentliche Pläne.
+
+    Ausgangslage: Fixtures für Nutzer, Organisationen, einen BPlan (4318) und einen FPlan (631).
+    Beide Pläne werden für diese Tests ausdrücklich auf nicht öffentlich gesetzt. Nutzer:
+    gemeinde_admin (admin_stadt_neustadt, Administrator der Gemeinde), ein neu angelegter
+    Superuser und ein Fremder ohne Rolle.
+    """
+
     fixtures = [
         "user.json",
         "administrative_organization.json",
@@ -47,132 +59,245 @@ class SuperuserVsGemeindeAdminPermissions(TestCase):
     def setUp(self):
         self.client = Client()
 
-    # Testfall: Superuser can open nicht öffentlich B-Plan Detailansicht.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_superuser_can_open_private_bplan_detail(self):
+        """
+        Was wird geprüft:
+            Der Superuser öffnet die Detailseite eines nicht öffentlichen BPlans.
+
+        Warum:
+            Verantwortliche müssen ihre eigenen Pläne auch vor der Veröffentlichung sehen.
+
+        Erwartung:
+            Status 200.
+        """
         self.client.force_login(self.superuser)
         response = self.client.get(reverse("bplan-detail", args=[self.bplan.pk]))
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Gemeinde Administrator can open nicht öffentlich B-Plan Detailansicht.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_open_private_bplan_detail(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator öffnet die Detailseite eines nicht öffentlichen
+            BPlans.
+
+        Warum:
+            Verantwortliche müssen ihre eigenen Pläne auch vor der Veröffentlichung sehen.
+
+        Erwartung:
+            Status 200.
+        """
         self.client.force_login(self.gemeinde_admin)
         response = self.client.get(reverse("bplan-detail", args=[self.bplan.pk]))
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Superuser can Export nicht öffentlich B-Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_superuser_can_export_private_bplan(self):
+        """
+        Was wird geprüft:
+            Der Superuser exportiert einen nicht öffentlichen BPlan als XPlanung-GML.
+
+        Warum:
+            Der Export ist für die Prüfung und Weitergabe vor der Veröffentlichung nötig.
+
+        Erwartung:
+            Status 200.
+        """
         self.client.force_login(self.superuser)
         response = self.client.get(
             reverse("bplan-export-xplan-raster-6", args=[self.bplan.pk])
         )
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Gemeinde Administrator can Export nicht öffentlich B-Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_export_private_bplan(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator exportiert einen nicht öffentlichen BPlan als
+            XPlanung-GML.
+
+        Warum:
+            Der Export ist für die Prüfung und Weitergabe vor der Veröffentlichung nötig.
+
+        Erwartung:
+            Status 200.
+        """
         self.client.force_login(self.gemeinde_admin)
         response = self.client.get(
             reverse("bplan-export-xplan-raster-6", args=[self.bplan.pk])
         )
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Superuser can open nicht öffentlich F-Plan Detailansicht.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_superuser_can_open_private_fplan_detail(self):
+        """
+        Was wird geprüft:
+            Der Superuser öffnet die Detailseite eines nicht öffentlichen FPlans.
+
+        Warum:
+            Verantwortliche müssen ihre eigenen Pläne auch vor der Veröffentlichung sehen.
+
+        Erwartung:
+            Status 200.
+        """
         self.client.force_login(self.superuser)
         response = self.client.get(reverse("fplan-detail", args=[self.fplan.pk]))
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Gemeinde Administrator can open nicht öffentlich F-Plan Detailansicht.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_open_private_fplan_detail(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator öffnet die Detailseite eines nicht öffentlichen
+            FPlans.
+
+        Warum:
+            Verantwortliche müssen ihre eigenen Pläne auch vor der Veröffentlichung sehen.
+
+        Erwartung:
+            Status 200.
+        """
         self.client.force_login(self.gemeinde_admin)
         response = self.client.get(reverse("fplan-detail", args=[self.fplan.pk]))
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Superuser can Export nicht öffentlich F-Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_superuser_can_export_private_fplan(self):
+        """
+        Was wird geprüft:
+            Der Superuser exportiert einen nicht öffentlichen FPlan als XPlanung-GML.
+
+        Warum:
+            Der Export ist für die Prüfung und Weitergabe vor der Veröffentlichung nötig.
+
+        Erwartung:
+            Status 200.
+        """
         self.client.force_login(self.superuser)
         response = self.client.get(
             reverse("fplan-export-xplan-raster-6", args=[self.fplan.pk])
         )
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Gemeinde Administrator can Export nicht öffentlich F-Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_export_private_fplan(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator exportiert einen nicht öffentlichen FPlan als
+            XPlanung-GML.
+
+        Warum:
+            Der Export ist für die Prüfung und Weitergabe vor der Veröffentlichung nötig.
+
+        Erwartung:
+            Status 200.
+        """
         self.client.force_login(self.gemeinde_admin)
         response = self.client.get(
             reverse("fplan-export-xplan-raster-6", args=[self.fplan.pk])
         )
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Superuser can aktualisieren B-Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_superuser_can_update_bplan(self):
+        """
+        Was wird geprüft:
+            Der Superuser öffnet das Bearbeiten-Formular des BPlans.
+
+        Warum:
+            Beide Rollen dürfen Pläne ändern.
+
+        Erwartung:
+            Status 200.
+        """
         self.client.force_login(self.superuser)
         response = self.client.get(reverse("bplan-update", args=[self.bplan.pk]))
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Gemeinde Administrator can aktualisieren B-Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_update_bplan(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator öffnet das Bearbeiten-Formular des BPlans.
+
+        Warum:
+            Beide Rollen dürfen Pläne ändern.
+
+        Erwartung:
+            Status 200.
+        """
         self.client.force_login(self.gemeinde_admin)
         response = self.client.get(reverse("bplan-update", args=[self.bplan.pk]))
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Superuser can löschen B-Plan.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_superuser_can_delete_bplan(self):
+        """
+        Was wird geprüft:
+            Der Superuser löscht einen BPlan per POST.
+
+        Warum:
+            Das Löschen ist die weitreichendste Aktion; sie muss für Superuser
+            funktionieren.
+
+        Erwartung:
+            Weiterleitung (302) und der BPlan existiert nicht mehr.
+        """
         self.client.force_login(self.superuser)
         response = self.client.post(reverse("bplan-delete", args=[self.bplan.pk]))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(BPlan.objects.filter(pk=self.BPLAN_PK).exists())
 
-    # Testfall: Superuser can aktualisieren F-Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_superuser_can_update_fplan(self):
+        """
+        Was wird geprüft:
+            Der Superuser öffnet das Bearbeiten-Formular des FPlans.
+
+        Warum:
+            Beide Rollen dürfen Pläne ändern.
+
+        Erwartung:
+            Status 200.
+        """
         self.client.force_login(self.superuser)
         response = self.client.get(reverse("fplan-update", args=[self.fplan.pk]))
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Gemeinde Administrator can aktualisieren F-Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_update_fplan(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator öffnet das Bearbeiten-Formular des FPlans.
+
+        Warum:
+            Beide Rollen dürfen Pläne ändern.
+
+        Erwartung:
+            Status 200.
+        """
         self.client.force_login(self.gemeinde_admin)
         response = self.client.get(reverse("fplan-update", args=[self.fplan.pk]))
         self.assertEqual(response.status_code, 200)
 
-    # Testfall: Superuser can löschen F-Plan.
-    # Erwartung/Absicherung: verwendet assertEqual, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_superuser_can_delete_fplan(self):
+        """
+        Was wird geprüft:
+            Der Superuser löscht einen FPlan per POST.
+
+        Warum:
+            Das Löschen ist die weitreichendste Aktion; sie muss für Superuser
+            funktionieren.
+
+        Erwartung:
+            Weiterleitung (302) und der FPlan existiert nicht mehr.
+        """
         self.client.force_login(self.superuser)
         response = self.client.post(reverse("fplan-delete", args=[self.fplan.pk]))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(FPlan.objects.filter(pk=self.FPLAN_PK).exists())
 
-    # Testfall: Mitarbeiter Benutzer ohne Superuser or Gemeinde Administrator Rolle ist forbidden.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_staff_user_without_superuser_or_gemeinde_admin_role_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Nutzer mit Staff-Status, aber ohne Superuser- und ohne Administratorrolle
+            öffnet das Bearbeiten-Formular eines BPlans.
+
+        Warum:
+            Der Django-Staff-Status darf keine Rechte an der Plan-Verwaltung verleihen; nur
+            Rollen in der Organisation zählen.
+
+        Erwartung:
+            Status 403.
+        """
         self.foreign_user.is_staff = True
         self.foreign_user.save(update_fields=["is_staff"])
         self.client.force_login(self.foreign_user)

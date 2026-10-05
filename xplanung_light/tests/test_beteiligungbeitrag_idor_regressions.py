@@ -1,7 +1,9 @@
-"""Regression tests for plan/participation/contribution URL consistency.
+"""
+Regressionstests für die Konsistenz der IDs in den URLs der Beitrags-Views (Schutz gegen
+unsichere direkte Objektverweise, IDOR).
 
-These tests deliberately mix IDs belonging to different parent objects.  The
-view must never resolve an object merely because its primary key exists.
+Die Tests mischen absichtlich IDs aus verschiedenen Plänen und Beteiligungen. Ein Objekt darf
+nie allein deshalb gefunden werden, weil es die Primärschlüssel-ID gibt.
 """
 
 from datetime import timedelta
@@ -27,11 +29,15 @@ from xplanung_light.models import (
 User = get_user_model()
 
 
-# Testklasse: BeteiligungBeitragIdorRegressionTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragIdorRegressionTests(TestCase):
-    """Parent IDs in contribution URLs must be mutually consistent."""
+    """
+    IDs von Plan, Beteiligung und Beitrag in der URL müssen zusammenpassen.
+
+    Ausgangslage: eine Gemeinde mit Administrator, zwei BPläne (A und B), je mit Beteiligung und
+    Beitrag, sowie zwei FPläne mit Beteiligungen und einem Beitrag. Der Administrator ist
+    angemeldet und hat an sich Zugriff auf alles; jede Anfrage unten scheitert deshalb nur an
+    der falschen Kombination der IDs.
+    """
 
     @classmethod
     def setUpTestData(cls):
@@ -126,11 +132,17 @@ class BeteiligungBeitragIdorRegressionTests(TestCase):
     def setUp(self):
         self.client.force_login(self.admin)
 
-    # Testfall: B-Plan auflisten weist zurück participation aus another Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_list_rejects_participation_from_another_plan(self):
-        """A valid participation ID must belong to the plan in the URL."""
+        """
+        Was wird geprüft:
+            Beitragsliste mit Plan A in der URL, aber der ID der Beteiligung von Plan B.
+
+        Warum:
+            Eine gültige Beteiligungs-ID muss zum Plan in der URL gehören.
+
+        Erwartung:
+            Status 404.
+        """
         url = reverse(
             "beteiligungbeitrag-list",
             kwargs={
@@ -142,11 +154,17 @@ class BeteiligungBeitragIdorRegressionTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
-    # Testfall: F-Plan auflisten weist zurück participation aus another Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_list_rejects_participation_from_another_plan(self):
-        """The same parent-consistency rule applies to FPlan."""
+        """
+        Was wird geprüft:
+            Dieselbe Prüfung für FPläne.
+
+        Warum:
+            Die Regel gilt für beide Plantypen.
+
+        Erwartung:
+            Status 404.
+        """
         url = reverse(
             "beteiligungbeitrag-list",
             kwargs={
@@ -158,10 +176,17 @@ class BeteiligungBeitragIdorRegressionTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
-    # Testfall: generic aktualisieren weist zurück participation aus another Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_update_rejects_participation_from_another_plan(self):
+        """
+        Was wird geprüft:
+            Bearbeiten eines Beitrags von Plan B über eine URL mit Plan A.
+
+        Warum:
+            Die Beteiligung gehört zu Plan B, die URL behauptet Plan A.
+
+        Erwartung:
+            Status 404.
+        """
         url = reverse(
             "beteiligungbeitrag-generic-update",
             kwargs={
@@ -174,11 +199,18 @@ class BeteiligungBeitragIdorRegressionTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
-    # Testfall: generic aktualisieren weist zurück contribution aus another participation.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_generic_update_rejects_contribution_from_another_participation(self):
-        """A contribution PK alone must not bypass the participation filter."""
+        """
+        Was wird geprüft:
+            Bearbeiten mit passender Beteiligung A in der URL, aber der ID eines Beitrags
+            aus Beteiligung B.
+
+        Warum:
+            Der Beitrag allein darf den Filter auf die Beteiligung nicht umgehen.
+
+        Erwartung:
+            Status 404.
+        """
         url = reverse(
             "beteiligungbeitrag-generic-update",
             kwargs={
@@ -191,10 +223,17 @@ class BeteiligungBeitragIdorRegressionTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
-    # Testfall: F-Plan generic aktualisieren weist zurück contribution aus another Plan.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_generic_update_rejects_contribution_from_another_plan(self):
+        """
+        Was wird geprüft:
+            FPlan-Variante: Beitrag von Beteiligung A, aber die URL nennt Beteiligung B.
+
+        Warum:
+            Auch für FPläne müssen Beitrag und Beteiligung zusammenpassen.
+
+        Erwartung:
+            Status 404.
+        """
         url = reverse(
             "beteiligungbeitrag-generic-update",
             kwargs={

@@ -1,3 +1,5 @@
+"""Tests der Benachrichtigung von TÖBs (Träger öffentlicher Belange) per Massen-E-Mail."""
+
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -19,10 +21,8 @@ from xplanung_light.models import (
 
 User = get_user_model()
 
-# Testklasse: BeteiligungToebNotificationViewTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungToebNotificationViewTests(TestCase):
+    """Liste, Formular und Versand der TÖB-Benachrichtigungen für BPlan und FPlan."""
 
     def setUp(self):
         # 1. Geometrie & Fristen aufsetzen
@@ -83,9 +83,6 @@ class BeteiligungToebNotificationViewTests(TestCase):
     # 1. BPLAN NOTIFICATION-VIEWS (GET, LIST & REINER FLRECHER POST)
     # ==============================================================================
 
-    # Testfall: B-Plan Benachrichtigung auflisten and erstellen get.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_notification_list_and_create_get(self):
         """Prüft die Erreichbarkeit der Listen- und Erstellungsformulare für den BPlan."""
         self.client.login(username="orga_admin", password="password123")
@@ -104,9 +101,6 @@ class BeteiligungToebNotificationViewTests(TestCase):
         response_get = self.client.get(create_url)
         self.assertEqual(response_get.status_code, 200)
 
-    # Testfall: B-Plan Benachrichtigung submit mass E-Mail Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_bplan_notification_submit_mass_email_success(self):
         """Das Absenden des nackten Crispy-Formulars muss die Mails absenden und das Protokoll erzeugen."""
         self.client.login(username="orga_admin", password="password123")
@@ -136,9 +130,6 @@ class BeteiligungToebNotificationViewTests(TestCase):
     # 2. FPLAN NOTIFICATION-VIEWS (REINER FLACHER POST)
     # ==============================================================================
 
-    # Testfall: F-Plan Benachrichtigung submit mass E-Mail Erfolg.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_fplan_notification_submit_mass_email_success(self):
         """Das Absenden des Crispy-Formulars muss Benachrichtigungs-Mails für den FPlan abfeuern."""
         self.client.login(username="orga_admin", password="password123")

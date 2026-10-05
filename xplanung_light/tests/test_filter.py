@@ -1,3 +1,8 @@
+"""
+Tests für filter.py: Querysets der Organisations-Auswahl und die django-filter-FilterSets für
+BPlan und FPlan.
+"""
+
 from types import SimpleNamespace
 
 from django.contrib.auth import get_user_model
@@ -14,14 +19,19 @@ RING = "((0 0, 0 1, 1 1, 1 0, 0 0))"
 
 
 def geom(model):
+    """Erzeugt ein Quadrat als Polygon oder MultiPolygon passend zum Geometriefeld."""
     multi = model._meta.get_field("geltungsbereich").geom_type == "MULTIPOLYGON"
     return GEOSGeometry(f"MULTIPOLYGON({RING})" if multi else f"POLYGON{RING}", srid=4326)
 
 
-# Testklasse: FilterTestBase.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class FilterTestBase(TestCase):
+    """
+    Gemeinsame Daten für die Filtertests.
+
+    Organisationen: A (hat einen öffentlichen Plan), B (nur einen internen Plan), C (keine
+    Pläne). Je Plantyp ein öffentlicher und ein interner Plan. Nutzer: member (Mitglied von A),
+    stranger (in keiner Organisation), root (Superuser) und anon (anonym).
+    """
 
     def setUp(self):
         self.a = Orga.objects.create(name="OG A", ls="07", ks="316", gs="001")   # öffentlicher Plan
@@ -40,32 +50,54 @@ class FilterTestBase(TestCase):
 
     @staticmethod
     def request_for(user):
+        """Minimaler Ersatz für einen Request, der nur den Benutzer enthält."""
         return SimpleNamespace(user=user)
 
     @staticmethod
     def names(qs):
+        """Menge der Namen eines Querysets, damit Vergleiche nicht von der Reihenfolge abhängen."""
         return set(qs.values_list("name", flat=True))
 
 
-# Testklasse: OrganizationQuerysetTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class OrganizationQuerysetTests(FilterTestBase):
+    """Welche Organisationen ein Nutzer in den Auswahlfeldern sieht."""
 
-    # Testfall: Organisationen.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_organizations(self):
+        """
+        Was wird geprüft:
+            Die Funktion organizations() ohne Request, als Superuser, als Mitglied und als
+            Fremder.
+
+        Warum:
+            Nutzer sollen nur Organisationen wählen können, in denen sie Mitglied sind.
+
+        Erwartung:
+            Ohne Request und für den Superuser alle drei, das Mitglied nur A, der Fremde
+            keine.
+
+        Hinweis:
+            Anonyme Nutzer fehlen bewusst, weil organizations() dafür keinen eigenen Zweig
+            hat.
+        """
         everyone = {"OG A", "OG B", "OG C"}
         self.assertEqual(self.names(flt.organizations(None)), everyone)
         self.assertEqual(self.names(flt.organizations(self.request_for(self.root))), everyone)
         self.assertEqual(self.names(flt.organizations(self.request_for(self.member))), {"OG A"})
         self.assertEqual(self.names(flt.organizations(self.request_for(self.stranger))), set())
 
-    # Testfall: Plan Organisationen.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_plan_organizations(self):
+        """
+        Was wird geprüft:
+            bplan_organizations() und fplan_organizations() für alle Nutzerarten.
+
+        Warum:
+            Auswahllisten dürfen nur Organisationen zeigen, zu denen sichtbare Pläne
+            gehören.
+
+        Erwartung:
+            Ohne Request und für den Superuser A und B, anonym nur A (öffentliche Pläne),
+            Mitglied A, Fremder keine.
+        """
         for fn in (flt.bplan_organizations, flt.fplan_organizations):
             with self.subTest(fn=fn.__name__):
                 self.assertEqual(self.names(fn(None)), {"OG A", "OG B"})
@@ -75,19 +107,31 @@ class OrganizationQuerysetTests(FilterTestBase):
                 self.assertEqual(self.names(fn(self.request_for(self.stranger))), set())
 
 
-# Testklasse: PlanFilterTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class PlanFilterTests(FilterTestBase):
+    """Die FilterSets für BPlan und FPlan sowie ihre Varianten (öffentlich, HTML, ID-Filter)."""
+
     CASES = (
         ("B", BPlan, flt.BPlanFilter, flt.BPlanPublicFilter, flt.BPlanFilterHtml, flt.BPlanIdFilter, "bplan_id__in"),
         ("F", FPlan, flt.FPlanFilter, flt.FPlanPublicFilter, flt.FPlanFilterHtml, flt.FPlanIdFilter, "fplan_id__in"),
     )
 
-    # Testfall: filtersets.
-    # Erwartung/Absicherung: verwendet assertEqual, assertNotIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_filtersets(self):
+        """
+        Was wird geprüft:
+            Alle Filter beider FilterSets: Name (ohne Groß-/Kleinschreibung), Bounding Box,
+            laufende Beteiligung, öffentlich, Gemeinde sowie die ID-Filter.
+
+        Warum:
+            Die Filter bestimmen, welche Pläne in Listen und Kartenabfragen erscheinen.
+
+        Erwartung:
+            Jeder Filter liefert genau die erwarteten Pläne; ein ausgeschaltetes Häkchen
+            filtert nicht; der öffentliche FilterSet kennt is_public nicht.
+
+        Hinweis:
+            count_current_beteiligungen kommt sonst aus der Annotation der View und wird
+            hier per Case-Ausdruck nachgebildet.
+        """
         for prefix, model, filter_cls, public_cls, html_cls, id_cls, id_param in self.CASES:
             pub, intern = f"{prefix} öffentlich", f"{prefix} intern"
             # count_current_beteiligungen kommt sonst aus der View-Annotation

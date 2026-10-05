@@ -1,3 +1,11 @@
+"""
+Tests für den Statuswechsel einer Stellungnahme (freischalten, zurückziehen, reaktivieren) über
+die Gast-Links, jeweils für BPlan und FPlan.
+
+Der gemeinsame Testkörper steckt in einem Mixin, das nicht von TestCase erbt. Die beiden
+konkreten Klassen mischen es ein und liefern nur die planspezifischen Werte.
+"""
+
 import datetime
 
 from django.contrib.auth.models import User
@@ -14,9 +22,6 @@ from xplanung_light.models import (
 )
 
 
-# Testklasse: _BeteiligungBeitragWorkflowMixin.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class _BeteiligungBeitragWorkflowMixin:
     """
     Gemeinsamer Testkörper für Statuswechsel einer Stellungnahme (approved /
@@ -78,6 +83,7 @@ class _BeteiligungBeitragWorkflowMixin:
         )
 
     def setUp(self):
+        """Legt pro Test einen frischen, nicht freigeschalteten Online-Beitrag an."""
         self.client = Client()
         # Für jeden Test ein frischer, noch nicht bestätigter Beitrag
         self.beitrag = self.BEITRAG_MODEL.objects.create(
@@ -93,6 +99,7 @@ class _BeteiligungBeitragWorkflowMixin:
         )
 
     def _url(self, action):
+        """URL der angegebenen Aktion (activate, withdraw oder reactivate) für den Beitrag."""
         return reverse(
             'beteiligungbeitrag-' + action,
             kwargs={
@@ -104,6 +111,7 @@ class _BeteiligungBeitragWorkflowMixin:
         )
 
     def _reload(self):
+        """Lädt den Beitrag frisch aus der Datenbank."""
         return self.BEITRAG_MODEL.objects.get(pk=self.beitrag.pk)
 
     def _put_beitrag_in_session(self):
@@ -114,20 +122,34 @@ class _BeteiligungBeitragWorkflowMixin:
 
     # --- Gemeinde-Admin ---------------------------------------------------
 
-    # Testfall: Gemeinde Administrator can activate Beitrag.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_gemeinde_admin_can_activate_beitrag(self):
+        """
+        Was wird geprüft:
+            Der Gemeinde-Administrator öffnet den Aktivierungslink.
+
+        Warum:
+            Verantwortliche dürfen Beiträge freischalten.
+
+        Erwartung:
+            Weiterleitung (302) und der Beitrag ist freigeschaltet.
+        """
         # Gemeinde-Admin darf einen Beitrag jederzeit freischalten (approved=True).
         self.client.force_login(self.gemeinde_admin)
         response = self.client.get(self._url('activate'))
         self.assertEqual(response.status_code, 302)
         self.assertTrue(self._reload().approved)
 
-    # Testfall: withdraw and reactivate roundtrip.
-    # Erwartung/Absicherung: verwendet assertTrue, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_withdraw_and_reactivate_roundtrip(self):
+        """
+        Was wird geprüft:
+            Der Administrator zieht einen Beitrag zurück und holt ihn wieder zurück.
+
+        Warum:
+            Der Status muss in beide Richtungen wechseln können.
+
+        Erwartung:
+            Nach dem Zurückziehen ist withdrawn wahr, nach dem Reaktivieren wieder falsch.
+        """
         # Zurückziehen setzt withdrawn=True, Reaktivieren setzt es wieder zurück.
         self.client.force_login(self.gemeinde_admin)
 
@@ -139,10 +161,18 @@ class _BeteiligungBeitragWorkflowMixin:
 
     # --- Gast-Nutzer ------------------------------------------------------
 
-    # Testfall: anonym ohne session ist sent to authentication.
-    # Erwartung/Absicherung: verwendet assertRedirects, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_without_session_is_sent_to_authentication(self):
+        """
+        Was wird geprüft:
+            Ein Besucher ohne Anmeldung und ohne Token öffnet den Aktivierungslink.
+
+        Warum:
+            Er muss sich erst über die E-Mail-Adresse des Beitrags ausweisen.
+
+        Erwartung:
+            Weiterleitung auf die Authentifizierungsseite; der Beitrag bleibt nicht
+            freigeschaltet.
+        """
         response = self.client.get(self._url('activate'))
         self.assertRedirects(
             response,
@@ -156,28 +186,40 @@ class _BeteiligungBeitragWorkflowMixin:
         )
         self.assertFalse(self._reload().approved)
 
-    # Testfall: anonym mit angemeldet session can activate.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_with_authenticated_session_can_activate(self):
+        """
+        Was wird geprüft:
+            Ein Gast, der sich bereits per E-Mail ausgewiesen hat, öffnet den
+            Aktivierungslink.
+
+        Warum:
+            Der Ersteller darf seinen Beitrag selbst freischalten.
+
+        Erwartung:
+            Status 200 und der Beitrag ist freigeschaltet.
+        """
         self._put_beitrag_in_session()
         response = self.client.get(self._url('activate'))
         # Gast bekommt die Detailseite gerendert, keinen Redirect
         self.assertEqual(response.status_code, 200)
         self.assertTrue(self._reload().approved)
 
-    # Testfall: anonym mit angemeldet session can withdraw.
-    # Erwartung/Absicherung: verwendet assertTrue.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_anonymous_with_authenticated_session_can_withdraw(self):
+        """
+        Was wird geprüft:
+            Derselbe Gast zieht seinen Beitrag zurück.
+
+        Warum:
+            Der Ersteller darf seinen Beitrag selbst zurückziehen.
+
+        Erwartung:
+            Der Beitrag ist als zurückgezogen markiert.
+        """
         # Gleicher Fall wie bei activate, hier für den Rückzug der Stellungnahme.
         self._put_beitrag_in_session()
         self.client.get(self._url('withdraw'))
         self.assertTrue(self._reload().withdrawn)
 
-    # Testfall: session of other Beitrag does nicht grant access.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_session_of_other_beitrag_does_not_grant_access(self):
         """Eine fremde generic_id in der Session darf keinen Zugriff öffnen."""
         fremder_beitrag = self.BEITRAG_MODEL.objects.create(
@@ -199,10 +241,17 @@ class _BeteiligungBeitragWorkflowMixin:
 
     # --- Eingeloggter Nutzer ohne Rechte ----------------------------------
 
-    # Testfall: foreign logged in Benutzer cannot activate.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn, assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_foreign_logged_in_user_cannot_activate(self):
+        """
+        Was wird geprüft:
+            Ein angemeldeter Nutzer ohne Rolle in der Gemeinde öffnet den Aktivierungslink.
+
+        Warum:
+            Angemeldet zu sein genügt nicht; er ist weder Ersteller noch Verantwortlicher.
+
+        Erwartung:
+            Weiterleitung zur Authentifizierung und der Beitrag bleibt nicht freigeschaltet.
+        """
         self.client.force_login(self.fremder_user)
         response = self.client.get(self._url('activate'))
         self.assertEqual(response.status_code, 302)
@@ -210,9 +259,6 @@ class _BeteiligungBeitragWorkflowMixin:
         self.assertFalse(self._reload().approved)
 
 
-# Testklasse: BeteiligungBeitragWorkflow.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragWorkflow(_BeteiligungBeitragWorkflowMixin, TestCase):
     """BPlan-Variante - unveränderte Werte gegenüber der ursprünglichen Fassung."""
     PLANTYP = 'bplan'
@@ -224,9 +270,6 @@ class BeteiligungBeitragWorkflow(_BeteiligungBeitragWorkflowMixin, TestCase):
     BETEILIGUNG_FK_FIELD = 'bplan_beteiligung'
 
 
-# Testklasse: FPlanBeteiligungBeitragWorkflow.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class FPlanBeteiligungBeitragWorkflow(_BeteiligungBeitragWorkflowMixin, TestCase):
     """FPlan-Variante - prüft dieselbe Logik für den Flächennutzungsplan-Zweig
     der plantyp-Verzweigung in beitrag_activate()/_withdraw()/_reactivate().

@@ -1,12 +1,11 @@
+"""Regressionstests gegen ungewollte Veröffentlichung: öffentliche und interne Planliste."""
+
 from django.test import TestCase, Client
 from django.urls import reverse
 
 from xplanung_light.models import BPlan
 
 
-# Testklasse: BPlanPublicVisibility.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BPlanPublicVisibility(TestCase):
     """
     Trennung von öffentlicher und interner Plan-Liste.
@@ -24,12 +23,21 @@ class BPlanPublicVisibility(TestCase):
                 ]
 
     def setUp(self):
+        """Legt einen Test-Client an (anonym)."""
         self.client = Client()
 
-    # Testfall: öffentlich auflisten contains only öffentlich Pläne.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue, assertSetEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_public_list_contains_only_public_plans(self):
+        """
+        Was wird geprüft:
+            Die öffentliche Liste der BPläne ohne Anmeldung.
+
+        Warum:
+            Nicht öffentliche Pläne dürfen dort nie erscheinen.
+
+        Erwartung:
+            Die Liste enthält genau die Pläne mit public=True; die Fixtures haben beide
+            Arten.
+        """
         # Die öffentliche Liste darf exakt der Menge der public=True-Pläne
         # entsprechen - kein zusätzlicher, kein fehlender Plan.
         response = self.client.get(reverse('bplan-public-list'))
@@ -51,9 +59,6 @@ class BPlanPublicVisibility(TestCase):
         self.assertSetEqual(listed_pks, expected_pks)
         self.assertSetEqual(listed_pks & non_public_pks, set())
 
-    # Testfall: nicht öffentlich Plan name ist nicht rendered.
-    # Erwartung/Absicherung: verwendet assertIsNotNone, assertNotContains.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_non_public_plan_name_is_not_rendered(self):
         """Der Name eines nicht-öffentlichen Plans darf nicht im HTML stehen."""
         non_public_plan = BPlan.objects.filter(public=False).first()
@@ -61,10 +66,17 @@ class BPlanPublicVisibility(TestCase):
         response = self.client.get(reverse('bplan-public-list'))
         self.assertNotContains(response, non_public_plan.name)
 
-    # Testfall: internal auflisten erfordert Anmeldung.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_internal_list_requires_login(self):
+        """
+        Was wird geprüft:
+            Die interne Liste ohne Anmeldung.
+
+        Warum:
+            Die interne Liste zeigt alle Pläne und ist nur für Angemeldete bestimmt.
+
+        Erwartung:
+            Weiterleitung (302) auf die Login-Seite.
+        """
         # Anonymer Zugriff auf die interne Liste muss auf den Login umleiten.
         response = self.client.get(reverse('bplan-list'))
         self.assertEqual(response.status_code, 302)

@@ -1,3 +1,8 @@
+"""
+Grenzfälle der Rechteprüfung bei TÖB-Stellungnahmen: Reporter einer anderen Organisation und
+URLs mit nicht zusammenpassenden Plänen und Beteiligungen.
+"""
+
 import copy
 import datetime
 from uuid import uuid4
@@ -16,11 +21,16 @@ from xplanung_light.models import (
 )
 
 
-# Testklasse: BeteiligungBeitragToebAuthorizationBoundaries.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class BeteiligungBeitragToebAuthorizationBoundaries(TestCase):
-    """TÖB reporter and URL-parent boundaries must be enforced."""
+    """
+    Ein TÖB-Reporter darf nur für seine eigene Organisation handeln, und die URL-IDs müssen
+    zusammenpassen.
+
+    Ausgangslage: Fixtures für Nutzer, Organisationen und einen BPlan. Dazu eine fremde
+    Organisation mit eigenem Plan. Reporter A gehört zur Gemeinde (Einheit TÖB A), Reporter B
+    zur fremden Organisation (Einheit TÖB B). Es gibt eine Beteiligung zu jedem Plan und einen
+    freigeschalteten Beitrag der Einheit TÖB B an der Beteiligung der Gemeinde.
+    """
 
     fixtures = [
         "user.json",
@@ -101,6 +111,10 @@ class BeteiligungBeitragToebAuthorizationBoundaries(TestCase):
         self.client = Client()
 
     def _url(self, name, beteiligungid=None, pk=None, toeb_id=None):
+        """
+        Baut die URL einer TÖB-Ansicht. Ohne Angabe gelten Plan und Beteiligung der Gemeinde;
+        beteiligungid, pk und toeb_id lassen sich überschreiben.
+        """
         kwargs = {
             "plantyp": "bplan",
             "planid": self.plan.pk,
@@ -112,18 +126,33 @@ class BeteiligungBeitragToebAuthorizationBoundaries(TestCase):
             kwargs["toeb_id"] = toeb_id
         return reverse(name, kwargs=kwargs)
 
-    # Testfall: aktualisieren weist zurück Berichterstatter aus another TöB Organisation.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_rejects_reporter_from_another_toeb_organization(self):
+        """
+        Was wird geprüft:
+            Reporter A öffnet das Bearbeiten-Formular für einen Beitrag der Einheit TÖB B.
+
+        Warum:
+            Reporter dürfen nur Beiträge ihrer eigenen Einheit ändern.
+
+        Erwartung:
+            Status 403.
+        """
         self.client.force_login(self.reporter_a)
         response = self.client.get(self._url("beteiligungbeitrag-toeb-update", pk=self.beitrag.pk))
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: aktualisieren weist zurück contribution wenn URL points to another participation.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_rejects_contribution_when_url_points_to_another_participation(self):
+        """
+        Was wird geprüft:
+            Reporter B ist berechtigt, die URL nennt aber die Beteiligung des fremden Plans,
+            während der Beitrag zur Beteiligung der Gemeinde gehört.
+
+        Warum:
+            Die Kette Plan, Beteiligung, Beitrag muss in der URL stimmig sein.
+
+        Erwartung:
+            Status 404.
+        """
         self.client.force_login(self.reporter_b)
         response = self.client.get(self._url(
             "beteiligungbeitrag-toeb-update",
@@ -131,18 +160,26 @@ class BeteiligungBeitragToebAuthorizationBoundaries(TestCase):
         ))
         self.assertEqual(response.status_code, 404)
 
-    # Testfall: löschen weist zurück Berichterstatter aus another TöB Organisation.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_rejects_reporter_from_another_toeb_organization(self):
+        """
+        Was wird geprüft:
+            Reporter A öffnet die Löschen-Ansicht eines Beitrags der Einheit TÖB B.
+
+        Erwartung:
+            Status 403.
+        """
         self.client.force_login(self.reporter_a)
         response = self.client.get(self._url("beteiligungbeitrag-toeb-delete", pk=self.beitrag.pk))
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: löschen weist zurück contribution wenn URL points to another participation.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_rejects_contribution_when_url_points_to_another_participation(self):
+        """
+        Was wird geprüft:
+            Löschen-Ansicht mit nicht zusammenpassender Beteiligung in der URL.
+
+        Erwartung:
+            Status 404.
+        """
         self.client.force_login(self.reporter_b)
         response = self.client.get(self._url(
             "beteiligungbeitrag-toeb-delete",
@@ -150,20 +187,35 @@ class BeteiligungBeitragToebAuthorizationBoundaries(TestCase):
         ))
         self.assertEqual(response.status_code, 404)
 
-    # Testfall: erstellen weist zurück Berichterstatter aus another TöB Organisation.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_rejects_reporter_from_another_toeb_organization(self):
+        """
+        Was wird geprüft:
+            Reporter A will eine Stellungnahme im Namen der Einheit TÖB B anlegen.
+
+        Warum:
+            Die Einheit steht in der URL und darf nicht frei wählbar sein.
+
+        Erwartung:
+            Status 403.
+        """
         self.client.force_login(self.reporter_a)
         response = self.client.get(self._url(
             "beteiligungbeitrag-toeb-create", toeb_id=self.toeb_b.pk,
         ))
         self.assertEqual(response.status_code, 403)
 
-    # Testfall: erstellen weist zurück participation aus falsch parent Kontext.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_rejects_participation_from_wrong_parent_context(self):
+        """
+        Was wird geprüft:
+            Reporter B legt mit seiner eigenen Einheit an, die URL nennt aber die
+            Beteiligung des fremden Plans zusammen mit der Plan-ID der Gemeinde.
+
+        Warum:
+            Plan und Beteiligung in der URL müssen zusammenpassen.
+
+        Erwartung:
+            Status 404.
+        """
         self.client.force_login(self.reporter_b)
         response = self.client.get(self._url(
             "beteiligungbeitrag-toeb-create",

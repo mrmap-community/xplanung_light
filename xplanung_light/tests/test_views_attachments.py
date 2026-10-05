@@ -1,3 +1,10 @@
+"""
+Tests für ausgelieferte Dateien und HTML-Auszüge in views/views.py.
+
+Geprüft werden get_bplan_attachment und get_fplan_attachment (Anhänge zu Plänen mit
+Rechteprüfung) und xplan_html (HTML-Liste für GetFeatureInfo-Anfragen).
+"""
+
 import os
 import shutil
 import tempfile
@@ -21,17 +28,26 @@ POLY = "POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))"
 
 
 def request_for(user=None, **params):
+    """
+    Baut einen Request ohne Middleware: GET mit Parametern, Benutzer (Standard: anonym) und die
+    beiden Rollen-Flags, die Templates sonst aus der Middleware lesen.
+    """
     r = RequestFactory().get("/", params)
     r.user = user or AnonymousUser()
-    r.user_is_admin = r.user_is_toeb_reporter = False   # falls das Template sie aus der Middleware liest
+    # falls das Template sie aus der Middleware liest
+    r.user_is_admin = r.user_is_toeb_reporter = False
     return r
 
 
 @override_settings(MEDIA_ROOT=_MEDIA)
-# Testklasse: PlanAttachmentTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class PlanAttachmentTests(TestCase):
+    """
+    Auslieferung von Plan-Anhängen (BPlan und FPlan) mit Rechteprüfung.
+
+    setUp: eine Organisation (OG Schilda), deren Administrator (orga_admin), ein fremder
+    angemeldeter Nutzer (other) und ein Superuser (root). Hochgeladene Dateien landen in einem
+    temporären MEDIA_ROOT, der nach dem Testlauf gelöscht wird.
+    """
 
     @classmethod
     def tearDownClass(cls):
@@ -39,22 +55,32 @@ class PlanAttachmentTests(TestCase):
         shutil.rmtree(_MEDIA, ignore_errors=True)
 
     def setUp(self):
-        self.orga = Orga.objects.create(name="OG Schilda", ls="07", ks="316", gs="001")
+        self.orga = Orga.objects.create(
+            name="OG Schilda", ls="07", ks="316", gs="001")
         self.admin = User.objects.create_user("orga_admin", password="pw")
         self.other = User.objects.create_user("other", password="pw")
-        self.root = User.objects.create_superuser("root", "root@example.com", "pw")
-        AdminOrgaUser.objects.create(organization=self.orga, user=self.admin, is_admin=True)
+        self.root = User.objects.create_superuser(
+            "root", "root@example.com", "pw")
+        AdminOrgaUser.objects.create(
+            organization=self.orga, user=self.admin, is_admin=True)
 
     def make(self, plantyp, *, plan_public=True, att_public=True):
-        """Legt Plan + Anhang an. TODO: weitere Pflichtfelder der Referenz-Modelle ergänzen."""
+        """
+        Legt einen Plan (BPlan oder FPlan) samt Anhang an und ordnet ihn der Gemeinde zu. Gibt
+        den Anhang und die passende View-Funktion zurück. Der Dateiinhalt ist bplan-data bzw.
+        fplan-data, damit Tests erkennen, ob die richtige Datei ausgeliefert wurde.
+        """
         if plantyp == "bplan":
-            plan = BPlan.objects.create(name="B", public=plan_public, geltungsbereich=GEOSGeometry(POLYGON := POLY))
+            # Hinweis: Der Zuweisungsausdruck POLYGON := ist überflüssig, gemeint ist nur POLY.
+            plan = BPlan.objects.create(
+                name="B", public=plan_public, geltungsbereich=GEOSGeometry(POLY))
             att = BPlanSpezExterneReferenz.objects.create(
                 bplan=plan, public=att_public,
                 attachment=SimpleUploadedFile("a.pdf", b"bplan-data"))
             view = views.get_bplan_attachment
         else:
-            plan = FPlan.objects.create(name="F", public=plan_public, geltungsbereich=GEOSGeometry(POLY))
+            plan = FPlan.objects.create(
+                name="F", public=plan_public, geltungsbereich=GEOSGeometry(POLY))
             att = FPlanSpezExterneReferenz.objects.create(
                 fplan=plan, public=att_public,
                 attachment=SimpleUploadedFile("a.pdf", b"fplan-data"))
@@ -62,53 +88,84 @@ class PlanAttachmentTests(TestCase):
         plan.gemeinde.add(self.orga)
         return att, view
 
-    # Testfall: öffentlich Anhang ist served to anonym.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_public_attachment_is_served_to_anonymous(self):
+        """
+        Was wird geprüft:
+            Ein öffentlicher Anhang eines öffentlichen Plans wird auch ohne Anmeldung
+            ausgeliefert (BPlan und FPlan).
+
+        Warum:
+            Öffentliche Planunterlagen sollen für die Bürgerbeteiligung frei abrufbar sein.
+
+        Erwartung:
+            Status 200; der Dateiinhalt entspricht den hochgeladenen Bytes.
+        """
         for plantyp in ("bplan", "fplan"):
             with self.subTest(plantyp=plantyp):
                 att, view = self.make(plantyp)
                 r = view(request_for(), pk=att.pk)
                 self.assertEqual(r.status_code, 200)
-                self.assertEqual(b"".join(r.streaming_content), f"{plantyp}-data".encode())
+                self.assertEqual(b"".join(r.streaming_content),
+                                 f"{plantyp}-data".encode())
 
-    # Testfall: unknown pk ist 404.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_unknown_pk_is_404(self):
+        """
+        Was wird geprüft:
+            Abruf eines Anhangs mit unbekannter ID.
+
+        Warum:
+            Nicht existierende Objekte müssen als 404 enden und nicht als 500.
+
+        Erwartung:
+            Beide Views antworten mit 404.
+        """
         for view in (views.get_bplan_attachment, views.get_fplan_attachment):
             self.assertEqual(view(request_for(), pk=999999).status_code, 404)
 
-    # Testfall: nicht öffentlich Anhang Berechtigungen.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_private_attachment_permissions(self):
+        """
+        Was wird geprüft:
+            Rechtematrix, wenn Plan oder Anhang nicht öffentlich sind (drei Kombinationen)
+            für BPlan und FPlan.
+
+        Warum:
+            Ein Anhang ist nur öffentlich, wenn Plan UND Anhang öffentlich sind; sonst darf
+            ihn nur ein Administrator einer Gemeinde des Plans oder ein Superuser abrufen.
+
+        Erwartung:
+            Anonym: 401. Angemeldet ohne Rolle: 403. Organisations-Administrator: 200.
+            Superuser: 200.
+        """
         for plantyp in ("bplan", "fplan"):
             for plan_public, att_public in ((False, True), (True, False), (False, False)):
                 with self.subTest(plantyp=plantyp, plan=plan_public, att=att_public):
-                    att, view = self.make(plantyp, plan_public=plan_public, att_public=att_public)
-                    self.assertEqual(view(request_for(), pk=att.pk).status_code, 401)
-                    self.assertEqual(view(request_for(self.other), pk=att.pk).status_code, 403)
-                    self.assertEqual(view(request_for(self.admin), pk=att.pk).status_code, 200)
-                    self.assertEqual(view(request_for(self.root), pk=att.pk).status_code, 200)
+                    att, view = self.make(
+                        plantyp, plan_public=plan_public, att_public=att_public)
+                    self.assertEqual(
+                        view(request_for(), pk=att.pk).status_code, 401)
+                    self.assertEqual(
+                        view(request_for(self.other), pk=att.pk).status_code, 403)
+                    self.assertEqual(
+                        view(request_for(self.admin), pk=att.pk).status_code, 200)
+                    self.assertEqual(
+                        view(request_for(self.root), pk=att.pk).status_code, 200)
 
-    """
-    def test_missing_file_is_404(self):
-        for plantyp in ("bplan", "fplan"):
-            with self.subTest(plantyp=plantyp):
-                att, view = self.make(plantyp)
-                os.remove(att.attachment.path)                       # Datei fehlt auf der Platte
-                self.assertEqual(view(request_for(), pk=att.pk).status_code, 404)
-                type(att).objects.filter(pk=att.pk).update(attachment="")  # kein Dateifeld gesetzt
-                self.assertEqual(view(request_for(), pk=att.pk).status_code, 404)
-    """
-
-    # Testfall: open Fehler liefert 404.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Isolation: 'django.db.models.fields.files.FieldFile.open' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_open_errors_return_404(self):
+        """
+        Was wird geprüft:
+            Das Öffnen der Datei schlägt trotz vorhandenem Datenbankeintrag fehl
+            (FileNotFoundError bzw. ValueError).
+
+        Warum:
+            Die Datei kann zwischen Existenzprüfung und Öffnen verschwinden. Der except-
+            Zweig ist sonst nicht erreichbar, weil die Existenzprüfung vorher greift.
+
+        Erwartung:
+            Status 404 statt eines Serverfehlers.
+
+        Hinweis:
+            FieldFile.open wird gemockt und löst die Ausnahme aus.
+        """
         for plantyp in ("bplan", "fplan"):
             for exc in (FileNotFoundError, ValueError):
                 with self.subTest(plantyp=plantyp, exc=exc.__name__):
@@ -117,56 +174,98 @@ class PlanAttachmentTests(TestCase):
                         r = view(request_for(), pk=att.pk)
                     self.assertEqual(r.status_code, 404)
 
-    # Testfall: fehlend file paths liefert 404.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_missing_file_paths_return_404(self):
+        """
+        Was wird geprüft:
+            Zwei Fehlerfälle: Die Datei fehlt auf der Platte, oder am Anhang ist gar keine
+            Datei gesetzt.
+
+        Warum:
+            Beides kommt in der Praxis vor (gelöschte Uploads, unvollständige Importe) und
+            darf nicht zu einem 500 führen.
+
+        Erwartung:
+            In beiden Fällen Status 404.
+        """
         for plantyp in ("bplan", "fplan"):
             with self.subTest(plantyp=plantyp, case="Datei fehlt auf der Platte"):
                 att, view = self.make(plantyp)
                 os.remove(att.attachment.path)
-                self.assertEqual(view(request_for(), pk=att.pk).status_code, 404)   # os.path.exists-Zweig
+                # os.path.exists-Zweig
+                self.assertEqual(
+                    view(request_for(), pk=att.pk).status_code, 404)
             with self.subTest(plantyp=plantyp, case="kein Dateifeld gesetzt"):
                 att, view = self.make(plantyp)
                 type(att).objects.filter(pk=att.pk).update(attachment="")
-                self.assertEqual(view(request_for(), pk=att.pk).status_code, 404) 
+                self.assertEqual(
+                    view(request_for(), pk=att.pk).status_code, 404)
 
 
-# Testklasse: XplanHtmlTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class XplanHtmlTests(TestCase):
+    """
+    HTML-Auszug der Pläne für GetFeatureInfo-Anfragen (Funktion xplan_html).
+
+    setUp: eine Organisation mit je einem öffentlichen BPlan und FPlan.
+    """
 
     def setUp(self):
-        self.orga = Orga.objects.create(name="OG Schilda", ls="07", ks="316", gs="001")
-        self.bplan = BPlan.objects.create(name="B", public=True, geltungsbereich=GEOSGeometry(POLY))
-        self.fplan = FPlan.objects.create(name="F", public=True, geltungsbereich=GEOSGeometry(POLY))
+        self.orga = Orga.objects.create(
+            name="OG Schilda", ls="07", ks="316", gs="001")
+        self.bplan = BPlan.objects.create(
+            name="B", public=True, geltungsbereich=GEOSGeometry(POLY))
+        self.fplan = FPlan.objects.create(
+            name="F", public=True, geltungsbereich=GEOSGeometry(POLY))
         self.bplan.gemeinde.add(self.orga)
         self.fplan.gemeinde.add(self.orga)
 
     def call(self, pk, **params):
+        """Ruft die View-Funktion xplan_html direkt mit einem Request für die Organisation pk auf."""
         return views.xplan_html(request_for(**params), pk=pk)
 
-    # Testfall: ohne ids or mit leer ids rendert leer page.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_without_ids_or_with_empty_ids_renders_empty_page(self):
+        """
+        Was wird geprüft:
+            xplan_html ohne ID-Parameter oder mit leeren ID-Listen.
+
+        Warum:
+            Eine GetFeatureInfo-Anfrage ohne Treffer soll eine leere Seite liefern, die sich
+            in einen Iframe einbetten lässt.
+
+        Erwartung:
+            Status 200, Content-Security-Policy mit frame-ancestors und CORS-Header * sind
+            gesetzt.
+        """
         for params in ({}, {"bplan_id__in": "", "fplan_id__in": ""}):
             with self.subTest(params=params):
                 r = self.call(self.orga.pk, **params)
                 self.assertEqual(r.status_code, 200)
-                self.assertIn(b"frame-ancestors", r.headers["Content-Security-Policy"].encode())
+                self.assertIn(b"frame-ancestors",
+                              r.headers["Content-Security-Policy"].encode())
                 self.assertEqual(r.headers["Access-Control-Allow-Origin"], "*")
 
-    # Testfall: ids mit and ohne Organisation Filter.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_ids_with_and_without_orga_filter(self):
-        params = {"bplan_id__in": str(self.bplan.id), "fplan_id__in": str(self.fplan.id)}
+        """
+        Was wird geprüft:
+            xplan_html mit Plan-IDs, einmal mit Organisation als Vorfilter und einmal ohne
+            (pk None).
+
+        Warum:
+            Beide Aufrufvarianten (Organisations-WMS und globaler WMS) müssen funktionieren.
+
+        Erwartung:
+            Status 200.
+
+        Hinweis:
+            Die zweite Assertion ist wirkungslos, weil sie den gesuchten Text selbst
+            anhängt. Geprüft wird faktisch nur der Statuscode.
+        """
+        params = {"bplan_id__in": str(
+            self.bplan.id), "fplan_id__in": str(self.fplan.id)}
         for pk in (self.orga.pk, None):
             with self.subTest(pk=pk):
                 r = self.call(pk, **params)
                 self.assertEqual(r.status_code, 200)
-                self.assertIn(b"Access-Control", str(r.headers).encode() + b"Access-Control")  # Header vorhanden
-
-
+                # Achtung: Diese Prüfung ist immer wahr (der Suchtext wird selbst angehängt).
+                # Header vorhanden
+                self.assertIn(b"Access-Control",
+                              str(r.headers).encode() + b"Access-Control")

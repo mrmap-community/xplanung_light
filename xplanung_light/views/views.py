@@ -1,4 +1,5 @@
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.contrib.auth.decorators import login_required
 import requests
 from django.shortcuts import render
 from xplanung_light.forms import RegistrationForm
@@ -817,6 +818,7 @@ def childs_map(request, pk: int):
     return render(request, "xplanung_light/orga_childs_map.html", {"orga": orga, "ortsgemeinden": ortsgemeinden, "geojson": geojson})
 
 
+@login_required
 def bplan_import(request):
     if request.method == "POST":
         form = BPlanImportForm(request.POST, request.FILES)
@@ -874,6 +876,7 @@ def bplan_import(request):
     return render(request, "xplanung_light/bplan_import.html", {"form": form})
 
 
+@login_required
 def fplan_import(request):
     if request.method == "POST":
         form = FPlanImportForm(request.POST, request.FILES)
@@ -932,6 +935,7 @@ def fplan_import(request):
     return render(request, "xplanung_light/fplan_import.html", {"form": form})
 
 
+@login_required
 def bplan_import_archiv(request):
     if request.method == "POST":
         form = BPlanImportArchivForm(request.POST, request.FILES)
@@ -987,6 +991,7 @@ def bplan_import_archiv(request):
     return render(request, "xplanung_light/bplan_import_archiv.html", {"form": form})
 
 
+@login_required
 def fplan_import_archiv(request):
     if request.method == "POST":
         form = FPlanImportArchivForm(request.POST, request.FILES)

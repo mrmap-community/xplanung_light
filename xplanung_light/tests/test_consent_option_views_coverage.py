@@ -1,3 +1,11 @@
+"""
+Abdeckungstests für die Views der Einwilligungstexte (ConsentOption): Anlegen, Bearbeiten, Liste
+und Löschen.
+
+Einwilligungstexte darf nur der zentrale Administrator (Superuser) verwalten. Die Tests rufen
+einzelne Methoden der Views direkt auf, teils mit gemockten Basisklassen-Aufrufen.
+"""
+
 from datetime import timedelta
 from unittest.mock import Mock, patch
 
@@ -21,11 +29,16 @@ from xplanung_light.views.consentoption import (
 User = get_user_model()
 
 
-# Testklasse: ConsentOptionCoverageTests.
-# Zweck: Gruppiert die Testfälle für die durch den Klassennamen bezeichnete Funktionalität.
-# Die Klasse enthält die unten aufgeführten Testvarianten; sie dokumentieren erwartetes Verhalten, Fehlerfälle und Randbedingungen anhand konkreter Assertions.
 class ConsentOptionCoverageTests(TestCase):
+    """
+    Rechte und Verhalten der ConsentOption-Views.
+
+    Ausgangslage (setUp): heutiges Datum, ein Superuser, ein normaler Nutzer und eine
+    Einwilligung vom Typ Kommentator mit dem Titel Datenschutzerklärung Version 1.0.
+    """
+
     def setUp(self):
+        """Legt Superuser, normalen Nutzer und eine Einwilligungsoption an."""
         self.today = timezone.now().date()
         self.superuser = User.objects.create_superuser(
             username="consent_superuser", password="password123"
@@ -45,12 +58,14 @@ class ConsentOptionCoverageTests(TestCase):
         )
 
     def _request(self, user, method="get"):
+        """Baut einen Request (Standard GET) für die übergebene Methode und setzt den Nutzer."""
         factory = RequestFactory()
         request = getattr(factory, method)("/consentoption/")
         request.user = user
         return request
 
     def _valid_form(self, instance=None, title="Neue Zustimmungsoption"):
+        """Liefert ein gültig befülltes ConsentOptionForm mit Titel und optionaler Instanz."""
         data = {
             "type": ConsentOption.COMMENTATOR,
             "title": title,
@@ -67,10 +82,14 @@ class ConsentOptionCoverageTests(TestCase):
     # CreateView
     # ------------------------------------------------------------------
 
-    # Testfall: erstellen get Formular liefert Formular für Superuser.
-    # Erwartung/Absicherung: verwendet assertIsInstance.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_get_form_returns_form_for_superuser(self):
+        """
+        Was wird geprüft:
+            get_form() der Anlegen-Ansicht für einen Superuser.
+
+        Erwartung:
+            Es kommt ein ConsentOptionForm zurück.
+        """
         view = ConsentOptionCreateView()
         view.request = self._request(self.superuser)
 
@@ -78,19 +97,30 @@ class ConsentOptionCoverageTests(TestCase):
 
         self.assertIsInstance(form, ConsentOptionForm)
 
-    # Testfall: erstellen get Formular liefert false für nicht Superuser.
-    # Erwartung/Absicherung: verwendet assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_get_form_returns_false_for_non_superuser(self):
+        """
+        Was wird geprüft:
+            get_form() der Anlegen-Ansicht für einen normalen Nutzer.
+
+        Warum:
+            Nur der zentrale Administrator darf Einwilligungen anlegen.
+
+        Erwartung:
+            Es wird kein Formular geliefert (False).
+        """
         view = ConsentOptionCreateView()
         view.request = self._request(self.user)
 
         self.assertFalse(view.get_form())
 
-    # Testfall: erstellen Formular gültig speichert für Superuser.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_form_valid_saves_for_superuser(self):
+        """
+        Was wird geprüft:
+            form_valid() beim Anlegen durch einen Superuser.
+
+        Erwartung:
+            Der Aufruf wird an die Basisklasse weitergereicht (gemockt, Ergebnis valid).
+        """
         view = ConsentOptionCreateView()
         view.request = self._request(self.superuser, "post")
         view.object = None
@@ -101,10 +131,18 @@ class ConsentOptionCoverageTests(TestCase):
 
         self.assertEqual(result, "valid")
 
-    # Testfall: erstellen Formular gültig weist zurück nicht Superuser.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_form_valid_rejects_non_superuser(self):
+        """
+        Was wird geprüft:
+            form_valid() beim Anlegen durch einen normalen Nutzer.
+
+        Warum:
+            Absicherung, falls ein POST an der Formularprüfung vorbei ankommt.
+
+        Erwartung:
+            form_invalid() wird aufgerufen und der Fehler Nutzer ist nicht der zentrale
+            Administrator! steht im Formular.
+        """
         view = ConsentOptionCreateView()
         view.request = self._request(self.user, "post")
         view.object = None
@@ -116,18 +154,28 @@ class ConsentOptionCoverageTests(TestCase):
         self.assertEqual(result, "invalid")
         self.assertIn("Nutzer ist nicht der zentrale Administrator!", form.errors["__all__"])
 
-    # Testfall: erstellen Erfolg URL.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_success_url(self):
+        """
+        Was wird geprüft:
+            Die Adresse nach dem Anlegen.
+
+        Erwartung:
+            Sie führt auf consentoption-list.
+        """
         view = ConsentOptionCreateView()
         self.assertEqual(view.get_success_url(), reverse("consentoption-list"))
 
-    # Testfall: erstellen Kontext contains extra Kontext.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Isolation: 'django.views.generic.edit.CreateView.get_context_data' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_create_context_contains_extra_context(self):
+        """
+        Was wird geprüft:
+            Der Kontext der Anlegen-Ansicht.
+
+        Warum:
+            Das Template unterscheidet Anlegen und Bearbeiten über extra_context.
+
+        Erwartung:
+            extra_context enthält create gleich True.
+        """
         view = ConsentOptionCreateView(extra_context={"create": True})
         view.request = self._request(self.superuser)
         view.object = None
@@ -141,38 +189,54 @@ class ConsentOptionCoverageTests(TestCase):
     # UpdateView
     # ------------------------------------------------------------------
 
-    # Testfall: aktualisieren get Formular liefert Formular für Superuser.
-    # Erwartung/Absicherung: verwendet assertIsInstance.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_get_form_returns_form_for_superuser(self):
+        """
+        Was wird geprüft:
+            get_form() der Bearbeiten-Ansicht für einen Superuser.
+
+        Erwartung:
+            Es kommt ein ConsentOptionForm zurück.
+        """
         view = ConsentOptionUpdateView()
         view.request = self._request(self.superuser)
 
         self.assertIsInstance(view.get_form(), ConsentOptionForm)
 
-    # Testfall: aktualisieren get Formular liefert false für nicht Superuser.
-    # Erwartung/Absicherung: verwendet assertFalse.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_get_form_returns_false_for_non_superuser(self):
+        """
+        Was wird geprüft:
+            get_form() der Bearbeiten-Ansicht für einen normalen Nutzer.
+
+        Erwartung:
+            Es wird kein Formular geliefert (False).
+        """
         view = ConsentOptionUpdateView()
         view.request = self._request(self.user)
 
         self.assertFalse(view.get_form())
 
-    # Testfall: aktualisieren get Objekt erlaubt Superuser.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_get_object_allows_superuser(self):
+        """
+        Was wird geprüft:
+            get_object() der Bearbeiten-Ansicht für einen Superuser.
+
+        Erwartung:
+            Die Option wird geliefert.
+        """
         view = ConsentOptionUpdateView()
         view.request = self._request(self.superuser)
         view.kwargs = {"pk": self.option.pk}
 
         self.assertEqual(view.get_object(), self.option)
 
-    # Testfall: aktualisieren get Objekt weist zurück nicht Superuser.
-    # Erwartung/Absicherung: verwendet assertRaises.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_get_object_rejects_non_superuser(self):
+        """
+        Was wird geprüft:
+            get_object() der Bearbeiten-Ansicht für einen normalen Nutzer.
+
+        Erwartung:
+            PermissionDenied.
+        """
         view = ConsentOptionUpdateView()
         view.request = self._request(self.user)
         view.kwargs = {"pk": self.option.pk}
@@ -180,10 +244,19 @@ class ConsentOptionCoverageTests(TestCase):
         with self.assertRaises(PermissionDenied):
             view.get_object()
 
-    # Testfall: aktualisieren Formular gültig weist zurück nicht Superuser.
-    # Erwartung/Absicherung: verwendet assertEqual, assertIn.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_form_valid_rejects_non_superuser(self):
+        """
+        Was wird geprüft:
+            form_valid() beim Bearbeiten durch einen normalen Nutzer.
+
+        Warum:
+            Änderungen an Einwilligungstexten sind rechtlich relevant und dürfen nur zentral
+            erfolgen.
+
+        Erwartung:
+            form_invalid() wird aufgerufen, der Fehler steht im Formular, und der Titel der
+            Option bleibt unverändert.
+        """
         view = ConsentOptionUpdateView()
         view.request = self._request(self.user, "post")
         view.object = self.option
@@ -197,10 +270,14 @@ class ConsentOptionCoverageTests(TestCase):
         self.option.refresh_from_db()
         self.assertEqual(self.option.title, "Datenschutzerklärung Version 1.0")
 
-    # Testfall: aktualisieren Formular gültig speichert für Superuser.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_form_valid_saves_for_superuser(self):
+        """
+        Was wird geprüft:
+            form_valid() beim Bearbeiten durch einen Superuser.
+
+        Erwartung:
+            Der Aufruf wird an die Basisklasse weitergereicht (gemockt).
+        """
         view = ConsentOptionUpdateView()
         view.request = self._request(self.superuser, "post")
         view.object = self.option
@@ -211,18 +288,25 @@ class ConsentOptionCoverageTests(TestCase):
 
         self.assertEqual(result, "valid")
 
-    # Testfall: aktualisieren Erfolg URL.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_success_url(self):
+        """
+        Was wird geprüft:
+            Die Adresse nach dem Bearbeiten.
+
+        Erwartung:
+            Sie führt auf consentoption-list.
+        """
         view = ConsentOptionUpdateView()
         self.assertEqual(view.get_success_url(), reverse("consentoption-list"))
 
-    # Testfall: aktualisieren Kontext contains extra Kontext.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Isolation: 'django.views.generic.edit.UpdateView.get_context_data' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_update_context_contains_extra_context(self):
+        """
+        Was wird geprüft:
+            Der Kontext der Bearbeiten-Ansicht.
+
+        Erwartung:
+            extra_context enthält update gleich True.
+        """
         view = ConsentOptionUpdateView(extra_context={"update": True})
         view.request = self._request(self.superuser)
         view.object = self.option
@@ -236,30 +320,45 @@ class ConsentOptionCoverageTests(TestCase):
     # ListView / DeleteView
     # ------------------------------------------------------------------
 
-    # Testfall: auflisten View ist accessible and contains option.
-    # Erwartung/Absicherung: verwendet assertEqual, assertContains.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_list_view_is_accessible_and_contains_option(self):
+        """
+        Was wird geprüft:
+            Die Liste der Einwilligungen für einen angemeldeten, normalen Nutzer.
+
+        Warum:
+            Die Liste darf jeder angemeldete Nutzer einsehen; nur das Ändern ist beschränkt.
+
+        Erwartung:
+            Status 200 und der Titel der Option steht in der Antwort.
+        """
         self.client.force_login(self.user)
         response = self.client.get(reverse("consentoption-list"))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.option.title)
 
-    # Testfall: löschen get Objekt erlaubt Superuser.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_get_object_allows_superuser(self):
+        """
+        Was wird geprüft:
+            get_object() der Löschen-Ansicht für einen Superuser.
+
+        Erwartung:
+            Die Option wird geliefert.
+        """
         view = ConsentOptionDeleteView()
         view.request = self._request(self.superuser)
         view.kwargs = {"pk": self.option.pk}
 
         self.assertEqual(view.get_object(), self.option)
 
-    # Testfall: löschen get Objekt weist zurück nicht Superuser.
-    # Erwartung/Absicherung: verwendet assertRaises.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_get_object_rejects_non_superuser(self):
+        """
+        Was wird geprüft:
+            get_object() der Löschen-Ansicht für einen normalen Nutzer.
+
+        Erwartung:
+            PermissionDenied.
+        """
         view = ConsentOptionDeleteView()
         view.request = self._request(self.user)
         view.kwargs = {"pk": self.option.pk}
@@ -267,11 +366,18 @@ class ConsentOptionCoverageTests(TestCase):
         with self.assertRaises(PermissionDenied):
             view.get_object()
 
-    # Testfall: löschen nicht Superuser redirects and keeps Objekt.
-    # Erwartung/Absicherung: verwendet assertEqual, assertTrue, assert_called_once.
-    # Isolation: 'xplanung_light.views.consentoption.messages.add_message' werden gemockt/gepatcht, damit der Test den beschriebenen Fall isoliert prüft.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_non_superuser_redirects_and_keeps_object(self):
+        """
+        Was wird geprüft:
+            form_valid() der Löschen-Ansicht für einen normalen Nutzer.
+
+        Warum:
+            Absicherung, falls der Zugriffsschutz in get_object umgangen wird.
+
+        Erwartung:
+            Weiterleitung auf die Liste, die Option bleibt bestehen und es wird eine
+            Warnmeldung (Stufe 30) angelegt.
+        """
         view = ConsentOptionDeleteView()
         view.request = self._request(self.user, "post")
         view.object = self.option
@@ -301,9 +407,13 @@ class ConsentOptionCoverageTests(TestCase):
         add_message.assert_called_once()
         self.assertEqual(add_message.call_args.args[1], 25)  # messages.SUCCESS
     """
-    # Testfall: löschen Erfolg URL.
-    # Erwartung/Absicherung: verwendet assertEqual.
-    # Der Test verifiziert damit gezielt das im Methodennamen beschriebene Verhalten.
     def test_delete_success_url(self):
+        """
+        Was wird geprüft:
+            Die Adresse nach dem Löschen.
+
+        Erwartung:
+            Sie führt auf consentoption-list.
+        """
         view = ConsentOptionDeleteView()
         self.assertEqual(view.get_success_url(), reverse("consentoption-list"))
