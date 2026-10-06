@@ -19,10 +19,14 @@ from organizations.base_admin import (
 """
 from xplanung_light.models import AdminOrgaUser
 
-# don't forget the commas
-BaseUserAdmin.list_filter += ('last_login',)
-BaseUserAdmin.list_display += ('last_login',)
-# BaseUserAdmin.fieldsets +=  (('Extra Fields', {'fields': ('new_field', )}),)
+
+class UserAdmin(BaseUserAdmin):
+    list_filter = BaseUserAdmin.list_filter + ("last_login",)  # pyright: ignore[reportOperatorIssue]
+    list_display = BaseUserAdmin.list_display + ("last_login",)  # pyright: ignore[reportOperatorIssue]
+
+
+admin.site.unregister(User)
+admin.site.register(User, UserAdmin)
 
 
 class RichtextAdmin(SimpleHistoryAdmin):
@@ -53,11 +57,6 @@ class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
     verbose_name_plural = "UserProfiles"
-
-
-# Re-register UserAdmin
-admin.site.unregister(User)
-admin.site.register(User, BaseUserAdmin)
 
 
 # admin.site.register(BPlanBeteiligung, SimpleHistoryAdmin)
