@@ -54,3 +54,14 @@ eine EMail. Die Anträge und Entscheidungen über die Anträge werden in der Dat
 
 Nach der Freigabe kann der Nutzer Bauleitpläne der ihm zugeordneten Gebietskörperschaften verwalten. 
 **Die Berechtigung hängt an der Gebietskörperschaft und nicht am Account des Nutzers**.
+
+=============
+Prozessmodell
+=============
+
+Antrags-/Freigabeverfahren (BPMN-Diagramm - erstellt mit BPMN.io):
+
+.. image:: ../media/zugriffskontrolle_beantragen_freischalten.svg
+   :align: center
+   :alt: BPMN Antrags-/Freigabeprozess
+   :width: 600px

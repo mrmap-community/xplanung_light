@@ -789,6 +789,13 @@ class BPlan(XPlan):
         """Returns a string representation of a BPlan."""
         return f"{self.name} ({self.get_planart_display()})"
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['public',]),
+            models.Index(fields=['inkrafttretens_datum',]),
+            models.Index(fields=['untergangs_datum',]),
+        ]
+
 
 """
 FPlan 
@@ -899,6 +906,13 @@ class FPlan(XPlan):
     def __str__(self):
         """Returns a string representation of a BPlan."""
         return f"{self.name} ({self.get_planart_display()})"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['public',]),
+            models.Index(fields=['wirksamkeits_datum',]),
+            models.Index(fields=['untergangs_datum',]),
+        ]
 
 
 """
@@ -1119,6 +1133,12 @@ class XPlanBeteiligung(GenericMetadata):
 
     class Meta:
         abstract = True
+        # Der Index wird für jedes Kind-Modell separat angelegt
+        indexes = [
+            models.Index(fields=['bekanntmachung_datum']),
+            models.Index(fields=['start_datum']),
+            models.Index(fields=['end_datum']),
+        ]
 
 
 class BPlanBeteiligung(XPlanBeteiligung):

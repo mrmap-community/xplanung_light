@@ -238,6 +238,7 @@ def ows_beteiligungen(request):
         req.setParameter(k, ','.join(v))
         # print(str(k) + "-" + str(v))
     map_file_string = ''
+    # TODO Cache einführen - wie bei ows
     with open(os.path.join(str(settings.BASE_DIR), "xplanung_light/mapserver/mapfiles/beteiligungen.map")) as file:
         map_file_string = file.read()
         # Überschreiben der Online Resource
@@ -304,6 +305,8 @@ def ows_beteiligungen(request):
         # print(map_file_string)
     # Switch für verschiedene Mapserver Versionen
     # Erstellen einer Grundkonfigurationsdatei für Mapserver > 8.0.0
+    # TODO: Die Konfiguration einmalig beim Start erzeugen — AppConfig.ready() oder Modulebene — und dort
+    # mapscript.msLoadConfig(pfad) aufrufen.
     mapserver_version = mapscript.msGetVersionInt()
     if mapserver_version >= 80000:
         # 1. Wir erstellen eine temporäre Dummy-Konfiguration auf der Festplatte

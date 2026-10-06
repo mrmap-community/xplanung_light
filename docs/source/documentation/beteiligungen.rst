@@ -17,14 +17,14 @@ Da dies nicht ausreichend ist, um Beteiligungsverfahren abbilden zu können, nut
 
 .. image:: ../media/bplan_models_graph_1.png
 
-Grund-Prozess (BPMN-Diagramm):
+Grund-Prozess (BPMN-Diagramm - erstellt mit BPMN.io):
 
 .. image:: ../media/beteiligung_bpmn.svg
    :align: center
    :alt: BPMN Beteiligungsprozess
    :width: 600px
 
-Detailierter Prozessablauf (BPMN-Diagramm):
+Detailierter Prozessablauf (BPMN-Diagramm- erstellt mit BPMN.io):
 
 .. image:: ../media/beteiligung_bpmn_detail.svg
    :align: center
@@ -86,6 +86,18 @@ EMail-Adresse erneut authentifizieren.
 .. image:: ../media/bplan_beteiligung_stellungnahme_authentifizierung.png
 
 .. image:: ../media/bplan_beteiligung_stellungnahme_zurueckziehen.png
+
+_____________
+Prozessmodell
+_____________
+
+Zurückziehen / Reaktivieren von Beiträgen (BPMN-Diagramm - erstellt mit BPMN.io):
+
+.. image:: ../media/beitrag_ruecknahme_reaktivierung.svg
+   :align: center
+   :alt: BPMN Zurückziehen/Reaktivieren von Beteiligungsbeiträgen
+   :width: 600px
+
 
 ========================
 Liste der Stellungnahmen

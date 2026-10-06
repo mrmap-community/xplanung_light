@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://xplanung-light/bpmn">
+<bpmn:collaboration id="Collaboration_1">
+<bpmn:participant id="Part_A" name="Antragsteller (angemeldeter Nutzer)" processRef="P_A" />
+<bpmn:participant id="Part_S" name="XPlanung Light (System)" processRef="P_S" />
+<bpmn:participant id="Part_F" name="Zentraladmin / Orga-Admin (Freigeber)" processRef="P_F" />
+<bpmn:messageFlow id="M1" name="Antrag" sourceRef="A1" targetRef="S0" />
+<bpmn:messageFlow id="M2" name="Eingangsmail" sourceRef="S4" targetRef="F0" />
+<bpmn:messageFlow id="M3" name="Entscheidung" sourceRef="F2" targetRef="D0" />
+<bpmn:messageFlow id="M4" name="Entscheidungsmail" sourceRef="D5" targetRef="ACe" />
+<bpmn:messageFlow id="M5" name="Antragsliste" sourceRef="Dend" targetRef="Fc" />
+<bpmn:messageFlow id="M6" name="Fehlermeldung" sourceRef="Derr" targetRef="Fc" />
+</bpmn:collaboration>
+<bpmn:process id="P_A" isExecutable="false">
+<bpmn:startEvent id="A0" name="Rolle für Gebietskörperschaft benötigt"></bpmn:startEvent>
+<bpmn:userTask id="A1" name="Rollenantrag stellen (Rolle, Gebietskörperschaften)"><bpmn:documentation>RequestForRoleCreateView, Login erforderlich. Rollen: TOEB-Reporter (TR) oder Organisationsadministrator (OA); mehrere Gebietskörperschaften pro Antrag möglich. Der Antragsteller kann seinen Antrag selbst löschen (Besitzer oder Superuser).</bpmn:documentation></bpmn:userTask>
+<bpmn:intermediateCatchEvent id="ACe" name="Entscheidung per E-Mail"><bpmn:messageEventDefinition id="med_ace" /></bpmn:intermediateCatchEvent>
+<bpmn:exclusiveGateway id="AX"></bpmn:exclusiveGateway>
+<bpmn:endEvent id="A_endr" name="Antrag abgelehnt (Begründung per E-Mail)"></bpmn:endEvent>
+<bpmn:endEvent id="A_endc" name="Rolle zugewiesen"></bpmn:endEvent>
+<bpmn:sequenceFlow id="SA1" sourceRef="A0" targetRef="A1" />
+<bpmn:sequenceFlow id="SA2" sourceRef="A1" targetRef="ACe" />
+<bpmn:sequenceFlow id="SA3" sourceRef="ACe" targetRef="AX" />
+<bpmn:sequenceFlow id="SA4" name="abgelehnt" sourceRef="AX" targetRef="A_endr" />
+<bpmn:sequenceFlow id="SA5" name="bestätigt" sourceRef="AX" targetRef="A_endc" />
+</bpmn:process>
+<bpmn:process id="P_S" isExecutable="false">
+<bpmn:startEvent id="S0" name="Antrag eingereicht"><bpmn:messageEventDefinition id="med_s0" /></bpmn:startEvent>
+<bpmn:serviceTask id="S1" name="Antrag speichern (Antragsteller, Rolle, Organisationen)"></bpmn:serviceTask>
+<bpmn:exclusiveGateway id="S2" name="Rolle = TOEB-Reporter?"></bpmn:exclusiveGateway>
+<bpmn:serviceTask id="S3" name="Admins aller beantragten Organisationen ermitteln (Kopie)"><bpmn:documentation>Nur Orga-Admins, die Admin für ALLE beantragten Organisationen sind, kommen in CC (get_admin_users_for_all_orgas).</bpmn:documentation></bpmn:serviceTask>
+<bpmn:exclusiveGateway id="SM"></bpmn:exclusiveGateway>
+<bpmn:sendTask id="S4" name="Eingangsmail an Zentraladmin (+ Orga-Admins) senden"><bpmn:documentation>An: Kontaktadresse der Anwendung; CC bei TOEB-Reporter-Anträgen: die ermittelten Orga-Admins. Enthält den Link auf die Antragsliste.</bpmn:documentation></bpmn:sendTask>
+<bpmn:endEvent id="S4e" name="Antrag erfasst"></bpmn:endEvent>
+<bpmn:sequenceFlow id="SS1" sourceRef="S0" targetRef="S1" />
+<bpmn:sequenceFlow id="SS2" sourceRef="S1" targetRef="S2" />
+<bpmn:sequenceFlow id="SS3" name="ja" sourceRef="S2" targetRef="S3" />
+<bpmn:sequenceFlow id="SS4" name="nein" sourceRef="S2" targetRef="SM" />
+<bpmn:sequenceFlow id="SS5" sourceRef="S3" targetRef="SM" />
+<bpmn:sequenceFlow id="SS6" sourceRef="SM" targetRef="S4" />
+<bpmn:sequenceFlow id="SS7" sourceRef="S4" targetRef="S4e" />
+<bpmn:startEvent id="D0" name="Entscheidung abgesendet"><bpmn:messageEventDefinition id="med_d0" /></bpmn:startEvent>
+<bpmn:exclusiveGateway id="D1" name="Superuser oder Admin aller beantragten Orgas (nur TOEB-Reporter)?"><bpmn:documentation>Geprüft erst beim Absenden der Entscheidung (form_valid). Die Formularseite verlangt nur Login. Orga-Admins dürfen nur TOEB-Reporter-Rollen bearbeiten und nur, wenn sie Admin ALLER beantragten Organisationen sind.</bpmn:documentation></bpmn:exclusiveGateway>
+<bpmn:exclusiveGateway id="D2" name="Entscheidung?"></bpmn:exclusiveGateway>
+<bpmn:serviceTask id="D3" name="Rolle zuweisen, Antrag als bestätigt abschließen"><bpmn:documentation>Je Organisation AdminOrgaUser anlegen oder aktualisieren: OA setzt is_admin = true, TR setzt is_toeb_reporter = true. Vermerk speichern, Grund = bestätigt, Antrag löschen (Verlauf bleibt in der Historie).</bpmn:documentation></bpmn:serviceTask>
+<bpmn:serviceTask id="D6" name="Antrag mit Begründung als zurückgewiesen abschließen"><bpmn:documentation>Begründung (editing_note) speichern, Grund = zurückgewiesen, Antrag löschen (Verlauf bleibt in der Historie).</bpmn:documentation></bpmn:serviceTask>
+<bpmn:exclusiveGateway id="DM"></bpmn:exclusiveGateway>
+<bpmn:sendTask id="D5" name="Entscheidungsmail an Antragsteller senden"><bpmn:documentation>Bestätigung bzw. Ablehnung (mit Begründung), ggf. mit Kontakt des bearbeitenden Orga-Admins.</bpmn:documentation></bpmn:sendTask>
+<bpmn:endEvent id="Dend" name="Antragsliste aktualisiert"><bpmn:messageEventDefinition id="med_dend" /></bpmn:endEvent>
+<bpmn:endEvent id="Derr" name="Fehlermeldung (keine Berechtigung)"><bpmn:messageEventDefinition id="med_derr" /></bpmn:endEvent>
+<bpmn:sequenceFlow id="SD1" sourceRef="D0" targetRef="D1" />
+<bpmn:sequenceFlow id="SD2" name="ja" sourceRef="D1" targetRef="D2" />
+<bpmn:sequenceFlow id="SD3" name="nein" sourceRef="D1" targetRef="Derr" />
+<bpmn:sequenceFlow id="SD4" name="bestätigen" sourceRef="D2" targetRef="D3" />
+<bpmn:sequenceFlow id="SD5" name="zurückweisen" sourceRef="D2" targetRef="D6" />
+<bpmn:sequenceFlow id="SD6" sourceRef="D3" targetRef="DM" />
+<bpmn:sequenceFlow id="SD7" sourceRef="D6" targetRef="DM" />
+<bpmn:sequenceFlow id="SD8" sourceRef="DM" targetRef="D5" />
+<bpmn:sequenceFlow id="SD9" sourceRef="D5" targetRef="Dend" />
+</bpmn:process>
+<bpmn:process id="P_F" isExecutable="false">
+<bpmn:startEvent id="F0" name="Antrag eingegangen (E-Mail)"><bpmn:messageEventDefinition id="med_f0" /></bpmn:startEvent>
+<bpmn:userTask id="F1" name="Antrag in Antragsliste prüfen"><bpmn:documentation>Superuser sieht alle Anträge. Orga-Admins sehen nur TOEB-Reporter-Anträge, bei denen sie Admin aller beantragten Organisationen sind.</bpmn:documentation></bpmn:userTask>
+<bpmn:userTask id="F2" name="Entscheidung erfassen (bestätigen mit Vermerk / zurückweisen mit Begründung)"></bpmn:userTask>
+<bpmn:intermediateCatchEvent id="Fc" name="Rückmeldung zur Entscheidung"><bpmn:messageEventDefinition id="med_fc" /></bpmn:intermediateCatchEvent>
+<bpmn:endEvent id="Fend" name="Antrag bearbeitet"></bpmn:endEvent>
+<bpmn:sequenceFlow id="SF1" sourceRef="F0" targetRef="F1" />
+<bpmn:sequenceFlow id="SF2" sourceRef="F1" targetRef="F2" />
+<bpmn:sequenceFlow id="SF3" sourceRef="F2" targetRef="Fc" />
+<bpmn:sequenceFlow id="SF4" sourceRef="Fc" targetRef="Fend" />
+</bpmn:process>
+<bpmndi:BPMNDiagram id="BPMNDiagram_1"><bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1">
+<bpmndi:BPMNShape id="Part_A_di" bpmnElement="Part_A" isHorizontal="true"><dc:Bounds x="160" y="30" width="1800" height="270" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Part_S_di" bpmnElement="Part_S" isHorizontal="true"><dc:Bounds x="160" y="330" width="1800" height="410" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Part_F_di" bpmnElement="Part_F" isHorizontal="true"><dc:Bounds x="160" y="770" width="1800" height="200" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="A0_di" bpmnElement="A0"><dc:Bounds x="210.0" y="132.0" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="173.0" y="172.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="A1_di" bpmnElement="A1"><dc:Bounds x="290.0" y="110.0" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="ACe_di" bpmnElement="ACe"><dc:Bounds x="1722.0" y="132.0" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1690.0" y="88.0" width="100" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="AX_di" bpmnElement="AX"><dc:Bounds x="1805.0" y="125.0" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="A_endr_di" bpmnElement="A_endr"><dc:Bounds x="1812.0" y="67.0" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1852" y="66" width="100" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="A_endc_di" bpmnElement="A_endc"><dc:Bounds x="1812.0" y="197.0" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1852" y="200" width="100" height="30" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="S0_di" bpmnElement="S0"><dc:Bounds x="332.0" y="402.0" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="305.0" y="442.0" width="90" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="S1_di" bpmnElement="S1"><dc:Bounds x="410.0" y="380.0" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="S2_di" bpmnElement="S2"><dc:Bounds x="565.0" y="395.0" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="535" y="351" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="S3_di" bpmnElement="S3"><dc:Bounds x="660.0" y="380.0" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="SM_di" bpmnElement="SM"><dc:Bounds x="825.0" y="395.0" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="S4_di" bpmnElement="S4"><dc:Bounds x="920.0" y="380.0" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="S4e_di" bpmnElement="S4e"><dc:Bounds x="1072.0" y="402.0" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1045.0" y="442.0" width="90" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D0_di" bpmnElement="D0"><dc:Bounds x="1102.0" y="532.0" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1005" y="535" width="95" height="30" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D1_di" bpmnElement="D1"><dc:Bounds x="1175.0" y="525.0" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1105" y="438" width="230" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D2_di" bpmnElement="D2"><dc:Bounds x="1295.0" y="525.0" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1290" y="485" width="80" height="22" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D3_di" bpmnElement="D3"><dc:Bounds x="1420.0" y="510.0" width="140" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D6_di" bpmnElement="D6"><dc:Bounds x="1420.0" y="630.0" width="140" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="DM_di" bpmnElement="DM"><dc:Bounds x="1595.0" y="525.0" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D5_di" bpmnElement="D5"><dc:Bounds x="1680.0" y="510.0" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Dend_di" bpmnElement="Dend"><dc:Bounds x="1822.0" y="532.0" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1815" y="572" width="90" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Derr_di" bpmnElement="Derr"><dc:Bounds x="1242.0" y="652.0" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1215" y="692" width="95" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="F0_di" bpmnElement="F0"><dc:Bounds x="962.0" y="852.0" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="930.0" y="892.0" width="100" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="F1_di" bpmnElement="F1"><dc:Bounds x="1030.0" y="830.0" width="100" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="F2_di" bpmnElement="F2"><dc:Bounds x="1160.0" y="830.0" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Fc_di" bpmnElement="Fc"><dc:Bounds x="1382.0" y="852.0" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1350.0" y="892.0" width="100" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Fend_di" bpmnElement="Fend"><dc:Bounds x="1462.0" y="852.0" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1435.0" y="892.0" width="90" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNEdge id="SA1_di" bpmnElement="SA1"><di:waypoint x="246.0" y="150.0" /><di:waypoint x="290.0" y="150.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SA2_di" bpmnElement="SA2"><di:waypoint x="410.0" y="150.0" /><di:waypoint x="1722.0" y="150.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SA3_di" bpmnElement="SA3"><di:waypoint x="1758.0" y="150.0" /><di:waypoint x="1805.0" y="150.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SA4_di" bpmnElement="SA4"><di:waypoint x="1830.0" y="125.0" /><di:waypoint x="1830.0" y="103.0" /><bpmndi:BPMNLabel><dc:Bounds x="1836" y="104" width="70" height="18" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SA5_di" bpmnElement="SA5"><di:waypoint x="1830.0" y="175.0" /><di:waypoint x="1830.0" y="197.0" /><bpmndi:BPMNLabel><dc:Bounds x="1836" y="176" width="70" height="18" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SS1_di" bpmnElement="SS1"><di:waypoint x="368.0" y="420.0" /><di:waypoint x="410.0" y="420.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SS2_di" bpmnElement="SS2"><di:waypoint x="530.0" y="420.0" /><di:waypoint x="565.0" y="420.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SS3_di" bpmnElement="SS3"><di:waypoint x="615.0" y="420.0" /><di:waypoint x="660.0" y="420.0" /><bpmndi:BPMNLabel><dc:Bounds x="617" y="398" width="30" height="20" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SS4_di" bpmnElement="SS4"><di:waypoint x="590.0" y="445.0" /><di:waypoint x="590" y="470" /><di:waypoint x="850" y="470" /><di:waypoint x="850.0" y="445.0" /><bpmndi:BPMNLabel><dc:Bounds x="600" y="472" width="40" height="18" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SS5_di" bpmnElement="SS5"><di:waypoint x="780.0" y="420.0" /><di:waypoint x="825.0" y="420.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SS6_di" bpmnElement="SS6"><di:waypoint x="875.0" y="420.0" /><di:waypoint x="920.0" y="420.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SS7_di" bpmnElement="SS7"><di:waypoint x="1040.0" y="420.0" /><di:waypoint x="1072.0" y="420.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SD1_di" bpmnElement="SD1"><di:waypoint x="1138.0" y="550.0" /><di:waypoint x="1175.0" y="550.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SD2_di" bpmnElement="SD2"><di:waypoint x="1225.0" y="550.0" /><di:waypoint x="1295.0" y="550.0" /><bpmndi:BPMNLabel><dc:Bounds x="1230" y="528" width="30" height="20" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SD3_di" bpmnElement="SD3"><di:waypoint x="1200.0" y="575.0" /><di:waypoint x="1200" y="670" /><di:waypoint x="1242.0" y="670.0" /><bpmndi:BPMNLabel><dc:Bounds x="1205" y="648" width="40" height="20" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SD4_di" bpmnElement="SD4"><di:waypoint x="1345.0" y="550.0" /><di:waypoint x="1420.0" y="550.0" /><bpmndi:BPMNLabel><dc:Bounds x="1347" y="526" width="72" height="20" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SD5_di" bpmnElement="SD5"><di:waypoint x="1320.0" y="575.0" /><di:waypoint x="1320" y="670" /><di:waypoint x="1420.0" y="670.0" /><bpmndi:BPMNLabel><dc:Bounds x="1324" y="648" width="92" height="20" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SD6_di" bpmnElement="SD6"><di:waypoint x="1560.0" y="550.0" /><di:waypoint x="1595.0" y="550.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SD7_di" bpmnElement="SD7"><di:waypoint x="1560.0" y="670.0" /><di:waypoint x="1620" y="670" /><di:waypoint x="1620.0" y="575.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SD8_di" bpmnElement="SD8"><di:waypoint x="1645.0" y="550.0" /><di:waypoint x="1680.0" y="550.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SD9_di" bpmnElement="SD9"><di:waypoint x="1800.0" y="550.0" /><di:waypoint x="1822.0" y="550.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SF1_di" bpmnElement="SF1"><di:waypoint x="998.0" y="870.0" /><di:waypoint x="1030.0" y="870.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SF2_di" bpmnElement="SF2"><di:waypoint x="1130.0" y="870.0" /><di:waypoint x="1160.0" y="870.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SF3_di" bpmnElement="SF3"><di:waypoint x="1280.0" y="870.0" /><di:waypoint x="1382.0" y="870.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="SF4_di" bpmnElement="SF4"><di:waypoint x="1418.0" y="870.0" /><di:waypoint x="1462.0" y="870.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="M1_di" bpmnElement="M1"><di:waypoint x="350.0" y="190.0" /><di:waypoint x="350.0" y="402.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="M2_di" bpmnElement="M2"><di:waypoint x="980.0" y="460.0" /><di:waypoint x="980.0" y="852.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="M3_di" bpmnElement="M3"><di:waypoint x="1220.0" y="830.0" /><di:waypoint x="1220" y="752" /><di:waypoint x="1120" y="752" /><di:waypoint x="1120.0" y="568.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="M4_di" bpmnElement="M4"><di:waypoint x="1740.0" y="510.0" /><di:waypoint x="1740.0" y="168.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="M5_di" bpmnElement="M5"><di:waypoint x="1840.0" y="568.0" /><di:waypoint x="1840" y="762" /><di:waypoint x="1400" y="762" /><di:waypoint x="1400.0" y="852.0" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="M6_di" bpmnElement="M6"><di:waypoint x="1260.0" y="688.0" /><di:waypoint x="1260" y="762" /><di:waypoint x="1400" y="762" /><di:waypoint x="1400.0" y="852.0" /></bpmndi:BPMNEdge>
+</bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>
