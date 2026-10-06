@@ -2,6 +2,10 @@
 Beteiligungen
 #############
 
+************
+Modellierung
+************
+
 Mit XPlanung-light lassen sich bliebig viele Beteiligungsverfahren verwalten. 
 
 XPlanung sieht hier aktuell nur zwei verschiedene Typen vor, die in Form von Datumswerten dokumentiert werden:
@@ -12,6 +16,21 @@ XPlanung sieht hier aktuell nur zwei verschiedene Typen vor, die in Form von Dat
 Da dies nicht ausreichend ist, um Beteiligungsverfahren abbilden zu können, nutzt XPlanung-light ein eigenes Datenmodell.
 
 .. image:: ../media/bplan_models_graph_1.png
+
+Grund-Prozess (BPMN-Diagramm):
+
+.. image:: ../media/beteiligung_bpmn.svg
+   :align: center
+   :alt: BPMN Beteiligungsprozess
+   :width: 600px
+
+Detailierter Prozessablauf (BPMN-Diagramm):
+
+.. image:: ../media/beteiligung_bpmn_detail.svg
+   :align: center
+   :alt: BPMN Beteiligungsprozess Detail
+   :width: 900px
+
 
 *****************************
 Beteiligungsverfahren anlegen

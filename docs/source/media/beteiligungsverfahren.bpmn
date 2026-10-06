@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://xplanung-light/bpmn">
+
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_Buerger" name="Bürger / Öffentlichkeit" processRef="Process_Buerger" />
+    <bpmn:participant id="Participant_Kommune" name="Gebietskörperschaft / Kommune" processRef="Process_Kommune" />
+    <bpmn:participant id="Participant_Toeb" name="TOEB-Vertreter" processRef="Process_Toeb" />
+    <bpmn:messageFlow id="MF1" name="Beteiligung veröffentlicht" sourceRef="Task_Verfahren" targetRef="Start_Buerger" />
+    <bpmn:messageFlow id="MF2" name="TOEB-Benachrichtigung" sourceRef="Task_Benachrichtigen" targetRef="Start_Toeb" />
+    <bpmn:messageFlow id="MF3" name="Beitrag" sourceRef="Task_BeitragBuerger" targetRef="Catch_Beitrag" />
+    <bpmn:messageFlow id="MF4" name="Beitrag" sourceRef="Task_BeitragToeb" targetRef="Catch_Beitrag" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Kommune" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Kommune">
+      <bpmn:lane id="Lane_Sachbearbeiter" name="Sachbearbeiter (Gebietskörperschaft)">
+        <bpmn:flowNodeRef>Start_Kommune</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Verwalten</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Veroeffentlichen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Verfahren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Benachrichtigen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Catch_Beitrag</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Bearbeiten</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Stellungnahme</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Kommune</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Kommune" name="Bauleitplan-Entwurf liegt vor">
+      <bpmn:outgoing>SF1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Verwalten" name="Bauleitplan verwalten">
+      <bpmn:documentation>ArchiMate: BusinessProcess "Bauleitplan verwalten" (Objekt: Bauleitplan B-/F-Plan)</bpmn:documentation>
+      <bpmn:incoming>SF1</bpmn:incoming>
+      <bpmn:outgoing>SF2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Veroeffentlichen" name="Bauleitplan veröffentlichen">
+      <bpmn:documentation>ArchiMate: BusinessProcess "Bauleitplan veröffentlichen"</bpmn:documentation>
+      <bpmn:incoming>SF2</bpmn:incoming>
+      <bpmn:outgoing>SF3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Verfahren" name="Beteiligungsverfahren durchführen">
+      <bpmn:documentation>ArchiMate: BusinessProcess "Beteiligungsverfahren durchführen" (Objekt: Beteiligungsverfahren)</bpmn:documentation>
+      <bpmn:incoming>SF3</bpmn:incoming>
+      <bpmn:outgoing>SF4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="Task_Benachrichtigen" name="TOEB benachrichtigen">
+      <bpmn:documentation>ArchiMate: BusinessProcess "TOEB benachrichtigen" (Objekt: TOEB-Benachrichtigung)</bpmn:documentation>
+      <bpmn:incoming>SF4</bpmn:incoming>
+      <bpmn:outgoing>SF5</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="Catch_Beitrag" name="Beitrag eingegangen">
+      <bpmn:incoming>SF5</bpmn:incoming>
+      <bpmn:outgoing>SF6</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Beitrag" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_Bearbeiten" name="Beiträge bearbeiten &amp; schwärzen">
+      <bpmn:documentation>ArchiMate: BusinessProcess "Beiträge bearbeiten &amp; schwärzen" (Objekt: Beteiligungsbeitrag). Mehrfachinstanz: je Beitrag.</bpmn:documentation>
+      <bpmn:incoming>SF6</bpmn:incoming>
+      <bpmn:outgoing>SF7</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false" />
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Stellungnahme" name="Stellungnahme zu Beiträgen erfassen">
+      <bpmn:documentation>ArchiMate: BusinessProcess "Stellungnahme zu Beiträgen erfassen" (Objekt: Stellungnahme). Mehrfachinstanz: je Beitrag.</bpmn:documentation>
+      <bpmn:incoming>SF7</bpmn:incoming>
+      <bpmn:outgoing>SF8</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false" />
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_Kommune" name="Beiträge bewertet">
+      <bpmn:incoming>SF8</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SF1" sourceRef="Start_Kommune" targetRef="Task_Verwalten" />
+    <bpmn:sequenceFlow id="SF2" sourceRef="Task_Verwalten" targetRef="Task_Veroeffentlichen" />
+    <bpmn:sequenceFlow id="SF3" sourceRef="Task_Veroeffentlichen" targetRef="Task_Verfahren" />
+    <bpmn:sequenceFlow id="SF4" sourceRef="Task_Verfahren" targetRef="Task_Benachrichtigen" />
+    <bpmn:sequenceFlow id="SF5" sourceRef="Task_Benachrichtigen" targetRef="Catch_Beitrag" />
+    <bpmn:sequenceFlow id="SF6" sourceRef="Catch_Beitrag" targetRef="Task_Bearbeiten" />
+    <bpmn:sequenceFlow id="SF7" sourceRef="Task_Bearbeiten" targetRef="Task_Stellungnahme" />
+    <bpmn:sequenceFlow id="SF8" sourceRef="Task_Stellungnahme" targetRef="End_Kommune" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Buerger" isExecutable="false">
+    <bpmn:startEvent id="Start_Buerger" name="Beteiligung eröffnet">
+      <bpmn:outgoing>SB1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Buerger" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_BeitragBuerger" name="Beteiligungsbeitrag einreichen">
+      <bpmn:documentation>ArchiMate: BusinessProcess "Beteiligungsbeitrag einreichen" (Rolle: Bürger / Öffentlichkeit)</bpmn:documentation>
+      <bpmn:incoming>SB1</bpmn:incoming>
+      <bpmn:outgoing>SB2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_Buerger" name="Beitrag abgegeben">
+      <bpmn:incoming>SB2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SB1" sourceRef="Start_Buerger" targetRef="Task_BeitragBuerger" />
+    <bpmn:sequenceFlow id="SB2" sourceRef="Task_BeitragBuerger" targetRef="End_Buerger" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Toeb" isExecutable="false">
+    <bpmn:startEvent id="Start_Toeb" name="Benachrichtigung erhalten">
+      <bpmn:outgoing>ST1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Toeb" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_BeitragToeb" name="Beteiligungsbeitrag einreichen">
+      <bpmn:documentation>ArchiMate: BusinessProcess "Beteiligungsbeitrag einreichen" (Rolle: TOEB-Vertreter)</bpmn:documentation>
+      <bpmn:incoming>ST1</bpmn:incoming>
+      <bpmn:outgoing>ST2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_Toeb" name="Beitrag abgegeben">
+      <bpmn:incoming>ST2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="ST1" sourceRef="Start_Toeb" targetRef="Task_BeitragToeb" />
+    <bpmn:sequenceFlow id="ST2" sourceRef="Task_BeitragToeb" targetRef="End_Toeb" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1">
+
+      <bpmndi:BPMNShape id="Participant_Buerger_di" bpmnElement="Participant_Buerger" isHorizontal="true">
+        <dc:Bounds x="160" y="30" width="1200" height="130" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Kommune_di" bpmnElement="Participant_Kommune" isHorizontal="true">
+        <dc:Bounds x="160" y="230" width="1200" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Sachbearbeiter_di" bpmnElement="Lane_Sachbearbeiter" isHorizontal="true">
+        <dc:Bounds x="190" y="230" width="1170" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Toeb_di" bpmnElement="Participant_Toeb" isHorizontal="true">
+        <dc:Bounds x="160" y="490" width="1200" height="130" />
+      </bpmndi:BPMNShape>
+
+      <!-- Kommune -->
+      <bpmndi:BPMNShape id="Start_Kommune_di" bpmnElement="Start_Kommune">
+        <dc:Bounds x="210" y="312" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="183" y="352" width="90" height="40" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Verwalten_di" bpmnElement="Task_Verwalten">
+        <dc:Bounds x="290" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Veroeffentlichen_di" bpmnElement="Task_Veroeffentlichen">
+        <dc:Bounds x="430" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Verfahren_di" bpmnElement="Task_Verfahren">
+        <dc:Bounds x="570" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Benachrichtigen_di" bpmnElement="Task_Benachrichtigen">
+        <dc:Bounds x="710" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Beitrag_di" bpmnElement="Catch_Beitrag">
+        <dc:Bounds x="872" y="312" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="896" y="352" width="80" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Bearbeiten_di" bpmnElement="Task_Bearbeiten">
+        <dc:Bounds x="990" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Stellungnahme_di" bpmnElement="Task_Stellungnahme">
+        <dc:Bounds x="1130" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Kommune_di" bpmnElement="End_Kommune">
+        <dc:Bounds x="1270" y="312" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1243" y="352" width="90" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="SF1_di" bpmnElement="SF1">
+        <di:waypoint x="246" y="330" /><di:waypoint x="290" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF2_di" bpmnElement="SF2">
+        <di:waypoint x="390" y="330" /><di:waypoint x="430" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF3_di" bpmnElement="SF3">
+        <di:waypoint x="530" y="330" /><di:waypoint x="570" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF4_di" bpmnElement="SF4">
+        <di:waypoint x="670" y="330" /><di:waypoint x="710" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF5_di" bpmnElement="SF5">
+        <di:waypoint x="810" y="330" /><di:waypoint x="872" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF6_di" bpmnElement="SF6">
+        <di:waypoint x="908" y="330" /><di:waypoint x="990" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF7_di" bpmnElement="SF7">
+        <di:waypoint x="1090" y="330" /><di:waypoint x="1130" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF8_di" bpmnElement="SF8">
+        <di:waypoint x="1230" y="330" /><di:waypoint x="1270" y="330" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Bürger -->
+      <bpmndi:BPMNShape id="Start_Buerger_di" bpmnElement="Start_Buerger">
+        <dc:Bounds x="602" y="77" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="575" y="40" width="90" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BeitragBuerger_di" bpmnElement="Task_BeitragBuerger">
+        <dc:Bounds x="840" y="55" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Buerger_di" bpmnElement="End_Buerger">
+        <dc:Bounds x="982" y="77" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="955" y="40" width="90" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SB1_di" bpmnElement="SB1">
+        <di:waypoint x="638" y="95" /><di:waypoint x="840" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SB2_di" bpmnElement="SB2">
+        <di:waypoint x="940" y="95" /><di:waypoint x="982" y="95" />
+      </bpmndi:BPMNEdge>
+
+      <!-- TOEB -->
+      <bpmndi:BPMNShape id="Start_Toeb_di" bpmnElement="Start_Toeb">
+        <dc:Bounds x="742" y="540" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="715" y="580" width="90" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BeitragToeb_di" bpmnElement="Task_BeitragToeb">
+        <dc:Bounds x="840" y="518" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Toeb_di" bpmnElement="End_Toeb">
+        <dc:Bounds x="982" y="540" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="955" y="580" width="90" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="ST1_di" bpmnElement="ST1">
+        <di:waypoint x="778" y="558" /><di:waypoint x="840" y="558" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="ST2_di" bpmnElement="ST2">
+        <di:waypoint x="940" y="558" /><di:waypoint x="982" y="558" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Nachrichtenflüsse -->
+      <bpmndi:BPMNEdge id="MF1_di" bpmnElement="MF1">
+        <di:waypoint x="620" y="290" /><di:waypoint x="620" y="113" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF2_di" bpmnElement="MF2">
+        <di:waypoint x="760" y="370" /><di:waypoint x="760" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF3_di" bpmnElement="MF3">
+        <di:waypoint x="890" y="135" /><di:waypoint x="890" y="312" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF4_di" bpmnElement="MF4">
+        <di:waypoint x="890" y="518" /><di:waypoint x="890" y="348" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
