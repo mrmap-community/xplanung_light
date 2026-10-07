@@ -61,8 +61,8 @@ class MapfileGenerator():
         # Informationen zu den Lizenzen - hier werden Infrmationen genutzt, die von den Datenanbietern pro Gebietskörperschaft definiert werden.
         # Damit werden natürlich alle Daten einer Gebietsköperschaft unter den gleichen Nutzungsbedingungen/Lizenzen publiziert
         # Im ersten Schritt werden nur die beiden Freitextfelder in die Capabilities geschrieben
-        if orga.published_data_license:
-            print(orga.published_data_license.identifier)
+        # if orga.published_data_license:
+        #    print(orga.published_data_license.identifier)
         if orga.published_data_accessrights:
             map["web"]["metadata"]["ows_accessconstraints"] = orga.published_data_accessrights
         else:

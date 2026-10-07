@@ -340,7 +340,8 @@ class OwsViewTests(TestCase):
 
         Warum:
             https-Metadaten-URL und der MapServer-8-Zweig mit Temp-Konfiguration
-            (configObj).
+            (configObj) - das Objekt wird nur noch einmal in der AppConfig generiert - daher
+            muss das Objekt in der Funktion auch bai Mapserver 8 nicht mehr aufgerufen werden.
 
         Erwartung:
             Status 200, Metadaten-URL beginnt mit https://, configObj genau einmal
@@ -353,7 +354,7 @@ class OwsViewTests(TestCase):
             self.assertEqual(self.client.get(url, GETCAP).status_code, 200)
         self.assertTrue(
             self.gen.generate_mapfile.call_args.args[2].startswith("https://"))
-        self.ms.configObj.assert_called_once()
+        self.ms.configObj.assert_not_called()
 
     def test_ows_dispatch_errors(self):
         """

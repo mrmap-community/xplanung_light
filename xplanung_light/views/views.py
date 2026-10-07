@@ -51,6 +51,7 @@ from django.core.exceptions import ValidationError
 import tempfile
 from urllib.parse import urlsplit
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.apps import apps
 
 # from django.utils.timezone import datetime
 
@@ -303,10 +304,15 @@ def ows_beteiligungen(request):
         map_file_string = map_file_string.replace(
             '<connection_type>', 'OGR').replace('<connection>', connection_string)
         # print(map_file_string)
-    # Switch für verschiedene Mapserver Versionen
-    # Erstellen einer Grundkonfigurationsdatei für Mapserver > 8.0.0
-    # TODO: Die Konfiguration einmalig beim Start erzeugen — AppConfig.ready() oder Modulebene — und dort
-    # mapscript.msLoadConfig(pfad) aufrufen.
+    # Die Konfiguration wird einmalig beim Start erzeugt — AppConfig.ready()
+    config = apps.get_app_config('xplanung_light')
+    if config.mapserver_config:
+        map_obj = mapscript.msLoadMapFromString(
+            map_file_string, str(settings.BASE_DIR) + "/", config.mapserver_config)
+    else:
+        map_obj = mapscript.msLoadMapFromString(
+            map_file_string, str(settings.BASE_DIR) + "/")
+    """
     mapserver_version = mapscript.msGetVersionInt()
     if mapserver_version >= 80000:
         # 1. Wir erstellen eine temporäre Dummy-Konfiguration auf der Festplatte
@@ -325,6 +331,7 @@ def ows_beteiligungen(request):
     else:
         map_obj = mapscript.msLoadMapFromString(
             map_file_string, str(settings.BASE_DIR) + "/")
+    """
     mapscript.msIO_installStdoutToBuffer()
     dispatch_status = map_obj.OWSDispatch(req)
     if dispatch_status != mapscript.MS_SUCCESS:
@@ -355,6 +362,7 @@ def ows_bplan_overview(request, pk: int, plan_typ='bplan'):
     for k, v in qs.items():
         req.setParameter(k, ','.join(v))
     map_file_string = ''
+    # TODO: Check ob map_file_string schon im cache existiert - dann hieraus nehmen
     with open(os.path.join(str(settings.BASE_DIR), "xplanung_light/mapserver/mapfiles/overview.map")) as file:
         map_file_string = file.read()
         # Überschreiben der Online Resource
@@ -389,22 +397,11 @@ def ows_bplan_overview(request, pk: int, plan_typ='bplan'):
                 '"wms_proxy_port" "<proxy_port>"', '')
             map_file_string = map_file_string.replace(
                 '"wms_proxy_type" "http"', '')
-    # 2. Den Aufruf versionsabhängig steuern
-    mapserver_version = mapscript.msGetVersionInt()
-    if mapserver_version >= 80000:
-        # 1. Wir erstellen eine temporäre Dummy-Konfiguration auf der Festplatte
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.conf') as tmp:
-            tmp.write("CONFIG\nEND")
-            tmp_path = tmp.name
-        # 2. MapServer mitteilen, wo die globale Konfiguration liegt
-        os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
-        mapserverConfig = mapscript.configObj()
+    # Die Konfiguration wird einmalig beim Start erzeugt — AppConfig.ready()
+    config = apps.get_app_config('xplanung_light')
+    if config.mapserver_config:
         map_obj = mapscript.msLoadMapFromString(
-            map_file_string, str(settings.BASE_DIR) + "/", mapserverConfig)
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
+            map_file_string, str(settings.BASE_DIR) + "/", config.mapserver_config)
     else:
         map_obj = mapscript.msLoadMapFromString(
             map_file_string, str(settings.BASE_DIR) + "/")
@@ -526,22 +523,11 @@ def ows(request, pk: int):
         cache.set("mapfile_" + orga.ags, mapfile,
                   settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
     # print(mapfile)
-    # 2. Den Aufruf versionsabhängig steuern
-    mapserver_version = mapscript.msGetVersionInt()
-    if mapserver_version >= 80000:
-        # 1. Wir erstellen eine temporäre Dummy-Konfiguration auf der Festplatte
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.conf') as tmp:
-            tmp.write("CONFIG\nEND")
-            tmp_path = tmp.name
-        # 2. MapServer mitteilen, wo die globale Konfiguration liegt
-        os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
-        mapserverConfig = mapscript.configObj()
+    # Die Konfiguration wird einmalig beim Start erzeugt — AppConfig.ready()
+    config = apps.get_app_config('xplanung_light')
+    if config.mapserver_config:
         map_obj = mapscript.msLoadMapFromString(
-            mapfile, str(settings.BASE_DIR) + "/", mapserverConfig)
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
+            mapfile, str(settings.BASE_DIR) + "/", config.mapserver_config)
     else:
         map_obj = mapscript.msLoadMapFromString(
             mapfile, str(settings.BASE_DIR) + "/")
@@ -675,22 +661,11 @@ def ows_all_orgas_xplan(request, plantyp: str):
         cache.set("mapfile_all_orgas_" + plantyp, mapfile,
                   settings.XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds'])
     # print(mapfile)
-    # 2. Den Aufruf versionsabhängig steuern
-    mapserver_version = mapscript.msGetVersionInt()
-    if mapserver_version >= 80000:
-        # 1. Wir erstellen eine temporäre Dummy-Konfiguration auf der Festplatte
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.conf') as tmp:
-            tmp.write("CONFIG\nEND")
-            tmp_path = tmp.name
-        # 2. MapServer mitteilen, wo die globale Konfiguration liegt
-        os.environ['MAPSERVER_CONFIG_FILE'] = tmp_path
-        mapserverConfig = mapscript.configObj()
+    # Die Konfiguration wird einmalig beim Start erzeugt — AppConfig.ready()
+    config = apps.get_app_config('xplanung_light')
+    if config.mapserver_config:
         map_obj = mapscript.msLoadMapFromString(
-            mapfile, str(settings.BASE_DIR) + "/", mapserverConfig)
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
+            mapfile, str(settings.BASE_DIR) + "/", config.mapserver_config)
     else:
         map_obj = mapscript.msLoadMapFromString(
             mapfile, str(settings.BASE_DIR) + "/")
@@ -1125,7 +1100,7 @@ def home(request):
             fplan__gemeinde__admin_orga_users__user=request.user, fplan__gemeinde__admin_orga_users__is_admin=True)
 
     plan_orga_qs = orga_qs.annotate(count_plan=Count(
-        'bplan') + Count('fplan')).filter(count_plan__gt=0)
+        'bplan', distinct=True) + Count('fplan', distinct=True)).filter(count_plan__gt=0)
     plan_orga_public_qs = orga_qs.annotate(count_plan=Count('bplan', distinct=True, filter=Q(
         bplan__public=True)) + Count('fplan', distinct=True, filter=Q(fplan__public=True))).filter(count_plan__gt=0)
 
