@@ -84,8 +84,30 @@ Da sich unter Linux gunicorn anbietet, sollte man die notwendigen Umgebungsvaria
    [Install]
    WantedBy=multi-user.target
 
-
 https://docs.djangoproject.com/en/6.1/ref/databases/#postgresql-connection-settings
+
+**Sicherheitsvergleich: Django Settings vs. Externe Konfigurationsdateien**
+(Gemini - 2026-10-07)
+
+.. list-table:: Direkter Sicherheitsvergleich
+   :widths: 30 35 35
+   :header-rows: 1
+
+   * - Sicherheitsaspekt
+     - Passwort in Django ``settings.py``
+     - Externe ``pg_service.conf`` + ``.pgpass``
+   * - **Sichtbarkeit bei App-Crashes**
+     - **Hoch** (wird oft im Stacktrace/Log im Klartext ausgegeben)
+     - **Keine** (wird isoliert von ``libpq`` auf C-Ebene verarbeitet)
+   * - **Auslesbar bei Django-RCE-Lücke**
+     - **Ja** (einfach über ``settings.DATABASES`` abfragbar)
+     - **Nein** (Python-Prozess liest die Datei nicht direkt ein)
+   * - **Gefahr von Git-Leaks**
+     - **Medium** (Trotz ``.env`` hohes Risiko durch Fehlkonfiguration)
+     - **Sehr gering** (Liegt in Systempfaden weit ab vom Quellcode)
+   * - **Erzwungene Dateirechte**
+     - **Nein** (Django startet auch mit unsicheren Dateirechten wie ``0644``)
+     - **Ja** (Datenbankverbindung schlägt bei falscher Permission sofort fehl)
 
 **Weitere Infos**
 
