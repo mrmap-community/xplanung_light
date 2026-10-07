@@ -54,6 +54,39 @@ Produktivbetrieb
 
 .. _Nginx: https://nginx.org/
 
+**PostgreSQL**
+
+Die Datenbankverbindungsparameter sollten aus Sicherheitsgründen nicht direkt in der settings.py abgelegt werden.
+Da sich unter Linux gunicorn anbietet, sollte man die notwendigen Umgebungsvariablen in der **/etc/systemd/system/gunicorn.service** setzen.
+
+.. code-block:: ini 
+
+   [Unit]
+   Description=gunicorn daemon
+   Requires=gunicorn.socket
+   After=network.target
+   [Service]
+   User=xplanung_light
+   Group=www-data
+   WorkingDirectory=/data/xplanung_light/
+
+   # Hier werden die Umgebungsvariablen optimalerweise gesetzt:
+   Environment=PGSERVICEFILE=/data/xplanung_light/config/pg_service.conf
+   Environment=PGPASSFILE=/data/xplanung_light/config/.pgpass
+   Environment=MAPSERVER_CONFIG_FILE=/data/xplanung_light/config/mapserver.conf
+
+   ExecStart=/data/xplanung_light/.venv/bin/gunicorn \
+            --log-file /tmp/gunicorn.log \
+            --workers 3 \
+            --bind unix:/run/gunicorn.sock \
+            komserv.wsgi:application
+
+   [Install]
+   WantedBy=multi-user.target
+
+
+https://docs.djangoproject.com/en/6.1/ref/databases/#postgresql-connection-settings
+
 **Weitere Infos**
 
 * https://www.howtoforge.de/anleitung/so-installierst-du-das-django-framework-unter-debian-11/

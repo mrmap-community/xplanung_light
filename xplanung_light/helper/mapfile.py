@@ -33,6 +33,7 @@ class MapfileGenerator():
             # "db.sqlite3"
             connection_string = str(connection.settings_dict['NAME'])
         if connection.vendor == "postgresql":
+            # TODO: Fall abfangen, dass die Zugangsdaten nicht in settings.py stehen, sondern über in Konfigurationsdateien, die über Umgebungsvariablen bekannt sind
             # 'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
             connection_string = 'host=' + str(connection.settings_dict['HOST']) + ' dbname=' + str(connection.settings_dict['NAME']) + ' user=' + str(
                 connection.settings_dict['USER']) + ' password=' + str(connection.settings_dict['PASSWORD']) + ' port=' + str(connection.settings_dict['PORT'])
@@ -380,6 +381,7 @@ class MapfileGenerator():
             # "db.sqlite3"
             connection_string = str(connection.settings_dict['NAME'])
         if connection.vendor == "postgresql":
+            # TODO: Fall abfangen, dass die Zugangsdaten nicht in settings.py stehen, sondern über in Konfigurationsdateien, die über Umgebungsvariablen bekannt sind
             connection_string = 'host=' + str(connection.settings_dict['HOST']) + ' dbname=' + str(connection.settings_dict['NAME']) + ' user=' + str(
                 connection.settings_dict['USER']) + ' password=' + str(connection.settings_dict['PASSWORD']) + ' port=' + str(connection.settings_dict['PORT'])
         # Für DEBUG Zwecke
