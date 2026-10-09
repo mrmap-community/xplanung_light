@@ -323,7 +323,7 @@ def bplan_content_validator(xplan_file):
                                 validation_error_messages.append(forms.ValidationError("Die gefundene AGS im Dokument hat keine 8 Stellen - es werden nur 8-stellige AGS akzeptiert!"))
                         result[key] = test
                     else:
-                       validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!")) 
+                       validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!"))
                 else:
                     if value['type'] == 'array':
                         test = root.findall(value['xpath'], ns)
@@ -332,7 +332,7 @@ def bplan_content_validator(xplan_file):
                         else:
                             if key == 'gemeinde':
                                 for gemeinde in test:
-                                    # Prüfen, ob die Pflichtattribute für das Objekt XP_Gemeinde im XML vorhanden sind und die zugehörigen AdministrativeOrganizations auch 
+                                    # Prüfen, ob die Pflichtattribute für das Objekt XP_Gemeinde im XML vorhanden sind und die zugehörigen AdministrativeOrganizations auch
                                     # in der DB existieren
                                     gemeinde_name = gemeinde.find('xplan:gemeindeName', ns).text
                                     gemeinde_ags = gemeinde.find('xplan:ags', ns).text
@@ -348,11 +348,11 @@ def bplan_content_validator(xplan_file):
                                     else:
                                         validation_error_messages.append(forms.ValidationError("Es wurden kein ags-Attribut im XP_Gemeinde-Objekt gefunden!"))
             # Erst mal alle Geometrietypen erlauben - ggf. Einschränkung auf MultiPolygon und Polygon
-            geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/*", ns) 
-            if geltungsbereich_element == None:
+            geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/*", ns)
+            if geltungsbereich_element is None:
                 validation_error_messages.append(forms.ValidationError("Geltungsbereich nicht gefunden!"))
             else:
-                geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()  
+                geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()
                 # Bauen eines GEOS Geometrie-Objektes aus dem GML
                 try:
                     geometry = GEOSGeometry.from_gml(geltungsbereich_text)
@@ -372,7 +372,7 @@ def bplan_content_validator(xplan_file):
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#raising-multiple-errors
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
-    
+
 def fplan_content_validator(xplan_file):
     """
     Funktion zur Validierung der zu importierenden XPlan-GML Datei.
@@ -452,7 +452,7 @@ def fplan_content_validator(xplan_file):
                                 validation_error_messages.append(forms.ValidationError("Die gefundene AGS im Dokument hat keine 8 Stellen - es werden nur 8-stellige AGS akzeptiert!"))
                         result[key] = test
                     else:
-                       validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!")) 
+                       validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!"))
                 else:
                     # kein direktes text Element
                     if value['type'] == 'array':
@@ -462,7 +462,7 @@ def fplan_content_validator(xplan_file):
                         else:
                             if key == 'gemeinde':
                                 for gemeinde in test:
-                                    # Prüfen, ob die Pflichtattribute für das Objekt XP_Gemeinde im XML vorhanden sind und die zugehörigen AdministrativeOrganizations auch 
+                                    # Prüfen, ob die Pflichtattribute für das Objekt XP_Gemeinde im XML vorhanden sind und die zugehörigen AdministrativeOrganizations auch
                                     # in der DB existieren
                                     gemeinde_name = gemeinde.find('xplan:gemeindeName', ns).text
                                     gemeinde_ags = gemeinde.find('xplan:ags', ns).text
@@ -478,11 +478,11 @@ def fplan_content_validator(xplan_file):
                                     else:
                                         validation_error_messages.append(forms.ValidationError("Es wurden kein ags-Attribut im XP_Gemeinde-Objekt gefunden!"))
             # Erst mal alle Geometrietypen erlauben - ggf. Einschränkung auf MultiPolygon und Polygon
-            geltungsbereich_element = root.find("gml:featureMember/xplan:FP_Plan/xplan:raeumlicherGeltungsbereich/*", ns) 
-            if geltungsbereich_element == None:
+            geltungsbereich_element = root.find("gml:featureMember/xplan:FP_Plan/xplan:raeumlicherGeltungsbereich/*", ns)
+            if geltungsbereich_element is None:
                 validation_error_messages.append(forms.ValidationError("Geltungsbereich nicht gefunden!"))
             else:
-                geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()  
+                geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()
                 # Bauen eines GEOS Geometrie-Objektes aus dem GML
                 try:
                     geometry = GEOSGeometry.from_gml(geltungsbereich_text)
@@ -502,6 +502,6 @@ def fplan_content_validator(xplan_file):
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#raising-multiple-errors
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
-    
+
 def bplan_datum_validator():
     pass

@@ -1,11 +1,12 @@
 from django.contrib import admin
-from leaflet.admin import LeafletGeoAdmin
-from xplanung_light.models import BPlan, AdministrativeOrganization, License, ContactOrganization, Uvp, ConsentOption, BPlanBeteiligung
-from simple_history.admin import SimpleHistoryAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
+from leaflet.admin import LeafletGeoAdmin
+from simple_history.admin import SimpleHistoryAdmin
 
-from xplanung_light.models import UserProfile
+from xplanung_light.models import (AdministrativeOrganization, BPlan, BPlanBeteiligung, ConsentOption,
+                                   ContactOrganization, License, UserProfile, Uvp)
+
 # from formset.admin import ModelAdmin - erst in späteren Versionen verfügbar
 # https://django-organizations.readthedocs.io/en/latest/cookbook.html#extending-the-base-admin-classes
 """
@@ -18,21 +19,19 @@ from organizations.base_admin import (
 """
 from xplanung_light.models import AdminOrgaUser
 
-# don't forget the commas
-BaseUserAdmin.list_filter += ('last_login',)
-BaseUserAdmin.list_display += ('last_login',)
-# BaseUserAdmin.fieldsets +=  (('Extra Fields', {'fields': ('new_field', )}),)
+
+class UserAdmin(BaseUserAdmin):
+    list_filter = BaseUserAdmin.list_filter + ("last_login",)  # pyright: ignore[reportOperatorIssue]
+    list_display = BaseUserAdmin.list_display + ("last_login",)  # pyright: ignore[reportOperatorIssue]
+
+
+admin.site.unregister(User)
+admin.site.register(User, UserAdmin)
 
 
 class RichtextAdmin(SimpleHistoryAdmin):
-    """
-    Herausnehmen der Richtext Felder - hierfür benötigen wir spezielle django-formset forms
-    """
-
-    def get_form(self, request, obj=None, **kwargs):
-        self.exclude = []
-        self.exclude.append('beschreibung')
-        return super().get_form(request, obj, **kwargs)
+    # Herausnehmen der Richtext Felder - hierfür benötigen wir spezielle django-formset forms
+    exclude = ["beschreibung"]
 
 
 admin.site.register(BPlanBeteiligung, RichtextAdmin)
@@ -58,11 +57,6 @@ class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
     verbose_name_plural = "UserProfiles"
-
-
-# Re-register UserAdmin
-admin.site.unregister(User)
-admin.site.register(User, BaseUserAdmin)
 
 
 # admin.site.register(BPlanBeteiligung, SimpleHistoryAdmin)
