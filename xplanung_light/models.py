@@ -14,6 +14,7 @@ from django.core.files.base import ContentFile
 from django.utils.text import slugify
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from io import BytesIO
+
 # Um gewisse Auszeichnungen zu unterstützen, nutzen wir eine formset Erweiterung - ab 2.0 liegt sie woanders
 from formset.richtext.fields import RichTextField
 # django-organizations
@@ -33,6 +34,7 @@ from organizations.abstract import (
 )
 
 from django_clamd.validators import validate_file_infection
+from .validators import validate_xplan_attachment_extension, validate_xplan_attachment_mimetype, validate_xplan_attachment_file_size
 
 
 # generic meta model
@@ -1538,7 +1540,7 @@ class XPlanSpezExterneReferenz(GenericMetadata):
     typ = models.CharField(null=False, blank=False, max_length=5, choices=REF_TYPE_CHOICES, default='1000',
                            verbose_name='Typ / Inhalt des referierten Dokuments oder Rasterplans', help_text="Typ / Inhalt des referierten Dokuments oder Rasterplans", db_index=True)
     attachment = models.FileField(null=True, blank=True, max_length=1024, upload_to='uploads',
-                                  verbose_name="Dokument", validators=[validate_file_infection])
+                                  verbose_name="Dokument", validators=[validate_file_infection, validate_xplan_attachment_extension, validate_xplan_attachment_mimetype, validate_xplan_attachment_file_size])
     # bplan = HistoricForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
     # bplan = models.ForeignKey(BPlan, on_delete=models.CASCADE, verbose_name="BPlan", help_text="BPlan", related_name="attachments")
 

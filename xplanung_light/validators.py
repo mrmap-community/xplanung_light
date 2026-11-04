@@ -2,20 +2,46 @@ from django import forms
 import xml.etree.ElementTree as ET
 import defusedxml.ElementTree as defused_ET
 from django.contrib.gis.geos import GEOSGeometry
-from xplanung_light.models import AdministrativeOrganization
+# from xplanung_light.models import AdministrativeOrganization
 from django.contrib.gis.gdal.raster.source import GDALRaster
-#https://www.tommygeorge.com/blog/validating-content-of-django-file-uploads/
-import magic, json
+# https://www.tommygeorge.com/blog/validating-content-of-django-file-uploads/
+import magic
+import json
 from io import BytesIO
 from zipfile import ZipFile
 import re
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 import sys
+
 
 def namespace(element):
     m = re.match(r'\{.*\}', element.tag)
     return m.group(0) if m else ''
+
+
+def validate_xplan_attachment_mimetype(value):
+    mime = magic.from_buffer(
+        value.read(2048),
+        mime=True
+    )
+    value.seek(0)
+    if mime not in settings.XPLANUNG_LIGHT_CONFIG['xplan_attachments']['allowed_mimetypes']:
+        raise ValidationError("Dieser Dateityp ist nicht erlaubt.")
+
+
+validate_xplan_attachment_extension = FileExtensionValidator(
+    allowed_extensions=settings.XPLANUNG_LIGHT_CONFIG['xplan_attachments']['allowed_extensions']
+)
+
+
+def validate_xplan_attachment_file_size(value):
+    max_file_size = settings.XPLANUNG_LIGHT_CONFIG['limits']['upload_file_size_limits']['other']
+    if value.size > max_file_size:
+        raise ValidationError(
+            f"Die Datei darf maximal {str(round(float(max_file_size) / float(1024 * 1024), 2))} MB groß sein."
+        )
 
 
 def geotiff_raster_validator(geotiff_file):
@@ -45,49 +71,57 @@ def geotiff_raster_validator(geotiff_file):
     mime_type = magic.from_buffer(geotiff_file.read(2048), mime=True)
     geotiff_file.seek(initial_pos)
     if mime_type != 'image/tiff':
-        validation_error_messages.append("Es werden nur Bilder im Format 'image/tiff' unterstützt!")
+        validation_error_messages.append(
+            "Es werden nur Bilder im Format 'image/tiff' unterstützt!")
     # check filesize
     size = geotiff_file.size
     if size > limits['upload_file_size_limits']['tiff']:
-        validation_error_messages.append("Dateigröße übersteigt die zugelassene Größe von " + str(limits['upload_file_size_limits']['tiff'] / 1_000_000) + "MB!")
+        validation_error_messages.append("Dateigröße übersteigt die zugelassene Größe von " + str(
+            limits['upload_file_size_limits']['tiff'] / 1_000_000) + "MB!")
     geotiff_file.seek(initial_pos)
     # Erst nach Prüfung der Größe öffnen, sonst läuft Speicher ggf. voll
     geotiff = geotiff_file.read()
     # check to open with gdal
     try:
         raster = GDALRaster(geotiff)
-        #print(raster)
+        # print(raster)
     except:
-        validation_error_messages.append("GDAL kann Datenquelle nicht als Raster interpretieren!")
+        validation_error_messages.append(
+            "GDAL kann Datenquelle nicht als Raster interpretieren!")
         raise forms.ValidationError(validation_error_messages)
     info = raster.info
     if info.find("Overviews:") == -1:
-        validation_error_messages.append("Es werden nur Bilder mit internen Overviews untertützt, bitte erstellen sie diese vor dem  Hochladen!")
+        validation_error_messages.append(
+            "Es werden nur Bilder mit internen Overviews untertützt, bitte erstellen sie diese vor dem  Hochladen!")
     if info.find("COMPRESSION=LZW") == -1:
-        validation_error_messages.append("Es werden nur LZW-komprimierte Bilder unterstützt - bitte komprimieren sie ihr Bild vor dem Hochladen!")
-    #if raster.metadata['IMAGE_STRUCTURE']['COMPRESSION'] != 'LZW':
+        validation_error_messages.append(
+            "Es werden nur LZW-komprimierte Bilder unterstützt - bitte komprimieren sie ihr Bild vor dem Hochladen!")
+    # if raster.metadata['IMAGE_STRUCTURE']['COMPRESSION'] != 'LZW':
     #    validation_error_messages.append("Es werden nur LZW-komprimierte Bilder unterstützt - bitte komprimieren sie ihr Bild vor dem Hochladen!")
     # check srid - with gdal
     # https://gis.stackexchange.com/questions/267321/extracting-epsg-from-a-raster-using-gdal-bindings-in-python
     # django gdal raster has only some of these features !!!!
     # check srid and extent
-    try: 
+    try:
         srid = raster.srs.srid
-        #print(srid)
+        # print(srid)
     except:
-        validation_error_messages.append("Datenquelle beinhaltet keine Informationen zum Koordinatenreferenzsystem!")
-    try: 
+        validation_error_messages.append(
+            "Datenquelle beinhaltet keine Informationen zum Koordinatenreferenzsystem!")
+    try:
         extent = raster.extent
-        #print(extent)
+        # print(extent)
     except:
-        validation_error_messages.append("Datenquelle beinhaltet keine räumliche Ausdehnung!")
-    # check extent - should cover extent of geltungsbereich 
+        validation_error_messages.append(
+            "Datenquelle beinhaltet keine räumliche Ausdehnung!")
+    # check extent - should cover extent of geltungsbereich
     # print(raster.extent)
     # srid lost during transformation!
     # debug
     # validation_error_messages.append(raster.info)
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
+
 
 def bplan_upload_file_validator(xplan_file):
     """
@@ -105,16 +139,19 @@ def bplan_upload_file_validator(xplan_file):
     limits = settings.XPLANUNG_LIGHT_CONFIG['limits']
     # check type
     validation_error_messages = []
-    #print(xplan_file.content_type)
+    # print(xplan_file.content_type)
     if xplan_file.content_type not in ('application/x-zip-compressed', 'application/zip'):
-        validation_error_messages.append("Es handelt sich nicht um ein ZIP-Archiv!")
+        validation_error_messages.append(
+            "Es handelt sich nicht um ein ZIP-Archiv!")
     else:
         bytes_content = xplan_file.read()
         file_like_object = BytesIO(bytes_content)
         zipfile_ob = ZipFile(file_like_object)
         gml_files = 0
-        allowed_mimetypes = ('application/gml', 'application/pdf', 'image/tiff', 'text/xml', 'text/plain', 'application/gml+xml')
-        allowed_gml_mimetypes = ('application/gml', 'application/gml+xml', 'text/xml', 'text/plain')
+        allowed_mimetypes = ('application/gml', 'application/pdf',
+                             'image/tiff', 'text/xml', 'text/plain', 'application/gml+xml')
+        allowed_gml_mimetypes = (
+            'application/gml', 'application/gml+xml', 'text/xml', 'text/plain')
         # Prüfen der Informationen im zipfile
         infos = zipfile_ob.infolist()
         if len(infos) > limits['max_files_in_zip']:
@@ -128,42 +165,49 @@ def bplan_upload_file_validator(xplan_file):
                 continue
             if info.file_size > limits['max_uncompressed_file_size']:
                 raise ValidationError(
-                    f"Die Datei {info.filename} ist zu groß (> " + str(limits['max_uncompressed_file_size'] / 1_000_000) + "MB)."
+                    f"Die Datei {info.filename} ist zu groß (> " + str(
+                        limits['max_uncompressed_file_size'] / 1_000_000) + "MB)."
                 )
             total_uncompressed_size += info.file_size
             if total_uncompressed_size > limits['max_uncompressed_zip_size']:
                 raise ValidationError(
-                    "Der entpackte Inhalt des ZIP-Archivs ist zu groß (> " + str(limits['max_uncompressed_file_size'] / 1_000_000) + "MB)."
+                    "Der entpackte Inhalt des ZIP-Archivs ist zu groß (> " + str(
+                        limits['max_uncompressed_file_size'] / 1_000_000) + "MB)."
                 )
         # Über einzelne Dateien iterieren
         for file in infos:
-            #print(file.filename)
+            # print(file.filename)
             file_bytes = zipfile_ob.read(file.filename)
             file_file = BytesIO(file_bytes)
             # check MimeType
             mime_type = magic.from_buffer(file_file.read(2048), mime=True)
             file_file.seek(0)
-            #print(mime_type)
+            # print(mime_type)
             if mime_type not in allowed_mimetypes:
-                validation_error_messages.append("ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
-            # check unkomprimierte Dateigröße 
+                validation_error_messages.append(
+                    "ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
+            # check unkomprimierte Dateigröße
             size = file.file_size
-            #print(size)
+            # print(size)
             if size > limits['max_uncompressed_file_size']:
-                validation_error_messages.append("Einzelne unkomprimierte Dateigröße übersteigt " + str(limits['max_uncompressed_file_size'] / 1_000_000) + "MB!")
+                validation_error_messages.append("Einzelne unkomprimierte Dateigröße übersteigt " + str(
+                    limits['max_uncompressed_file_size'] / 1_000_000) + "MB!")
             # TODO: ggf. Virenscanner über Datei laufen lassen!
             # check GML-Datei
             if file.filename.endswith('.gml') and mime_type in allowed_gml_mimetypes:
                 gml_files = gml_files + 1
-                #print("some gml file found")
+                # print("some gml file found")
                 bplan_content_validator(file_file)
         if gml_files == 0:
-            validation_error_messages.append("ZIP-Archiv beinhaltet keine GML-Datei!")
+            validation_error_messages.append(
+                "ZIP-Archiv beinhaltet keine GML-Datei!")
         if gml_files > 1:
-            validation_error_messages.append("ZIP-Archiv beinhaltet mehrere GML-Dateien - es ist aber nur eine zulässig!")   
-    #validation_error_messages.append("Error occured - level 1!")
+            validation_error_messages.append(
+                "ZIP-Archiv beinhaltet mehrere GML-Dateien - es ist aber nur eine zulässig!")
+    # validation_error_messages.append("Error occured - level 1!")
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
+
 
 def fplan_upload_file_validator(xplan_file):
     """
@@ -181,16 +225,19 @@ def fplan_upload_file_validator(xplan_file):
     limits = settings.XPLANUNG_LIGHT_CONFIG['limits']
     # check type
     validation_error_messages = []
-    #print(xplan_file.content_type)
+    # print(xplan_file.content_type)
     if xplan_file.content_type not in ('application/x-zip-compressed', 'application/zip'):
-        validation_error_messages.append("Es handelt sich nicht um ein ZIP-Archiv!")
+        validation_error_messages.append(
+            "Es handelt sich nicht um ein ZIP-Archiv!")
     else:
         bytes_content = xplan_file.read()
         file_like_object = BytesIO(bytes_content)
         zipfile_ob = ZipFile(file_like_object)
         gml_files = 0
-        allowed_mimetypes = ('application/octet-stream', 'application/gml', 'application/pdf', 'image/tiff', 'text/xml', 'text/plain', 'application/gml+xml')
-        allowed_gml_mimetypes = ('application/octet-stream', 'application/gml', 'application/gml+xml', 'text/xml', 'text/plain')
+        allowed_mimetypes = ('application/octet-stream', 'application/gml', 'application/pdf',
+                             'image/tiff', 'text/xml', 'text/plain', 'application/gml+xml')
+        allowed_gml_mimetypes = ('application/octet-stream', 'application/gml',
+                                 'application/gml+xml', 'text/xml', 'text/plain')
         # Prüfen der Informationen im zipfile
         infos = zipfile_ob.infolist()
         if len(infos) > limits['max_files_in_zip']:
@@ -213,35 +260,41 @@ def fplan_upload_file_validator(xplan_file):
                 )
         # Über einzelne Dateien iterieren
         for file in infos:
-            #print(file.filename)
+            # print(file.filename)
             file_bytes = zipfile_ob.read(file.filename)
             file_file = BytesIO(file_bytes)
             # check MimeType
             mime_type = magic.from_buffer(file_file.read(2048), mime=True)
             file_file.seek(0)
-            #print(mime_type)
+            # print(mime_type)
             if mime_type not in allowed_mimetypes:
-                validation_error_messages.append("ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
-            # check unkomprimierte Dateigröße 
+                validation_error_messages.append(
+                    "ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
+            # check unkomprimierte Dateigröße
             size = file.file_size
-            #print(size)
+            # print(size)
             if size > limits['max_uncompressed_file_size']:
-                validation_error_messages.append("Einzelne unkomprimierte Dateigröße übersteigt " + str(limits['max_uncompressed_file_size'] / 1_000_000) + "MB!")
+                validation_error_messages.append("Einzelne unkomprimierte Dateigröße übersteigt " + str(
+                    limits['max_uncompressed_file_size'] / 1_000_000) + "MB!")
             # TODO: ggf. Virenscanner über Datei laufen lassen!
             # check GML-Datei
             if file.filename.endswith('.gml') and mime_type in allowed_gml_mimetypes:
                 gml_files = gml_files + 1
-                #print("some gml file found")
+                # print("some gml file found")
                 fplan_content_validator(file_file)
         if gml_files == 0:
-            validation_error_messages.append("ZIP-Archiv beinhaltet keine GML-Datei!")
+            validation_error_messages.append(
+                "ZIP-Archiv beinhaltet keine GML-Datei!")
         if gml_files > 1:
-            validation_error_messages.append("ZIP-Archiv beinhaltet mehrere GML-Dateien - es ist aber nur eine zulässig!")   
-    #validation_error_messages.append("Error occured - level 1!")
+            validation_error_messages.append(
+                "ZIP-Archiv beinhaltet mehrere GML-Dateien - es ist aber nur eine zulässig!")
+    # validation_error_messages.append("Error occured - level 1!")
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
 
+
 def bplan_content_validator(xplan_file):
+    from xplanung_light.models import AdministrativeOrganization
     """
     Funktion zur Validierung der zu importierenden XPlan-GML Datei.
 
@@ -257,37 +310,43 @@ def bplan_content_validator(xplan_file):
     validation_error_messages = []
     # Der content-type kann nur bei hochgeladenenen Dateien bestimmt werden. Wird eine ZIP-Datei hochgeladen und zur Laufzeit ausgepackt,
     # dann wird der mimetype anders bestimmt. TODO: Datentyp für die Übergabe vereinheitlichen.
-    #print("Klasse des xplan_file objects: " + str(type(xplan_file)))
+    # print("Klasse des xplan_file objects: " + str(type(xplan_file)))
     if str(type(xplan_file)) == "<class '_io.BytesIO'>":
         mime_type = magic.from_buffer(xplan_file.read(2048), mime=True)
         xplan_file.seek(0)
-        #print("mimetype of gml in zip: " + mime_type)
+        # print("mimetype of gml in zip: " + mime_type)
         if mime_type not in ('application/octet-stream', 'application/gml', 'text/xml', 'text/plain', 'application/gml+xml'):
-            validation_error_messages.append("ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
+            validation_error_messages.append(
+                "ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
             raise forms.ValidationError(validation_error_messages)
         size = sys.getsizeof(xplan_file.getvalue())
     else:
         if xplan_file.content_type not in ('application/octet-stream', 'application/gml', 'text/xml', 'text/plain', 'application/gml+xml'):
-            validation_error_messages.append("Es handelt sich nicht um eine GML-Datei!")
+            validation_error_messages.append(
+                "Es handelt sich nicht um eine GML-Datei!")
             raise forms.ValidationError(validation_error_messages)
         size = xplan_file.size
     if size > limits["max_gml_size"]:
         raise forms.ValidationError(
-            "Die GML-Datei überschreitet die maximale Größe (> " + str(limits["max_gml_size"] / 1_000_000) + "MB)."
+            "Die GML-Datei überschreitet die maximale Größe (> " + str(
+                limits["max_gml_size"] / 1_000_000) + "MB)."
         )
     try:
         xml_string = xplan_file.read().decode('UTF-8')
     except:
-        validation_error_messages.append("Das decodieren nach UTF-8 war nicht erfolgreich!")
+        validation_error_messages.append(
+            "Das decodieren nach UTF-8 war nicht erfolgreich!")
         raise forms.ValidationError(validation_error_messages)
-    #validation_error_messages.append('test')
+    # validation_error_messages.append('test')
     try:
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
         root = defused_ET.fromstring(xml_string)
         root_element_name = root.tag.__str__()
-        supported_element_names = ["{http://www.xplanung.de/xplangml/6/0}XPlanAuszug", "{http://www.xplanung.de/xplangml/5/4}XPlanAuszug", "{http://www.xplanung.de/xplangml/5/1}XPlanAuszug"]
+        supported_element_names = ["{http://www.xplanung.de/xplangml/6/0}XPlanAuszug",
+                                   "{http://www.xplanung.de/xplangml/5/4}XPlanAuszug", "{http://www.xplanung.de/xplangml/5/1}XPlanAuszug"]
         if root_element_name not in supported_element_names:
-            validation_error_messages.append(forms.ValidationError("XML-Dokument mit root-Element *" + root_element_name + "* wird nicht unterstützt!"))
+            validation_error_messages.append(forms.ValidationError(
+                "XML-Dokument mit root-Element *" + root_element_name + "* wird nicht unterstützt!"))
         else:
             # check Pflichtfelder
             # check zusätzliche Pflichtfelder aus eigenem Standard - nummer, rechtsstand, ...
@@ -305,8 +364,8 @@ def bplan_content_validator(xplan_file):
                 'name': {'xpath': 'gml:featureMember/xplan:BP_Plan/', 'type': 'text', 'xplan_element': 'xplan:name'},
                 'planart': {'xpath': 'gml:featureMember/xplan:BP_Plan/', 'type': 'text', 'xplan_element': 'xplan:planArt'},
                 'gemeinde': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde', 'type': 'array'},
-                #'gemeinde_name': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:gemeindeName'},
-                #'gemeinde_ags': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:ags'},
+                # 'gemeinde_name': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:gemeindeName'},
+                # 'gemeinde_ags': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:ags'},
             }
             # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
             # TODO - check für mehrere XP_Gemeinde-Objekte
@@ -314,50 +373,64 @@ def bplan_content_validator(xplan_file):
             gemeinde_ags = "00000000"
             for key, value in mandatory_fields.items():
                 if value['type'] == 'text':
-                    test = root.find(value['xpath'] + value['xplan_element'], ns).text
+                    test = root.find(value['xpath'] +
+                                     value['xplan_element'], ns).text
                     if test != None:
                         if value['xplan_element'] == 'xplan:ags':
                             if len(test) == 8:
                                 gemeinde_ags = test
                             else:
-                                validation_error_messages.append(forms.ValidationError("Die gefundene AGS im Dokument hat keine 8 Stellen - es werden nur 8-stellige AGS akzeptiert!"))
+                                validation_error_messages.append(forms.ValidationError(
+                                    "Die gefundene AGS im Dokument hat keine 8 Stellen - es werden nur 8-stellige AGS akzeptiert!"))
                         result[key] = test
                     else:
-                       validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!")) 
+                        validation_error_messages.append(forms.ValidationError(
+                            "Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!"))
                 else:
                     if value['type'] == 'array':
                         test = root.findall(value['xpath'], ns)
                         if len(test) == 0:
-                            validation_error_messages.append(forms.ValidationError("Es wurden keine Pflichtelemente für *" + key +  "* gefunden!"))
+                            validation_error_messages.append(forms.ValidationError(
+                                "Es wurden keine Pflichtelemente für *" + key + "* gefunden!"))
                         else:
                             if key == 'gemeinde':
                                 for gemeinde in test:
-                                    # Prüfen, ob die Pflichtattribute für das Objekt XP_Gemeinde im XML vorhanden sind und die zugehörigen AdministrativeOrganizations auch 
+                                    # Prüfen, ob die Pflichtattribute für das Objekt XP_Gemeinde im XML vorhanden sind und die zugehörigen AdministrativeOrganizations auch
                                     # in der DB existieren
-                                    gemeinde_name = gemeinde.find('xplan:gemeindeName', ns).text
-                                    gemeinde_ags = gemeinde.find('xplan:ags', ns).text
+                                    gemeinde_name = gemeinde.find(
+                                        'xplan:gemeindeName', ns).text
+                                    gemeinde_ags = gemeinde.find(
+                                        'xplan:ags', ns).text
                                     if gemeinde_ags:
                                         try:
-                                            orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
+                                            orga = AdministrativeOrganization.objects.get(
+                                                ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
                                         except:
                                             orga = None
-                                            validation_error_messages.append(forms.ValidationError("Es wurden kein Eintrag für eine Gemeinde mit dem AGS  *" + gemeinde_ags +  "* in der Datenbank gefunden!"))
+                                            validation_error_messages.append(forms.ValidationError(
+                                                "Es wurden kein Eintrag für eine Gemeinde mit dem AGS  *" + gemeinde_ags + "* in der Datenbank gefunden!"))
                                         if orga and gemeinde_name:
                                             if orga.name != gemeinde_name:
-                                                validation_error_messages.append(forms.ValidationError("Das Element xplan:gemeindeName: **" + str(gemeinde_name) + "** stimmt nicht mit dem name der Organisation aus der DB für den AGS " + orga.ags + ": **" + orga.name + "** überein!"))
+                                                validation_error_messages.append(forms.ValidationError("Das Element xplan:gemeindeName: **" + str(
+                                                    gemeinde_name) + "** stimmt nicht mit dem name der Organisation aus der DB für den AGS " + orga.ags + ": **" + orga.name + "** überein!"))
                                     else:
-                                        validation_error_messages.append(forms.ValidationError("Es wurden kein ags-Attribut im XP_Gemeinde-Objekt gefunden!"))
+                                        validation_error_messages.append(forms.ValidationError(
+                                            "Es wurden kein ags-Attribut im XP_Gemeinde-Objekt gefunden!"))
             # Erst mal alle Geometrietypen erlauben - ggf. Einschränkung auf MultiPolygon und Polygon
-            geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/*", ns) 
+            geltungsbereich_element = root.find(
+                "gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/*", ns)
             if geltungsbereich_element == None:
-                validation_error_messages.append(forms.ValidationError("Geltungsbereich nicht gefunden!"))
+                validation_error_messages.append(
+                    forms.ValidationError("Geltungsbereich nicht gefunden!"))
             else:
-                geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()  
+                geltungsbereich_text = ET.tostring(
+                    geltungsbereich_element, encoding="utf-8").decode()
                 # Bauen eines GEOS Geometrie-Objektes aus dem GML
                 try:
                     geometry = GEOSGeometry.from_gml(geltungsbereich_text)
                 except:
-                    validation_error_messages.append(forms.ValidationError("GEOS kann Geometrie des Geltungsbereichs nicht interpretieren!"))
+                    validation_error_messages.append(forms.ValidationError(
+                        "GEOS kann Geometrie des Geltungsbereichs nicht interpretieren!"))
                 # Definition des Koordinatenreferenzsystems
                 if geometry:
                     geometry.srid = 25832
@@ -365,15 +438,19 @@ def bplan_content_validator(xplan_file):
                     try:
                         geometry.transform(4326)
                     except:
-                        validation_error_messages.append(forms.ValidationError("Geometrie des Geltungsbereichs lässt sich nicht in EPSG:4326 transformieren!"))
+                        validation_error_messages.append(forms.ValidationError(
+                            "Geometrie des Geltungsbereichs lässt sich nicht in EPSG:4326 transformieren!"))
     except:
-        validation_error_messages.append(forms.ValidationError("XML-Dokument konnte nicht geparsed werden!"))
+        validation_error_messages.append(forms.ValidationError(
+            "XML-Dokument konnte nicht geparsed werden!"))
     # Falls mindestens ein ValidationError aufgetreten ist
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#raising-multiple-errors
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
-    
+
+
 def fplan_content_validator(xplan_file):
+    from xplanung_light.models import AdministrativeOrganization
     """
     Funktion zur Validierung der zu importierenden XPlan-GML Datei.
 
@@ -389,34 +466,39 @@ def fplan_content_validator(xplan_file):
     validation_error_messages = []
     # Der content-type kann nur bei hochgeladenenen Dateien bestimmt werden. Wird eine ZIP-Datei hochgeladen und zur Laufzeit ausgepackt,
     # dann wird der mimetype anders bestimmt. TODO: Datentyp für die Übergabe vereinheitlichen.
-    #print("Klasse des xplan_file objects: " + str(type(xplan_file)))
+    # print("Klasse des xplan_file objects: " + str(type(xplan_file)))
     if str(type(xplan_file)) == "<class '_io.BytesIO'>":
         mime_type = magic.from_buffer(xplan_file.read(2048), mime=True)
         xplan_file.seek(0)
-        #print("mimetype of gml in zip: " + mime_type)
+        # print("mimetype of gml in zip: " + mime_type)
         if mime_type not in ('application/octet-stream', 'application/gml', 'text/xml', 'text/plain', 'application/gml+xml'):
-            validation_error_messages.append("ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
+            validation_error_messages.append(
+                "ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
             raise forms.ValidationError(validation_error_messages)
         size = sys.getsizeof(xplan_file.getvalue())
     else:
-        #print("contenttype of gml in zip: " + xplan_file.content_type)
+        # print("contenttype of gml in zip: " + xplan_file.content_type)
         if xplan_file.content_type not in ('application/octet-stream', 'application/gml', 'text/xml', 'text/plain', 'application/gml+xml'):
-            validation_error_messages.append("Es handelt sich nicht um eine GML-Datei!")
+            validation_error_messages.append(
+                "Es handelt sich nicht um eine GML-Datei!")
             raise forms.ValidationError(validation_error_messages)
         size = xplan_file.size
     if size > limits["max_gml_size"]:
         raise forms.ValidationError(
-            "Die GML-Datei überschreitet die maximale Größe (> " + str(limits["max_gml_size"] / 1_000_000) + "MB)."
+            "Die GML-Datei überschreitet die maximale Größe (> " + str(
+                limits["max_gml_size"] / 1_000_000) + "MB)."
         )
     xml_string = xplan_file.read().decode('UTF-8')
-    #validation_error_messages.append('test')
+    # validation_error_messages.append('test')
     try:
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
         root = defused_ET.fromstring(xml_string)
         root_element_name = root.tag.__str__()
-        supported_element_names = ["{http://www.xplanung.de/xplangml/6/0}XPlanAuszug", "{http://www.xplanung.de/xplangml/5/4}XPlanAuszug", "{http://www.xplanung.de/xplangml/5/1}XPlanAuszug", ]
+        supported_element_names = ["{http://www.xplanung.de/xplangml/6/0}XPlanAuszug",
+                                   "{http://www.xplanung.de/xplangml/5/4}XPlanAuszug", "{http://www.xplanung.de/xplangml/5/1}XPlanAuszug", ]
         if root_element_name not in supported_element_names:
-            validation_error_messages.append(forms.ValidationError("XML-Dokument mit root-Element *" + root_element_name + "* wird nicht unterstützt!"))
+            validation_error_messages.append(forms.ValidationError(
+                "XML-Dokument mit root-Element *" + root_element_name + "* wird nicht unterstützt!"))
         else:
             # check Pflichtfelder
             # check zusätzliche Pflichtfelder aus eigenem Standard - nummer, rechtsstand, ...
@@ -434,8 +516,8 @@ def fplan_content_validator(xplan_file):
                 'name': {'xpath': 'gml:featureMember/xplan:FP_Plan/', 'type': 'text', 'xplan_element': 'xplan:name'},
                 'planart': {'xpath': 'gml:featureMember/xplan:FP_Plan/', 'type': 'text', 'xplan_element': 'xplan:planArt'},
                 'gemeinde': {'xpath': 'gml:featureMember/xplan:FP_Plan/xplan:gemeinde/xplan:XP_Gemeinde', 'type': 'array'},
-                #'gemeinde_name': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:gemeindeName'},
-                #'gemeinde_ags': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:ags'},
+                # 'gemeinde_name': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:gemeindeName'},
+                # 'gemeinde_ags': {'xpath': 'gml:featureMember/xplan:BP_Plan/xplan:gemeinde/xplan:XP_Gemeinde/', 'type': 'text', 'xplan_element': 'xplan:ags'},
             }
             # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
             # TODO - check für mehrere XP_Gemeinde-Objekte
@@ -443,51 +525,65 @@ def fplan_content_validator(xplan_file):
             gemeinde_ags = "00000000"
             for key, value in mandatory_fields.items():
                 if value['type'] == 'text':
-                    test = root.find(value['xpath'] + value['xplan_element'], ns).text
+                    test = root.find(value['xpath'] +
+                                     value['xplan_element'], ns).text
                     if test != None:
                         if value['xplan_element'] == 'xplan:ags':
                             if len(test) == 8:
                                 gemeinde_ags = test
                             else:
-                                validation_error_messages.append(forms.ValidationError("Die gefundene AGS im Dokument hat keine 8 Stellen - es werden nur 8-stellige AGS akzeptiert!"))
+                                validation_error_messages.append(forms.ValidationError(
+                                    "Die gefundene AGS im Dokument hat keine 8 Stellen - es werden nur 8-stellige AGS akzeptiert!"))
                         result[key] = test
                     else:
-                       validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!")) 
+                        validation_error_messages.append(forms.ValidationError(
+                            "Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!"))
                 else:
                     # kein direktes text Element
                     if value['type'] == 'array':
                         test = root.findall(value['xpath'], ns)
                         if len(test) == 0:
-                            validation_error_messages.append(forms.ValidationError("Es wurden keine Pflichtelemente für *" + key +  "* gefunden!"))
+                            validation_error_messages.append(forms.ValidationError(
+                                "Es wurden keine Pflichtelemente für *" + key + "* gefunden!"))
                         else:
                             if key == 'gemeinde':
                                 for gemeinde in test:
-                                    # Prüfen, ob die Pflichtattribute für das Objekt XP_Gemeinde im XML vorhanden sind und die zugehörigen AdministrativeOrganizations auch 
+                                    # Prüfen, ob die Pflichtattribute für das Objekt XP_Gemeinde im XML vorhanden sind und die zugehörigen AdministrativeOrganizations auch
                                     # in der DB existieren
-                                    gemeinde_name = gemeinde.find('xplan:gemeindeName', ns).text
-                                    gemeinde_ags = gemeinde.find('xplan:ags', ns).text
+                                    gemeinde_name = gemeinde.find(
+                                        'xplan:gemeindeName', ns).text
+                                    gemeinde_ags = gemeinde.find(
+                                        'xplan:ags', ns).text
                                     if gemeinde_ags:
                                         try:
-                                            orga = AdministrativeOrganization.objects.get(ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
+                                            orga = AdministrativeOrganization.objects.get(
+                                                ls=gemeinde_ags[:2], ks=gemeinde_ags[2:5], gs=gemeinde_ags[5:8])
                                         except:
                                             orga = None
-                                            validation_error_messages.append(forms.ValidationError("Es wurden kein Eintrag für eine Gemeinde mit dem AGS  *" + str(gemeinde_ags) +  "* in der Datenbank gefunden!"))
+                                            validation_error_messages.append(forms.ValidationError(
+                                                "Es wurden kein Eintrag für eine Gemeinde mit dem AGS  *" + str(gemeinde_ags) + "* in der Datenbank gefunden!"))
                                         if orga and gemeinde_name:
                                             if orga.name != gemeinde_name:
-                                                validation_error_messages.append(forms.ValidationError("Das Element xplan:gemeindeName: **" + str(gemeinde_name) + "** stimmt nicht mit dem name der Organisation aus der DB für den AGS " + orga.ags + ": **" + orga.name + "** überein!"))
+                                                validation_error_messages.append(forms.ValidationError("Das Element xplan:gemeindeName: **" + str(
+                                                    gemeinde_name) + "** stimmt nicht mit dem name der Organisation aus der DB für den AGS " + orga.ags + ": **" + orga.name + "** überein!"))
                                     else:
-                                        validation_error_messages.append(forms.ValidationError("Es wurden kein ags-Attribut im XP_Gemeinde-Objekt gefunden!"))
+                                        validation_error_messages.append(forms.ValidationError(
+                                            "Es wurden kein ags-Attribut im XP_Gemeinde-Objekt gefunden!"))
             # Erst mal alle Geometrietypen erlauben - ggf. Einschränkung auf MultiPolygon und Polygon
-            geltungsbereich_element = root.find("gml:featureMember/xplan:FP_Plan/xplan:raeumlicherGeltungsbereich/*", ns) 
+            geltungsbereich_element = root.find(
+                "gml:featureMember/xplan:FP_Plan/xplan:raeumlicherGeltungsbereich/*", ns)
             if geltungsbereich_element == None:
-                validation_error_messages.append(forms.ValidationError("Geltungsbereich nicht gefunden!"))
+                validation_error_messages.append(
+                    forms.ValidationError("Geltungsbereich nicht gefunden!"))
             else:
-                geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()  
+                geltungsbereich_text = ET.tostring(
+                    geltungsbereich_element, encoding="utf-8").decode()
                 # Bauen eines GEOS Geometrie-Objektes aus dem GML
                 try:
                     geometry = GEOSGeometry.from_gml(geltungsbereich_text)
                 except:
-                    validation_error_messages.append(forms.ValidationError("GEOS kann Geometrie des Geltungsbereichs nicht interpretieren!"))
+                    validation_error_messages.append(forms.ValidationError(
+                        "GEOS kann Geometrie des Geltungsbereichs nicht interpretieren!"))
                 # Definition des Koordinatenreferenzsystems
                 if geometry:
                     geometry.srid = 25832
@@ -495,13 +591,16 @@ def fplan_content_validator(xplan_file):
                     try:
                         geometry.transform(4326)
                     except:
-                        validation_error_messages.append(forms.ValidationError("Geometrie des Geltungsbereichs lässt sich nicht in EPSG:4326 transformieren!"))
+                        validation_error_messages.append(forms.ValidationError(
+                            "Geometrie des Geltungsbereichs lässt sich nicht in EPSG:4326 transformieren!"))
     except:
-        validation_error_messages.append(forms.ValidationError("XML-Dokument konnte nicht geparsed werden!"))
+        validation_error_messages.append(forms.ValidationError(
+            "XML-Dokument konnte nicht geparsed werden!"))
     # Falls mindestens ein ValidationError aufgetreten ist
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#raising-multiple-errors
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
-    
+
+
 def bplan_datum_validator():
     pass

@@ -22,8 +22,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-x0@(n#0!f(wy^b4=r7&@0dn30$10n-92nb=lxzcwz@!gl_jsln'
-
+# The key ist only for local testing, overridden in production settings
+SECRET_KEY = 'django-insecure-x0@(n#0!f(wy^b4=r7&@0dn30$10n-92nb=lxzcwz@!gl_jsln'  # noqa # NOSONAR
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
@@ -295,6 +295,20 @@ XPLANUNG_LIGHT_CONFIG = {
         'max_gml_size': 50_000_000,
         'max_gml_elements': 500_000,
         'max_gml_vertices': 1_000_000,
+    },
+    'xplan_attachments': {
+        'allowed_extensions': [
+            'pdf',
+            'png',
+            'jpg',
+            'tif',
+        ],
+        'allowed_mimetypes': [
+            'application/pdf',
+            'image/png',
+            'image/jpeg',
+            'image/tiff',
+        ]
     },
 }
 

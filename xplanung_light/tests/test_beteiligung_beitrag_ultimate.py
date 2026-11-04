@@ -402,7 +402,7 @@ class BeteiligungBeitragUltimateTests(TestCase):
         session = self.client.session
         session["beitrag_generic_id"] = str(self.bplan_token)
         session.save()
-        self.assertEqual(self.client.get(url, follow=True).status_code, 200)
+        self.assertEqual(self.client.post(url, follow=True).status_code, 200)
         self.bplan_beitrag.refresh_from_db()
         self.assertTrue(self.bplan_beitrag.approved)
 
@@ -422,7 +422,7 @@ class BeteiligungBeitragUltimateTests(TestCase):
         session = self.client.session
         session["beitrag_generic_id"] = str(self.bplan_token)
         session.save()
-        self.assertEqual(self.client.get(url, follow=True).status_code, 200)
+        self.assertEqual(self.client.post(url, follow=True).status_code, 200)
         self.bplan_beitrag.refresh_from_db()
         self.assertTrue(self.bplan_beitrag.withdrawn)
 
@@ -669,8 +669,9 @@ class BeteiligungBeitragUltimateTests(TestCase):
                     ("beteiligungbeitrag-reactivate",
                      "withdrawn", False),  # URL-Name prüfen
                 ):
-                    r = self.client.get(
-                        reverse(name, kwargs=self._kw(plantyp)))
+                    # POST löst die Aktion aus, follow=True folgt dem Redirect auf die Detailseite
+                    r = self.client.post(
+                        reverse(name, kwargs=self._kw(plantyp)), follow=True)
                     self.assertTemplateUsed(
                         r, "xplanung_light/gastbeteiligungbeitrag_detail.html")
                     beitrag.refresh_from_db()
@@ -692,7 +693,7 @@ class BeteiligungBeitragUltimateTests(TestCase):
         for username in ("admin_master", "root"):
             with self.subTest(user=username):
                 self.client.login(username=username, password="password123")
-                r = self.client.get(
+                r = self.client.post(
                     reverse("beteiligungbeitrag-activate", kwargs=self._kw()))
                 self.assertRedirects(r, self._list_url(),
                                      fetch_redirect_response=False)
@@ -764,16 +765,72 @@ class BeteiligungBeitragUltimateTests(TestCase):
             url = reverse(name, kwargs=self._kw())
             with self.subTest(name=name, who="anonym"):
                 self.client.logout()
-                self.assertRedirects(self.client.get(
+                self.assertRedirects(self.client.post(
                     url), auth, fetch_redirect_response=False)
             for username in ("admin_master", "root"):
                 with self.subTest(name=name, who=username):
                     self.client.login(username=username,
                                       password="password123")
-                    self.assertRedirects(self.client.get(
+                    self.assertRedirects(self.client.post(
                         url), self._list_url(), fetch_redirect_response=False)
                     self.bplan_beitrag.refresh_from_db()
                     self.assertEqual(self.bplan_beitrag.withdrawn, expected)
+
+    def test_admin_of_other_gemeinde_cannot_use_foreign_planid(self):
+        """
+        Was wird geprüft:
+            Ein Administrator einer anderen Gemeinde kombiniert die planid eines eigenen
+            Plans mit der generic_id eines fremden Beitrags.
+
+        Warum:
+            Die Berechtigung muss sich aus dem Plan des Beitrags ergeben und nicht aus der
+            planid in der URL.
+
+        Erwartung:
+            Weiterleitung zur Authentifizierung; der Beitrag bleibt unverändert.
+        """
+        admin_b = User.objects.create_user(
+            username="admin_behoerde", password="password123")
+        AdminOrgaUser.objects.create(
+            organization=self.behoerde, user=admin_b, is_admin=True)
+        eigener_plan = BPlan.objects.create(
+            name="Eigener Plan", geltungsbereich=self.bplan.geltungsbereich)
+        eigener_plan.gemeinde.add(self.behoerde)
+        eigene_beteiligung = BPlanBeteiligung.objects.create(
+            bplan=eigener_plan, typ="1000", bekanntmachung_datum=self.gestern,
+            start_datum=self.gestern, end_datum=self.in_einem_monat)
+        self.client.login(username="admin_behoerde", password="password123")
+        kw = {**self._kw(), "planid": eigener_plan.id,
+              "beteiligungid": eigene_beteiligung.id}
+        for name in ("beteiligungbeitrag-activate", "beteiligungbeitrag-withdraw"):
+            with self.subTest(name=name):
+                r = self.client.post(reverse(name, kwargs=kw))
+                self.assertEqual(r.status_code, 302)
+                self.assertIn("authenticate", r.url)
+        self.bplan_beitrag.refresh_from_db()
+        self.assertFalse(self.bplan_beitrag.approved)
+        self.assertFalse(self.bplan_beitrag.withdrawn)
+
+    def test_get_on_action_links_changes_nothing(self):
+        """
+        Was wird geprüft:
+            Gast mit Token öffnet die Links zum Aktivieren, Zurückziehen und Reaktivieren
+            per GET (z. B. durch einen Link-Scanner).
+
+        Erwartung:
+            Bestätigungsseite (200); approved und withdrawn bleiben unverändert.
+        """
+        self._as_guest()
+        for name in ("activate", "withdraw", "reactivate"):
+            with self.subTest(name=name):
+                r = self.client.get(
+                    reverse("beteiligungbeitrag-" + name, kwargs=self._kw()))
+                self.assertEqual(r.status_code, 200)
+                self.assertTemplateUsed(
+                    r, "xplanung_light/beitrag_action_confirm.html")
+                self.bplan_beitrag.refresh_from_db()
+                self.assertFalse(self.bplan_beitrag.approved)
+                self.assertFalse(self.bplan_beitrag.withdrawn)
 
     def test_detail_and_home_for_admin(self):
         """

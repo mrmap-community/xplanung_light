@@ -16,6 +16,27 @@ from django.conf import settings
 from xplanung_light.views.user import ExtentUserOrgaInfo
 from django.contrib.auth.models import User
 
+
+def requests_processable_by(user):
+    """
+    Anträge, die der Nutzer bestätigen oder zurückweisen darf:
+    Superuser alle; Organisations-Admins nur TÖB-Reporter-Anträge,
+    bei denen sie Admin ALLER beantragten Organisationen sind.
+    """
+    qs = RequestForRole.objects.all()
+    if user.is_superuser:
+        return qs
+    return qs.annotate(
+        total_orgas=Count('organizations', distinct=True),
+        admin_orgas=Count(
+            'organizations',
+            filter=Q(organizations__admin_orga_users__user=user,
+                     organizations__admin_orga_users__is_admin=True),
+            distinct=True,
+        ),
+    ).filter(total_orgas=F('admin_orgas'), total_orgas__gt=0, role='TR')
+
+
 class RequestForRoleCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
     """
     Antragsformular um eine Benutzerrolle zugeteilt
@@ -27,8 +48,9 @@ class RequestForRoleCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateVie
     model_name_lower = str(model._meta).lower()
     template_name = 'xplanung_light/requestforrole_form.html'
     # copy fields to form class - cause form class will handle the form now!
-    #fields = ["organizations", ]
-    #success_url = reverse_lazy(model_name_lower + "-list") 
+    # fields = ["organizations", ]
+    # success_url = reverse_lazy(model_name_lower + "-list")
+
     def get_form(self, form_class=None):
         """
         Liefert das Formular für den BPlanCreateView. Beim Select Field für die Gemeinden, werden nur die Gemeinden angezeigt, für die der Nutzer
@@ -36,21 +58,23 @@ class RequestForRoleCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateVie
         """
         form = super().get_form(self.form_class)
         if self.request.user.is_superuser:
-            form.fields['organizations'].queryset = form.fields['organizations'].queryset.only("pk", "name", "type", "name_part")
+            form.fields['organizations'].queryset = form.fields['organizations'].queryset.only(
+                "pk", "name", "type", "name_part")
         else:
             """
             Wir excluden ggf. hier über die implizit von django-organizations angelegte Kreuztabelle mit dem related_name *admin_orga_users* und auf die Eigenschaft *is_admin*,
             da der Nutzer dann ja schon die admin Rolle hat.
             """
 
-            #pending_requested_orgas = AdministrativeOrganization.objects.filter(pending_admin_requests__owned_by_user=self.request.user).distinct()
-            
+            # pending_requested_orgas = AdministrativeOrganization.objects.filter(pending_admin_requests__owned_by_user=self.request.user).distinct()
+
             # TODO queryset ggf. anpassen
-            #form.fields['organizations'].queryset = form.fields['organizations'].queryset.exclude(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).exclude(id__in = pending_requested_orgas).only("pk", "name", "type", "name_part")
-            form.fields['organizations'].queryset = form.fields['organizations'].queryset.only("pk", "name", "type", "name_part")
-        
+            # form.fields['organizations'].queryset = form.fields['organizations'].queryset.exclude(admin_orga_users__user=self.request.user, admin_orga_users__is_admin=True).exclude(id__in = pending_requested_orgas).only("pk", "name", "type", "name_part")
+            form.fields['organizations'].queryset = form.fields['organizations'].queryset.only(
+                "pk", "name", "type", "name_part")
+
         return form
-    
+
     def form_valid(self, form):
 
         form.instance.owned_by_user = self.request.user
@@ -63,26 +87,33 @@ class RequestForRoleCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateVie
         cc = None
         if form.cleaned_data['role'] == 'TR':
             cc = []
-            admin_users = self.get_admin_users_for_all_orgas(form.cleaned_data['organizations'])
+            admin_users = self.get_admin_users_for_all_orgas(
+                form.cleaned_data['organizations'])
             for user in admin_users:
                 if str(user.email) != '':
                     cc += [str(user.email)]
-        antragsliste_link = self.request.build_absolute_uri(reverse("requestforrole-admin-list"))
+        antragsliste_link = self.request.build_absolute_uri(
+            reverse("requestforrole-admin-list"))
         if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
-            antragsliste_link = antragsliste_link.replace('http://', 'https://')
-        subject = str("XPlanung-light - Antrag auf Zuweisung einer " + form.instance.get_role_display() + "-Rolle eingegangen")
-        html_content = render_to_string("xplanung_light/email/role_antrag_eingang.html", context={"antragsliste_link": antragsliste_link, },)
-        text_content = render_to_string("xplanung_light/email/role_antrag_eingang.txt", context={"antragsliste_link": antragsliste_link, },)
+            antragsliste_link = antragsliste_link.replace(
+                'http://', 'https://')
+        subject = str("XPlanung-light - Antrag auf Zuweisung einer " +
+                      form.instance.get_role_display() + "-Rolle eingegangen")
+        html_content = render_to_string(
+            "xplanung_light/email/role_antrag_eingang.html", context={"antragsliste_link": antragsliste_link, },)
+        text_content = render_to_string(
+            "xplanung_light/email/role_antrag_eingang.txt", context={"antragsliste_link": antragsliste_link, },)
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
             from_email=settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],
             to=[str(settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email']),],
-            #bcc=[str(farmshop.contact_email),],
+            # bcc=[str(farmshop.contact_email),],
             cc=cc,
-            reply_to=[settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
+            reply_to=[
+                settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email'],]
         )
-        #email.content_subtype = "text"
+        # email.content_subtype = "text"
         email.attach_alternative(html_content, "text/html")
         email.send(fail_silently=True)
         return super().form_valid(form)
@@ -123,11 +154,13 @@ class RequestForRoleListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTable
     def get_queryset(self):
         if self.request.user.is_superuser:
             qs = RequestForRole.objects.prefetch_related('organizations').annotate(last_changed=Subquery(
-                RequestForRole.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                RequestForRole.history.filter(id=OuterRef("pk")).order_by(
+                    '-history_date').values('history_date')[:1]
             )).order_by('-last_changed')
         else:
             qs = RequestForRole.objects.filter(owned_by_user=self.request.user).distinct().prefetch_related('organizations').annotate(last_changed=Subquery(
-                RequestForRole.history.filter(id=OuterRef("pk")).order_by('-history_date').values('history_date')[:1]
+                RequestForRole.history.filter(id=OuterRef("pk")).order_by(
+                    '-history_date').values('history_date')[:1]
             )).order_by('-last_changed')
         return qs
 
@@ -155,6 +188,7 @@ class RequestForRoleAdminListView(ExtentUserOrgaInfo, LoginRequiredMixin, Single
         return qs
     """
     # Count ist hier schneller als der doppelte Ausschluss mit zweimal exclude - es werden nur Antrage für TOEB-Reporter zugelassen
+
     def get_queryset(self):
         base_qs = RequestForRole.objects.prefetch_related('organizations').annotate(
             last_changed=Subquery(
@@ -194,18 +228,20 @@ class RequestForRoleDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, DeleteVie
     def form_valid(self, form):
         success_url = self.get_success_url()
         if self.request.user.is_superuser == True or self.object.owned_by_user == self.request.user:
-            messages.add_message(self.request, messages.SUCCESS, "Antrag " + str(self.object.id) + " wurde gelöscht!")
+            messages.add_message(self.request, messages.SUCCESS,
+                                 "Antrag " + str(self.object.id) + " wurde gelöscht!")
             return super().form_valid(form)
         else:
             return super().form_invalid(form)
-    
+
     def get_object(self):
         object = super().get_object()
         if self.request.user.is_superuser == True or object.owned_by_user == self.request.user:
             return object
         else:
-            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
-    
+            raise PermissionDenied(
+                "Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+
     def get_success_url(self):
         if self.request.user.is_superuser == True:
             return reverse_lazy("requestforrole-admin-list")

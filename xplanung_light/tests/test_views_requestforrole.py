@@ -5,6 +5,9 @@ views/views.py).
 Rollen: TR = TÖB-Reporter, OA = Organisations-Administrator. Entscheiden dürfen Administratoren
 ALLER beantragten Organisationen oder Superuser; Administratoren dürfen aber nur die TÖB-
 Reporter-Rolle vergeben.
+
+Fehlt die Berechtigung, antwortet die View schon in dispatch mit 403 (auch bei GET). Ein
+unbekannter oder bereits bearbeiteter Antrag ergibt 404.
 """
 
 import json
@@ -160,12 +163,11 @@ class RequestForRoleDecisionTests(TestCase):
             Über Rollen in einer Organisation darf nur deren Administrator entscheiden.
 
         Erwartung:
-            Status 422 mit nicht Administrator; nichts wurde verändert.
+            Status 403; nichts wurde verändert.
         """
         req = self.make_request("TR")
         r = self.post(CONFIRM, req, self.admin_one)
-        self.assertEqual(r.status_code, 422, r.content.decode())
-        self.assertIn("nicht Administrator", r.content.decode())
+        self.assertEqual(r.status_code, 403)
         self.assert_untouched(req)
 
     def test_confirm_admin_role_denied_for_orga_admin(self):
@@ -178,12 +180,11 @@ class RequestForRoleDecisionTests(TestCase):
             dürfen ausschließlich TÖB-Reporter freigeben.
 
         Erwartung:
-            Status 422 mit TOEB-Reporter in der Meldung; nichts wurde verändert.
+            Status 403; nichts wurde verändert.
         """
         req = self.make_request("OA")
         r = self.post(CONFIRM, req, self.admin_both)
-        self.assertEqual(r.status_code, 422, r.content.decode())
-        self.assertIn("TOEB-Reporter", r.content.decode())
+        self.assertEqual(r.status_code, 403)
         self.assert_untouched(req)
 
     # --- Refuse ---------------------------------------------------------------
@@ -225,16 +226,100 @@ class RequestForRoleDecisionTests(TestCase):
             Die Rechteprüfung muss für beide Entscheidungen identisch sein.
 
         Erwartung:
-            Status 422 mit der jeweiligen Meldung; nichts wurde verändert.
+            Status 403; nichts wurde verändert.
         """
-        for who, role, marker in ((self.admin_one, "TR", "nicht Administrator"),
-                                  (self.admin_both, "OA", "TOEB-Reporter")):
+        for who, role in ((self.admin_one, "TR"), (self.admin_both, "OA")):
             with self.subTest(user=who.username, role=role):
                 req = self.make_request(role)
                 r = self.post(REFUSE, req, who)
-                self.assertEqual(r.status_code, 422, r.content.decode())
-                self.assertIn(marker, r.content.decode())
+                self.assertEqual(r.status_code, 403)
                 self.assert_untouched(req)
+
+    # --- Berechtigung wird vor dem Formular geprüft (dispatch) -----------------
+
+    def test_get_denied_without_permission(self):
+        """
+        Was wird geprüft:
+            GET auf Bestätigen und Ablehnen durch Nutzer ohne Berechtigung: der Antragsteller
+            selbst, ein Administrator nur einer der beiden Organisationen und ein
+            Administrator bei einem Administrator-Antrag (OA).
+
+        Warum:
+            Die Details eines Antrags dürfen nicht angezeigt werden, bevor die Berechtigung
+            geprüft ist.
+
+        Erwartung:
+            Status 403.
+        """
+        for who, role in ((self.applicant, "TR"), (self.admin_one, "TR"), (self.admin_both, "OA")):
+            req = self.make_request(role)
+            self.client.force_login(who)
+            for name in (CONFIRM, REFUSE):
+                with self.subTest(user=who.username, role=role, name=name):
+                    r = self.client.get(reverse(name, kwargs={"pk": req.pk}))
+                    self.assertEqual(r.status_code, 403)
+
+    def test_request_without_organizations_cannot_be_decided_by_orga_admin(self):
+        """
+        Was wird geprüft:
+            Ein Antrag ohne Organisation wird von einem Organisations-Administrator
+            bestätigt oder abgelehnt.
+
+        Warum:
+            "Administrator aller beantragten Organisationen" darf bei einer leeren Menge
+            nicht automatisch erfüllt sein.
+
+        Erwartung:
+            Status 403; nichts wurde verändert.
+        """
+        req = RequestForRole.objects.create(owned_by_user=self.applicant, role="TR")
+        for name in (CONFIRM, REFUSE):
+            with self.subTest(name=name):
+                r = self.post(name, req, self.admin_both)
+                self.assertEqual(r.status_code, 403)
+                self.assert_untouched(req)
+
+    def test_unknown_request_id_is_404(self):
+        """
+        Was wird geprüft:
+            GET und POST auf Bestätigen und Ablehnen mit einer Antrags-ID, die es nicht gibt.
+
+        Warum:
+            Regressionstest: Die Suche über den Antrag warf DoesNotExist und führte zu einem
+            Serverfehler (500).
+
+        Erwartung:
+            Status 404.
+        """
+        self.client.force_login(self.root)
+        for name in (CONFIRM, REFUSE):
+            url = reverse(name, kwargs={"pk": 999999})
+            with self.subTest(name=name):
+                self.assertEqual(self.client.get(url).status_code, 404)
+                self.assertEqual(self.client.post(
+                    url,
+                    data=json.dumps({"formset_data": {"editing_note": "x"}}),
+                    content_type="application/json",
+                    HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+                ).status_code, 404)
+
+    def test_decision_on_already_processed_request_is_404(self):
+        """
+        Was wird geprüft:
+            Ein bereits entschiedener Antrag wird noch einmal bestätigt oder abgelehnt
+            (z. B. durch doppeltes Absenden).
+
+        Erwartung:
+            Status 404, es entsteht keine zweite Mail und keine Rolle.
+        """
+        req = self.make_request("TR")
+        self.assertEqual(self.post(REFUSE, req, self.root).status_code, 200)
+        mail.outbox.clear()
+        for name in (CONFIRM, REFUSE):
+            with self.subTest(name=name):
+                self.assertEqual(self.post(name, req, self.root).status_code, 404)
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertFalse(AdminOrgaUser.objects.filter(user=self.applicant).exists())
 
     # --- anonym ---------------------------------------------------------------
     def test_anonymous_cannot_decide(self):

@@ -29,9 +29,10 @@ MAP
             "ows_contactorganization" "Musterorganisation"
             "ows_contactposition" "Position"
             "ows_contactelectronicmailaddress" "test@example.com"
+            "wfs_maxfeatures" "100"
             "wms_contactfacsimiletelephone" "1111"
             "wms_contactvoicetelephone" "1111"
-            "wms_enable_request" "*"
+            "wms_enable_request" "GetCapabilities GetMap"
             "wms_allow_getmap_without_styles"   "true"
         END
     END

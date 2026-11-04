@@ -1,0 +1,16 @@
+{% extends "xplanung_light/layout.html" %}
+{# Bestätigungsseite für Aktivieren / Zurückziehen / Reaktivieren einer Stellungnahme. #}
+{% block content %}
+<div class="container my-4">
+  <h1 class="h3">{{ action.titel }}</h1>
+  <p>{{ action.frage }}</p>
+  <p class="text-muted">
+    Plan: {{ plan.name }}
+  </p>
+  <form method="post" action="{{ action_url }}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary">{{ action.button }}</button>
+    <a href="javascript:history.back()" class="btn btn-secondary">Abbrechen</a>
+  </form>
+</div>
+{% endblock %}

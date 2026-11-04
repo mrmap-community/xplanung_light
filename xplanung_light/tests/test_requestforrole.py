@@ -34,6 +34,9 @@ class RequestForRoleWorkflow(TestCase):
 
     editing_note ist ein Pflichtfeld; ein leerer Text scheitert schon an der Formularprüfung.
 
+    Fehlt die Berechtigung, antwortet die View schon in dispatch mit 403 (auch bei GET), nicht
+    mit 422. Ein unbekannter oder bereits bearbeiteter Antrag ergibt 404.
+
     Ausgangslage: zwei Gemeinden (die Fixture-Gemeinde A und die neue Gemeinde B), ein
     Antragsteller, ein Administrator beider Gemeinden, ein Administrator nur von Gemeinde A und
     der Superuser aus den Fixtures.
@@ -187,9 +190,8 @@ class RequestForRoleWorkflow(TestCase):
 
         response = self._post(self._confirm_url(req))
 
-        # form.add_error() + super().form_invalid(form) -> 422 bei
-        # formset.views.FormView, nicht Djangos übliches 200.
-        self.assertEqual(response.status_code, 422)
+        # dispatch() wirft PermissionDenied -> 403, noch bevor das Formular verarbeitet wird.
+        self.assertEqual(response.status_code, 403)
         self.assertTrue(RequestForRole.objects.filter(pk=req.pk).exists())
         self.assertFalse(
             AdminOrgaUser.objects.filter(
@@ -197,7 +199,7 @@ class RequestForRoleWorkflow(TestCase):
         )
 
     def test_org_admin_cannot_confirm_orgadmin_role_request(self):
-        """Org-Admins dürfen laut form_valid() ausschließlich TOEB-Reporter-
+        """Org-Admins dürfen laut Berechtigungsprüfung ausschließlich TOEB-Reporter-
         Anträge bearbeiten, niemals Organisationsadmin-Anträge."""
         req = self._make_request(
             role=RequestForRole.ORGADMIN, organizations=[self.gemeinde_a])
@@ -205,8 +207,48 @@ class RequestForRoleWorkflow(TestCase):
 
         response = self._post(self._confirm_url(req))
 
-        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.status_code, 403)
         self.assertTrue(RequestForRole.objects.filter(pk=req.pk).exists())
+
+    def test_org_admin_for_only_some_organizations_cannot_refuse(self):
+        """Dieselbe Sperre wie beim Bestätigen gilt für die Ablehnung."""
+        req = self._make_request(
+            role=RequestForRole.TOEBREPORTER, organizations=[
+                self.gemeinde_a, self.gemeinde_b],
+        )
+        self.client.force_login(self.admin_nur_einer_gemeinde)
+
+        response = self._post(self._refuse_url(req))
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(RequestForRole.objects.filter(pk=req.pk).exists())
+
+    def test_get_of_decision_pages_is_denied_without_permission(self):
+        """
+        Was wird geprüft:
+            GET auf Bestätigen und Ablehnen durch den Antragsteller selbst, durch einen
+            Administrator nur einer der beantragten Gemeinden und durch einen Administrator
+            bei einem Administrator-Antrag.
+
+        Warum:
+            Die Details eines Antrags dürfen nicht angezeigt werden, bevor die Berechtigung
+            geprüft ist.
+
+        Erwartung:
+            Status 403.
+        """
+        cases = (
+            (self.antragsteller, RequestForRole.TOEBREPORTER, [self.gemeinde_a]),
+            (self.admin_nur_einer_gemeinde, RequestForRole.TOEBREPORTER,
+             [self.gemeinde_a, self.gemeinde_b]),
+            (self.admin_nur_einer_gemeinde, RequestForRole.ORGADMIN, [self.gemeinde_a]),
+        )
+        for user, role, orgas in cases:
+            req = self._make_request(role=role, organizations=orgas)
+            self.client.force_login(user)
+            for url in (self._confirm_url(req), self._refuse_url(req)):
+                with self.subTest(user=user.username, role=role, url=url):
+                    self.assertEqual(self.client.get(url).status_code, 403)
 
     def test_superuser_can_confirm_orgadmin_role_request(self):
         """
