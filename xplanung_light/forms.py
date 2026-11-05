@@ -2069,7 +2069,7 @@ class BPlanBeteiligungBeitragAnhangForm(ModelForm):
         widget=UploadedFileInput(attrs={
             'max-size': settings.XPLANUNG_LIGHT_CONFIG['limits']['upload_file_size_limits']['other'],
         }),
-        help_text="Please do not upload files larger than 1MB",
+        help_text=f"Please do not upload files larger than {settings.XPLANUNG_LIGHT_CONFIG['limits']['upload_file_size_limits']['other'] / 1_000_000:g} MB",
         required=True,
         validators=[validate_file_infection],
     )
@@ -2109,7 +2109,7 @@ class FPlanBeteiligungBeitragAnhangForm(ModelForm):
         widget=UploadedFileInput(attrs={
             'max-size': settings.XPLANUNG_LIGHT_CONFIG['limits']['upload_file_size_limits']['other'],
         }),
-        help_text="Please do not upload files larger than 1MB",
+        help_text=f"Please do not upload files larger than {settings.XPLANUNG_LIGHT_CONFIG['limits']['upload_file_size_limits']['other'] / 1_000_000:g} MB.",
         required=True,
         validators=[validate_file_infection],
     )

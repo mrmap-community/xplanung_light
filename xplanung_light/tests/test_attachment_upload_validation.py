@@ -73,7 +73,8 @@ class AttachmentUploadValidation(TestCase):
 
     def _assert_rejected(self, upload, name):
         response = self._post_attachment(upload, name=name)
-        self.assertEqual(response.status_code, 200)  # Formular mit Fehler neu gerendert
+        # Formular mit Fehler neu gerendert
+        self.assertEqual(response.status_code, 200)
         self.assertIn('attachment', response.context['form'].errors)
         self.assertFalse(BPlanSpezExterneReferenz.objects.filter(
             bplan=self.plan, name=name).exists())
@@ -90,7 +91,9 @@ class AttachmentUploadValidation(TestCase):
         cases = [('a.pdf', PDF, 'application/pdf'),
                  ('a.png', PNG, 'image/png'),
                  ('a.jpg', JPG, 'image/jpeg'),
-                 ('a.tif', TIF, 'image/tiff')]
+                 ('a.jpeg', JPG, 'image/jpeg'),
+                 ('a.tif', TIF, 'image/tiff'),
+                 ('a.tiff', TIF, 'image/tiff')]
         for filename, content, ctype in cases:
             with self.subTest(filename=filename):
                 self._assert_accepted(
@@ -100,38 +103,35 @@ class AttachmentUploadValidation(TestCase):
     def test_uppercase_extension_is_accepted(self):
         # FileExtensionValidator vergleicht case-insensitive
         self._assert_accepted(
-            SimpleUploadedFile('BERICHT.PDF', PDF, content_type='application/pdf'),
+            SimpleUploadedFile('BERICHT.PDF', PDF,
+                               content_type='application/pdf'),
             name='Grossbuchstaben')
 
     def test_exe_extension_is_rejected(self):
         self._assert_rejected(
-            SimpleUploadedFile('payload.exe', EXE, content_type='application/x-msdownload'),
+            SimpleUploadedFile('payload.exe', EXE,
+                               content_type='application/x-msdownload'),
             name='Ausführbare Datei')
 
     def test_double_extension_exe_is_rejected(self):
         # nur das letzte Suffix zählt
         self._assert_rejected(
-            SimpleUploadedFile('bericht.pdf.exe', PDF, content_type='application/pdf'),
+            SimpleUploadedFile('bericht.pdf.exe', PDF,
+                               content_type='application/pdf'),
             name='doppelt')
-
-    def test_jpeg_and_tiff_long_extensions_are_rejected(self):
-        # Dokumentationstest: Allowlist kennt nur 'jpg' und 'tif'.
-        # Wenn .jpeg/.tiff gewollt sind: in base.py ergänzen und Test umdrehen.
-        for filename, content in (('foto.jpeg', JPG), ('scan.tiff', TIF)):
-            with self.subTest(filename=filename):
-                self._assert_rejected(
-                    SimpleUploadedFile(filename, content), name=f'lang-{filename}')
 
     # --- Inhalt (Mimetype per libmagic) ---------------------------------
 
     def test_exe_content_with_pdf_extension_is_rejected(self):
         self._assert_rejected(
-            SimpleUploadedFile('getarnt.pdf', EXE, content_type='application/pdf'),
+            SimpleUploadedFile('getarnt.pdf', EXE,
+                               content_type='application/pdf'),
             name='getarnt')
 
     def test_text_content_with_pdf_extension_is_rejected(self):
         self._assert_rejected(
-            SimpleUploadedFile('text.pdf', b'A' * 5000, content_type='application/pdf'),
+            SimpleUploadedFile('text.pdf', b'A' * 5000,
+                               content_type='application/pdf'),
             name='text-als-pdf')
 
     # --- Größe ----------------------------------------------------------
@@ -216,3 +216,8 @@ class AttachmentUploadValidation(TestCase):
             self._assert_accepted(upload, name='Unbedenkliche Datei')
 
         self.assertTrue(scanner.instream.called)
+
+    def test_png_extension_with_pdf_content_is_rejected(self):
+        self._assert_rejected(
+            SimpleUploadedFile('bild.png', PDF, content_type='image/png'),
+            name='png-mit-pdf')

@@ -301,14 +301,24 @@ XPLANUNG_LIGHT_CONFIG = {
             'pdf',
             'png',
             'jpg',
+            'jpeg',
             'tif',
+            'tiff',
         ],
         'allowed_mimetypes': [
             'application/pdf',
             'image/png',
             'image/jpeg',
             'image/tiff',
-        ]
+        ],
+        'mimetypes_by_extension': {
+            'pdf': ['application/pdf'],
+            'png': ['image/png'],
+            'jpg': ['image/jpeg'],
+            'jpeg': ['image/jpeg'],
+            'tif': ['image/tiff'],
+            'tiff': ['image/tiff'],
+        },
     },
 }
 

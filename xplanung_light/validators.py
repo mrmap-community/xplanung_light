@@ -14,6 +14,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 import sys
+import os
 
 
 def namespace(element):
@@ -22,13 +23,19 @@ def namespace(element):
 
 
 def validate_xplan_attachment_mimetype(value):
+    value.seek(0)
     mime = magic.from_buffer(
         value.read(2048),
         mime=True
     )
     value.seek(0)
-    if mime not in settings.XPLANUNG_LIGHT_CONFIG['xplan_attachments']['allowed_mimetypes']:
+    cfg = settings.XPLANUNG_LIGHT_CONFIG['xplan_attachments']
+    if mime not in cfg['allowed_mimetypes']:
         raise ValidationError("Dieser Dateityp ist nicht erlaubt.")
+    ext = os.path.splitext(value.name)[1].lower().lstrip('.')
+    if mime not in cfg['mimetypes_by_extension'].get(ext, []):
+        raise ValidationError(
+            "Dateiendung und Dateiinhalt passen nicht zusammen.")
 
 
 validate_xplan_attachment_extension = FileExtensionValidator(
@@ -40,7 +47,7 @@ def validate_xplan_attachment_file_size(value):
     max_file_size = settings.XPLANUNG_LIGHT_CONFIG['limits']['upload_file_size_limits']['other']
     if value.size > max_file_size:
         raise ValidationError(
-            f"Die Datei darf maximal {str(round(float(max_file_size) / float(1024 * 1024), 2))} MB groß sein."
+            f"Die Datei darf maximal {str(round(float(max_file_size) / float(1_000_000), 2))} MB groß sein."
         )
 
 
