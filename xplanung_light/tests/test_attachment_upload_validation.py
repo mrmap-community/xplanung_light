@@ -1,40 +1,45 @@
 """
-Tests zur serverseitigen Prüfung von Datei-Uploads bei Beitrags-Anhängen: Größe, Dateityp und
-Virenscan.
+Tests zur serverseitigen Prüfung von Datei-Uploads bei Plan-Anhängen: Endung, Inhalt
+(Mimetype per libmagic), Größe und Virenscan.
 
-Einige Tests halten bewusst bestehende Lücken fest (Dokumentationstests). Sie schlagen fehl,
-sobald die Lücke geschlossen wird, und müssen dann angepasst werden.
+Validatoren (siehe validators.py und XPLANUNG_LIGHT_CONFIG['xplan_attachments'] in base.py):
+FileExtensionValidator, validate_xplan_attachment_mimetype, validate_xplan_attachment_file_size
+und validate_file_infection (django-clamd).
 """
 
+import base64
+import copy
 from unittest.mock import MagicMock, patch
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 import django_clamd.validators as clamd_validators
 
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz
 
+PDF = b'%PDF-1.4\n%Testinhalt\n'
+PNG = base64.b64decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+)
+JPG = b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9'
+TIF = b'II*\x00\x08\x00\x00\x00\x00\x00'
+EXE = b'MZ\x90\x00' + b'\x00' * 100
+
+
+def _config_with_limit(limit):
+    cfg = copy.deepcopy(settings.XPLANUNG_LIGHT_CONFIG)
+    cfg['limits']['upload_file_size_limits']['other'] = limit
+    return cfg
+
 
 class AttachmentUploadValidation(TestCase):
     """
-    Was tatsächlich passiert, wenn eine Datei als Plan-Anhang hochgeladen
-    wird - jenseits der bereits in test_permissions.py geprüften Frage, WER
-    das darf.
-
-    Der einzige Validator auf BPlanSpezExterneReferenz.attachment ist
-    validate_file_infection (django-clamd). Es gibt weder einen
-    FileExtensionValidator noch eine serverseitige Größenprüfung - das
-    "max-size": 1024*1024 im Formular-Widget (BPlanBeteiligungBeitragAnhangForm,
-    siehe forms.py) ist nur ein HTML/JS-Attribut fürs Frontend und wird vom
-    Server nicht durchgesetzt.
-
-    Diese Tests dokumentieren den IST-Zustand (auch die überraschenden
-    Teile davon) und prüfen zusätzlich, dass die Virenscan-Anbindung an sich
-    korrekt verdrahtet ist - unabhängig davon, ob in dieser Umgebung
-    tatsächlich ein ClamAV-Dienst erreichbar ist.
+    Was passiert, wenn eine Datei als Plan-Anhang hochgeladen wird - jenseits
+    der in test_permissions.py geprüften Frage, WER das darf.
     """
 
     fixtures = ['user.json',
@@ -52,7 +57,8 @@ class AttachmentUploadValidation(TestCase):
 
     def setUp(self):
         self.client = Client()
-        self.client.force_login(User.objects.get(username='admin_stadt_neustadt'))
+        self.client.force_login(User.objects.get(
+            username='admin_stadt_neustadt'))
 
     def _post_attachment(self, file_obj, typ=BPlanSpezExterneReferenz.BESCHREIBUNG, name='Test-Anhang'):
         return self.client.post(
@@ -65,60 +71,86 @@ class AttachmentUploadValidation(TestCase):
             },
         )
 
-    # --- Größenlimit --------------------------------------------------
+    def _assert_rejected(self, upload, name):
+        response = self._post_attachment(upload, name=name)
+        self.assertEqual(response.status_code, 200)  # Formular mit Fehler neu gerendert
+        self.assertIn('attachment', response.context['form'].errors)
+        self.assertFalse(BPlanSpezExterneReferenz.objects.filter(
+            bplan=self.plan, name=name).exists())
 
-    def test_oversized_attachment_is_accepted_server_side(self):
-        """
-        Dokumentiert eine bestehende Lücke: das Formular wirbt im help_text
-        mit "Please do not upload files larger than 1MB", aber das ist reine
-        Bitte an den Browser (max-size im Widget-Attribut, JS-seitig). Diese
-        2-MB-Datei wird serverseitig anstandslos akzeptiert.
+    def _assert_accepted(self, upload, name):
+        response = self._post_attachment(upload, name=name)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(BPlanSpezExterneReferenz.objects.filter(
+            bplan=self.plan, name=name).exists())
 
-        Falls hier künftig ein serverseitiger Größenlimit-Validator ergänzt
-        wird, muss dieser Test auf eine 4xx/Formularfehler-Assertion
-        umgestellt werden - dann wäre das ein begrüßenswerter Fix, kein
-        Regressionsfehler.
-        """
-        oversized_content = b'A' * (2 * 1024 * 1024)  # 2 MB, deutlich > 1 MB
-        upload = SimpleUploadedFile(
-            'grosse_datei.pdf', oversized_content, content_type='application/pdf',
-        )
+    # --- Endung ---------------------------------------------------------
 
-        response = self._post_attachment(upload)
+    def test_allowed_types_are_accepted(self):
+        cases = [('a.pdf', PDF, 'application/pdf'),
+                 ('a.png', PNG, 'image/png'),
+                 ('a.jpg', JPG, 'image/jpeg'),
+                 ('a.tif', TIF, 'image/tiff')]
+        for filename, content, ctype in cases:
+            with self.subTest(filename=filename):
+                self._assert_accepted(
+                    SimpleUploadedFile(filename, content, content_type=ctype),
+                    name=f'ok-{filename}')
 
-        self.assertEqual(response.status_code, 302, (
-            "Erwartetes (überraschendes) Verhalten: der Upload wird trotz "
-            "Überschreitung der im UI beworbenen 1-MB-Grenze akzeptiert, "
-            "weil es keine serverseitige Größenprüfung gibt."
-        ))
-        attachment = BPlanSpezExterneReferenz.objects.filter(bplan=self.plan, name='Test-Anhang').first()
-        self.assertIsNotNone(attachment)
-        self.assertEqual(attachment.attachment.size, len(oversized_content))
+    def test_uppercase_extension_is_accepted(self):
+        # FileExtensionValidator vergleicht case-insensitive
+        self._assert_accepted(
+            SimpleUploadedFile('BERICHT.PDF', PDF, content_type='application/pdf'),
+            name='Grossbuchstaben')
 
-    # --- Dateityp / Endung ---------------------------------------------
+    def test_exe_extension_is_rejected(self):
+        self._assert_rejected(
+            SimpleUploadedFile('payload.exe', EXE, content_type='application/x-msdownload'),
+            name='Ausführbare Datei')
 
-    def test_arbitrary_file_extension_is_accepted(self):
-        """
-        Dokumentiert dieselbe Art Lücke wie oben, hier für den Dateityp: es
-        gibt keine Allowlist für Dateiendungen oder Content-Types. Eine
-        .exe-Datei wird ebenso akzeptiert wie ein PDF.
-        """
-        upload = SimpleUploadedFile(
-            'payload.exe', b'MZ\x90\x00' + b'\x00' * 100,
-            content_type='application/x-msdownload',
-        )
+    def test_double_extension_exe_is_rejected(self):
+        # nur das letzte Suffix zählt
+        self._assert_rejected(
+            SimpleUploadedFile('bericht.pdf.exe', PDF, content_type='application/pdf'),
+            name='doppelt')
 
-        response = self._post_attachment(upload, name='Ausführbare Datei')
+    def test_jpeg_and_tiff_long_extensions_are_rejected(self):
+        # Dokumentationstest: Allowlist kennt nur 'jpg' und 'tif'.
+        # Wenn .jpeg/.tiff gewollt sind: in base.py ergänzen und Test umdrehen.
+        for filename, content in (('foto.jpeg', JPG), ('scan.tiff', TIF)):
+            with self.subTest(filename=filename):
+                self._assert_rejected(
+                    SimpleUploadedFile(filename, content), name=f'lang-{filename}')
 
-        self.assertEqual(response.status_code, 302, (
-            "Erwartetes (überraschendes) Verhalten: es gibt keine "
-            "Dateityp-Allowlist, die .exe-Datei wird angenommen."
-        ))
-        self.assertTrue(
-            BPlanSpezExterneReferenz.objects.filter(
-                bplan=self.plan, name='Ausführbare Datei'
-            ).exists()
-        )
+    # --- Inhalt (Mimetype per libmagic) ---------------------------------
+
+    def test_exe_content_with_pdf_extension_is_rejected(self):
+        self._assert_rejected(
+            SimpleUploadedFile('getarnt.pdf', EXE, content_type='application/pdf'),
+            name='getarnt')
+
+    def test_text_content_with_pdf_extension_is_rejected(self):
+        self._assert_rejected(
+            SimpleUploadedFile('text.pdf', b'A' * 5000, content_type='application/pdf'),
+            name='text-als-pdf')
+
+    # --- Größe ----------------------------------------------------------
+
+    def test_file_at_size_limit_is_accepted(self):
+        limit = 4096
+        with override_settings(XPLANUNG_LIGHT_CONFIG=_config_with_limit(limit)):
+            self._assert_accepted(
+                SimpleUploadedFile('grenze.pdf', PDF + b'A' * (limit - len(PDF)),
+                                   content_type='application/pdf'),
+                name='genau-am-limit')
+
+    def test_file_above_size_limit_is_rejected(self):
+        limit = 4096
+        with override_settings(XPLANUNG_LIGHT_CONFIG=_config_with_limit(limit)):
+            self._assert_rejected(
+                SimpleUploadedFile('zu_gross.pdf', PDF + b'A' * (limit - len(PDF) + 1),
+                                   content_type='application/pdf'),
+                name='ein-byte-zu-gross')
 
     # --- Virenscan: Konfigurationsstand dieser Umgebung -----------------
 
@@ -126,18 +158,9 @@ class AttachmentUploadValidation(TestCase):
         """
         Warnender Canary-Test: CLAMD_ENABLED steht in komserv/settings/base.py
         auf False. django-clamd liest diesen Wert als Modulkonstante EINMAL
-        beim Import von django_clamd.conf (genau dasselbe Muster wie
-        CAPTCHA_TEST_MODE bei django-simple-captcha, siehe
-        test_beitrag_authenticate.py) - @override_settings würde hier also
-        NICHT dynamisch greifen.
-
-        Für komserv/settings/dev.py und komserv/settings/prod.py lagen mir
-        beim Schreiben dieses Tests keine Dateien vor (nicht im Repo-Export
-        enthalten) - ob dort CLAMD_ENABLED=True gesetzt wird, konnte ich
-        nicht prüfen. Dieser Test deckt nur ab, was in der Test-Umgebung
-        tatsächlich aktiv ist (test.py erbt von base.py, ohne eigene
-        CLAMD_ENABLED-Zeile). Schlägt er künftig fehl, hat sich das geändert
-        - bitte dann auch dev.py/prod.py auf denselben Stand prüfen.
+        beim Import - @override_settings würde hier also NICHT dynamisch
+        greifen. Schlägt der Test künftig fehl, hat sich das geändert -
+        bitte dann auch dev.py/prod.py auf denselben Stand prüfen.
         """
         self.assertFalse(
             clamd_validators.CLAMD_ENABLED,
@@ -156,54 +179,40 @@ class AttachmentUploadValidation(TestCase):
 
     def test_infected_file_is_rejected_when_scanning_is_enabled(self):
         """
-        Prüft die Verdrahtung von validate_file_infection() unabhängig von
-        einem echten, erreichbaren ClamAV-Dienst: CLAMD_ENABLED wird für die
-        Dauer des Tests auf True gepatcht (als Attribut auf dem
-        django_clamd.validators-Modul, siehe Hinweis im vorigen Test - ein
-        @override_settings würde hier NICHT wirken), und der Scanner wird
-        durch ein Mock ersetzt, das eine Infektion meldet.
-
-        Damit ist sichergestellt: WENN ein Scanner läuft und "FOUND" meldet,
-        wird der Upload tatsächlich abgelehnt und nichts landet in der DB -
-        unabhängig davon, ob in dieser Sandbox ein echter ClamAV-Daemon
-        erreichbar ist.
+        Prüft die Verdrahtung von validate_file_infection() ohne echten
+        ClamAV-Dienst: CLAMD_ENABLED wird als Attribut auf dem
+        django_clamd.validators-Modul gepatcht, der Scanner durch ein Mock
+        ersetzt, das eine Infektion meldet. Die Testdatei hat gültige Endung
+        und gültigen Inhalt, damit die Ablehnung nachweislich vom Scan kommt.
         """
         upload = SimpleUploadedFile(
-            'eicar_test.txt', b'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-TEST',
-            content_type='text/plain',
+            'eicar_test.pdf',
+            PDF + b'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-TEST',
+            content_type='application/pdf',
         )
+        scanner = self._mock_scan_result('FOUND', 'Eicar-Test-Signature')
 
         with patch.object(clamd_validators, 'CLAMD_ENABLED', True), \
-             patch.object(clamd_validators, 'get_scanner',
-                           return_value=self._mock_scan_result('FOUND', 'Eicar-Test-Signature')):
-            response = self._post_attachment(upload, name='Infizierte Datei')
+                patch.object(clamd_validators, 'get_scanner', return_value=scanner):
+            self._assert_rejected(upload, name='Infizierte Datei')
 
-        self.assertEqual(response.status_code, 200)  # Formular wird mit Fehler neu gerendert
-        self.assertFalse(
-            BPlanSpezExterneReferenz.objects.filter(
-                bplan=self.plan, name='Infizierte Datei'
-            ).exists()
-        )
+        # Beweist: die Ablehnung kam vom Scanner (kein assert_called_once,
+        # falls Validatoren durch ModelForm._post_clean doppelt laufen)
+        self.assertTrue(scanner.instream.called)
 
     def test_clean_file_is_accepted_when_scanning_is_enabled(self):
         """
-        Positiv-Gegenprobe zum vorigen Test: derselbe Mock-Mechanismus, aber
-        der Scanner meldet "OK" statt "FOUND". Stellt sicher, dass der Mock
-        nicht grundsätzlich jeden Upload blockiert, sondern tatsächlich am
-        Scan-Ergebnis hängt.
+        Positiv-Gegenprobe: derselbe Mock-Mechanismus, aber der Scanner
+        meldet "OK". Stellt sicher, dass der Upload am Scan-Ergebnis hängt.
         """
         upload = SimpleUploadedFile(
-            'unbedenklich.txt', b'Ganz normaler Text.', content_type='text/plain',
+            'unbedenklich.pdf', PDF + b'Ganz normaler Text.',
+            content_type='application/pdf',
         )
+        scanner = self._mock_scan_result('OK')
 
         with patch.object(clamd_validators, 'CLAMD_ENABLED', True), \
-             patch.object(clamd_validators, 'get_scanner',
-                           return_value=self._mock_scan_result('OK')):
-            response = self._post_attachment(upload, name='Unbedenkliche Datei')
+                patch.object(clamd_validators, 'get_scanner', return_value=scanner):
+            self._assert_accepted(upload, name='Unbedenkliche Datei')
 
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(
-            BPlanSpezExterneReferenz.objects.filter(
-                bplan=self.plan, name='Unbedenkliche Datei'
-            ).exists()
-        )
+        self.assertTrue(scanner.instream.called)

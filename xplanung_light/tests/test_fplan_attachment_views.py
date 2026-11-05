@@ -53,17 +53,18 @@ class FPlanSpezExterneReferenzViewTests(TestCase):
     # ==============================================================================
 
     def test_fplan_attachment_create_success(self):
-        """Das Hochladen einer neuen Textanlage (z.B. Begründungsentwurf) muss erfolgreich durchgehen."""
+        """Das Hochladen einer neuen Anlage (z.B. Begründungsentwurf als PDF) muss erfolgreich durchgehen."""
         self.client.login(username="orga_admin_fplan", password="password123")
         url = reverse("fplanattachment-create", kwargs={"planid": self.fplan.id})
 
-        dummy_text_file = SimpleUploadedFile("begruendung.txt", b"FPlan Begruendung...", content_type="text/plain")
+        # Zulässig sind nur Dateien aus der Allowlist (pdf, png, jpg, tif) mit passendem Inhalt
+        dummy_file = SimpleUploadedFile("begruendung.pdf", b"%PDF-1.4 FPlan Begruendung...", content_type="application/pdf")
 
         payload = {
             "public": True,
             "typ": "1010",  # 'Begruendung' laut REF_TYPE_CHOICES in models.py
             "name": "Begründungsentwurf FPlan",
-            "attachment": dummy_text_file
+            "attachment": dummy_file
         }
 
         response = self.client.post(url, data=payload, follow=True)
