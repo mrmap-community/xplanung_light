@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import Any, Optional
 
@@ -16,6 +17,12 @@ PROXIES = {
 }
 """
 PROXIES = None
+
+# Lokaler Testumgebungs-Fix: www.geoportal.rlp.de baut TLS-Verbindungen
+# intermittierend ab (SSLEOFError). Requests mit Timeout und Retry mit
+# Backoff statt eines Abbruchs des Gesamtimports.
+GET_RETRIES = 8
+GET_TIMEOUT = (10, 60)
 
 
 class Command(BaseCommand):
@@ -39,12 +46,35 @@ class Command(BaseCommand):
             param_dict = {'f': 'json', 'ags': "*7" + ags}
         else:
             raise CommandError(f"Unbekannter Typ: {type}")
-        resp = requests.get(url=base_uri, params=param_dict, proxies=PROXIES)
+        resp = self._get_with_retries(base_uri, param_dict)
         # resp = requests.get(url=base_uri, params=param_dict)
         self.stdout.write(base_uri)
         self.stdout.write(str(param_dict))
         data = resp.json()
         return str(data['features'][0]['geometry'])
+
+    def _get_with_retries(self, url: str, params: dict) -> requests.Response:
+        """
+        requests.get mit Timeout und Retries. Der Geoportal-Server beendet
+        TLS-Verbindungen gelegentlich abrupt (SSLEOFError); ohne Retry bricht
+        sonst der komplette Import ab.
+        """
+        last_error: Optional[Exception] = None
+        for attempt in range(1, GET_RETRIES + 1):
+            try:
+                resp = requests.get(url=url, params=params,
+                                    proxies=PROXIES, timeout=GET_TIMEOUT)
+                resp.raise_for_status()
+                return resp
+            except (requests.exceptions.RequestException,) as error:
+                last_error = error
+                pause = min(2 ** attempt, 30)
+                self.stderr.write(
+                    f"Wiederhole Request (Versuch {attempt}/{GET_RETRIES}, "
+                    f"Pausiere {pause}s): {error.__class__.__name__}: {error}"
+                )
+                time.sleep(pause)
+        raise CommandError(f"Request nicht erfolgreich, auch nach Retries nicht: {url} ({last_error})")
 
     def import_organisations(self, excel_file: Path):
         wb = load_workbook(excel_file)
