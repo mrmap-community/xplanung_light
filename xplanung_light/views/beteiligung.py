@@ -800,17 +800,17 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         story.append(HRFlowable())
         qr_link = self.absolute_url
         #print(qr_link)
-        # Informationen zum Projekt - hier Beteiligung, Plan , ... 
+        # Informationen zum Projekt - hier Beteiligung, Plan , ...
         if self.plantyp=='bplan':
             content_info_content = "<font size=10><b>" + self.beteiligung.get_typ_display() + " zum Bebauungsplan</b><br/>"
             content_info_content = content_info_content + "\"" + self.beteiligung.bplan.name + "\"<br/>"
         if self.plantyp=='fplan':
             content_info_content = "<font size=10><b>" + self.beteiligung.get_typ_display() + " zum Flächennutzungsplan</b><br/>"
-            content_info_content = content_info_content + "\"" + self.beteiligung.fplan.name + "\"<br/>" 
+            content_info_content = content_info_content + "\"" + self.beteiligung.fplan.name + "\"<br/>"
         # typ
-        content_info_content = content_info_content + "<b>Bekanntmachung:</b> " + str(self.beteiligung.bekanntmachung_datum.strftime('%Y-%m-%d')) + "<br/>" 
+        content_info_content = content_info_content + "<b>Bekanntmachung:</b> " + str(self.beteiligung.bekanntmachung_datum.strftime('%Y-%m-%d')) + "<br/>"
         content_info_content = content_info_content + "<b>Beginn Beteiligung:</b> " + str(self.beteiligung.start_datum.strftime('%Y-%m-%d')) + "<br/>"
-        content_info_content = content_info_content + "<b>Ende Beteiligung:</b> " + str(self.beteiligung.end_datum.strftime('%Y-%m-%d')) + "<br/></font>"  
+        content_info_content = content_info_content + "<b>Ende Beteiligung:</b> " + str(self.beteiligung.end_datum.strftime('%Y-%m-%d')) + "<br/></font>"
         content_info_paragraph_style = self.style['Normal']
         content_info_flowable = Paragraph(content_info_content, content_info_paragraph_style)
         story.append(content_info_flowable)
@@ -863,12 +863,12 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         story.append(Table(table_grid, repeatRows=1, colWidths=[0.10 * 165 * mm,  0.17 * 165 * mm, 0.20 * 165 * mm, 0.25 * 165 * mm, 0.10 * 165 * mm],#, 0.15 * 165 * self.mm],
                            style=TableStyle([('GRID',(0,1),(-1,-1), 0.25, colors.gray),
                                              ('BOX', (0,0), (-1,-1), 1.0, colors.black),
-                                             ('ALIGN', (0,0), (-1,0), 'CENTER'), 
-                                             ('ALIGN', (0,1), (0,-1), 'CENTER'), 
-                                             ('ALIGN', (1,1), (1,-1), 'LEFT'), 
-                                             ('ALIGN', (2,1), (2,-1), 'RIGHT'), 
-                                             ('ALIGN', (3,1), (3,-1), 'CENTER'), 
-                                             ('ALIGN', (4,1), (4,-1), 'RIGHT'), 
+                                             ('ALIGN', (0,0), (-1,0), 'CENTER'),
+                                             ('ALIGN', (0,1), (0,-1), 'CENTER'),
+                                             ('ALIGN', (1,1), (1,-1), 'LEFT'),
+                                             ('ALIGN', (2,1), (2,-1), 'RIGHT'),
+                                             ('ALIGN', (3,1), (3,-1), 'CENTER'),
+                                             ('ALIGN', (4,1), (4,-1), 'RIGHT'),
                                              ('FONTSIZE', (0,1), (-1,-1), 8),
                                              ])))
         #story.append(Paragraph("Legende", styles['Heading4']))
@@ -877,14 +877,14 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
         i = 0
         count_beitraege = len(beteiligung_beitraege)
         for beteiligung_beitrag in beteiligung_beitraege:
-            i = i + 1 
+            i = i + 1
             story.append(Paragraph("Beitrag lfd Nr.: " + str(beteiligung_beitrag.id), styles['Heading3']))
             story.append(HRFlowable())
             # Titel, EMail, erstellt, letzte Änderung
             metadaten = ""
-            metadaten = metadaten + "<b>Titel:</b> " + str(beteiligung_beitrag.titel) + "<br/>" 
+            metadaten = metadaten + "<b>Titel:</b> " + str(beteiligung_beitrag.titel) + "<br/>"
             metadaten = metadaten + "<b>EMail:</b> " + str(beteiligung_beitrag.email) + "<br/>"
-            metadaten = metadaten + "<b>Erstellt:</b> " + str(beteiligung_beitrag.created.strftime('%Y-%m-%d %H:%M')) + "<br/>"  
+            metadaten = metadaten + "<b>Erstellt:</b> " + str(beteiligung_beitrag.created.strftime('%Y-%m-%d %H:%M')) + "<br/>"
             metadaten = metadaten + "<b>Letzte Änderung:</b> " + str(beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M')) + "<br/>"
             metadaten_paragraph_style = self.style['Normal']
             metadaten_flowable = Paragraph(metadaten, metadaten_paragraph_style)
@@ -929,11 +929,11 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
             for stellungnahme in stellungnahmen:
                 bezug_beitrag_mixed = TipTapToReportLab().convert_to_elements(TipTapNode.model_validate(stellungnahme.bezug_beitrag))
                 stellungnahme_mixed = TipTapToReportLab().convert_to_elements(TipTapNode.model_validate(stellungnahme.stellungnahme))
-                if beteiligung_beitrag.email == None:
+                if beteiligung_beitrag.email is None:
                     beteiligung_beitrag.email = "Email nicht erfasst oder nicht interpretierbar"
-                if bezug_beitrag_mixed == None:
+                if bezug_beitrag_mixed is None:
                     bezug_beitrag_mixed = "Bezug nicht erfasst oder nicht lesbar"
-                if stellungnahme_mixed == None:
+                if stellungnahme_mixed is None:
                     stellungnahme_mixed = "Text der Stellungnahme nicht erfasst oder nicht lesbar"
                 #table_grid.append([beteiligung_beitrag.id, beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), Paragraph(beteiligung_beitrag.email, description_paragraph_style), bezug_beitrag_mixed, stellungnahme_mixed, Paragraph(stellungnahme.beruecksichtigung, description_paragraph_style)])
                 table_grid.append([Paragraph(str(beteiligung_beitrag.id) + " - " + str(stellungnahme.id), description_paragraph_style), Paragraph(beteiligung_beitrag.email, description_paragraph_style), Paragraph(beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), description_paragraph_style), bezug_beitrag_mixed, stellungnahme_mixed, Paragraph(str(stellungnahme.beruecksichtigung).replace('[', '').replace(']', '').replace("'", ""), description_paragraph_style)])
@@ -945,9 +945,9 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
                                              ('ALIGN', (0,0), (-1,0), 'CENTER'), # first row - header
                                              ('VALIGN', (0,0), (-1,0), 'TOP'), # first row - header
                                              ('ALIGN', (0,1), (-1,-1), 'LEFT'), # whole table
-                                             ('VALIGN', (0,1), (-1,-1), 'TOP'), # whole table 
+                                             ('VALIGN', (0,1), (-1,-1), 'TOP'), # whole table
                                              ('FONTSIZE', (0,1), (-1,-1), 8),
-                                             ])))           
+                                             ])))
         story.append(Paragraph("Legende TBD", styles['Heading4']))
         story.append(PageBreak())
         # https://stackoverflow.com/questions/3448365/pdf-image-in-pdf-document-using-reportlab-python

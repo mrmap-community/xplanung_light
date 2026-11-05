@@ -88,7 +88,7 @@
                   {% endif %}
 
                       <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'requestforrole-list' %}">Meine Anträge</a></li>
-                  
+
                   <!-- <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'contact-list' %}">Meine Kontaktstellen</a></li>-->
                   <!-- <li class="dropdown-item"><a class="nav-link" aria-current="page" href="{% url 'organization-publishing-list' %}">Übersicht Schnittstellen</a></li> -->
                   <!--<li><hr class="dropdown-divider"></li>-->
@@ -126,7 +126,7 @@
               {% endif %}
               <li class="nav-item">
                 <a class="nav-link" aria-current="page" href="{% url 'toebunitpublic-list' %}">Träger öffentlicher Belange</a>
-              </li> 
+              </li>
               <li class="nav-item">
                 <a class="nav-link" aria-current="page" href="{% url 'about' %}">Über</a>
               </li>
@@ -136,15 +136,14 @@
                   <p>
                     Angemeldeter Benutzer: <b>{{ user.username }}</b><br>
                     {% if not user.is_superuser %}Rollen: {% if user_is_admin %}<b>admin</b>{% endif  %}{% if user_is_toeb_reporter %} <b>toeb-reporter</b>{% endif %}<br>{% endif %}
-                    <a class="btn btn-primary" role="buton" href="{% url 'logout' %}">Abmelden</a>
-                    <a class="btn btn-primary" role="buton" href="{% url 'password_change' %}">Passwort ändern</a>
+                    <a class="btn btn-primary" role="button" href="{% url 'logout' %}">Abmelden</a>
+                    <a class="btn btn-primary" role="button" href="{% url 'password_change' %}">Passwort ändern</a>
                     {% if user.userprofile %}
-                    <a class="btn btn-primary" role="buton" href="{% url 'user_profile_update' pk=user.userprofile.id %}">Profil</a>
+                    <a class="btn btn-primary" role="button" href="{% url 'user_profile_update' pk=user.userprofile.id %}">Profil</a>
                     {% endif %}
-                    
                   </p>
                 {% else %}
-                <a class="btn btn-primary" role="buton" href="{% url 'login' %}">Anmelden</a>
+                <a class="btn btn-primary" role="button" href="{% url 'login' %}">Anmelden</a>
                 {% endif %}
             </div>
           </div>

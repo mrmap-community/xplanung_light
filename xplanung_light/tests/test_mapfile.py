@@ -51,7 +51,7 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         })
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('text/xml', response.headers.get('Content-Type', ''))
+        self.assertIn('text/xml', response.get('Content-Type', ''))
         self.assertIn(b'WMS_Capabilities', response.content)
 
     # -------------------------------------------------------------------------
@@ -90,7 +90,7 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         })
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get('Content-Type'), 'image/png')
+        self.assertEqual(response.get('Content-Type'), 'image/png')
 
     # -------------------------------------------------------------------------
     # 3. Test: WFS GetCapabilities & GetFeature OWS pro Orga
@@ -106,7 +106,7 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         })
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('text/xml', response.headers.get('Content-Type', ''))
+        self.assertIn('text/xml', response.get('Content-Type', ''))
         self.assertIn(b'wfs:WFS_Capabilities', response.content)
 
     # Testet GetFeature auf dem WFS Service.
@@ -130,7 +130,7 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         })
         self.assertEqual(response.status_code, 200)
         # print(response.content)
-        self.assertIn('xml', response.headers.get('Content-Type', ''))
+        self.assertIn('xml', response.get('Content-Type', ''))
 
     # -------------------------------------------------------------------------
     # 4. Test BPlan Aggregat
@@ -139,7 +139,7 @@ class OGCServiceViewsTestCase(TransactionTestCase):
     # Testet den WMS GetCapabilities-Request über den View.
     # Deaktiviert weil er auf github nicht durchgelaufen ist -
     # lokal läuft der Test auf spatialite problemlos durch
-    # Meldung auf github ubuntu 24.04: 
+    # Meldung auf github ubuntu 24.04:
     File "/home/runner/work/xplanung_light/xplanung_light/.venv/lib/python3.12/site-packages/mapscript/mapscript.py", line 1612, in OWSDispatch
     return _mapscript.mapObj_OWSDispatch(self, req)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -155,7 +155,7 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         })
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('text/xml', response.headers.get('Content-Type', ''))
+        self.assertIn('text/xml', response.get('Content-Type', ''))
         self.assertIn(b'WMS_Capabilities', response.content)
 
     def test_wms_get_map_bplan(self):
@@ -175,7 +175,7 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         })
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get('Content-Type'), 'image/png')
+        self.assertEqual(response.get('Content-Type'), 'image/png')
     """
     # -------------------------------------------------------------------------
     # 5. Test: FPlan Aggregat
@@ -191,7 +191,7 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         })
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('text/xml', response.headers.get('Content-Type', ''))
+        self.assertIn('text/xml', response.get('Content-Type', ''))
         self.assertIn(b'WMS_Capabilities', response.content)
 
     def test_wms_get_map_fplan(self):
@@ -222,4 +222,4 @@ class OGCServiceViewsTestCase(TransactionTestCase):
         })
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get('Content-Type'), 'image/png')
+        self.assertEqual(response.get('Content-Type'), 'image/png')
