@@ -53,18 +53,18 @@ class BPlanSpezExterneReferenzViewTests(TestCase):
     # ==============================================================================
 
     def test_bplan_attachment_create_success(self):
-        """Das Hochladen einer neuen Textanlage (z.B. Satzungstext) muss erfolgreich durchgehen."""
+        """Das Hochladen einer neuen Anlage (z.B. Satzungstext als PDF) muss erfolgreich durchgehen."""
         self.client.login(username="orga_admin", password="password123")
         url = reverse("bplanattachment-create", kwargs={"planid": self.bplan.id})
 
-        # Wir simulieren den Upload eines Textdokuments
-        dummy_text_file = SimpleUploadedFile("satzung.txt", b"Satzungsinhalt...", content_type="text/plain")
+        # Zulässig sind nur Dateien aus der Allowlist (pdf, png, jpg, tif) mit passendem Inhalt
+        dummy_file = SimpleUploadedFile("satzung.pdf", b"%PDF-1.4 Satzungsinhalt...", content_type="application/pdf")
 
         payload = {
             "public": True,
             "typ": "1060",  # 'Satzung' laut REF_TYPE_CHOICES in models.py
             "name": "Textliche Festsetzungen",
-            "attachment": dummy_text_file
+            "attachment": dummy_file
         }
 
         response = self.client.post(url, data=payload, follow=True)

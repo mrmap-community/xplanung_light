@@ -81,31 +81,26 @@ class CoreViewsBusinessLogicTests(TestCase):
     # ==============================================================================
 
     def test_get_bplan_attachment_download_success(self):
-        """Prüft, ob die Download-Route für BPlan-Anlagen die Datei korrekt ausliefert."""
+        """Download von BPlan-Anlagen: Inhalt korrekt, Content-Type immer application/octet-stream (Security Audit)."""
         self.client.login(username="download_admin", password="password123")
         url = reverse("bplanattachment-download", kwargs={"pk": self.bplan_attachment.id})
         
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        
-        # Verifiziert, dass es sich um eine FileResponse / StreamingResponse handelt
-        if response.has_header('Content-Type'):
-            self.assertEqual(response['Content-Type'], 'application/pdf')
-            
-        # Binär-Inhalt prüfen (Chunks zusammenfügen, falls es ein Stream ist)
-        binary_data = b"".join(response.streaming_content) if hasattr(response, 'streaming_content') else response.content
+        self.assertEqual(response['Content-Type'], 'application/octet-stream')
+
+        # Binär-Inhalt prüfen (FileResponse ist ein Stream)
+        binary_data = b"".join(response.streaming_content)
         self.assertTrue(binary_data.startswith(b'%PDF'))
 
     def test_get_fplan_attachment_download_success(self):
-        """Prüft, ob die Download-Route für FPlan-Anlagen die Datei korrekt ausliefert."""
+        """Download von FPlan-Anlagen: Inhalt korrekt, Content-Type immer application/octet-stream (Security Audit)."""
         self.client.login(username="download_admin", password="password123")
         url = reverse("fplanattachment-download", kwargs={"pk": self.fplan_attachment.id})
         
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        
-        if response.has_header('Content-Type'):
-            self.assertEqual(response['Content-Type'], 'application/pdf')
-            
-        binary_data = b"".join(response.streaming_content) if hasattr(response, 'streaming_content') else response.content
+        self.assertEqual(response['Content-Type'], 'application/octet-stream')
+
+        binary_data = b"".join(response.streaming_content)
         self.assertTrue(binary_data.startswith(b'%PDF'))

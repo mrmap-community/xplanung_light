@@ -16,7 +16,8 @@ from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.http import HttpResponse
-from xplanung_light.models import BPlan
+from xplanung_light.models import BPlan, AdminOrgaUser
+from django.contrib.auth import get_user_model
 import requests
 from django.test import RequestFactory
 from xplanung_light.views import views
@@ -59,7 +60,7 @@ class OwsViewTests(TestCase):
     Die OWS-Views mit gemocktem MapServer.
 
     setUp: leert den Cache, ersetzt mapscript und MapfileGenerator (Mapfile ist MAP END),
-    sichert os.environ und legt einen BPlan und eine Organisation an.
+    sichert os.environ und legt einen öffentlichen BPlan und eine Organisation an.
     """
 
     def setUp(self):
@@ -77,6 +78,7 @@ class OwsViewTests(TestCase):
         self.bplan = BPlan.objects.create(
             name="BPlan Test",
             geltungsbereich=GEOSGeometry("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))"),
+            public=True,  # Overview-WMS liefert nicht öffentliche Pläne nur an Admins
         )
         self.orga = Orga.objects.create(
             name="OG Schilda", ls="07", ks="316", gs="001")
@@ -321,7 +323,7 @@ class OwsViewTests(TestCase):
             Fehlermeldungen bei MS_DONE/MS_FAILURE, bei Version 7 Status 200.
         """
         fplan = FPlan.objects.create(
-            name="FPlan Test", geltungsbereich=self.bplan.geltungsbereich)
+            name="FPlan Test", geltungsbereich=self.bplan.geltungsbereich, public=True)
         for name, pk in (("bplan-overview-map", self.bplan.id), ("fplan-overview-map", fplan.id)):
             url = reverse(name, kwargs={"pk": pk})
             for status, text in ((1, "No valid OWS Request!"), (2, "not successfully processed")):
@@ -331,6 +333,71 @@ class OwsViewTests(TestCase):
             with self.subTest(name=name, version=7):
                 fake_mapscript(self.ms, version=70000)
                 self.assertEqual(self.client.get(url, GETCAP).status_code, 200)
+
+    def test_overview_private_plan_requires_admin(self):
+        """
+        Was wird geprüft:
+            Übersichts-WMS eines nicht öffentlichen Plans (BPlan und FPlan) für Anonyme,
+            angemeldete Nutzer ohne Rolle, Administratoren der Gemeinde und Superuser.
+
+        Warum:
+            Die Geometrie nicht öffentlicher Pläne darf nur Verantwortlichen ausgeliefert
+            werden.
+
+        Erwartung:
+            Anonym: 401. Nutzer ohne Rolle: 403. Administrator der Gemeinde und Superuser:
+            200. Bei 401/403 wird der MapServer gar nicht erst aufgerufen.
+        """
+        User = get_user_model()
+        fplan = FPlan.objects.create(
+            name="FPlan privat", geltungsbereich=self.bplan.geltungsbereich, public=False)
+        self.bplan.public = False
+        self.bplan.save()
+        self.bplan.gemeinde.add(self.orga)
+        fplan.gemeinde.add(self.orga)
+        admin = User.objects.create_user("ows_admin", password="pw")
+        AdminOrgaUser.objects.create(
+            organization=self.orga, user=admin, is_admin=True)
+        User.objects.create_user("ows_fremder", password="pw")
+        User.objects.create_superuser("ows_root", "root@example.com", "pw")
+
+        for name, pk in (("bplan-overview-map", self.bplan.id), ("fplan-overview-map", fplan.id)):
+            url = reverse(name, kwargs={"pk": pk})
+            for username, expected in ((None, 401), ("ows_fremder", 403),
+                                       ("ows_admin", 200), ("ows_root", 200)):
+                with self.subTest(name=name, user=username):
+                    self.client.logout()
+                    if username:
+                        self.client.login(username=username, password="pw")
+                    self.ms.msLoadMapFromString.reset_mock()
+                    self.assertEqual(
+                        self.client.get(url, GETCAP).status_code, expected)
+                    if expected in (401, 403):
+                        self.ms.msLoadMapFromString.assert_not_called()
+
+    def test_overview_private_plan_of_other_gemeinde_is_forbidden(self):
+        """
+        Was wird geprüft:
+            Ein Administrator einer anderen Gemeinde öffnet den Übersichts-WMS eines nicht
+            öffentlichen Plans.
+
+        Erwartung:
+            Status 403; die Geometrie wird nicht ausgeliefert.
+        """
+        User = get_user_model()
+        self.bplan.public = False
+        self.bplan.save()
+        self.bplan.gemeinde.add(self.orga)
+        andere = Orga.objects.create(
+            name="Andere Gemeinde", ls="07", ks="999", gs="001")
+        admin_b = User.objects.create_user("ows_admin_b", password="pw")
+        AdminOrgaUser.objects.create(
+            organization=andere, user=admin_b, is_admin=True)
+        self.client.login(username="ows_admin_b", password="pw")
+        r = self.client.get(
+            reverse("bplan-overview-map", kwargs={"pk": self.bplan.id}), GETCAP)
+        self.assertEqual(r.status_code, 403)
+        self.ms.msLoadMapFromString.assert_not_called()
 
     # --- ows (pk = Organisation): MapServer-8-Zweig, https, Fehlerzweige ---------
     def test_ows_https_flag_and_mapserver_8_branch(self):

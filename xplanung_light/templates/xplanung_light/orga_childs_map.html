@@ -26,7 +26,6 @@
     
     </style>
     <script>
-    //const geojson = {  type:”FeatureCollection”,  features:     ({{ geojson|safe }}).map(segment=>({        “type”:”Feature”,        “geometry”: JSON.parse(segment.json),        “properties”: {           “id”: segment.id        }     })  )}
     let mapGlobal = {};
     function map_init_basic (map, options) {
         mapGlobal = map;

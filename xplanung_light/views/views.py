@@ -1,4 +1,6 @@
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 import requests
 from django.shortcuts import render
@@ -12,6 +14,7 @@ from xplanung_light.models import FPlanBeteiligung, FPlanBeteiligungBeitragAnhan
 from xplanung_light.models import AdminOrgaUser, ConsentOption
 from xplanung_light.models import RequestForRole
 import uuid
+from django.db import transaction
 import xml.etree.ElementTree as ET
 import defusedxml.ElementTree as defused_ET
 from django.urls import reverse
@@ -28,7 +31,7 @@ from xplanung_light.helper.mapfile import MapfileGenerator
 # for caching mapfiles ;-)
 from django.core.cache import cache
 from django.conf import settings
-from django.http import FileResponse
+from django.http import FileResponse, Http404, HttpResponseBadRequest, HttpResponse, JsonResponse
 import os
 from xplanung_light.views.bplan import BPlanDetailView, BPlanListViewHtml
 from xplanung_light.views import views
@@ -87,7 +90,7 @@ def get_bplan_attachment(request, pk):
     try:
         if not os.path.exists(attachment.attachment.path):
             return HttpResponse("File not found", status=404)
-        return FileResponse(attachment.attachment.open("rb"))
+        return FileResponse(attachment.attachment.open("rb"), as_attachment=True, content_type="application/octet-stream")
     except (FileNotFoundError, ValueError):
         return HttpResponse("File not found", status=404)
 
@@ -111,7 +114,7 @@ def get_fplan_attachment(request, pk):
     try:
         if not os.path.exists(attachment.attachment.path):
             return HttpResponse("File not found", status=404)
-        return FileResponse(attachment.attachment.open("rb"))
+        return FileResponse(attachment.attachment.open("rb"), as_attachment=True, content_type="application/octet-stream")
     except (FileNotFoundError, ValueError):
         return HttpResponse("File not found", status=404)
 
@@ -163,11 +166,11 @@ def get_beteiligung_beitrag_attachment(request, priorize_redacted=True, **kwargs
         return HttpResponse("File not found", status=404)
     if priorize_redacted == True:
         if hasattr(attachment, 'redacted_version'):
-            return FileResponse(attachment.redacted_version.attachment)
+            return FileResponse(attachment.redacted_version.attachment, as_attachment=True, content_type="application/octet-stream")
         else:
-            return FileResponse(attachment.attachment)
+            return FileResponse(attachment.attachment, as_attachment=True, content_type="application/octet-stream")
     else:
-        return FileResponse(attachment.attachment)
+        return FileResponse(attachment.attachment, as_attachment=True, content_type="application/octet-stream")
 
 
 def get_beteiligung_beitrag_attachment_orig(request, **kwargs):
@@ -372,12 +375,23 @@ def ows_bplan_overview(request, pk: int, plan_typ='bplan'):
         if plan_typ == 'fplan':
             map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(
                 reverse('fplan-overview-map', kwargs={"pk": pk})))
-        # Überschreiben der Punkte des Features:
-        wkt = str(plan.geltungsbereich)
-        map_file_string = map_file_string.replace(
-            '<wkt>', wkt.replace('SRID=4326;', ''))
-        geometry = OGRGeometry(str(plan.geltungsbereich), srs=4326)
-        wgs84_extent = geometry.extent
+        # Erzeugen des Inline-Features wenn Plan public oder der Nutzer Admin des Plans ist.
+        # Ansonsten wird eine Default-Geometrie aus den settings ausgeliefert.
+        if not plan.public and not _is_plan_admin(request, plan):
+            # Möglichkeit einfach den Extent als default value zu nehmen - oder einfacher
+            # wkt = "MULTIPOLYGON (((6.0 48.0, 9.0 48.0, 9.0 52.0, 6.0 52.0, 6.0 48.0)))"
+            # wkt = "MULTIPOLYGON ((({x1} {y1}, {x2} {y1}, {x2} {y2}, {x1} {y2}, {x1} {y1})))".format(
+            #    x1=settings.LEAFLET_CONFIG['SPATIAL_EXTENT'][0], y1=settings.LEAFLET_CONFIG['SPATIAL_EXTENT'][1], x2=settings.LEAFLET_CONFIG['SPATIAL_EXTENT'][2], y2=settings.LEAFLET_CONFIG['SPATIAL_EXTENT'][3])
+            # map_file_string = map_file_string.replace(
+            #    '<wkt>', wkt.replace('SRID=4326;', ''))
+            return HttpResponse('Forbidden',
+                                status=401 if not request.user.is_authenticated else 403)
+        else:
+            wkt = str(plan.geltungsbereich)
+            map_file_string = map_file_string.replace(
+                '<wkt>', wkt.replace('SRID=4326;', ''))
+            # geometry = OGRGeometry(str(plan.geltungsbereich), srs=4326)
+            # wgs84_extent = geometry.extent
         # print(wgs84_extent)
         # Nutzung des Proxy, wenn in settings definiert - da verhält sich gunicorn wohl anders als runserver im Debug
         if settings.REQUESTS_PROXIES and 'http' in settings.REQUESTS_PROXIES.keys():
@@ -1228,207 +1242,137 @@ def register(request):
 
 
 """
+Neue Funktionen zur Steuerung der Abgabe von Stellungnahmen - nach Sicherheitshinweisen sollen die nur noch über POST laufen!
+Claude-Lösung 2026-11-04
+"""
+"""
 Funktionen für die Steuerung der Abgabe von Stellungnahmen - insbesondere durch Gast-Nutzer
 """
 
+_BEITRAG_MODELLE = {
+    'bplan': BPlanBeteiligungBeitrag,
+    'fplan': FPlanBeteiligungBeitrag,
+}
 
+# Zustandsändernde Aktionen auf einem Beitrag (Stellungnahme).
+# Jede Aktion setzt genau ein Feld auf einen Zielwert.
+_BEITRAG_AKTIONEN = {
+    'activate': {
+        'feld': 'approved',
+        'wert': True,
+        'titel': 'Stellungnahme aktivieren',
+        'frage': 'Möchten Sie diese Stellungnahme jetzt aktivieren?',
+        'button': 'Aktivieren',
+    },
+    'withdraw': {
+        'feld': 'withdrawn',
+        'wert': True,
+        'titel': 'Stellungnahme zurückziehen',
+        'frage': 'Möchten Sie diese Stellungnahme wirklich zurückziehen?',
+        'button': 'Zurückziehen',
+    },
+    'reactivate': {
+        'feld': 'withdrawn',
+        'wert': False,
+        'titel': 'Stellungnahme wieder aktivieren',
+        'frage': 'Möchten Sie die zurückgezogene Stellungnahme wieder aktivieren?',
+        'button': 'Wieder aktivieren',
+    },
+}
+
+
+def _beitrag_aktion(request, aktion, **kwargs):
+    """
+    Gemeinsame Logik für Aktivieren / Zurückziehen / Reaktivieren einer Stellungnahme.
+
+    GET  -> zeigt nur eine Bestätigungsseite an, es wird NICHTS geändert
+            (GET muss "safe" sein: Prefetching, Link-Scanner und CSRF per <img>/Link
+            dürfen keinen Zustand verändern).
+    POST -> führt die Aktion aus (durch den CSRF-Schutz von Django abgesichert).
+
+    Berechtigung: Admin einer Gebietskörperschaft des Plans, Superuser oder Gast-Nutzer
+    mit der generic_id des Beitrags in der Session. Die Gebietskörperschaften werden
+    aus dem Plan des Beitrags selbst abgeleitet und nicht aus der planid der URL.
+    """
+    cfg = _BEITRAG_AKTIONEN[aktion]
+    plantyp = kwargs['plantyp']
+    beitrag_model = _BEITRAG_MODELLE.get(plantyp)
+    if beitrag_model is None:
+        raise Http404("Unbekannter Plantyp")
+    # Eigentlich sollte das ausgereicht habenm, weil die Berechtigungsprüfung im Anschluss erfolgt - mehr Filter sind aber sicherer als nur einer
+    beitrag = get_object_or_404(beitrag_model, generic_id=kwargs['generic_id'])
+    if plantyp == 'bplan':
+        # beitrag = get_object_or_404(
+        #    beitrag_model.objects.filter(bplan_beteiligung__pk=kwargs['beteiligungid'],
+        #                                 bplan_beteiligung__bplan_id=kwargs['planid']),
+        #    generic_id=kwargs['generic_id'])
+        beteiligung = beitrag.bplan_beteiligung
+        plan = beteiligung.bplan
+    else:
+        # beitrag = get_object_or_404(
+        #    beitrag_model.objects.filter(fplan_beteiligung__pk=kwargs['beteiligungid'],
+        #                                 fplan_beteiligung__bplan_id=kwargs['planid']),
+        #    generic_id=kwargs['generic_id'])
+        beteiligung = beitrag.fplan_beteiligung
+        plan = beteiligung.fplan
+    # Admins der Gebietskörperschaften oder Superuser
+    access_allowed = _is_plan_admin(request, plan)
+    # Gast-Nutzer: nur mit der uuid des Beitrags in der Session
+    if not access_allowed and request.user.is_anonymous:
+        if request.session.get('beitrag_generic_id') == str(beitrag.generic_id):
+            access_allowed = True
+    if not access_allowed:
+        # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
+        return redirect("beteiligungbeitrag-authenticate", plantyp=plantyp, planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
+
+    context = {
+        'beitrag': beitrag,
+        'plantyp': plantyp,
+        'beteiligung': beteiligung,
+        'plan': plan,
+    }
+
+    if request.method != "POST":
+        # Nur Bestätigungsseite - keine Zustandsänderung
+        context['action'] = cfg
+        context['action_url'] = request.path
+        return render(request, "xplanung_light/beitrag_action_confirm.html", context)
+
+    if getattr(beitrag, cfg['feld']) != cfg['wert']:
+        setattr(beitrag, cfg['feld'], cfg['wert'])
+        beitrag.save()
+    # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
+    if request.user.is_anonymous:
+        # Wurde durch Redirect ersetzt, weil sonst bei F5 ein erneutes POST erfolgen würde
+        return redirect("gastbeteiligungbeitrag-detail", plantyp=plantyp,
+                        planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'],
+                        generic_id=kwargs['generic_id'])
+        # return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
+    return redirect("beteiligungbeitrag-list", plantyp=plantyp, planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
+
+
+@require_http_methods(["GET", "POST"])
 def beitrag_activate(request, **kwargs):
     """
-    Funktion um einen BPlanBeteiligungBeitrag (Stellungnahme) zu aktivieren - sollte per POST erfolgen, daher 
-    zuerst eine Bestätigungsseite anzeigen und dann nochmal alles als POST versenden!
-
-    :param request: Description
-    :param kwargs: Description
+    Aktivieren eines Beitrags (Stellungnahme). GET zeigt die Bestätigungsseite, POST aktiviert.
     """
-    context = {}
-    # Switch für den Plantyp
-    gemeinden = None
-    if kwargs['plantyp'] == 'bplan':
-        beitrag_model = BPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(
-            bplan__id__in=[kwargs['planid']])
-    if kwargs['plantyp'] == 'fplan':
-        beitrag_model = FPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(
-            fplan__id__in=[kwargs['planid']])
-    # Zunächst Nur admins der Gebietskörperschaften oder superuser
-    access_allowed = False
-    if request.user.is_superuser == False:
-        for gemeinde in gemeinden:
-            for user in gemeinde.admin_orga_users.all():
-                if user.user == request.user and user.is_admin:
-                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird
-                    access_allowed = True
-    else:
-        # Superuser dürfen immer freischalten
-        access_allowed = True
-    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat
-    if request.user.is_anonymous:
-        if 'beitrag_generic_id' in request.session.keys():
-            if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
-                # print('beitrag id steht in session - activate ...!')
-                access_allowed = True
-    if not access_allowed:
-        # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
-        return redirect("beteiligungbeitrag-authenticate", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
-    # Aktivieren des Beitrags
-
-    beitrag = beitrag_model.objects.get(generic_id=kwargs['generic_id'])
-    # TODO - Wenn wir auf Formular basierte Schalter umsteigen müssen zuerst die Tests angepasst werden
-    # test_beteiligung_beitrag_ultimate.py test_beteiligung_workflow.py test_beteiligung_beitrag_views.py
-    if request.method == "POST" or request.method == "GET":
-        if beitrag.approved == False:
-            beitrag.approved = True
-            beitrag.save()
-        # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
-        if request.user.is_anonymous:
-            context['beitrag'] = beitrag
-            context['plantyp'] = kwargs['plantyp']
-            if kwargs['plantyp'] == 'bplan':
-                context['beteiligung'] = beitrag.bplan_beteiligung
-                context['plan'] = beitrag.bplan_beteiligung.bplan
-            if kwargs['plantyp'] == 'fplan':
-                context['beteiligung'] = beitrag.fplan_beteiligung
-                context['plan'] = beitrag.fplan_beteiligung.fplan
-            # context={}
-            # context['object'] = beitrag
-            # context['beitrag_generic_id'] = beitrag.generic_id
-            return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
-        else:
-            return redirect("beteiligungbeitrag-list", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
-    else:
-        return render(
-            request,
-            "beitrag/activate_confirm.html",
-            {"beitrag": beitrag},
-        )
+    return _beitrag_aktion(request, 'activate', **kwargs)
 
 
+@require_http_methods(["GET", "POST"])
 def beitrag_withdraw(request, **kwargs):
     """
-    Funktion um einen BPlanBeteiligungBeitrag (Stellungnahme) zurückzuziehen
-
-    :param request: Description
-    :param kwargs: Description
+    Zurückziehen eines Beitrags (Stellungnahme). GET zeigt die Bestätigungsseite, POST zieht zurück.
     """
-    if request.method == "POST":
-        # print("POST")
-        pass
-    if request.method == "GET":
-        # print("GET")
-        pass
-    # Switch für den Plantyp
-    gemeinden = None
-    if kwargs['plantyp'] == 'bplan':
-        beitrag_model = BPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(
-            bplan__id__in=[kwargs['planid']])
-    if kwargs['plantyp'] == 'fplan':
-        beitrag_model = FPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(
-            fplan__id__in=[kwargs['planid']])
-    # Zunächst Nur admins der Gebietskörperschaften oder superuser
-    access_allowed = False
-    if request.user.is_superuser == False:
-        for gemeinde in gemeinden:
-            for user in gemeinde.admin_orga_users.all():
-                if user.user == request.user and user.is_admin:
-                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird
-                    access_allowed = True
-    else:
-        # Superuser dürfen immer freischalten
-        access_allowed = True
-    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat
-    if request.user.is_anonymous:
-        if 'beitrag_generic_id' in request.session.keys():
-            if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
-                # print('beitrag id steht in session - activate ...!')
-                access_allowed = True
-    if not access_allowed:
-        # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
-        return redirect("beteiligungbeitrag-authenticate", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
-    # Aktivieren des Beitrags
-    beitrag = beitrag_model.objects.get(generic_id=kwargs['generic_id'])
-    if beitrag.withdrawn == False:
-        beitrag.withdrawn = True
-        beitrag.save()
-    # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
-    if request.user.is_anonymous:
-        context = {}
-        context['beitrag'] = beitrag
-        context['plantyp'] = kwargs['plantyp']
-        if kwargs['plantyp'] == 'bplan':
-            context['beteiligung'] = beitrag.bplan_beteiligung
-            context['plan'] = beitrag.bplan_beteiligung.bplan
-        if kwargs['plantyp'] == 'fplan':
-            context['beteiligung'] = beitrag.fplan_beteiligung
-            context['plan'] = beitrag.fplan_beteiligung.fplan
-        # context={}
-        # context['object'] = beitrag
-        # context['beitrag_generic_id'] = beitrag.generic_id
-        return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
-    else:
-        return redirect("beteiligungbeitrag-list", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
+    return _beitrag_aktion(request, 'withdraw', **kwargs)
 
 
+@require_http_methods(["GET", "POST"])
 def beitrag_reactivate(request, **kwargs):
     """
-    Funktion um einen BPlanBeteiligungBeitrag (Stellungnahme) zurückzuziehen
-
-    :param request: Description
-    :param kwargs: Description
+    Reaktivieren eines zurückgezogenen Beitrags (Stellungnahme). GET zeigt die Bestätigungsseite, POST reaktiviert.
     """
-    # Switch für den Plantyp
-    gemeinden = None
-    if kwargs['plantyp'] == 'bplan':
-        beitrag_model = BPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(
-            bplan__id__in=[kwargs['planid']])
-    if kwargs['plantyp'] == 'fplan':
-        beitrag_model = FPlanBeteiligungBeitrag
-        gemeinden = AdministrativeOrganization.objects.filter(
-            fplan__id__in=[kwargs['planid']])
-    # Zunächst Nur admins der Gebietskörperschaften oder superuser
-    access_allowed = False
-    if request.user.is_superuser == False:
-        for gemeinde in gemeinden:
-            for user in gemeinde.admin_orga_users.all():
-                if user.user == request.user and user.is_admin:
-                    # Zugriff wird erteilt - Nutzer ist Admin für eine der Gemeinden, für die der BPlan publiziert wird
-                    access_allowed = True
-    else:
-        # Superuser dürfen immer freischalten
-        access_allowed = True
-    # Prüfung für den Fall des Gast-Nutzers - er darf die Funktion nur verwenden, wenn er die uuid in seiner Session hat
-    if request.user.is_anonymous:
-        if 'beitrag_generic_id' in request.session.keys():
-            if request.session['beitrag_generic_id'] == str(kwargs['generic_id']):
-                # print('beitrag id steht in session - reactivate ...!')
-                access_allowed = True
-    if not access_allowed:
-        # Weiterleitung an das Authentifizierungsmodul - Gast-Nutzer muss sich durch die Angabe der richtigen EMail-Adresse authentifizieren
-        return redirect("beteiligungbeitrag-authenticate", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'], generic_id=kwargs['generic_id'])
-    # Aktivieren des Beitrags
-    beitrag = beitrag_model.objects.get(generic_id=kwargs['generic_id'])
-    if beitrag.withdrawn == True:
-        beitrag.withdrawn = False
-        beitrag.save()
-    # Rückkehr zur Liste mit den Beiträgen (admins und superuser) oder auf die Detailseite des Beitrags
-    if request.user.is_anonymous:
-        context = {}
-        context['beitrag'] = beitrag
-        context['plantyp'] = kwargs['plantyp']
-        if kwargs['plantyp'] == 'bplan':
-            context['beteiligung'] = beitrag.bplan_beteiligung
-            context['plan'] = beitrag.bplan_beteiligung.bplan
-        if kwargs['plantyp'] == 'fplan':
-            context['beteiligung'] = beitrag.fplan_beteiligung
-            context['plan'] = beitrag.fplan_beteiligung.fplan
-        # context['object'] = beitrag
-        # context['beitrag_generic_id'] = beitrag.generic_id
-        return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
-    else:
-        return redirect("beteiligungbeitrag-list", plantyp=kwargs['plantyp'], planid=kwargs['planid'], beteiligungid=kwargs['beteiligungid'])
+    return _beitrag_aktion(request, 'reactivate', **kwargs)
 
 
 def beitrag_authenticate(request, **kwargs):
@@ -1536,39 +1480,60 @@ def beitrag_detail(request, **kwargs):
     return render(request, "xplanung_light/gastbeteiligungbeitrag_detail.html", context)
 
 
-class RequestForRoleConfirm(LoginRequiredMixin, FormView):
+"""
+Sicherheitspatch um Berechtigungsprüfung der folgenden Klassen auszulagern. Claude - 2026-11-04
+"""
+
+
+class RequestForRoleAdminMixin:
+    """
+    Berechtigungsprüfung für das Bearbeiten (Bestätigen/Zurückweisen) von Rollenanträgen.
+    Muss in der Basisklassenliste NACH LoginRequiredMixin stehen, damit anonyme Nutzer
+    zuerst zum Login geleitet werden.
+
+    Erlaubt sind Superuser sowie Administratoren ALLER beantragten Organisationen,
+    letztere nur für TÖB-Reporter-Anträge.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        self.role_request = get_object_or_404(RequestForRole, pk=kwargs['pk'])
+        self.contact_org_admin = None
+        if not request.user.is_superuser:
+            if self.role_request.role != "TR":
+                raise PermissionDenied(
+                    "Nutzer kann nur TOEB-Reporter Rollen verwalten.")
+            beantragt = set(
+                self.role_request.organizations.values_list('pk', flat=True))
+            administriert = set(
+                AdminOrgaUser.objects.filter(
+                    user=request.user, is_admin=True, organization_id__in=beantragt
+                ).values_list('organization_id', flat=True))
+            if not beantragt or beantragt != administriert:
+                raise PermissionDenied(
+                    "Nutzer ist nicht Administrator für alle beantragten Organisationen.")
+            # Kontaktinformationen, damit der Antragsteller den Genehmiger erreichen kann
+            self.contact_org_admin = request.user
+        return super().dispatch(request, *args, **kwargs)
+
+
+class RequestForRoleConfirm(LoginRequiredMixin, RequestForRoleAdminMixin, FormView):
     form_class = RequestForRoleConfirmForm
     template_name = "xplanung_light/requestforrole_form_confirm.html"
     success_url = reverse_lazy("requestforrole-admin-list")
 
     def get_context_data(self, **kwargs):
-        pk = self.kwargs['pk']
+        # pk = self.kwargs['pk']
         context = super().get_context_data(**kwargs)
-        context['anfrage'] = RequestForRole.objects.get(id=pk)
+        context['anfrage'] = self.role_request
+        # context['anfrage'] = RequestForRole.objects.get(id=pk)
         return context
 
+    @transaction.atomic
     def form_valid(self, form):
         # Auslesen des pk zur Aktualisierung des Antragrecords
-        request = RequestForRole.objects.get(id=self.kwargs['pk'])
-        contact_org_admin = None
-        if not self.request.user.is_superuser:
-            # Check auf Admin-Rolle des Nutzers für jede Organisation
-            user_is_admin_for_all = True
-            for organization in request.organizations.all():
-                # Check if Eintrag existiert
-                if not AdminOrgaUser.objects.filter(organization=organization, user=self.request.user, is_admin=True).exists():
-                    user_is_admin_for_all = False
-                    break
-            if not user_is_admin_for_all:
-                form.add_error(
-                    None, "Nutzer ist nicht Administrator für alle beantragten Organisationen - Freigabe kann nicht erfolgen!")
-                return super().form_invalid(form)
-            if request.role != "TR":
-                form.add_error(
-                    None, "Nutzer kann nur TOEB-Reporter Rollen freischalten - Freigabe kann nicht erfolgen!")
-                return super().form_invalid(form)
-            # Kontaktinformationen in View übernehmen damit Antragsteller mit Genehmiger (OrgAdmin) Kontakt aufnehmen kann
-            contact_org_admin = self.request.user
+        # request = RequestForRole.objects.get(id=self.kwargs['pk'])
+        request = self.role_request
+        contact_org_admin = self.contact_org_admin
         organizations = []
         # Administratorrollen anlegen
         for organization in request.organizations.all():
@@ -1618,39 +1583,19 @@ class RequestForRoleConfirm(LoginRequiredMixin, FormView):
         return super().form_valid(form)
 
 
-class RequestForRoleRefuse(LoginRequiredMixin, FormView):
+class RequestForRoleRefuse(LoginRequiredMixin, RequestForRoleAdminMixin, FormView):
     form_class = RequestForRoleRefuseForm
     template_name = "xplanung_light/requestforrole_form_refuse.html"
     success_url = reverse_lazy("requestforrole-admin-list")
 
     def get_context_data(self, **kwargs):
-        pk = self.kwargs['pk']
         context = super().get_context_data(**kwargs)
-        context['anfrage'] = RequestForRole.objects.get(id=pk)
+        context['anfrage'] = self.role_request
         return context
 
     def form_valid(self, form):
-        # Auslesen des pk zur Aktualisierung des Antragrecords
-        request = RequestForRole.objects.get(id=self.kwargs['pk'])
-        contact_org_admin = None
-        if not self.request.user.is_superuser:
-            # Check auf Admin-Rolle des Nutzers für jede Organisation
-            user_is_admin_for_all = True
-            for organization in request.organizations.all():
-                # Check if Eintrag existiert
-                if not AdminOrgaUser.objects.filter(organization=organization, user=self.request.user, is_admin=True).exists():
-                    user_is_admin_for_all = False
-                    break
-            if not user_is_admin_for_all:
-                form.add_error(
-                    None, "Nutzer ist nicht Administrator für alle beantragten Organisationen - Zurückweisung kann nicht erfolgen!")
-                return super().form_invalid(form)
-            if request.role != "TR":
-                form.add_error(
-                    None, "Nutzer kann nur TOEB-Reporter Rollen verwalten - Zurückweisung nicht möglich!")
-                return super().form_invalid(form)
-            # Kontaktinformationen in View übernehmen damit Antragsteller mit Genehmiger (OrgAdmin) Kontakt aufnehmen kann
-            contact_org_admin = self.request.user
+        request = self.role_request
+        contact_org_admin = self.contact_org_admin
         request.editing_note = form.cleaned_data['editing_note']
         request.delete_reason = 'r'
         request.save()

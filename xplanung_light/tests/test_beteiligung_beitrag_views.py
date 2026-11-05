@@ -114,7 +114,7 @@ class BeteiligungBeitragViewsTests(TestCase):
     # ==============================================================================
 
     def test_beitrag_activate_via_email_link(self):
-        """Der Klick auf den Aktivierungslink schaltet die anonyme Stellungnahme frei."""
+        """Die Bestätigung (POST) auf der Aktivierungsseite schaltet die anonyme Stellungnahme frei."""
         url = reverse("beteiligungbeitrag-activate", kwargs={
             "plantyp": "bplan",
             "planid": self.bplan.id,
@@ -127,7 +127,7 @@ class BeteiligungBeitragViewsTests(TestCase):
         session["beitrag_generic_id"] = str(self.bplan_token)
         session.save()
         
-        response = self.client.get(url, follow=True)
+        response = self.client.post(url, follow=True)
         self.assertEqual(response.status_code, 200)
         
         self.bplan_beitrag.refresh_from_db()
@@ -147,11 +147,32 @@ class BeteiligungBeitragViewsTests(TestCase):
         session["beitrag_generic_id"] = str(self.bplan_token)
         session.save()
         
-        response = self.client.get(url, follow=True)
+        response = self.client.post(url, follow=True)
         self.assertEqual(response.status_code, 200)
         
         self.bplan_beitrag.refresh_from_db()
         self.assertTrue(self.bplan_beitrag.withdrawn)
+
+    def test_beitrag_links_via_get_change_nothing(self):
+        """Ein GET auf Aktivieren/Zurückziehen/Reaktivieren zeigt nur die Bestätigungsseite."""
+        session = self.client.session
+        session["beitrag_generic_id"] = str(self.bplan_token)
+        session.save()
+        for action in ("activate", "withdraw", "reactivate"):
+            with self.subTest(action=action):
+                url = reverse("beteiligungbeitrag-" + action, kwargs={
+                    "plantyp": "bplan",
+                    "planid": self.bplan.id,
+                    "beteiligungid": self.bplan_beteiligung.id,
+                    "generic_id": str(self.bplan_token)
+                })
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(
+                    response, "xplanung_light/beitrag_action_confirm.html")
+                self.bplan_beitrag.refresh_from_db()
+                self.assertFalse(self.bplan_beitrag.approved)
+                self.assertFalse(self.bplan_beitrag.withdrawn)
 
     # ==============================================================================
     # 3. TESTS FÜR LÖSCH-ANSICHTEN

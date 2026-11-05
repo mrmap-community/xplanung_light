@@ -1,8 +1,26 @@
+from formset.widgets import Selectize
+from formset.richtext import controls
+from formset.richtext.dialogs import SimpleLinkDialogForm
+from formset.richtext.controls import DialogControl
+from formset.widgets import DualSortableSelector
+from formset.widgets import DualSelector
+from django.forms.widgets import HiddenInput
+from django.forms.fields import ChoiceField
+from django.forms.fields import IntegerField
+from formset.renderers.bootstrap import FormRenderer
+from formset.collection import FormCollection
+from formset.widgets import UploadedFileInput, DateInput, TextInput
+from formset.widgets import Button
+from formset.renderers import ButtonVariant
+from formset.fields import Activator
+from xplanung_light.models import BPlanBeteiligungBeitrag
+from django.forms import widgets, fields, BooleanField
+from django.forms.models import ModelForm
 from datetime import timedelta, datetime
 from django.utils import timezone
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.models import User 
+from django.contrib.auth.models import User
 from xplanung_light.models import BPlan, BPlanSpezExterneReferenz, BPlanBeteiligung, AdministrativeOrganization, Uvp, FPlanUvp
 from xplanung_light.models import FPlan, FPlanSpezExterneReferenz, FPlanBeteiligung, FPlanBeteiligungBeitrag, FPlanBeteiligungBeitragAnhang
 from xplanung_light.models import ContactOrganization, ToebUnit, AdminOrgaUser, RequestForRole
@@ -33,113 +51,137 @@ from django.db.models import Avg, F, Q
 from django.contrib import messages
 from django.conf import settings
 
-#from django.db.models import CharField
-#from formset.utils import FormMixin
+# from django.db.models import CharField
+# from formset.utils import FormMixin
+
 
 class BPlanImportForm(forms.Form):
-    confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
-    file = forms.FileField(required=True, label="BPlan GML", validators=[bplan_content_validator, validate_file_infection])
+    confirm = forms.BooleanField(
+        label="Vorhandenen Plan überschreiben", initial=False, required=False)
+    file = forms.FileField(required=True, label="BPlan GML", validators=[
+                           bplan_content_validator, validate_file_infection])
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super(BPlanImportForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
-        self.helper.layout = Layout(Fieldset("Bebauungsplan importieren", "file", "confirm"), Submit("submit", "Hochladen"))
+        self.helper.layout = Layout(Fieldset(
+            "Bebauungsplan importieren", "file", "confirm"), Submit("submit", "Hochladen"))
 
 
 class FPlanImportForm(forms.Form):
-    confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
-    file = forms.FileField(required=True, label="FPlan GML", validators=[fplan_content_validator, validate_file_infection])
+    confirm = forms.BooleanField(
+        label="Vorhandenen Plan überschreiben", initial=False, required=False)
+    file = forms.FileField(required=True, label="FPlan GML", validators=[
+                           fplan_content_validator, validate_file_infection])
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super(FPlanImportForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
-        self.helper.layout = Layout(Fieldset("Flächennutzungsplan importieren", "file", "confirm"), Submit("submit", "Hochladen"))
+        self.helper.layout = Layout(Fieldset(
+            "Flächennutzungsplan importieren", "file", "confirm"), Submit("submit", "Hochladen"))
 
 
 class BPlanImportArchivForm(forms.Form):
-    confirm = forms.BooleanField(label="Vorhandenen Plan überschreiben", initial=False, required=False)
-    file = forms.FileField(required=True, label="BPlan ZIP-Archiv", validators=[bplan_upload_file_validator, validate_file_infection])
+    confirm = forms.BooleanField(
+        label="Vorhandenen Plan überschreiben", initial=False, required=False)
+    file = forms.FileField(required=True, label="BPlan ZIP-Archiv",
+                           validators=[bplan_upload_file_validator, validate_file_infection])
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super(BPlanImportArchivForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
-        self.helper.layout = Layout(Fieldset("Bebauungsplanarchiv importieren", "file", "confirm"), Submit("submit", "Hochladen"))
+        self.helper.layout = Layout(Fieldset(
+            "Bebauungsplanarchiv importieren", "file", "confirm"), Submit("submit", "Hochladen"))
 
 
 class FPlanImportArchivForm(forms.Form):
-    confirm = forms.BooleanField(label="Vorhandenen FPlan überschreiben", initial=False, required=False)
-    file = forms.FileField(required=True, label="FPlan ZIP-Archiv", validators=[fplan_upload_file_validator, validate_file_infection])
+    confirm = forms.BooleanField(
+        label="Vorhandenen FPlan überschreiben", initial=False, required=False)
+    file = forms.FileField(required=True, label="FPlan ZIP-Archiv",
+                           validators=[fplan_upload_file_validator, validate_file_infection])
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super(FPlanImportArchivForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
-        self.helper.layout = Layout(Fieldset("Flächennutzungsplanarchiv importieren", "file", "confirm"), Submit("submit", "Hochladen"))
+        self.helper.layout = Layout(Fieldset(
+            "Flächennutzungsplanarchiv importieren", "file", "confirm"), Submit("submit", "Hochladen"))
 
 
 class BPlanSpezExterneReferenzForm(forms.ModelForm):
-    #typ = forms.CharField(required=True, label="Typ des Anhangs")
-    #name = forms.CharField
-    #attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
+    # typ = forms.CharField(required=True, label="Typ des Anhangs")
+    # name = forms.CharField
+    # attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super(BPlanSpezExterneReferenzForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
-        self.helper.layout = Layout(Fieldset("Anlage hochladen", "public", "typ", "name", "attachment"), Submit("submit", "Hochladen/Aktualisieren"))
+        self.helper.layout = Layout(Fieldset("Anlage hochladen", "public", "typ",
+                                    "name", "attachment"), Submit("submit", "Hochladen/Aktualisieren"))
 
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
     def clean(self):
         cleaned_data = super().clean()
-        #print(self.cleaned_data['typ'])
+        # print(self.cleaned_data['typ'])
         # check if karte should be uploaded
-        if cleaned_data['typ'] == '1070': # Karte
-            # Validierung der Rasterdatei 
+        if cleaned_data['typ'] == '1070':  # Karte
+            # Validierung der Rasterdatei
             test = geotiff_raster_validator(cleaned_data['attachment'])
 
     class Meta:
-       model = BPlanSpezExterneReferenz
-       fields = ["public", "typ", "name", "attachment"] # list of fields you want from model
+        model = BPlanSpezExterneReferenz
+        # list of fields you want from model
+        fields = ["public", "typ", "name", "attachment"]
 
 
 class FPlanSpezExterneReferenzForm(forms.ModelForm):
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super(FPlanSpezExterneReferenzForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
-        self.helper.layout = Layout(Fieldset("Anlage hochladen", "public", "typ", "name", "attachment"), Submit("submit", "Hochladen/Aktualisieren"))
+        self.helper.layout = Layout(Fieldset("Anlage hochladen", "public", "typ",
+                                    "name", "attachment"), Submit("submit", "Hochladen/Aktualisieren"))
 
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
     def clean(self):
         cleaned_data = super().clean()
-        #print(self.cleaned_data['typ'])
+        # print(self.cleaned_data['typ'])
         # check if karte should be uploaded
-        if cleaned_data['typ'] == '1070': # Karte
-            # Validierung der Rasterdatei 
+        if cleaned_data['typ'] == '1070':  # Karte
+            # Validierung der Rasterdatei
             test = geotiff_raster_validator(cleaned_data['attachment'])
 
     class Meta:
-       model = FPlanSpezExterneReferenz
-       fields = ["public", "typ", "name", "attachment"] # list of fields you want from model
+        model = FPlanSpezExterneReferenz
+        # list of fields you want from model
+        fields = ["public", "typ", "name", "attachment"]
 
 
 class BPlanBeteiligungFormOld(forms.ModelForm):
-    #typ = forms.CharField(required=True, label="Typ des Anhangs")
-    #name = forms.CharField
-    #attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
+    # typ = forms.CharField(required=True, label="Typ des Anhangs")
+    # name = forms.CharField
+    # attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super(BPlanBeteiligungFormOld, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
@@ -148,64 +190,65 @@ class BPlanBeteiligungFormOld(forms.ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date() + timedelta(days=30)),
-                }
+            }
         )
         self.fields['start_datum'].widget = forms.DateInput(
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date() + timedelta(days=30)),
-                }
+            }
         )
         self.fields['end_datum'].widget = forms.DateInput(
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date() + timedelta(days=30)),
-                }
+            }
         )
-        #self.fields['beschreibung'].widget =
-        
-        
+        # self.fields['beschreibung'].widget =
+
         self.helper.layout = Layout(
-            Fieldset("Information zur Beteiligung / Offenlage", 
-                "typ",
-                Fieldset(
-                    "Datumsfelder",
-                    Row(
-                        Column(
-                            "bekanntmachung_datum",
-                        ),
-                        Column(
-                            "start_datum",
-                        ),
-                        Column(
-                            "end_datum",
-                        ),
-                    ),
-                ),
-                Fieldset(
-                    "Weitere Informationen",
-                    "allow_online_beitrag",
-                    "beschreibung",
-                    "publikation_internet",
-                ),
-            ),
+            Fieldset("Information zur Beteiligung / Offenlage",
+                     "typ",
+                     Fieldset(
+                         "Datumsfelder",
+                         Row(
+                             Column(
+                                 "bekanntmachung_datum",
+                             ),
+                             Column(
+                                 "start_datum",
+                             ),
+                             Column(
+                                 "end_datum",
+                             ),
+                         ),
+                     ),
+                     Fieldset(
+                         "Weitere Informationen",
+                         "allow_online_beitrag",
+                         "beschreibung",
+                         "publikation_internet",
+                     ),
+                     ),
             Submit("submit", "Anlegen/Aktualisieren")
         )
-        
+
     class Meta:
-       model = BPlanBeteiligung
-       fields = ["typ", "bekanntmachung_datum", "start_datum", "end_datum", "allow_online_beitrag", "beschreibung", "publikation_internet"] # list of fields you want from model
+        model = BPlanBeteiligung
+        fields = ["typ", "bekanntmachung_datum", "start_datum", "end_datum", "allow_online_beitrag",
+                  "beschreibung", "publikation_internet"]  # list of fields you want from model
 
 
 class FPlanBeteiligungForOld(forms.ModelForm):
-    #typ = forms.CharField(required=True, label="Typ des Anhangs")
-    #name = forms.CharField
-    #attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
+    # typ = forms.CharField(required=True, label="Typ des Anhangs")
+    # name = forms.CharField
+    # attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super(FPlanBeteiligungForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
@@ -214,80 +257,83 @@ class FPlanBeteiligungForOld(forms.ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date() + timedelta(days=30)),
-                }
+            }
         )
         self.fields['start_datum'].widget = forms.DateInput(
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date() + timedelta(days=30)),
-                }
+            }
         )
         self.fields['end_datum'].widget = forms.DateInput(
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date() + timedelta(days=30)),
-                }
+            }
         )
         self.helper.layout = Layout(
-            Fieldset("Information zur Beteiligung / Offenlage", 
-                "typ",
-                Fieldset(
-                    "Datumsfelder",
-                    Row(
-                        Column(
-                            "bekanntmachung_datum",
-                        ),
-                        Column(
-                            "start_datum",
-                        ),
-                        Column(
-                            "end_datum",
-                        ),
-                    ),
-                ),
-                Fieldset(
-                    "Weitere Informationen",
-                    "publikation_internet",
-                ),
-            ),
+            Fieldset("Information zur Beteiligung / Offenlage",
+                     "typ",
+                     Fieldset(
+                         "Datumsfelder",
+                         Row(
+                             Column(
+                                 "bekanntmachung_datum",
+                             ),
+                             Column(
+                                 "start_datum",
+                             ),
+                             Column(
+                                 "end_datum",
+                             ),
+                         ),
+                     ),
+                     Fieldset(
+                         "Weitere Informationen",
+                         "publikation_internet",
+                     ),
+                     ),
             Submit("submit", "Anlegen/Aktualisieren")
         )
-        
 
     class Meta:
-       model = FPlanBeteiligung
-       fields = ["typ", "bekanntmachung_datum", "start_datum", "end_datum", "publikation_internet"] # list of fields you want from model
+        model = FPlanBeteiligung
+        fields = ["typ", "bekanntmachung_datum", "start_datum", "end_datum",
+                  "publikation_internet"]  # list of fields you want from model
 
 
 """
 Formular zur Verwaltung von Informationen zu durchgeführten UVPs
 """
+
+
 class UvpForm(forms.ModelForm):
-    #typ = forms.CharField(required=True, label="Typ des Anhangs")
-    #name = forms.CharField
-    #attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
+    # typ = forms.CharField(required=True, label="Typ des Anhangs")
+    # name = forms.CharField
+    # attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super(UvpForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
-        #self.fields['bekanntmachung_datum'].widget = forms.DateInput(
+        # self.fields['bekanntmachung_datum'].widget = forms.DateInput(
         #    attrs={
         #        'type': 'date',
         #        'min': str((timezone.now() - timedelta(days=29200)).date()),
         #        'max': str(timezone.now().date() + timedelta(days=30)),
         #        }
-        #)
+        # )
         self.fields['uvp_beginn_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date() + timedelta(days=30)),
-                }
+            }
         )
         self.fields['uvp_ende_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
@@ -295,65 +341,68 @@ class UvpForm(forms.ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date() + timedelta(days=30)),
-                }
+            }
         )
         self.helper.layout = Layout(
-            Fieldset("Information zur Umweltverträglichkeitsprüfung",      
-                "typ",
-                "uvp_vp",
-                "uvp",
-                Fieldset(
-                    "Datumsfelder",
-                    Row(
-                        Column(
-                            "uvp_beginn_datum",
-                        ),
-                        Column(
-                            "uvp_ende_datum",
-                        ),
-                        #Column(
-                        #    "end_datum",
-                        #),
-                    ),
-                ),
-                #Fieldset(
-                #    "Weitere Informationen",
-                #    "publikation_internet",
-                #),
-            ),
+            Fieldset("Information zur Umweltverträglichkeitsprüfung",
+                     "typ",
+                     "uvp_vp",
+                     "uvp",
+                     Fieldset(
+                         "Datumsfelder",
+                         Row(
+                             Column(
+                                 "uvp_beginn_datum",
+                             ),
+                             Column(
+                                 "uvp_ende_datum",
+                             ),
+                             # Column(
+                             #    "end_datum",
+                             # ),
+                         ),
+                     ),
+                     # Fieldset(
+                     #    "Weitere Informationen",
+                     #    "publikation_internet",
+                     # ),
+                     ),
             Submit("submit", "Anlegen/Aktualisieren")
         )
-        
 
     class Meta:
-       model = Uvp
-       fields = ["uvp", "uvp_vp", "typ", "uvp_beginn_datum", "uvp_ende_datum"] # list of fields you want from model
+        model = Uvp
+        fields = ["uvp", "uvp_vp", "typ", "uvp_beginn_datum",
+                  "uvp_ende_datum"]  # list of fields you want from model
 
 
 """
 Formular zur Verwaltung von Informationen zu durchgeführten UVPs
 """
+
+
 class FPlanUvpForm(forms.ModelForm):
-    #typ = forms.CharField(required=True, label="Typ des Anhangs")
-    #name = forms.CharField
-    #attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
+    # typ = forms.CharField(required=True, label="Typ des Anhangs")
+    # name = forms.CharField
+    # attachment = forms.FileField(required=True, label="Anlage", validators=[xplan_content_validator])
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super(FPlanUvpForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
-        #self.fields['bekanntmachung_datum'].widget = forms.DateInput(
+        # self.fields['bekanntmachung_datum'].widget = forms.DateInput(
         #    attrs={
         #        'type': 'date',
         #        'min': str((timezone.now() - timedelta(days=29200)).date()),
         #        'max': str(timezone.now().date() + timedelta(days=30)),
         #        }
-        #)
+        # )
         self.fields['uvp'].label = "Umweltprüfung durchgeführt"
-        #self.fields['uvp_vp'].label = "Vorprüfung durchgeführt"
+        # self.fields['uvp_vp'].label = "Vorprüfung durchgeführt"
         self.fields['uvp'].help_text = "Umweltprüfung durchgeführt"
-        #self.fields['uvp_vp'].help_text = "Vorprüfung durchgeführt"
+        # self.fields['uvp_vp'].help_text = "Vorprüfung durchgeführt"
 
         self.fields['uvp_beginn_datum'].label = "Beginns UP"
         self.fields['uvp_ende_datum'].label = "Ende UP"
@@ -366,7 +415,7 @@ class FPlanUvpForm(forms.ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date() + timedelta(days=30)),
-                }
+            }
         )
         self.fields['uvp_ende_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
@@ -374,45 +423,46 @@ class FPlanUvpForm(forms.ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date() + timedelta(days=30)),
-                }
+            }
         )
         self.helper.layout = Layout(
-            Fieldset("Information zur Umweltprüfung",      
-                "typ",
-                "uvp_vp",
-                "uvp",
-                Fieldset(
-                    "Datumsfelder",
-                    Row(
-                        Column(
-                            "uvp_beginn_datum",
-                        ),
-                        Column(
-                            "uvp_ende_datum",
-                        ),
-                        #Column(
-                        #    "end_datum",
-                        #),
-                    ),
-                ),
-                #Fieldset(
-                #    "Weitere Informationen",
-                #    "publikation_internet",
-                #),
-            ),
+            Fieldset("Information zur Umweltprüfung",
+                     "typ",
+                     "uvp_vp",
+                     "uvp",
+                     Fieldset(
+                         "Datumsfelder",
+                         Row(
+                             Column(
+                                 "uvp_beginn_datum",
+                             ),
+                             Column(
+                                 "uvp_ende_datum",
+                             ),
+                             # Column(
+                             #    "end_datum",
+                             # ),
+                         ),
+                     ),
+                     # Fieldset(
+                     #    "Weitere Informationen",
+                     #    "publikation_internet",
+                     # ),
+                     ),
             Submit("submit", "Anlegen/Aktualisieren")
         )
-        
 
     class Meta:
-       model = FPlanUvp
-       fields = ["uvp", "typ", "uvp_beginn_datum", "uvp_ende_datum"] # list of fields you want from model
+        model = FPlanUvp
+        # list of fields you want from model
+        fields = ["uvp", "typ", "uvp_beginn_datum", "uvp_ende_datum"]
 
 
 class RegistrationForm(UserCreationForm):
 
     email = forms.EmailField(required=True)
-    phone = forms.CharField(max_length=256, required=False, label='Telefonnummer', help_text='Die Angabe der dienstl. Telefonnumer erleichtert das Kontaktieren bei Rückfragen')
+    phone = forms.CharField(max_length=256, required=False, label='Telefonnummer',
+                            help_text='Die Angabe der dienstl. Telefonnumer erleichtert das Kontaktieren bei Rückfragen')
     captcha = CaptchaField()
 
     class Meta:
@@ -425,7 +475,7 @@ class RegistrationForm(UserCreationForm):
         """
         # Save the User model first
         user = super().save(commit=False)
-        
+
         if commit:
             user.save()
             # Save or update the related Profile model
@@ -448,7 +498,7 @@ class UsernamePasswordResetForm(PasswordResetForm):
     def get_users(self, email):
         """Given an email, return matching users who also match the username."""
         username = self.cleaned_data.get("username")
-        
+
         # Filter active users matching both credentials
         active_users = User.objects.filter(
             **{
@@ -474,15 +524,17 @@ class GemeindeSelect(forms.SelectMultiple):
             option["attrs"]["bbox"] = value.instance.bbox
         return option
 
+
 """
 Neue Klasse zur Verbesserung des Formulars der Zuordnung mehrerer Gebietskörperschaften zu einem 
 XPlan. Ist abhängig von django-autocomplete-light und select2
 """
+
+
 class GemeindeSelect2(autocomplete.ModelSelect2Multiple):
 
     def _init_(self):
         self.url = 'administrativeorganization-autocomplete'
-
 
     def create_option(
         self, name, value, label, selected, index, subindex=None, attrs=None
@@ -493,15 +545,15 @@ class GemeindeSelect2(autocomplete.ModelSelect2Multiple):
         if value:
             option["attrs"]["bbox"] = value.instance.bbox
         return option
-    
+
 
 class GemeindeSelect3(autocomplete.ModelSelect2Multiple):
     """
     Klasse für den Zugriff auf die Gemeinden ohne die Verwendung der Geometrien - macht das alles etwas schneller
     """
+
     def _init_(self):
         self.url = 'administrativeorganization-autocomplete'
-
 
     def create_option(
         self, name, value, label, selected, index, subindex=None, attrs=None
@@ -516,9 +568,9 @@ class OrganizationSelect3Single(autocomplete.ModelSelect2):
     """
     Klasse für den Zugriff auf die Gemeinden ohne die Verwendung der Geometrien - macht das alles etwas schneller
     """
+
     def _init_(self):
         self.url = 'administrativeorganization-autocomplete'
-
 
     def create_option(
         self, name, value, label, selected, index, subindex=None, attrs=None
@@ -533,11 +585,12 @@ class OrganizationSelect3Single(autocomplete.ModelSelect2):
 Neue Klasse zur Verbesserung des Formulars der Zuordnung mehrerer Gebietskörperschaften zu einem 
 XPlan. Ist abhängig von django-autocomplete-light und select2
 """
+
+
 class OrganizationSelect2Single(autocomplete.ModelSelect2):
 
     def _init_(self):
         self.url = 'administrativeorganization-autocomplete'
-
 
     def create_option(
         self, name, value, label, selected, index, subindex=None, attrs=None
@@ -548,13 +601,13 @@ class OrganizationSelect2Single(autocomplete.ModelSelect2):
         if value:
             option["attrs"]["bbox"] = value.instance.bbox
         return option
-    
 
 
 class BPlanCreateForm(ModelForm):
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
@@ -568,7 +621,7 @@ class BPlanCreateForm(ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
         self.fields['satzungsbeschluss_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
@@ -576,7 +629,7 @@ class BPlanCreateForm(ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
         self.fields['rechtsverordnungs_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
@@ -584,7 +637,7 @@ class BPlanCreateForm(ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
         self.fields['ausfertigungs_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
@@ -592,23 +645,23 @@ class BPlanCreateForm(ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
-        self.fields['inkrafttretens_datum'].widget = forms.DateInput(    
+        self.fields['inkrafttretens_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
-        self.fields['untergangs_datum'].widget = forms.DateInput(    
-            format='%Y-%m-%d',  
+        self.fields['untergangs_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': '1960-01-01',
                 'max': str(timezone.now().date()),
-                }
+            }
         )
         # https://forum.djangoproject.com/t/model-choice-field-how-to-add-attributes-to-the-options/37782
         # https://django-autocomplete-light.readthedocs.io/en/master/_modules/dal_select2/widgets.html#ModelSelect2Multiple
@@ -616,7 +669,8 @@ class BPlanCreateForm(ModelForm):
         # alter Weg (einfache Select option Liste):
         # self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
         # Neuer Weg - django-autocomplete-light/select2
-        self.fields['gemeinde'].widget = GemeindeSelect2(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
+        self.fields['gemeinde'].widget = GemeindeSelect2(
+            attrs={'onchange': "zoomToSelectedOptionsExtent(this);"})
         """
         self.helper.layout = Layout(
             TabHolder(
@@ -648,7 +702,7 @@ class BPlanCreateForm(ModelForm):
                 ),
             ),
             Fieldset(
-                
+
                 "Pflichtfelder XPlanung",
                 Row(
                     Column(
@@ -659,7 +713,7 @@ class BPlanCreateForm(ModelForm):
                             "Pflichtfeld XPlanung-light",
                             Row(
                                 "nummer",
-                        )),
+                            )),
                     ),
                     Column(
                         "geltungsbereich",
@@ -674,7 +728,7 @@ class BPlanCreateForm(ModelForm):
                 Row(
                     "beschreibung",
                 ),
-            ),    
+            ),
             Fieldset(
                 "Datumsfelder",
                 Row(
@@ -714,35 +768,35 @@ class BPlanCreateForm(ModelForm):
                         "gruenordnungsplan",
                     ),
                 ),
-            ), 
+            ),
             Submit("submit", "Erstellen")
         )
 
     class Meta:
         model = BPlan
-        fields = ["name", 
-                  "nummer", 
+        fields = ["name",
+                  "nummer",
                   "public",
-                  "geltungsbereich", 
-                  "gemeinde", 
+                  "geltungsbereich",
+                  "gemeinde",
                   "planart",
                   "massstab",
                   "beschreibung",
-                  "aufstellungsbeschluss_datum", 
+                  "aufstellungsbeschluss_datum",
                   "satzungsbeschluss_datum",
                   "rechtsverordnungs_datum",
                   "ausfertigungs_datum",
-                  "inkrafttretens_datum", 
+                  "inkrafttretens_datum",
                   "untergangs_datum",
                   "staedtebaulicher_vertrag",
                   "erschliessungs_vertrag",
                   "durchfuehrungs_vertrag",
                   "gruenordnungsplan",
-                ]
+                  ]
         # alternative to invokation above - but no possibility to have further attributes?
-        #widgets = {
+        # widgets = {
         #    'gemeinde': autocomplete.ModelSelect2Multiple(url='administrativeorganization-autocomplete')
-        #}
+        # }
 
 
 class BPlanUpdateForm(ModelForm):
@@ -750,6 +804,7 @@ class BPlanUpdateForm(ModelForm):
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
@@ -765,7 +820,7 @@ class BPlanUpdateForm(ModelForm):
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
                 'localize': True,
-                }
+            }
         )
         self.fields['satzungsbeschluss_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
@@ -773,7 +828,7 @@ class BPlanUpdateForm(ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
         self.fields['rechtsverordnungs_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
@@ -781,7 +836,7 @@ class BPlanUpdateForm(ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
         self.fields['ausfertigungs_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
@@ -789,26 +844,27 @@ class BPlanUpdateForm(ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
-        self.fields['inkrafttretens_datum'].widget = forms.DateInput( 
-            format='%Y-%m-%d',   
+        self.fields['inkrafttretens_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
-        self.fields['untergangs_datum'].widget = forms.DateInput(  
-            format='%Y-%m-%d',    
+        self.fields['untergangs_datum'].widget = forms.DateInput(
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': '1960-01-01',
                 'max': str(timezone.now().date()),
-                }
+            }
         )
-        self.fields['gemeinde'].widget = GemeindeSelect2(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
-        #self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
+        self.fields['gemeinde'].widget = GemeindeSelect2(
+            attrs={'onchange': "zoomToSelectedOptionsExtent(this);"})
+        # self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
         self.helper.layout = Layout(
             Fieldset(
                 "Verwaltung",
@@ -827,7 +883,7 @@ class BPlanUpdateForm(ModelForm):
                             "Pflichtfeld XPlanung-light",
                             Row(
                                 "nummer",
-                        )),
+                            )),
                     ),
                     Column(
                         "geltungsbereich",
@@ -842,7 +898,7 @@ class BPlanUpdateForm(ModelForm):
                 Row(
                     "beschreibung",
                 ),
-            ),    
+            ),
             Fieldset(
                 "Datumsfelder",
                 Row(
@@ -882,38 +938,39 @@ class BPlanUpdateForm(ModelForm):
                         "gruenordnungsplan",
                     ),
                 ),
-            ),   
+            ),
             Submit("submit", "Aktualisieren"),
         )
 
     class Meta:
         model = BPlan
 
-        fields = ["name", 
-                  "nummer", 
-                  "geltungsbereich", 
-                  "gemeinde", 
+        fields = ["name",
+                  "nummer",
+                  "geltungsbereich",
+                  "gemeinde",
                   "planart",
                   "massstab",
                   "beschreibung",
                   "public",
-                  "aufstellungsbeschluss_datum", 
+                  "aufstellungsbeschluss_datum",
                   "satzungsbeschluss_datum",
                   "rechtsverordnungs_datum",
-                  "ausfertigungs_datum", 
-                  "inkrafttretens_datum",  
+                  "ausfertigungs_datum",
+                  "inkrafttretens_datum",
                   "untergangs_datum",
                   "staedtebaulicher_vertrag",
                   "erschliessungs_vertrag",
                   "durchfuehrungs_vertrag",
                   "gruenordnungsplan",
-                ]
+                  ]
 
 
 class FPlanCreateForm(ModelForm):
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
@@ -927,7 +984,7 @@ class FPlanCreateForm(ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
         self.fields['planbeschluss_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
@@ -935,7 +992,7 @@ class FPlanCreateForm(ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
         self.fields['wirksamkeits_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
@@ -943,15 +1000,15 @@ class FPlanCreateForm(ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
         self.fields['untergangs_datum'].widget = forms.DateInput(
-            format='%Y-%m-%d',   
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': '1960-01-01',
                 'max': str(timezone.now().date()),
-                }
+            }
         )
         # https://forum.djangoproject.com/t/model-choice-field-how-to-add-attributes-to-the-options/37782
         # https://django-autocomplete-light.readthedocs.io/en/master/_modules/dal_select2/widgets.html#ModelSelect2Multiple
@@ -959,7 +1016,8 @@ class FPlanCreateForm(ModelForm):
         # alter Weg (einfache Select option Liste):
         # self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
         # Neuer Weg - django-autocomplete-light/select2
-        self.fields['gemeinde'].widget = GemeindeSelect2(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
+        self.fields['gemeinde'].widget = GemeindeSelect2(
+            attrs={'onchange': "zoomToSelectedOptionsExtent(this);"})
         """
         self.helper.layout = Layout(
             TabHolder(
@@ -1008,7 +1066,7 @@ class FPlanCreateForm(ModelForm):
                 Row(
                     "nummer",
                 ),
-            ),  
+            ),
             Fieldset(
                 "Weitere Informationen",
                 Row(
@@ -1017,7 +1075,7 @@ class FPlanCreateForm(ModelForm):
                 Row(
                     "beschreibung",
                 ),
-            ),    
+            ),
             Fieldset(
                 "Datumsfelder",
                 Row(
@@ -1040,23 +1098,23 @@ class FPlanCreateForm(ModelForm):
 
     class Meta:
         model = FPlan
-        fields = ["name", 
-                  "nummer", 
+        fields = ["name",
+                  "nummer",
                   "public",
-                  "geltungsbereich", 
-                  "gemeinde", 
+                  "geltungsbereich",
+                  "gemeinde",
                   "planart",
                   "massstab",
                   "beschreibung",
-                  "aufstellungsbeschluss_datum", 
+                  "aufstellungsbeschluss_datum",
                   "planbeschluss_datum",
                   "wirksamkeits_datum",
-                  "untergangs_datum", 
-                ]
+                  "untergangs_datum",
+                  ]
         # alternative to invokation above - but no possibility to have further attributes?
-        #widgets = {
+        # widgets = {
         #    'gemeinde': autocomplete.ModelSelect2Multiple(url='administrativeorganization-autocomplete')
-        #}
+        # }
 
 
 class FPlanUpdateForm(ModelForm):
@@ -1064,6 +1122,7 @@ class FPlanUpdateForm(ModelForm):
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
@@ -1079,7 +1138,7 @@ class FPlanUpdateForm(ModelForm):
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
                 'localize': True,
-                }
+            }
         )
         self.fields['planbeschluss_datum'].widget = forms.DateInput(
             format='%Y-%m-%d',
@@ -1087,26 +1146,27 @@ class FPlanUpdateForm(ModelForm):
                 'type': 'date',
                 'min': str((timezone.now() - timedelta(days=29200)).date()),
                 'max': str(timezone.now().date()),
-                }
+            }
         )
         self.fields['wirksamkeits_datum'].widget = forms.DateInput(
-            format='%Y-%m-%d',       
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': '1960-01-01',
                 'max': str(timezone.now().date()),
-                }
+            }
         )
         self.fields['untergangs_datum'].widget = forms.DateInput(
-            format='%Y-%m-%d',     
+            format='%Y-%m-%d',
             attrs={
                 'type': 'date',
                 'min': '1960-01-01',
                 'max': str(timezone.now().date()),
-                }
+            }
         )
-        self.fields['gemeinde'].widget = GemeindeSelect2(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
-        #self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
+        self.fields['gemeinde'].widget = GemeindeSelect2(
+            attrs={'onchange': "zoomToSelectedOptionsExtent(this);"})
+        # self.fields['gemeinde'].widget = GemeindeSelect(attrs = {'onchange' : "zoomToExtent(this);"})
         self.helper.layout = Layout(
             Fieldset(
                 "Verwaltung",
@@ -1140,7 +1200,7 @@ class FPlanUpdateForm(ModelForm):
                 Row(
                     "beschreibung",
                 ),
-            ),    
+            ),
             Fieldset(
                 "Datumsfelder",
                 Row(
@@ -1164,25 +1224,26 @@ class FPlanUpdateForm(ModelForm):
     class Meta:
         model = FPlan
 
-        fields = ["name", 
-                  "nummer", 
+        fields = ["name",
+                  "nummer",
                   "public",
-                  "geltungsbereich", 
-                  "gemeinde", 
+                  "geltungsbereich",
+                  "gemeinde",
                   "planart",
                   "massstab",
                   "beschreibung",
-                  "aufstellungsbeschluss_datum", 
+                  "aufstellungsbeschluss_datum",
                   "planbeschluss_datum",
                   "wirksamkeits_datum",
                   "untergangs_datum",
-                ]
+                  ]
 
 
 class ContactOrganizationCreateForm(ModelForm):
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
@@ -1192,7 +1253,7 @@ class ContactOrganizationCreateForm(ModelForm):
                 "Informationen zur Kontaktstelle",
                 Row(
                     Field("gemeinde"),
-                    ),
+                ),
                 Row(
                     Column(
                         "name",
@@ -1228,13 +1289,15 @@ class ContactOrganizationCreateForm(ModelForm):
     class Meta:
         model = ContactOrganization
 
-        fields = ["gemeinde", "name", "unit", "person", "email", "phone", "facsimile", "homepage", "datenschutz_link"]
+        fields = ["gemeinde", "name", "unit", "person", "email",
+                  "phone", "facsimile", "homepage", "datenschutz_link"]
 
 
 class ContactOrganizationUpdateForm(ModelForm):
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
@@ -1280,11 +1343,13 @@ class ContactOrganizationUpdateForm(ModelForm):
     class Meta:
         model = ContactOrganization
 
-        fields = ["gemeinde", "name", "unit", "person", "email", "phone", "facsimile", "homepage", "datenschutz_link" ]
+        fields = ["gemeinde", "name", "unit", "person", "email",
+                  "phone", "facsimile", "homepage", "datenschutz_link"]
 
 
 class ToebMultipleChoiceField(forms.ModelMultipleChoiceField):
     """Überschreibt die Label-Darstellung mit zusätzlichen Annotierungen."""
+
     def label_from_instance(self, obj):
         emails = self.form._email_map.get(obj.pk, 'keine E-Mails')
         return f"{obj.name} – EMails: ({emails})"
@@ -1292,7 +1357,7 @@ class ToebMultipleChoiceField(forms.ModelMultipleChoiceField):
 
 class BPlanBeteiligungToebNotificationCreateForm(ModelForm):
     selected_toebs = ToebMultipleChoiceField(
-        queryset=ToebUnit.objects.none(),  
+        queryset=ToebUnit.objects.none(),
         widget=forms.CheckboxSelectMultiple,
         label="TÖBs auswählen",
     )
@@ -1304,7 +1369,8 @@ class BPlanBeteiligungToebNotificationCreateForm(ModelForm):
         self.fields['selected_toebs'].form = self
 
         if beteiligung is not None:
-            toebs = ToebUnit.objects.filter(bplan_beteiligungen=beteiligung).prefetch_related('editors')
+            toebs = ToebUnit.objects.filter(
+                bplan_beteiligungen=beteiligung).prefetch_related('editors')
             for toeb in toebs:
                 emails = [
                     user.user.email
@@ -1312,20 +1378,19 @@ class BPlanBeteiligungToebNotificationCreateForm(ModelForm):
                     if user.user.email
                 ]
                 self._email_map[toeb.pk] = ', '.join(emails)
-            self.fields['selected_toebs'].queryset = toebs    
-
+            self.fields['selected_toebs'].queryset = toebs
 
         self.helper = FormHelper(self)
-        
+
         self.helper.layout = Layout(
             Fieldset(
                 "TOEB-Benachrichtigung",
                 Row(
-                        Field("message"),
-                    ),
+                    Field("message"),
+                ),
                 Row(
-                        Field("selected_toebs"),
-                    ),
+                    Field("selected_toebs"),
+                ),
             ),
             Submit("submit", "Versenden"),
         )
@@ -1344,7 +1409,8 @@ class FPlanBeteiligungToebNotificationCreateForm(BPlanBeteiligungToebNotificatio
         self.fields['selected_toebs'].form = self
 
         if beteiligung is not None:
-            toebs = ToebUnit.objects.filter(fplan_beteiligungen=beteiligung).prefetch_related('editors')
+            toebs = ToebUnit.objects.filter(
+                fplan_beteiligungen=beteiligung).prefetch_related('editors')
             for toeb in toebs:
                 emails = [
                     user.user.email
@@ -1352,20 +1418,19 @@ class FPlanBeteiligungToebNotificationCreateForm(BPlanBeteiligungToebNotificatio
                     if user.user.email
                 ]
                 self._email_map[toeb.pk] = ', '.join(emails)
-            self.fields['selected_toebs'].queryset = toebs    
-
+            self.fields['selected_toebs'].queryset = toebs
 
         self.helper = FormHelper(self)
-        
+
         self.helper.layout = Layout(
             Fieldset(
                 "TOEB-Benachrichtigung",
                 Row(
-                        Field("message"),
-                    ),
+                    Field("message"),
+                ),
                 Row(
-                        Field("selected_toebs"),
-                    ),
+                    Field("selected_toebs"),
+                ),
             ),
             Submit("submit", "Versenden"),
         )
@@ -1406,7 +1471,8 @@ class ToebUnitCreateForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.fields['organization'].widget = OrganizationSelect2Single(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
+        self.fields['organization'].widget = OrganizationSelect2Single(
+            attrs={'onchange': "zoomToSelectedOptionsExtent(this);"})
         self.helper.layout = Layout(
             Fieldset(
                 "Informationen zur TOEB-Stelle",
@@ -1423,10 +1489,10 @@ class ToebUnitCreateForm(ModelForm):
                     Column(
                         "editors",
                     ),
-                    ),
+                ),
                 Row(
                     Column(
-                       Row('description'),
+                        Row('description'),
                     ),
                     Column(
                         "geometry",
@@ -1443,7 +1509,8 @@ class ToebUnitCreateForm(ModelForm):
 
     class Meta:
         model = ToebUnit
-        fields = ["organization", "name", "description", "theme", "public", "geometry", "editors" ]
+        fields = ["organization", "name", "description",
+                  "theme", "public", "geometry", "editors"]
 
 
 class ToebUnitUpdateForm(ModelForm):
@@ -1473,11 +1540,12 @@ class ToebUnitUpdateForm(ModelForm):
                     "TOEB-Reporter sein."
                 )
         return cleaned_data
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.fields['organization'].widget = OrganizationSelect2Single(attrs = {'onchange' : "zoomToSelectedOptionsExtent(this);"})
+        self.fields['organization'].widget = OrganizationSelect2Single(
+            attrs={'onchange': "zoomToSelectedOptionsExtent(this);"})
         self.helper.layout = Layout(
             Fieldset(
                 "Informationen zur TOEB-Stelle",
@@ -1494,10 +1562,10 @@ class ToebUnitUpdateForm(ModelForm):
                     Column(
                         "editors",
                     ),
-                    ),
+                ),
                 Row(
                     Column(
-                       Row('description'),
+                        Row('description'),
                     ),
                     Column(
                         "geometry",
@@ -1514,13 +1582,15 @@ class ToebUnitUpdateForm(ModelForm):
 
     class Meta:
         model = ToebUnit
-        fields = ["organization", "name", "description", "theme", "public", "geometry", "editors" ]
+        fields = ["organization", "name", "description",
+                  "theme", "public", "geometry", "editors"]
 
 
 class AdministrativeOrganizationUpdateForm(ModelForm):
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
@@ -1553,7 +1623,8 @@ class AdministrativeOrganizationUpdateForm(ModelForm):
     class Meta:
         model = AdministrativeOrganization
 
-        fields = ["coat_of_arms_url", "published_data_license", "published_data_license_source_note", "published_data_accessrights", "published_data_rights", ]
+        fields = ["coat_of_arms_url", "published_data_license", "published_data_license_source_note",
+                  "published_data_accessrights", "published_data_rights", ]
 
 
 """
@@ -1561,25 +1632,11 @@ Neues Formular zur Editierung der Beteiligungsbeiträge - basierend auf django-f
 https://django-formset.fly.dev/model-forms/#
 """
 
-from django.forms.models import ModelForm
-#from formset.widgets import DateInput, Selectize, UploadedFileInput
-#from formset.widgets.richtext import RichTextarea
-#from formset.richtext.widgets import RichTextarea
-from django.forms import widgets, fields, BooleanField
-from xplanung_light.models import BPlanBeteiligungBeitrag
-from formset.fields import Activator
-from formset.renderers import ButtonVariant
-from formset.widgets import Button
-from formset.widgets import UploadedFileInput, DateInput, TextInput
+# from formset.widgets import DateInput, Selectize, UploadedFileInput
+# from formset.widgets.richtext import RichTextarea
+# from formset.richtext.widgets import RichTextarea
 
-from formset.collection import FormCollection
-from formset.renderers.bootstrap import FormRenderer
-#from formset.views import FormCollectionView
-from django.forms.fields import IntegerField
-from django.forms.fields import ChoiceField
-from django.forms.widgets import HiddenInput
-from formset.widgets import DualSelector
-from formset.widgets import DualSortableSelector
+# from formset.views import FormCollectionView
 
 
 class BeteiligungToebDualSortableSelector(DualSortableSelector):
@@ -1595,13 +1652,14 @@ class BeteiligungToebDualSortableSelector(DualSortableSelector):
                 option['label'] = f"* {option['label']}"
         return groups
     """
+
     def label_from_instance(self, obj):
         """Überschreibt die Label-Darstellung mit zusätzlichen Annotierungen."""
-        #print(f"label_from_instance aufgerufen für: {obj}") 
+        # print(f"label_from_instance aufgerufen für: {obj}")
         prefix = "* "
         return f"{prefix}{obj.label}"
-        #emails = self.form._email_map.get(obj.pk, 'keine E-Mails')
-        #return f"{obj.name} – EMails: ({emails})"
+        # emails = self.form._email_map.get(obj.pk, 'keine E-Mails')
+        # return f"{obj.name} – EMails: ({emails})"
 
 
 class BPlanBeteiligungForm(FormMixin, ModelForm):
@@ -1613,16 +1671,16 @@ class BPlanBeteiligungForm(FormMixin, ModelForm):
 
     """
     default_renderer = FormRenderer(
-        form_css_classes = 'row',
+        form_css_classes='row',
         field_css_classes={
             '*': 'mb-2 col-12',
-            #'typ': 'mb-2 col-12',
+            # 'typ': 'mb-2 col-12',
             'bekanntmachung_datum': 'mb-2 col-4',
             'start_datum': 'mb-2 col-4',
             'end_datum': 'mb-2 col-4',
             'allow_online_beitrag': 'mb-2 col-12',
-            #'publikation_internet': 'mb-2 col-12',
-            #'assigned_toebs': 'mb-2 col-12',
+            # 'publikation_internet': 'mb-2 col-12',
+            # 'assigned_toebs': 'mb-2 col-12',
         },
     )
 
@@ -1632,8 +1690,9 @@ class BPlanBeteiligungForm(FormMixin, ModelForm):
         """
         super().__init__(*args, **kwargs)
         # Über die lambda Funktion können wir auf weitere Attribute reagieren - Eigene TOEBS und Räumliche Überdeckung
-        #self.fields['assigned_toebs'].label_from_instance = lambda obj:  str(obj) if not obj.owned and not obj.intersects else "* " + str(obj)  if obj.owned and not obj.intersects else "+ " + str(obj) if obj.intersects and not obj.owned else "*+ " + str(obj)
-        self.fields['assigned_toebs'].label_from_instance = lambda obj:  "&~ " + str(obj) if not obj.owned and not obj.intersects and obj.has_geometry else "*~ " + str(obj) if obj.owned and not obj.intersects and obj.has_geometry else "* " + str(obj) if obj.owned and not obj.has_geometry else "& " + str(obj) if not obj.owned and not obj.has_geometry else "&# " + str(obj) if obj.intersects and not obj.owned else "*# " + str(obj)
+        # self.fields['assigned_toebs'].label_from_instance = lambda obj:  str(obj) if not obj.owned and not obj.intersects else "* " + str(obj)  if obj.owned and not obj.intersects else "+ " + str(obj) if obj.intersects and not obj.owned else "*+ " + str(obj)
+        self.fields['assigned_toebs'].label_from_instance = lambda obj:  "&~ " + str(obj) if not obj.owned and not obj.intersects and obj.has_geometry else "*~ " + str(obj) if obj.owned and not obj.intersects and obj.has_geometry else "* " + str(
+            obj) if obj.owned and not obj.has_geometry else "& " + str(obj) if not obj.owned and not obj.has_geometry else "&# " + str(obj) if obj.intersects and not obj.owned else "*# " + str(obj)
         self.fields['assigned_toebs'].help_text = "TOEBS - Filter: (*) - eigene, (&) - fremde, (#) - räumliche Überdeckung Zuständigkeitsbereich mit Planung, (~) - keine räumliche Überdeckung"
         is_update = self.instance.pk is not None
         # Bei Update und bereits vorhandene Beiträge -> alles sperren bis auf ...
@@ -1645,10 +1704,10 @@ class BPlanBeteiligungForm(FormMixin, ModelForm):
                 bplan_beteiligung=self.instance.pk
             ).exists()
             if hat_beitraege:
-                #print('Deaktivieren spezieller Felder wenn schon Beteiligungsbeiträge vorhanden sind')
+                # print('Deaktivieren spezieller Felder wenn schon Beteiligungsbeiträge vorhanden sind')
                 # Problem - cache? - Deaktivierung des Dualselectors erfolgt erst bei refresh ... - strange
                 # TODO klären warum?
-                #self.fields['assigned_toebs'].disabled = True
+                # self.fields['assigned_toebs'].disabled = True
                 for field in self.fields.values():
                     field.disabled = True
 
@@ -1668,12 +1727,15 @@ class BPlanBeteiligungForm(FormMixin, ModelForm):
             alter_typ = self.instance.typ  # Wert aus der Datenbank vor dem Update
             neuer_typ = cleaned_data.get('typ')
             if alter_typ != neuer_typ:
-                self.add_error('typ', "Der Typ des Beteiligungsverfahrens kann nachträglich nicht mehr geändert werden.")
-            
+                self.add_error(
+                    'typ', "Der Typ des Beteiligungsverfahrens kann nachträglich nicht mehr geändert werden.")
+
             # Test ob es schon Beitraege gibt - falls das der Fall ist, soll die Bearbeitung verhindert werden
-            beitraege = BPlanBeteiligungBeitrag.objects.filter(bplan_beteiligung__in=[self.instance.pk])
+            beitraege = BPlanBeteiligungBeitrag.objects.filter(
+                bplan_beteiligung__in=[self.instance.pk])
             if len(beitraege) > 0:
-                self.add_error(None, "Es gibt schon Beiträge zum Verfahren - das Verfahren darf daher nicht mehr verändert werden!")
+                self.add_error(
+                    None, "Es gibt schon Beiträge zum Verfahren - das Verfahren darf daher nicht mehr verändert werden!")
         # Attribute aus den bereinigten Daten auslesen
         start_datum = cleaned_data.get('start_datum')
         end_datum = cleaned_data.get('end_datum')
@@ -1684,11 +1746,12 @@ class BPlanBeteiligungForm(FormMixin, ModelForm):
         # Logische Datumsprüfung
         if start_datum and end_datum and start_datum > end_datum:
             # Fehler an ein bestimmtes Feld binden (wird direkt unter dem Feld angezeigt)
-            self.add_error('end_datum', "Das Enddatum darf nicht vor dem Startdatum liegen.")
+            self.add_error(
+                'end_datum', "Das Enddatum darf nicht vor dem Startdatum liegen.")
 
         # Abhängigkeiten prüfen basierend auf deinem 'typ'
         # Passend zu deinen 'df-hide/show' Bedingungen im Frontend:
-        #if typ not in ['2000', '20001'] and not publikation_internet:
+        # if typ not in ['2000', '20001'] and not publikation_internet:
         #    self.add_error('publikation_internet', "Für diesen Typ ist eine Internet-Publikation erforderlich.")
 
         # Rückgabe der bereinigten Daten
@@ -1696,17 +1759,18 @@ class BPlanBeteiligungForm(FormMixin, ModelForm):
 
     class Meta:
         model = BPlanBeteiligung
-        fields = ['typ', 'beschreibung', 'bekanntmachung_datum', 'start_datum', 'end_datum' , "allow_online_beitrag", "publikation_internet", "assigned_toebs"]
+        fields = ['typ', 'beschreibung', 'bekanntmachung_datum', 'start_datum',
+                  'end_datum', "allow_online_beitrag", "publikation_internet", "assigned_toebs"]
         widgets = {
             'beschreibung': RichTextarea(),
             'bekanntmachung_datum': DateInput(),
             'start_datum': DateInput(),
             'end_datum': DateInput(),
-            #'allow_online_beitrag': widgets.CheckboxInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),
-            'publikation_internet': TextInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),                         
+            # 'allow_online_beitrag': widgets.CheckboxInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),
+            'publikation_internet': TextInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),
             'assigned_toebs': BeteiligungToebDualSortableSelector(search_lookup='label__icontains',
-                                                   group_field_name='theme_display',
-                                                   attrs={'df-show': ".typ=='2000' || .typ=='20001'"}),
+                                                                  group_field_name='theme_display',
+                                                                  attrs={'df-show': ".typ=='2000' || .typ=='20001'"}),
         }
 
 
@@ -1719,16 +1783,16 @@ class FPlanBeteiligungForm(FormMixin, ModelForm):
     """
 
     default_renderer = FormRenderer(
-        form_css_classes = 'row',
+        form_css_classes='row',
         field_css_classes={
             '*': 'mb-2 col-12',
-            #'typ': 'mb-2 col-12',
+            # 'typ': 'mb-2 col-12',
             'bekanntmachung_datum': 'mb-2 col-4',
             'start_datum': 'mb-2 col-4',
             'end_datum': 'mb-2 col-4',
             'allow_online_beitrag': 'mb-2 col-12',
-            #'publikation_internet': 'mb-2 col-12',
-            #'assigned_toebs': 'mb-2 col-12',
+            # 'publikation_internet': 'mb-2 col-12',
+            # 'assigned_toebs': 'mb-2 col-12',
         },
     )
 
@@ -1737,7 +1801,8 @@ class FPlanBeteiligungForm(FormMixin, ModelForm):
         In der init Funktion kann beim Update gewisse Elemente deaktivieren.
         """
         super().__init__(*args, **kwargs)
-        self.fields['assigned_toebs'].label_from_instance = lambda obj:  "&~ " + str(obj) if not obj.owned and not obj.intersects and obj.has_geometry else "*~ " + str(obj) if obj.owned and not obj.intersects and obj.has_geometry else "* " + str(obj) if obj.owned and not obj.has_geometry else "& " + str(obj) if not obj.owned and not obj.has_geometry else "&# " + str(obj) if obj.intersects and not obj.owned else "*# " + str(obj)
+        self.fields['assigned_toebs'].label_from_instance = lambda obj:  "&~ " + str(obj) if not obj.owned and not obj.intersects and obj.has_geometry else "*~ " + str(obj) if obj.owned and not obj.intersects and obj.has_geometry else "* " + str(
+            obj) if obj.owned and not obj.has_geometry else "& " + str(obj) if not obj.owned and not obj.has_geometry else "&# " + str(obj) if obj.intersects and not obj.owned else "*# " + str(obj)
         self.fields['assigned_toebs'].help_text = "TOEBS - Filter: (*) - eigene, (&) - fremde, (#) - räumliche Überdeckung Zuständigkeitsbereich mit Planung, (~) - keine räumliche Überdeckung"
         is_update = self.instance.pk is not None
         # Bei Update und bereits vorhandene Beiträge -> alles sperren bis auf ...
@@ -1749,10 +1814,10 @@ class FPlanBeteiligungForm(FormMixin, ModelForm):
                 fplan_beteiligung=self.instance.pk
             ).exists()
             if hat_beitraege:
-                #print('Deaktivieren spezieller Felder wenn schon Beteiligungsbeiträge vorhanden sind')
+                # print('Deaktivieren spezieller Felder wenn schon Beteiligungsbeiträge vorhanden sind')
                 # Problem - cache? - Deaktivierung des Dualselectors erfolgt erst bei refresh ... - strange
                 # TODO klären warum?
-                #self.fields['assigned_toebs'].disabled = True
+                # self.fields['assigned_toebs'].disabled = True
                 for field in self.fields.values():
                     field.disabled = True
 
@@ -1772,12 +1837,15 @@ class FPlanBeteiligungForm(FormMixin, ModelForm):
             alter_typ = self.instance.typ  # Wert aus der Datenbank vor dem Update
             neuer_typ = cleaned_data.get('typ')
             if alter_typ != neuer_typ:
-                self.add_error('typ', "Der Typ des Beteiligungsverfahrens kann nachträglich nicht mehr geändert werden.")
-            
+                self.add_error(
+                    'typ', "Der Typ des Beteiligungsverfahrens kann nachträglich nicht mehr geändert werden.")
+
             # Test ob es schon Beitraege gibt - falls das der Fall ist, soll die Bearbeitung verhindert werden
-            beitraege = FPlanBeteiligungBeitrag.objects.filter(fplan_beteiligung__in=[self.instance.pk])
+            beitraege = FPlanBeteiligungBeitrag.objects.filter(
+                fplan_beteiligung__in=[self.instance.pk])
             if len(beitraege) > 0:
-                self.add_error(None, "Es gibt schon Beiträge zum Verfahren - das Verfahren darf daher nicht mehr verändert werden!")
+                self.add_error(
+                    None, "Es gibt schon Beiträge zum Verfahren - das Verfahren darf daher nicht mehr verändert werden!")
         # Attribute aus den bereinigten Daten auslesen
         start_datum = cleaned_data.get('start_datum')
         end_datum = cleaned_data.get('end_datum')
@@ -1788,11 +1856,12 @@ class FPlanBeteiligungForm(FormMixin, ModelForm):
         # Logische Datumsprüfung
         if start_datum and end_datum and start_datum > end_datum:
             # Fehler an ein bestimmtes Feld binden (wird direkt unter dem Feld angezeigt)
-            self.add_error('end_datum', "Das Enddatum darf nicht vor dem Startdatum liegen.")
+            self.add_error(
+                'end_datum', "Das Enddatum darf nicht vor dem Startdatum liegen.")
 
         # Abhängigkeiten prüfen basierend auf deinem 'typ'
         # Passend zu deinen 'df-hide/show' Bedingungen im Frontend:
-        #if typ not in ['2000', '20001'] and not publikation_internet:
+        # if typ not in ['2000', '20001'] and not publikation_internet:
         #    self.add_error('publikation_internet', "Für diesen Typ ist eine Internet-Publikation erforderlich.")
 
         # Rückgabe der bereinigten Daten
@@ -1800,17 +1869,18 @@ class FPlanBeteiligungForm(FormMixin, ModelForm):
 
     class Meta:
         model = FPlanBeteiligung
-        fields = ['typ', 'beschreibung', 'bekanntmachung_datum', 'start_datum', 'end_datum' , "allow_online_beitrag", "publikation_internet", "assigned_toebs"]
+        fields = ['typ', 'beschreibung', 'bekanntmachung_datum', 'start_datum',
+                  'end_datum', "allow_online_beitrag", "publikation_internet", "assigned_toebs"]
         widgets = {
             'beschreibung': RichTextarea(),
             'bekanntmachung_datum': DateInput(),
             'start_datum': DateInput(),
             'end_datum': DateInput(),
-            #'allow_online_beitrag': widgets.CheckboxInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),
-            'publikation_internet': TextInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}), 
+            # 'allow_online_beitrag': widgets.CheckboxInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),
+            'publikation_internet': TextInput(attrs={'df-hide': ".typ=='2000' || .typ=='20001'"}),
             'assigned_toebs': BeteiligungToebDualSortableSelector(search_lookup='label__icontains',
-                                                   group_field_name='theme_display',
-                                                   attrs={'df-show': ".typ=='2000' || .typ=='20001'"}),
+                                                                  group_field_name='theme_display',
+                                                                  attrs={'df-show': ".typ=='2000' || .typ=='20001'"}),
         }
 
 
@@ -1827,10 +1897,11 @@ class BPlanBeitragStellungnahmeForm(ModelForm):
         widget=forms.CheckboxSelectMultiple,
         label="Berücksichtigung",
     )
-   
+
     class Meta:
         model = BPlanBeitragStellungnahme
-        fields = ["bezug_beitrag", "stellungnahme", "beruecksichtigung", "beitrag"]
+        fields = ["bezug_beitrag", "stellungnahme",
+                  "beruecksichtigung", "beitrag"]
         widgets = {
             'beitrag': HiddenInput(),
         }
@@ -1843,7 +1914,7 @@ class BPlanBeitragStellungnahmeForm(ModelForm):
             'end_datum': DateInput(),
         }
         """
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Initial-Wert aus JSONField setzen
@@ -1861,22 +1932,25 @@ class FPlanBeitragStellungnahmeForm(BPlanBeitragStellungnahmeForm):
         widget=forms.CheckboxSelectMultiple,
         label="Berücksichtigung",
     )
-   
+
     class Meta:
         model = FPlanBeitragStellungnahme
-        fields = ["bezug_beitrag", "stellungnahme", "beruecksichtigung", "beitrag"]
+        fields = ["bezug_beitrag", "stellungnahme",
+                  "beruecksichtigung", "beitrag"]
         widgets = {
             'beitrag': HiddenInput(),
         }
-   
+
 
 class CaptchaForm(forms.Form):
-    consent = forms.BooleanField(required=True, label="Ich habe die Datenschutzbestimmungen der Gebietskörperschaft, sowie die Hinweise zum Datenschutz und den Nutzungsbedingungen der Plattform gelesen und akzeptiere sie.")
+    consent = forms.BooleanField(
+        required=True, label="Ich habe die Datenschutzbestimmungen der Gebietskörperschaft, sowie die Hinweise zum Datenschutz und den Nutzungsbedingungen der Plattform gelesen und akzeptiere sie.")
     captcha = CaptchaField()
 
 
 class GastBeitragAuthenticateForm(ModelForm):
     captcha = CaptchaField()
+
     class Meta:
         model = BPlanBeteiligungBeitrag
         fields = ['email']
@@ -1888,6 +1962,8 @@ https://django-formset.fly.dev/model-collections/
 Das Model wird nur für das schon vorgegebene id Feld genutzt.
 Die url lautet in dem Fall: /plan/<int:planid/beteiligung/<int:pk>/beitrag/create/
 """
+
+
 class BPlanBeteiligungFormFormset(ModelForm):
     id = IntegerField(
         required=False,
@@ -1908,9 +1984,12 @@ class BPlanBeteiligungFormFormset(ModelForm):
         model = BPlanBeteiligung
         fields = ['id']
 
+
 """
 Das Gleiche für FPläne
 """
+
+
 class FPlanBeteiligungFormFormset(ModelForm):
     id = IntegerField(
         required=False,
@@ -1927,41 +2006,46 @@ Einfache ModelForm für das BPlanBeteiligungBeitragBeitrag-Objekt
 Zunächst nur soll nur das Feld beschreibung editierbar sein.
 Und das über ein RichtText-widget - mal sehen, ob das so ok ist - ggf. muessen wir das Model-Field ändern.
 """
+
+
 class BPlanBeteiligungBeitragForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        #self.fields['name'].required = True
+        # self.fields['name'].required = True
         self.fields['typ'].initial = 1000
         self.fields['email'].required = True
         self.fields['eingangsdatum'].initial = datetime.now().date()
 
-
     class Meta:
         model = BPlanBeteiligungBeitrag
-        fields = ['name', 'email', 'eingangsdatum', 'titel', 'beschreibung', 'typ']
+        fields = ['name', 'email', 'eingangsdatum',
+                  'titel', 'beschreibung', 'typ']
         widgets = {
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
             'typ': HiddenInput(),
             'eingangsdatum': HiddenInput(),
         }
 
+
 """
 Die gleiche Klasse für FPläne
 """
+
+
 class FPlanBeteiligungBeitragForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        #self.fields['name'].required = True
+        # self.fields['name'].required = True
         self.fields['typ'].initial = 1000
         self.fields['email'].required = True
         self.fields['eingangsdatum'].initial = datetime.now().date()
 
-
     class Meta:
         model = FPlanBeteiligungBeitrag
-        fields = ['name', 'email', 'eingangsdatum', 'titel', 'beschreibung', 'typ']
+        fields = ['name', 'email', 'eingangsdatum',
+                  'titel', 'beschreibung', 'typ']
         widgets = {
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
             'typ': HiddenInput(),
@@ -1972,6 +2056,8 @@ class FPlanBeteiligungBeitragForm(ModelForm):
 """
 Einfache ModelForm für das BPlanBeteiligungBeitragAnhang-Objekt
 """
+
+
 class BPlanBeteiligungBeitragAnhangForm(ModelForm):
 
     id = IntegerField(
@@ -1983,7 +2069,7 @@ class BPlanBeteiligungBeitragAnhangForm(ModelForm):
         widget=UploadedFileInput(attrs={
             'max-size': settings.XPLANUNG_LIGHT_CONFIG['limits']['upload_file_size_limits']['other'],
         }),
-        help_text="Please do not upload files larger than 1MB",
+        help_text=f"Please do not upload files larger than {settings.XPLANUNG_LIGHT_CONFIG['limits']['upload_file_size_limits']['other'] / 1_000_000:g} MB",
         required=True,
         validators=[validate_file_infection],
     )
@@ -2003,29 +2089,31 @@ class BPlanBeteiligungBeitragAnhangForm(ModelForm):
 
     class Meta:
         model = BPlanBeteiligungBeitragAnhang
-        fields = ['id', 'name', 'typ', 'attachment']#,'beitrag']
-    
+        fields = ['id', 'name', 'typ', 'attachment']  # ,'beitrag']
+
 
 """
 Für FPläne
 """
+
+
 class FPlanBeteiligungBeitragAnhangForm(ModelForm):
 
     id = IntegerField(
         required=False,
         widget=HiddenInput,
     )
-    
+
     attachment = fields.FileField(
         label="Anhang",
         widget=UploadedFileInput(attrs={
             'max-size': settings.XPLANUNG_LIGHT_CONFIG['limits']['upload_file_size_limits']['other'],
         }),
-        help_text="Please do not upload files larger than 1MB",
+        help_text=f"Please do not upload files larger than {settings.XPLANUNG_LIGHT_CONFIG['limits']['upload_file_size_limits']['other'] / 1_000_000:g} MB.",
         required=True,
         validators=[validate_file_infection],
     )
-    
+
     class Meta:
         model = FPlanBeteiligungBeitragAnhang
         fields = ['id', 'name', 'typ', 'attachment']
@@ -2034,18 +2122,20 @@ class FPlanBeteiligungBeitragAnhangForm(ModelForm):
 """
 Collection für die über ein ForeignKey mit dem BPlanBeteiligungBeitrag-Objekt verbundenen BPlanBeteiligungBeitragAnhang-Objekte.
 """
+
+
 class BPlanBeteiligungBeitragAnhangCollection(FormCollection):
     legend = "Anlagen"
     add_label = "Anlage hinzufügen"
     related_field = 'beitrag'
     attachment = BPlanBeteiligungBeitragAnhangForm()
-    #beitrag = BPlanBeteiligungBeitragCollection()
+    # beitrag = BPlanBeteiligungBeitragCollection()
     min_siblings = 0
     max_siblings = 4
 
     def retrieve_instance(self, data):
-        #print(f"DEBUG: retrieve_instance aufgerufen mit ID: {data.get('id')}")
-        #print(f"DEBUG: Aktuelle Instanz der Collection (Beitrag): {self.instance}")
+        # print(f"DEBUG: retrieve_instance aufgerufen mit ID: {data.get('id')}")
+        # print(f"DEBUG: Aktuelle Instanz der Collection (Beitrag): {self.instance}")
         if data := data.get('attachment'):
             try:
                 return self.instance.attachments.get(id=data.get('id') or 0)
@@ -2056,6 +2146,8 @@ class BPlanBeteiligungBeitragAnhangCollection(FormCollection):
 """
 Für FPläne
 """
+
+
 class FPlanBeteiligungBeitragAnhangCollection(FormCollection):
     legend = "Anlagen"
     add_label = "Anlage hinzufügen"
@@ -2075,13 +2167,17 @@ class FPlanBeteiligungBeitragAnhangCollection(FormCollection):
 """
 Collection für die über ein ForeignKey mit dem BPlanBeteiligung-Objekt verbundenen BPlanBeteiligungBeitrag-Objekte.
 """
+
+
 class BPlanBeteiligungBeitragCollection(FormCollection):
-    #print("Instantierung BPlanBeteiligungBeitragCollection")
+    # print("Instantierung BPlanBeteiligungBeitragCollection")
     legend = "Ihr Beitrag"
     add_label = "Beitrag hinzufügen"
-    related_field = 'bplan_beteiligung' # hier wird der related_name des verbundenen Objketes genutzt!
+    # hier wird der related_name des verbundenen Objketes genutzt!
+    related_field = 'bplan_beteiligung'
     beitrag = BPlanBeteiligungBeitragForm()
-    attachments = BPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+    # attribute name MUST match related_name (see note below)
+    attachments = BPlanBeteiligungBeitragAnhangCollection()
     min_siblings = 1
     max_siblings = 1
 
@@ -2090,20 +2186,24 @@ class BPlanBeteiligungBeitragCollection(FormCollection):
             try:
                 return self.instance.beitrag.get(id=data.get('id') or 0)
             except (AttributeError, BPlanBeteiligungBeitrag.DoesNotExist, ValueError):
-                #print("BPlanBeteiligungBeitrag nicht gefunden!")
+                # print("BPlanBeteiligungBeitrag nicht gefunden!")
                 return BPlanBeteiligungBeitrag(bplan_beteiligung=self.instance)
 
 
 """
 Für FPläne
 """
+
+
 class FPlanBeteiligungBeitragCollection(FormCollection):
-    #print("Instantierung FPlanBeteiligungBeitragCollection")
+    # print("Instantierung FPlanBeteiligungBeitragCollection")
     legend = "Ihr Beitrag"
     add_label = "Beitrag hinzufügen"
-    related_field = 'fplan_beteiligung' # hier wird der related_name des verbundenen Objketes genutzt!
+    # hier wird der related_name des verbundenen Objketes genutzt!
+    related_field = 'fplan_beteiligung'
     beitrag = FPlanBeteiligungBeitragForm()
-    attachments = FPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+    # attribute name MUST match related_name (see note below)
+    attachments = FPlanBeteiligungBeitragAnhangCollection()
     min_siblings = 1
     max_siblings = 1
 
@@ -2112,7 +2212,7 @@ class FPlanBeteiligungBeitragCollection(FormCollection):
             try:
                 return self.instance.beitrag.get(id=data.get('id') or 0)
             except (AttributeError, FPlanBeteiligungBeitrag.DoesNotExist, ValueError):
-                #print("BPlanBeteiligungBeitrag nicht gefunden!")
+                # print("BPlanBeteiligungBeitrag nicht gefunden!")
                 return FPlanBeteiligungBeitrag(fplan_beteiligung=self.instance)
 
 
@@ -2121,13 +2221,16 @@ class BeteiligungEinwilligungsoptionenForm(forms.Form):
     Falls man die Einwilligungsoptionen später alle getrennt im Formular auflisten will
     """
     # Hier noch die Pflichtfelder zuden Einwilligungsfragen mit aufnehmen
+
     def __init__(self, *args, **kwargs):
         today = datetime.now().date()
-        einwilligungsfragen = ConsentOption.objects.filter(obsolete=False, mandatory=True, valid_from__lte=today, valid_until__gte=today, type='commentator')
+        einwilligungsfragen = ConsentOption.objects.filter(
+            obsolete=False, mandatory=True, valid_from__lte=today, valid_until__gte=today, type='commentator')
         super().__init__(*args, **kwargs)
 
         for instance in einwilligungsfragen:
-            self.fields[str(uuid.uuid4())] = forms.BooleanField(label=instance.title, required=True)
+            self.fields[str(uuid.uuid4())] = forms.BooleanField(
+                label=instance.title, required=True)
 
 
 class BPlanBeteiligungCollection(FormCollection):
@@ -2140,6 +2243,8 @@ class BPlanBeteiligungCollection(FormCollection):
 """
 Für FPläne
 """
+
+
 class FPlanBeteiligungCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
     fplan_beteiligung = FPlanBeteiligungFormFormset()
@@ -2151,6 +2256,7 @@ class FPlanBeteiligungCollection(FormCollection):
 Klassen für die Verwaltung aller Einträge - auch der analogen.
 Zunächst die Standard ModelForms für die Beitrag Objekte
 """
+
 
 class BPlanBeteiligungBeitragGenericForm(ModelForm):
 
@@ -2166,18 +2272,19 @@ class BPlanBeteiligungBeitragGenericForm(ModelForm):
         # Bestehende Choices abrufen und filtern
         original_choices = self.fields['typ'].choices
         # Beispiel: Nur '2000', '3000' und '4000' behalten
-        filtered_choices = [c for c in original_choices if c[0] in ['2000', '3000', '4000']]
+        filtered_choices = [
+            c for c in original_choices if c[0] in ['2000', '3000', '4000']]
         self.fields['typ'].choices = filtered_choices
         if not self.instance.pk:
             self.fields['eingangsdatum'].initial = None
-            #self.fields['eingangsdatum'].widget.attrs.pop('value', None)
+            # self.fields['eingangsdatum'].widget.attrs.pop('value', None)
             # Instanz-Default überschreiben damit Django kein value rendert
-            #self.instance.eingangsdatum = None
+            # self.instance.eingangsdatum = None
 
     # in der save Funktion kann man die Instanz einfach anpassen - hidden fields sind nicht sinnvoll
     def save(self, commit=True):
         instance = super().save(commit=False)
-        #print("save ausgeführt - jetzt überschreiben ...")
+        # print("save ausgeführt - jetzt überschreiben ...")
         instance.approved = True
         if commit:
             instance.save()
@@ -2197,7 +2304,8 @@ class BPlanBeteiligungBeitragGenericForm(ModelForm):
 
     class Meta:
         model = BPlanBeteiligungBeitrag
-        fields = ['id', 'typ', 'eingangsdatum', 'name', 'email', 'titel', 'beschreibung', 'bplan_beteiligung']
+        fields = ['id', 'typ', 'eingangsdatum', 'name', 'email',
+                  'titel', 'beschreibung', 'bplan_beteiligung']
         widgets = {
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
             'bplan_beteiligung': HiddenInput(),
@@ -2214,7 +2322,8 @@ class FPlanBeteiligungBeitragGenericForm(ModelForm):
         # Bestehende Choices abrufen und filtern
         original_choices = self.fields['typ'].choices
         # Beispiel: Nur '2000', '3000' und '4000' behalten
-        filtered_choices = [c for c in original_choices if c[0] in ['2000', '3000', '4000']]
+        filtered_choices = [
+            c for c in original_choices if c[0] in ['2000', '3000', '4000']]
         self.fields['typ'].choices = filtered_choices
 
     def save(self, commit=True):
@@ -2238,36 +2347,41 @@ class FPlanBeteiligungBeitragGenericForm(ModelForm):
 
     class Meta:
         model = FPlanBeteiligungBeitrag
-        fields = ['typ', 'eingangsdatum', 'name', 'email', 'titel', 'beschreibung', 'approved']
+        fields = ['typ', 'eingangsdatum', 'name',
+                  'email', 'titel', 'beschreibung', 'approved']
         widgets = {
             'beschreibung': RichTextarea(attrs={'cols': '80', 'rows': '3'}),
             'eingangsdatum': widgets.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'pattern': r'\d{4}-\d{2}-\d{2}'}),
-            #'approved': HiddenInput(),
+            # 'approved': HiddenInput(),
         }
+
 
 """
 Andere Formulare für die TOEB-Beiträge
 """
+
+
 class BPlanBeteiligungBeitragToebForm(ModelForm):
 
     id = IntegerField(
         required=False,
         widget=HiddenInput,
     )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        #self.fields['name'].required = True
-        #self.fields['email'].required = False
+        # self.fields['name'].required = True
+        # self.fields['email'].required = False
         # Bestehende Choices abrufen und filtern
-        #original_choices = self.fields['typ'].choices
+        # original_choices = self.fields['typ'].choices
         # Beispiel: Nur '2000', '3000' und '4000' behalten
-        #filtered_choices = [c for c in original_choices if c[0] in ['2000', '3000', '4000']]
-        #self.fields['typ'].choices = filtered_choices
+        # filtered_choices = [c for c in original_choices if c[0] in ['2000', '3000', '4000']]
+        # self.fields['typ'].choices = filtered_choices
 
     # in der save Funktion kann man die Instanz einfach anpassen - hidden fields sind nicht sinnvoll
     def save(self, commit=True):
         instance = super().save(commit=False)
-        #print("save ausgeführt - jetzt überschreiben ...")
+        # print("save ausgeführt - jetzt überschreiben ...")
         instance.approved = True
         if commit:
             instance.save()
@@ -2294,6 +2408,7 @@ class FPlanBeteiligungBeitragToebForm(BPlanBeteiligungBeitragToebForm):
             'email': HiddenInput(),
         }
 
+
 """
 Formular Collections für den generischen Fall - Sicht des Sachbearbeiters - er hat alle Freiheiten verschiedene 
 Typen von Beiträgen zu erfassen - hier schliessen wir die Online-Varianten aus- da diese ja nicht vom Sachbearbeiter
@@ -2302,71 +2417,92 @@ Wichtig ist hier zu klären, wie die Formulare aus einer Instanz befüllt werden
 
 """
 
+
 class BPlanBeteiligungBeitragGenericCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
     legend = "Beitrag"
     beitrag = BPlanBeteiligungBeitragGenericForm()
-    attachments = BPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+    # attribute name MUST match related_name (see note below)
+    attachments = BPlanBeteiligungBeitragAnhangCollection()
 
-    #def retrieve_initial_dict(self, name, instance):
+    # def retrieve_initial_dict(self, name, instance):
     #    initial = super().retrieve_initial_dict(name, instance)
     #    if name == 'beitrag' and not instance.pk:
     #        initial['eingangsdatum'] = datetime.date.today().isoformat()
     #    return initial
 
+
 """
 Für FPläne
 """
+
+
 class FPlanBeteiligungBeitragGenericCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
     legend = "Beitrag"
     add_label = "Beitrag hinzufügen"
     beitrag = FPlanBeteiligungBeitragGenericForm()
-    attachments = FPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+    # attribute name MUST match related_name (see note below)
+    attachments = FPlanBeteiligungBeitragAnhangCollection()
+
 
 """
 Für TOEB-Beiträge
 """
+
+
 class BPlanBeteiligungBeitragToebCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
     legend = "Beitrag"
     beitrag = BPlanBeteiligungBeitragToebForm()
-    attachments = BPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+    # attribute name MUST match related_name (see note below)
+    attachments = BPlanBeteiligungBeitragAnhangCollection()
+
 
 """
 Für FPläne
 """
+
+
 class FPlanBeteiligungBeitragToebCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
     legend = "Beitrag"
     add_label = "Beitrag hinzufügen"
     beitrag = FPlanBeteiligungBeitragToebForm()
-    attachments = FPlanBeteiligungBeitragAnhangCollection()  # attribute name MUST match related_name (see note below)
+    # attribute name MUST match related_name (see note below)
+    attachments = FPlanBeteiligungBeitragAnhangCollection()
 
 
 """
 Generisches Formulare
 Für BPläne
 """
+
+
 class BPlanBeteiligungGenericCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
     bplan_beteiligung = BPlanBeteiligungFormFormset()
     beitrag = BPlanBeteiligungBeitragGenericCollection()
-    #captcha = CaptchaForm()
+    # captcha = CaptchaForm()
+
 
 """
 Für FPläne
 """
+
+
 class FPlanBeteiligungGenericCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
     fplan_beteiligung = FPlanBeteiligungFormFormset()
     beitrag = FPlanBeteiligungBeitragGenericCollection()
-    #captcha = CaptchaForm()
+    # captcha = CaptchaForm()
 
 
 """
 Für TOEB-Beiträge
 """
+
+
 class BPlanBeteiligungToebCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
     bplan_beteiligung = BPlanBeteiligungFormFormset()
@@ -2376,6 +2512,8 @@ class BPlanBeteiligungToebCollection(FormCollection):
 """
 Für FPläne
 """
+
+
 class FPlanBeteiligungToebCollection(FormCollection):
     default_renderer = FormRenderer(field_css_classes='mb-3')
     fplan_beteiligung = FPlanBeteiligungFormFormset()
@@ -2386,11 +2524,12 @@ class RequestForRoleCreateForm(ModelForm):
     """
     for crispy-forms
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
         self.fields['organizations'].widget = GemeindeSelect3()
-        
+
         self.helper.layout = Layout(
             Fieldset(
                 'Antrag Rollenzuweisung',
@@ -2402,7 +2541,7 @@ class RequestForRoleCreateForm(ModelForm):
                         Field("organizations"),
                     ),
                 ),
-            ), 
+            ),
             Submit("submit", "Antrag stellen")
         )
 
@@ -2451,10 +2590,6 @@ class RequestForRoleConfirmForm(ModelForm):
         """
 
 
-from formset.richtext.controls import DialogControl
-from formset.richtext.dialogs import SimpleLinkDialogForm
-from formset.richtext import controls
-
 class ConsentOptionForm(ModelForm):
     """
     Klasse für die Verwaltung von Zustimmungsoptionen - nutzt django-formset wegen Support für RichText-Field.
@@ -2465,58 +2600,61 @@ class ConsentOptionForm(ModelForm):
         form_css_classes='row',
         field_css_classes={
             '*': 'mb-2 col-12',
-            
+
             'valid_from': 'mb-2 col-4',
             'valid_until': 'mb-2 col-8',
-            #'start_datum': 'mb-2 col-4',
-            #'end_datum': 'mb-2 col-4',
-            #'allow_online_beitrag': 'mb-2 col-4',
-            #'publikation_internet': 'mb-2 col-4',
+            # 'start_datum': 'mb-2 col-4',
+            # 'end_datum': 'mb-2 col-4',
+            # 'allow_online_beitrag': 'mb-2 col-4',
+            # 'publikation_internet': 'mb-2 col-4',
         },
     )
 
     class Meta:
         model = ConsentOption
-        fields = ['type', 'title', 'description', 'mandatory', 'opt_out', 'valid_from', 'valid_until', 'validity_period']
+        fields = ['type', 'title', 'description', 'mandatory',
+                  'opt_out', 'valid_from', 'valid_until', 'validity_period']
         widgets = {
             'description': RichTextarea(attrs={'cols': '80', 'rows': '3'}, control_elements=[
-                    controls.Heading(),
-                    controls.Underline(),
-                    controls.BulletList(),
-                    controls.OrderedList(),
-                    controls.Bold(),
-                    controls.Italic(),
-                    DialogControl(SimpleLinkDialogForm())
-                ]),
-            'valid_from': DateInput(attrs={
-                'min': now().isoformat(),
-                #'max': (now() + timedelta(weeks=2)).isoformat(),
-            }),
+                controls.Heading(),
+                controls.Underline(),
+                controls.BulletList(),
+                controls.OrderedList(),
+                controls.Bold(),
+                controls.Italic(),
+                DialogControl(SimpleLinkDialogForm())
+            ]),
+            # 'valid_from': DateInput(attrs={
+            #    'min': now().isoformat(),
+            # 'max': (now() + timedelta(weeks=2)).isoformat(),
+            # }),
+            'valid_from': DateInput(),
             'valid_until': DateInput(),
         }
 
-from formset.widgets import Selectize
 
 class OrganizationUserAssignmentFormAdmin(FormMixin, forms.Form):
     default_renderer = FormRenderer(
-        form_css_classes = 'row',
+        form_css_classes='row',
         field_css_classes={
-            #'*': 'mb-2 col-12',
+            # '*': 'mb-2 col-12',
         },
     )
     organization = forms.ModelChoiceField(
-        queryset=AdministrativeOrganization.objects.all().only('name', 'name_part', 'id', 'type'),
+        queryset=AdministrativeOrganization.objects.all().only(
+            'name', 'name_part', 'id', 'type'),
         label="Organisation",
-        #widget=forms.Select(attrs={
-        widget = Selectize(
+        # widget=forms.Select(attrs={
+        widget=Selectize(
             search_lookup='name__icontains',
             attrs={
-            'class': 'form-select',
-            'df-change': 'reload'  # Lädt Nutzer-Listen beim Wechsel neu
-        })
+                'class': 'form-select',
+                'df-change': 'reload'  # Lädt Nutzer-Listen beim Wechsel neu
+            })
     )
     admins = forms.ModelMultipleChoiceField(
-        queryset=User.objects.all().annotate(full_name=Concat('username', Value(' ('), 'email', Value(')'), output_field=CharField())),
+        queryset=User.objects.all().annotate(full_name=Concat(
+            'username', Value(' ('), 'email', Value(')'), output_field=CharField())),
         required=False,
         label="Nutzer",
         widget=DualSelector(
@@ -2529,12 +2667,12 @@ class OrganizationUserAssignmentFormAdmin(FormMixin, forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
-        #print("admin form")
+        # print("admin form")
         organization_id = kwargs.pop('organization_id', None)
         super().__init__(*args, **kwargs)
         # Label überschreiben
         self.fields['admins'].label_from_instance = lambda obj: obj.full_name
-        
+
         if organization_id:
             # Bereits zugewiesene Nutzer als initial values setzen
             org_users = AdminOrgaUser.objects.filter(
@@ -2546,19 +2684,21 @@ class OrganizationUserAssignmentFormAdmin(FormMixin, forms.Form):
             self.fields['admins'].initial = User.objects.filter(
                 id__in=org_users_initial,
             )
-            self.fields['organization'].initial = AdministrativeOrganization.objects.get(pk=organization_id)
+            self.fields['organization'].initial = AdministrativeOrganization.objects.get(
+                pk=organization_id)
 
     def save(self):
         """Speichert die Nutzer-Rollen-Zuweisungen"""
         organization = self.cleaned_data['organization']
         admins = self.cleaned_data['admins']
-        
+
         # Alle existierenden admin-Zuweisungen für diese Organisation auf False setzen!
-        admin_orga_users_for_organisation = AdminOrgaUser.objects.filter(organization=organization, is_admin=True)
+        admin_orga_users_for_organisation = AdminOrgaUser.objects.filter(
+            organization=organization, is_admin=True)
         for admin_orga_user in admin_orga_users_for_organisation:
             admin_orga_user.is_admin = False
             admin_orga_user.save()
-        
+
         # AdminOrgaUser neu erstellen oder is_admin = True setzen
         for user in admins:
             if not AdminOrgaUser.objects.filter(
@@ -2578,7 +2718,7 @@ class OrganizationUserAssignmentFormAdmin(FormMixin, forms.Form):
                 )
                 org_user.is_admin = True
                 org_user.save()
-        
+
         return organization
 
 
@@ -2587,24 +2727,26 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
     org_users_initial = None
     org_users_single_toebunit = None
     default_renderer = FormRenderer(
-        form_css_classes = 'row',
+        form_css_classes='row',
         field_css_classes={
-            #'*': 'mb-2 col-12',
+            # '*': 'mb-2 col-12',
         },
     )
     organization = forms.ModelChoiceField(
-        queryset=AdministrativeOrganization.objects.all().only('name', 'name_part', 'id', 'type'),
-        #queryset=AdministrativeOrganization.objects.none(),
+        queryset=AdministrativeOrganization.objects.all().only(
+            'name', 'name_part', 'id', 'type'),
+        # queryset=AdministrativeOrganization.objects.none(),
         label="Organisation",
-        widget = Selectize(
+        widget=Selectize(
             search_lookup='name__icontains',
             attrs={
-            'class': 'form-select',
-            'df-change': 'reload'  # Lädt Nutzer-Listen beim Wechsel neu
-        })
+                'class': 'form-select',
+                'df-change': 'reload'  # Lädt Nutzer-Listen beim Wechsel neu
+            })
     )
     toeb_reporter = forms.ModelMultipleChoiceField(
-        queryset=User.objects.all().annotate(full_name=Concat('username', Value(' ('), 'email', Value(')'), output_field=CharField())),
+        queryset=User.objects.all().annotate(full_name=Concat(
+            'username', Value(' ('), 'email', Value(')'), output_field=CharField())),
         required=False,
         label="Nutzer",
         widget=DualSelector(
@@ -2617,8 +2759,8 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
-        #print("toeb reporter form")
-        organization_id = kwargs.pop('organization_id', None) 
+        # print("toeb reporter form")
+        organization_id = kwargs.pop('organization_id', None)
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         # Label überschreiben
@@ -2635,7 +2777,8 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
                     admin_orga_users__is_admin=True
                 ).only('name', 'name_part', 'id', 'type').distinct()
         else:
-            self.fields['organization'].queryset = AdministrativeOrganization.objects.none()        
+            self.fields['organization'].queryset = AdministrativeOrganization.objects.none(
+            )
         if organization_id:
             # Bereits zugewiesene Nutzer als initial values setzen
             org_users_initial = AdminOrgaUser.objects.filter(
@@ -2646,33 +2789,38 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
             self.fields['toeb_reporter'].initial = User.objects.filter(
                 id__in=org_users_initial,
             )
-            self.fields['organization'].initial = AdministrativeOrganization.objects.get(pk=organization_id)
+            self.fields['organization'].initial = AdministrativeOrganization.objects.get(
+                pk=organization_id)
             # Selektion der vernüpften TOEBUnits die sich aktuell in einem Trägerbeteiligungsverfahren befinden - die müssen mindestens einen TOEB-Reporter behalten!
             # Wenn kein TOEB-Reporter zugewiesen ist, dann steht die Info sonst niemandem mehr zur Verfügung!
             # Am besten die Liste unterhalb des Formulars anzeigen
-            toeb_units = ToebUnit.objects.filter(organization__id=organization_id)
-            laufende_toeb_verfahren_bplan = BPlanBeteiligung.objects.filter(assigned_toebs__in=toeb_units, end_datum__gte=timezone.now(), bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), xplan_id=F('bplan__id'), beteiligung_id=F('id'))
-            laufende_toeb_verfahren_fplan = FPlanBeteiligung.objects.filter(assigned_toebs__in=toeb_units, end_datum__gte=timezone.now(), bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), beteiligung_id=F('id'))
-            toeb_beteiligungen_plaene = laufende_toeb_verfahren_bplan.union(laufende_toeb_verfahren_fplan).order_by('end_datum')
+            toeb_units = ToebUnit.objects.filter(
+                organization__id=organization_id)
+            laufende_toeb_verfahren_bplan = BPlanBeteiligung.objects.filter(assigned_toebs__in=toeb_units, end_datum__gte=timezone.now(
+            ), bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), xplan_id=F('bplan__id'), beteiligung_id=F('id'))
+            laufende_toeb_verfahren_fplan = FPlanBeteiligung.objects.filter(assigned_toebs__in=toeb_units, end_datum__gte=timezone.now(
+            ), bekanntmachung_datum__lte=timezone.now()).annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), beteiligung_id=F('id'))
+            toeb_beteiligungen_plaene = laufende_toeb_verfahren_bplan.union(
+                laufende_toeb_verfahren_fplan).order_by('end_datum')
             org_users_single_toebunit = []
             for beteiligung in toeb_beteiligungen_plaene:
-                #print(str(beteiligung.beteiligung_id) + " - " + beteiligung.xplan_name)
+                # print(str(beteiligung.beteiligung_id) + " - " + beteiligung.xplan_name)
                 for toeb in beteiligung.assigned_toebs.filter(organization__id=organization_id):
-                    #print(toeb.name + ":")
-                    #print("Anzahl TOEB-Reporter: " + str(len(toeb.editors.all())))
+                    # print(toeb.name + ":")
+                    # print("Anzahl TOEB-Reporter: " + str(len(toeb.editors.all())))
                     for editor in toeb.editors.all():
                         if len(toeb.editors.all()) == 1:
                             org_users_single_toebunit.append(editor.user_id)
                         # wenn nur ein TOEB-Reporter zugewiesen wurde, muss er in die Liste der zu sperrenden User aufgenommen werden
-                        #print(str(editor.user.id) + ": " + editor.user.username + " ("+ editor.user.email + ")")
-            #print("Zu sichernde user: ")
-            #for user in org_users_single_toebunit:
+                        # print(str(editor.user.id) + ": " + editor.user.username + " ("+ editor.user.email + ")")
+            # print("Zu sichernde user: ")
+            # for user in org_users_single_toebunit:
             #    print(str(user))
             # In die Instanz schreiben um später vergleichen zu können
-            self.org_users_single_toebunit = org_users_single_toebunit 
+            self.org_users_single_toebunit = org_users_single_toebunit
 
     def save(self):
-        #print("Save Funktion des Formulars")
+        # print("Save Funktion des Formulars")
         """Speichert die Nutzer-Rollen-Zuweisungen"""
         organization = self.cleaned_data['organization']
         toeb_reporter = self.cleaned_data['toeb_reporter']
@@ -2681,7 +2829,7 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
         # 2. ALTE IDs (Initialzustand) frisch aus der Datenbank laden!
         # Da wir die 'organization' aus cleaned_data haben, kennen wir die korrekte ID.
         org_users_initial = list(AdminOrgaUser.objects.filter(
-            organization=organization, 
+            organization=organization,
             is_toeb_reporter=True
         ).values_list('user__id', flat=True))
         # 3. Sicherheitsliste (Single Toeb Units) ebenfalls frisch ermitteln!
@@ -2689,16 +2837,17 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
         org_users_single_toebunit = []
         toeb_units = ToebUnit.objects.filter(organization=organization)
         laufende_toeb_verfahren_bplan = BPlanBeteiligung.objects.filter(
-            assigned_toebs__in=toeb_units, 
-            end_datum__gte=timezone.now(), 
+            assigned_toebs__in=toeb_units,
+            end_datum__gte=timezone.now(),
             bekanntmachung_datum__lte=timezone.now()
         ).annotate(xplan_name=F('bplan__name'), plantyp=Value('BPlan'), xplan_id=F('bplan__id'), verfahren_id=F('id'))
         laufende_toeb_verfahren_fplan = FPlanBeteiligung.objects.filter(
-            assigned_toebs__in=toeb_units, 
-            end_datum__gte=timezone.now(), 
+            assigned_toebs__in=toeb_units,
+            end_datum__gte=timezone.now(),
             bekanntmachung_datum__lte=timezone.now()
         ).annotate(xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), verfahren_id=F('id'))
-        toeb_beteiligungen_plaene = laufende_toeb_verfahren_bplan.union(laufende_toeb_verfahren_fplan)
+        toeb_beteiligungen_plaene = laufende_toeb_verfahren_bplan.union(
+            laufende_toeb_verfahren_fplan)
         for verfahren in toeb_beteiligungen_plaene:
             for toeb in verfahren.assigned_toebs.filter(organization=organization):
                 # Ermitteln, wie viele Reporter dieser konkrete TOEB hat
@@ -2707,34 +2856,34 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
                 if len(active_editors) == 1:
                     org_users_single_toebunit.append(active_editors[0].user_id)
         # Debug-Ausgaben
-        #print(f"Neue user ids für TOEB-Reporter Rolle: {new_users}")
-        #print(f"Alte user ids für TOEB-Reporter Rolle: {org_users_initial}")
-        # Differenz - Nutzer die zwar im initialen Set, aber nicht mehr in der neuen Liste auftauchen   
+        # print(f"Neue user ids für TOEB-Reporter Rolle: {new_users}")
+        # print(f"Alte user ids für TOEB-Reporter Rolle: {org_users_initial}")
+        # Differenz - Nutzer die zwar im initialen Set, aber nicht mehr in der neuen Liste auftauchen
         zu_entziehen = list(set(org_users_initial) - set(new_users))
         # Diese müssen die Rolle toeb_reporter entzogen bekommen, wenn sie nicht self.org_users_single_toebunit vorhanden sind.
         # Sonst Hinweis darauf, dass die Rolle aktuell nicht entzogen werden kann
-        #secured_users = User.objects.filter(id__in=self.org_users_single_toebunit)
+        # secured_users = User.objects.filter(id__in=self.org_users_single_toebunit)
         some_user_excluded = False
         for user_id in zu_entziehen:
             if user_id not in org_users_single_toebunit:
                 org_user = AdminOrgaUser.objects.get(
-                        organization=organization,
-                        user__id=user_id
+                    organization=organization,
+                    user__id=user_id
                 )
                 org_user.is_toeb_reporter = False
                 org_user.save()
             else:
                 some_user_excluded = True
         # Message erzeugen mit Nutzern, deren Rollen nicht angepasst werden können - müssen wir in den View verlagern!
-        #if some_user_excluded:
-            #print("some user excluded!")
-            #messages.add_message(self.request, messages.INFO, 'Manche Nutzer koennen nicht angepasst werden')
+        # if some_user_excluded:
+            # print("some user excluded!")
+            # messages.add_message(self.request, messages.INFO, 'Manche Nutzer koennen nicht angepasst werden')
         self.some_user_excluded = some_user_excluded
         self.org_users_single_toebunit = org_users_single_toebunit
-        neu_anzulegen =  list(set(new_users) - set(org_users_initial))
+        neu_anzulegen = list(set(new_users) - set(org_users_initial))
         for user_id in neu_anzulegen:
             # Nutzer aus der DB ziehen
-            user=User.objects.get(pk=user_id)
+            user = User.objects.get(pk=user_id)
             # Wenn noch keine Rolle zugewiesen
             if not AdminOrgaUser.objects.filter(
                 organization=organization,
@@ -2756,24 +2905,25 @@ class OrganizationUserAssignmentFormToebReporter(FormMixin, forms.Form):
                 org_user.save()
             pass
         return organization
-    
+
 
 class UserOrganizationFormRoles(FormMixin, forms.Form):
     default_renderer = FormRenderer(
-        form_css_classes = 'row',
+        form_css_classes='row',
         field_css_classes={
-            #'*': 'mb-2 col-12',
+            # '*': 'mb-2 col-12',
         },
     )
     user = forms.ModelChoiceField(
-        queryset=User.objects.all().only('username', 'email', 'id').annotate(full_name=Concat('username', Value(' ('), 'email', Value(')'), output_field=CharField())),
+        queryset=User.objects.all().only('username', 'email', 'id').annotate(full_name=Concat(
+            'username', Value(' ('), 'email', Value(')'), output_field=CharField())),
         label="Nutzer",
-        widget = Selectize(
+        widget=Selectize(
             search_lookup='username__icontains',
             attrs={
-            'class': 'form-select',
-            'df-change': 'reload'  # Lädt Nutzer-Listen beim Wechsel neu
-        })
+                'class': 'form-select',
+                'df-change': 'reload'  # Lädt Nutzer-Listen beim Wechsel neu
+            })
     )
 
     def __init__(self, *args, **kwargs):
@@ -2782,7 +2932,7 @@ class UserOrganizationFormRoles(FormMixin, forms.Form):
         super().__init__(*args, **kwargs)
         # Label überschreiben
         self.fields['user'].label_from_instance = lambda obj: obj.full_name
-        
+
         if user_id:
             self.user_id = user_id
             self.fields['user'].initial = User.objects.get(pk=user_id)

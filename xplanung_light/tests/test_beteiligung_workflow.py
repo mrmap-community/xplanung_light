@@ -135,7 +135,7 @@ class _BeteiligungBeitragWorkflowMixin:
         """
         # Gemeinde-Admin darf einen Beitrag jederzeit freischalten (approved=True).
         self.client.force_login(self.gemeinde_admin)
-        response = self.client.get(self._url('activate'))
+        response = self.client.post(self._url('activate'))
         self.assertEqual(response.status_code, 302)
         self.assertTrue(self._reload().approved)
 
@@ -153,10 +153,10 @@ class _BeteiligungBeitragWorkflowMixin:
         # Zurückziehen setzt withdrawn=True, Reaktivieren setzt es wieder zurück.
         self.client.force_login(self.gemeinde_admin)
 
-        self.client.get(self._url('withdraw'))
+        self.client.post(self._url('withdraw'))
         self.assertTrue(self._reload().withdrawn)
 
-        self.client.get(self._url('reactivate'))
+        self.client.post(self._url('reactivate'))
         self.assertFalse(self._reload().withdrawn)
 
     # --- Gast-Nutzer ------------------------------------------------------
@@ -199,9 +199,18 @@ class _BeteiligungBeitragWorkflowMixin:
             Status 200 und der Beitrag ist freigeschaltet.
         """
         self._put_beitrag_in_session()
-        response = self.client.get(self._url('activate'))
-        # Gast bekommt die Detailseite gerendert, keinen Redirect
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(self._url('activate'))
+        # Gast bekommt jetzt einen Redirect
+        self.assertRedirects(
+            response,
+            reverse('gastbeteiligungbeitrag-detail', kwargs={
+                'plantyp': self.PLANTYP,
+                'planid': self.PLAN_PK,
+                'beteiligungid': self.beteiligung.pk,
+                'generic_id': str(self.beitrag.generic_id),
+            }),
+            fetch_redirect_response=False,
+        )
         self.assertTrue(self._reload().approved)
 
     def test_anonymous_with_authenticated_session_can_withdraw(self):
@@ -217,7 +226,7 @@ class _BeteiligungBeitragWorkflowMixin:
         """
         # Gleicher Fall wie bei activate, hier für den Rückzug der Stellungnahme.
         self._put_beitrag_in_session()
-        self.client.get(self._url('withdraw'))
+        self.client.post(self._url('withdraw'))
         self.assertTrue(self._reload().withdrawn)
 
     def test_session_of_other_beitrag_does_not_grant_access(self):
@@ -234,7 +243,7 @@ class _BeteiligungBeitragWorkflowMixin:
         session['beitrag_generic_id'] = str(fremder_beitrag.generic_id)
         session.save()
 
-        response = self.client.get(self._url('activate'))
+        response = self.client.post(self._url('activate'))
         self.assertEqual(response.status_code, 302)
         self.assertIn('authenticate', response.url)
         self.assertFalse(self._reload().approved)
@@ -253,10 +262,65 @@ class _BeteiligungBeitragWorkflowMixin:
             Weiterleitung zur Authentifizierung und der Beitrag bleibt nicht freigeschaltet.
         """
         self.client.force_login(self.fremder_user)
-        response = self.client.get(self._url('activate'))
+        response = self.client.post(self._url('activate'))
         self.assertEqual(response.status_code, 302)
         self.assertIn('authenticate', response.url)
         self.assertFalse(self._reload().approved)
+
+
+    # --- GET ändert nichts, nur POST ----------------------------------------
+
+    def test_get_shows_confirmation_and_changes_nothing_for_admin(self):
+        """
+        Was wird geprüft:
+            Der Administrator öffnet die Links zum Aktivieren, Zurückziehen und Reaktivieren
+            per GET.
+
+        Warum:
+            GET muss "safe" sein: Prefetching, Link-Scanner und fremde Seiten (<img>, Link)
+            dürfen keinen Status ändern.
+
+        Erwartung:
+            Status 200 mit der Bestätigungsseite; approved und withdrawn bleiben unverändert.
+        """
+        self.client.force_login(self.gemeinde_admin)
+        self._assert_get_only_confirms()
+
+    def test_get_shows_confirmation_and_changes_nothing_for_guest(self):
+        """Dasselbe für einen Gast mit Token in der Session."""
+        self._put_beitrag_in_session()
+        self._assert_get_only_confirms()
+
+    def _assert_get_only_confirms(self):
+        for action in ('activate', 'withdraw', 'reactivate'):
+            with self.subTest(action=action):
+                response = self.client.get(self._url(action))
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(
+                    response, 'xplanung_light/beitrag_action_confirm.html')
+                beitrag = self._reload()
+                self.assertFalse(beitrag.approved)
+                self.assertFalse(beitrag.withdrawn)
+
+    def test_other_http_methods_are_rejected(self):
+        """PUT/DELETE auf den Aktionslinks werden mit 405 abgelehnt und ändern nichts."""
+        self.client.force_login(self.gemeinde_admin)
+        for method in (self.client.put, self.client.delete):
+            with self.subTest(method=method.__name__):
+                response = method(self._url('activate'))
+                self.assertEqual(response.status_code, 405)
+                self.assertFalse(self._reload().approved)
+
+    def test_unauthorized_post_is_redirected_and_changes_nothing(self):
+        """Anonym ohne Token: POST auf alle drei Aktionen führt zur Authentifizierung."""
+        for action in ('activate', 'withdraw', 'reactivate'):
+            with self.subTest(action=action):
+                response = self.client.post(self._url(action))
+                self.assertEqual(response.status_code, 302)
+                self.assertIn('authenticate', response.url)
+                beitrag = self._reload()
+                self.assertFalse(beitrag.approved)
+                self.assertFalse(beitrag.withdrawn)
 
 
 class BeteiligungBeitragWorkflow(_BeteiligungBeitragWorkflowMixin, TestCase):
