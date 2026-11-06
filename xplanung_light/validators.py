@@ -193,12 +193,8 @@ def bplan_upload_file_validator(xplan_file):
             if mime_type not in allowed_mimetypes:
                 validation_error_messages.append(
                     "ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
-            # check unkomprimierte Dateigröße
-            size = file.file_size
-            # print(size)
-            if size > limits['max_uncompressed_file_size']:
-                validation_error_messages.append("Einzelne unkomprimierte Dateigröße übersteigt " + str(
-                    limits['max_uncompressed_file_size'] / 1_000_000) + "MB!")
+            # Die unkomprimierte Einzelgröße wurde oben bereits geprüft (fruher Abbruch);
+            # eine zweite Pruefung hier war toter Code und ist entfernt.
             # TODO: ggf. Virenscanner über Datei laufen lassen!
             # check GML-Datei
             if file.filename.endswith('.gml') and mime_type in allowed_gml_mimetypes:
@@ -277,12 +273,8 @@ def fplan_upload_file_validator(xplan_file):
             if mime_type not in allowed_mimetypes:
                 validation_error_messages.append(
                     "ZIP-Archiv beinhaltet eine Datei vom nicht zugelassenen MimeType: " + mime_type + "!")
-            # check unkomprimierte Dateigröße
-            size = file.file_size
-            # print(size)
-            if size > limits['max_uncompressed_file_size']:
-                validation_error_messages.append("Einzelne unkomprimierte Dateigröße übersteigt " + str(
-                    limits['max_uncompressed_file_size'] / 1_000_000) + "MB!")
+            # Die unkomprimierte Einzelgröße wurde oben bereits geprüft (fruher Abbruch);
+            # eine zweite Pruefung hier war toter Code und ist entfernt.
             # TODO: ggf. Virenscanner über Datei laufen lassen!
             # check GML-Datei
             if file.filename.endswith('.gml') and mime_type in allowed_gml_mimetypes:
@@ -383,12 +375,8 @@ def bplan_content_validator(xplan_file):
                     test = root.find(value['xpath'] +
                                      value['xplan_element'], ns).text
                     if test != None:
-                        if value['xplan_element'] == 'xplan:ags':
-                            if len(test) == 8:
-                                gemeinde_ags = test
-                            else:
-                                validation_error_messages.append(forms.ValidationError(
-                                    "Die gefundene AGS im Dokument hat keine 8 Stellen - es werden nur 8-stellige AGS akzeptiert!"))
+                        # Ein Pflichtfeld 'xplan:ags' gibt es in der Liste nicht (auskommentiert);
+                        # der zugehoerige Zweig war toter Code und ist entfernt.
                         result[key] = test
                     else:
                        validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!"))
@@ -530,12 +518,8 @@ def fplan_content_validator(xplan_file):
                     test = root.find(value['xpath'] +
                                      value['xplan_element'], ns).text
                     if test != None:
-                        if value['xplan_element'] == 'xplan:ags':
-                            if len(test) == 8:
-                                gemeinde_ags = test
-                            else:
-                                validation_error_messages.append(forms.ValidationError(
-                                    "Die gefundene AGS im Dokument hat keine 8 Stellen - es werden nur 8-stellige AGS akzeptiert!"))
+                        # Ein Pflichtfeld 'xplan:ags' gibt es in der Liste nicht (auskommentiert);
+                        # der zugehoerige Zweig war toter Code und ist entfernt.
                         result[key] = test
                     else:
                        validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!"))
