@@ -158,6 +158,38 @@ class XPlanViewTests(TestCase):
                 self.assertEqual(r.status_code, 200)
                 self.assertEqual(len(r.context["markers"]["features"]), 1)
 
+    def test_html_list_hides_non_public_plans_for_anonymous(self):
+        """
+        Was wird geprüft:
+            Die HTML-Liste für GetFeatureInfo (bplan-list-html) ohne Anmeldung, mit
+            einem zusätzlichen nicht-öffentlichen Plan; einmal unfiltered, einmal
+            gezielt nach der pk des nicht-öffentlichen Plans gefiltert (pk__in).
+
+        Warum:
+            Die Route ist ohne Login erreichbar. Bewusst nicht publizierte Pläne
+            (z. B. in Aufstellung befindliche) dürfen dort nicht auftauchen — auch
+            nicht, wenn ihre pk direkt über den Filter angefragt wird. Der Fix in
+            XPlanListViewHtml greift in der Basisklasse und gilt damit auch für die
+            (derzeit auskommentierte) FPlan-Route.
+
+        Erwartung:
+            Status 200; der nicht-öffentliche Plan fehlt in beiden Antworten, der
+            öffentliche ist enthalten.
+        """
+        hidden = BPlan.objects.create(
+            name="bplan vertraulich", public=False, nummer=2,
+            geltungsbereich=geom(BPlan, "geltungsbereich", TRIANGLE))
+        hidden.gemeinde.add(self.orga)
+        url = reverse("bplan-list-html")
+        r = self.client.get(url)
+        self.assertEqual(r.status_code, 200)
+        names = [p.name for p in r.context["object_list"]]
+        self.assertIn("bplan Dreieck", names)
+        self.assertNotIn(hidden.name, names)
+        r = self.client.get(url, {"pk__in": hidden.pk})
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn(hidden.name, [p.name for p in r.context["object_list"]])
+
     # ein 500 wäre die Mixin-Reihenfolge
     def test_anonymous_cannot_use_management_views(self):
         """
