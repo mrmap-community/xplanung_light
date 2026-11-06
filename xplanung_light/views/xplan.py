@@ -642,11 +642,17 @@ class XPlanListViewHtml(FilterView, ListView):
     """
     Klasse wird für die Rückgabe einer Liste von Pläne bei einer GetFeatureInfo Anfrage verwendet.
     Da die Bereitstellung immer pro Organisation erfolgt, kann man die Organisation als Vorfilter setzen.
+    Die Liste ist ohne Anmeldung erreichbar und darf daher nur public-Pläne ausliefern.
     """
     model = BPlan
     model_name_lower = str(model._meta.model_name).lower()
     template_name = 'xplanung_light/' + model_name_lower + '_list_html.html'
     filterset_class = BPlanFilterHtml
+
+    def get_queryset(self):
+        # Anonyme dürfen nur öffentliche Pläne sehen, analog zu
+        # XPlanPublicListView und dem Layer-Filter des WMS.
+        return super().get_queryset().filter(public=True)
 
 
 class XPlanDetailView(PublicOrGemeindeAdminRequiredMixin, DetailView):
