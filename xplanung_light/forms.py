@@ -2937,6 +2937,16 @@ class UserOrganizationFormRoles(FormMixin, forms.Form):
             self.user_id = user_id
             self.fields['user'].initial = User.objects.get(pk=user_id)
 
+    def save(self):
+        """
+        Das Formular wählt lediglich den Nutzer aus, dessen Rollen eingeblendet
+        werden; die Rollenpflege selbst erfolgt über die angezeigten
+        AdminOrgaUser-Einträge. form_valid der View erwartet den Nutzer
+        zurück - ohne diese Methode hätte ein gültiger POST mit
+        AttributeError abgebrochen.
+        """
+        return self.cleaned_data["user"]
+
 
 class UserProfileUpdateForm(forms.ModelForm):
     """
