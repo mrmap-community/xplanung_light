@@ -17,7 +17,6 @@ from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 import json
-from django.core.exceptions import PermissionDenied
 from django.db.models import Subquery, OuterRef, Q
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -65,8 +64,7 @@ class BeitragStellungnahmeScopeMixin(GemeindeAdminRequiredMixin):
                 pk=self.beitragid,
                 fplan_beteiligung=self.beteiligung,
             )
-        else:
-            raise PermissionDenied("Unbekannter Plantyp.")
+        # Anderer Plantyp als bplan|fplan erreicht die Routen per Regex nicht.
 
 
 class XPlanBeitragStellungnahmeCreateView(ExtentUserOrgaInfo, CreateView):
@@ -103,43 +101,13 @@ class BeitragStellungnahmeListView(BeitragStellungnahmeScopeMixin, ExtentUserOrg
             self.parent_model = FPlanBeteiligungBeitrag
             self.table_class = FPlanBeitragStellungnahmeTable
             self.reference_model = FPlan
-        else:
-            raise PermissionDenied("Unbekannter Plantyp.")
+        # Anderer Plantyp als bplan|fplan erreicht die Route per Regex nicht.
 
         self.planid = kwargs['planid']
         self.beitragid = kwargs['beitragid']
         self.beteiligungid = kwargs['beteiligungid']
 
         self.resolve_scope()
-        """
-        self.plan = get_object_or_404(
-            self.reference_model,
-            pk=self.planid,
-        )
-        self.check_gemeinde_admin(self.plan)
-        if self.plantyp == 'bplan':
-            self.beteiligung = get_object_or_404(
-                BPlanBeteiligung,
-                pk=self.beteiligungid,
-                bplan=self.plan,
-            )
-            self.beitrag = get_object_or_404(
-                BPlanBeteiligungBeitrag,
-                pk=self.beitragid,
-                bplan_beteiligung=self.beteiligung,
-            )
-        else:
-            self.beteiligung = get_object_or_404(
-                FPlanBeteiligung,
-                pk=self.beteiligungid,
-                fplan=self.plan,
-            )
-            self.beitrag = get_object_or_404(
-                FPlanBeteiligungBeitrag,
-                pk=self.beitragid,
-                fplan_beteiligung=self.beteiligung,
-            )
-        """
         self.template_name = 'xplanung_light/beitragstellungnahme_list.html'
         # Debugausgabe
         # print(f"Typ: {self.plantyp}")
@@ -291,14 +259,6 @@ class XPlanBeitragStellungnahmeUpdateView(BeitragStellungnahmeScopeMixin, FormVi
     def form_valid(self, form):
         form.instance.beitrag = self.beitrag
         return super().form_valid(form)
-
-    """
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            pk=self.kwargs["pk"],
-            beitrag=self.beitrag,
-        )
-    """
 
     def get_queryset(self):
         return self.model.objects.filter(
