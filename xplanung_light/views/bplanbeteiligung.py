@@ -197,59 +197,46 @@ class BPlanBeteiligungDeleteView(XPlanRelationsDeleteView):
 
 class BPlanBeteiligungDeleteRecursiveHistoryView(XPlanRelationsDeleteView):
     """
-    CBGV zum Löschen von BPlanBeteiligung inkl. der Historie, sowie der zugehörige Beiträge und deren Historie,
-    ist in 3.8.0 wohl noch sehr störrisch ... - vielleicht erstmal Anonymisieren statt Löschen!
-    Felder, die überschrieben werden müssen: email, titel, beschreibung, file durch dummy ersetzen - hier auch durch die 
-    gesamte Historie gehen!
-    
+    CBGV zum Löschen von BPlanBeteiligung inkl. der Historie des Verfahrens sowie
+    der zugehörigen Beiträge und deren Historie.
+
+    Hinweis: seit Django 4.0 ruft DeleteView.post() nicht mehr delete() auf,
+    sondern validiert ein Bestätigungsformular und ruft form_valid() auf. Der
+    Aufräumcode durfte deshalb nicht in einem delete()-Override stehen - dort
+    lief er nie und die Historie inklusive aller Inhalte blieb erhalten.
     """
     model = BPlanBeteiligung
     reference_model = BPlan
     list_url_name = 'bplanbeteiligung-list'
 
-    def delete(self, request, *args, **kwargs):
-        # 1. Das Objekt abrufen
-        self.object = self.get_object()
-        
-        # Wir nutzen eine Transaction, damit entweder alles oder nichts gelöscht wird
+    def form_valid(self, form):
+        # 1. IDs vorab merken - nach dem Löschen setzt Django instance.pk auf
+        #    None, dann sind weder Verfahren noch Beiträge über den Manager
+        #    noch erreichbar
+        verfahren_id = self.object.pk
+        beitrag_ids = list(self.object.comments.values_list('id', flat=True))
+        beitrag_history_model = self.object.comments.model.history.model
+
+        # Transaction, damit entweder alles oder nichts gelöscht wird
         with transaction.atomic():
-            # 1. Historie der abhängigen Objekte (Beiträge) löschen
-            # Wir greifen über den Related Name auf die Beiträge zu
+            # 2. Historie der Beiträge und die Beiträge selbst löschen
             for beitrag in self.object.comments.all():
                 beitrag.history.all().delete()
-                # Falls die Aufgabe selbst auch gelöscht werden soll:
-                #with skip_history(beitrag):
-                beitrag.skip_history = True 
-                beitrag.delete() # werden dann nicht neue Löschrecords angelegt?
+                beitrag.delete()
 
-            # 2. Historie des Hauptobjekts (BPlanBeteiligung) löschen
-            self.object.history.all().delete()
-            
-            # 3. Das eigentliche Objekt löschen (Standard-Verhalten)
-            #with skip_history(self):
-            self.skip_history = True
-            return super().delete(request, *args, **kwargs)
-        """
-        with transaction.atomic():
-            # 1. Bestehende Historie der Kinder restlos löschen
-            for aufgabe in self.object.aufgaben.all():
-                aufgabe.history.all().delete()
-            
-            # 2. Bestehende Historie des Hauptobjekts löschen
+            # 3. Historie des Verfahrens löschen
             self.object.history.all().delete()
 
-            # 3. Signale für Parent UND Child Modelle trennen
-            # Wichtig: Der 'sender' muss die jeweilige Modell-Klasse sein
-            post_create_historical_record.disconnect(sender=Projekt)
-            post_create_historical_record.disconnect(sender=Aufgabe)
+            # 4. Verfahren löschen (Standard-Verhalten des DeleteView)
+            response = super().form_valid(form)
 
-            try:
-                # 4. Jetzt löschen (es wird KEIN Record erzeugt)
-                response = super().delete(request, *args, **kwargs)
-            finally:
-                # 5. Signale UNBEDINGT wieder verbinden (sonst fehlt Historie woanders)
-                post_create_historical_record.connect(sender=Projekt)
-                post_create_historical_record.connect(sender=Aufgabe)
-
-            return response
-        """
+            # 5. Beim Löschen schreibt django-simple-history über das
+            #    post_delete-Signal je Beitrag und Verfahren einen letzten
+            #    Snapshot - der enthält alle Inhalte und muss deshalb
+            #    unmittelbar danach ebenfalls entfernt werden
+            db = self.object._state.db
+            self.model.history.model.objects.using(db).filter(
+                id=verfahren_id).delete()
+            beitrag_history_model.objects.using(db).filter(
+                id__in=beitrag_ids).delete()
+        return response
