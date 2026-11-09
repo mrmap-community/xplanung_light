@@ -78,8 +78,6 @@ urlpatterns = [
     # Beteiligungsviews mit django-formset - sollte mit einem view möglich sein, klappt aber nicht
     path("bplan/<int:planid>/beteiligung/create/", BPlanBeteiligungCreateView.as_view(extra_context={'create': True}), name="bplanbeteiligung-create"),
     path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="bplanbeteiligung-update"),
-    # Benachrichtigungsmodule (zunächst nur für TOEB)
-    path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="bplanbeteiligung-update"),path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="bplanbeteiligung-update"),
     #path("bplan/<int:planid>/beteiligung/<int:pk>/notify/create", BPlanBeteiligungNotifyCreateView.as_view(), name="bplanbeteiligungnotify-create"),
     # Neue Struktur für Routen, die für alle Plantypen gelten!
     re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<pk>\d+)/beitrag/create/$', BeteiligungBeitragCreateView.as_view(), name="beteiligungbeitrag-create"),
