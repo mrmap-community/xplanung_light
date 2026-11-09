@@ -1,6 +1,7 @@
 """Tests der Benachrichtigung von TÖBs (Träger öffentlicher Belange) per Massen-E-Mail."""
 
-from django.test import TestCase
+from django.conf import settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import GEOSGeometry
@@ -147,3 +148,144 @@ class BeteiligungToebNotificationViewTests(TestCase):
 
         # DB-Verifikation für FPlan
         self.assertTrue(FPlanBeteiligungToebNotification.objects.filter(fplanbeteiligung=self.fplan_beteiligung).exists())
+
+    # ==============================================================================
+    # 3. LISTE: BERECHTIGUNG, SUPERUSER- UND STATUS-ANZEIGE
+    # ==============================================================================
+
+    def _list_url(self, plantyp, plan, beteiligung):
+        return reverse("beteiligungnotification-list", kwargs={
+            "plantyp": plantyp, "planid": plan.id, "beteiligungid": beteiligung.id})
+
+    def test_list_view_denies_user_without_gemeinde_admin_role(self):
+        """
+        Was wird geprüft:
+            Der Aufruf der Benachrichtigungsliste durch einen angemeldeten Nutzer
+            ohne Admin-Rolle in der Gemeinde des Plans.
+
+        Warum:
+            Die Liste zeigt internen Schriftverkehr zu einem Verfahren; nur
+            Gemeinde-Administratoren (oder Superuser) dürfen sie sehen.
+
+        Erwartung:
+            Status 403 (Zugriff verweigert).
+        """
+        User.objects.create_user(username="nur_zuschauer", password="password123")
+        self.client.login(username="nur_zuschauer", password="password123")
+        response = self.client.get(
+            self._list_url("bplan", self.bplan, self.bplan_beteiligung))
+        self.assertEqual(response.status_code, 403)
+
+    def test_superuser_opens_notification_list_for_both_plantyps(self):
+        """
+        Was wird geprüft:
+            Der Aufruf der Benachrichtigungsliste durch einen Superuser für
+            BPlan- und FPlan-Verfahren.
+
+        Warum:
+            Die Liste verzweigt den Zugriff je Plantyp - Superuser dürfen ohne
+            Admin-Rolle in jede Gemeinde sehen.
+
+        Erwartung:
+            In beiden Listen Status 200.
+        """
+        User.objects.create_superuser(
+            username="notification_boss", email="boss@example.com",
+            password="password123")
+        self.client.login(username="notification_boss", password="password123")
+        self.assertEqual(self.client.get(
+            self._list_url("bplan", self.bplan, self.bplan_beteiligung)
+        ).status_code, 200)
+        self.assertEqual(self.client.get(
+            self._list_url("fplan", self.fplan, self.fplan_beteiligung)
+        ).status_code, 200)
+
+    def test_list_view_shows_inactive_status_for_closed_procedure(self):
+        """
+        Was wird geprüft:
+            Die Statusanzeige der Liste, wenn das Beteiligungsverfahren bereits
+            abgelaufen ist.
+
+        Warum:
+            Die Liste berechnet den Status aus Bekanntmachungs- und Enddatum;
+            abgelaufene Verfahren müssen als inaktiv dargestellt werden.
+
+        Erwartung:
+            Status 200 und context["status"] gleich 0.
+        """
+        self.client.login(username="orga_admin", password="password123")
+        beendete_beteiligung = BPlanBeteiligung.objects.create(
+            bplan=self.bplan, typ="1000",
+            bekanntmachung_datum=self.gestern, start_datum=self.gestern,
+            end_datum=self.gestern)
+        response = self.client.get(
+            self._list_url("bplan", self.bplan, beendete_beteiligung))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["status"], 0)
+
+    # ==============================================================================
+    # 4. FORMULARVARIANTEN DES VERSANDS
+    # ==============================================================================
+
+    def test_submit_without_message_still_notifies_editors(self):
+        """
+        Was wird geprüft:
+            Das Absenden der Benachrichtigung ohne Begleitnachricht.
+
+        Warum:
+            Die Nachricht ist freiwillig - auch ohne Text muss eine
+            Standard-Benachrichtigung an die Sachbearbeiter der TÖB-Stellen
+            gehen und das Protokoll geschrieben werden.
+
+        Erwartung:
+            Benachrichtigung in der Datenbank, mindestens eine E-Mail an die
+            Reporterin, Protokoll ohne Kommentar-Text.
+        """
+        self.client.login(username="orga_admin", password="password123")
+        url = reverse("beteiligungnotification-create", kwargs={
+            "plantyp": "bplan", "planid": self.bplan.id,
+            "beteiligungid": self.bplan_beteiligung.id})
+        response = self.client.post(
+            url, data={"selected_toebs": [self.toeb_unit.id]}, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        notification = BPlanBeteiligungToebNotification.objects.get(
+            bplanbeteiligung=self.bplan_beteiligung)
+        self.assertTrue(len(mail.outbox) >= 1)
+        self.assertIn("reporter@behoerde.de", mail.outbox[0].to)
+        self.assertEqual(notification.message, None)
+
+    @override_settings(XPLANUNG_LIGHT_CONFIG={
+        **settings.XPLANUNG_LIGHT_CONFIG,
+        "mapfile_force_online_resource_https": True,
+    })
+    def test_links_are_forced_to_https_when_configured(self):
+        """
+        Was wird geprüft:
+            Der Versand, wenn die Konfiguration erzwingt, Links auf https
+            umzustellen.
+
+        Warum:
+            Die Permalink- und Listen-Links in der E-Mail müssen dem in
+            XPLANUNG_LIGHT_CONFIG konfigurierten Schema folgen, damit
+            TÖB-Stellen nicht über unverschlüsselte Adressen geleitet werden.
+
+        Erwartung:
+            In Text- und HTML-Fassung der E-Mail erscheinen ausschließlich
+            https-Links auf die Beteiligung.
+        """
+        self.client.login(username="orga_admin", password="password123")
+        url = reverse("beteiligungnotification-create", kwargs={
+            "plantyp": "bplan", "planid": self.bplan.id,
+            "beteiligungid": self.bplan_beteiligung.id})
+        self.client.post(
+            url,
+            data={"message": "Bitte bis Fristende rückmelden.",
+                  "selected_toebs": [self.toeb_unit.id]},
+            follow=True)
+
+        self.assertTrue(len(mail.outbox) >= 1)
+        email = mail.outbox[0]
+        volltext = email.body + email.alternatives[0][0]
+        self.assertIn("https://testserver/bplan", volltext)
+        self.assertNotIn("http://testserver/bplan", volltext)
