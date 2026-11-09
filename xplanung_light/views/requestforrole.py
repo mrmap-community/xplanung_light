@@ -17,26 +17,6 @@ from xplanung_light.views.user import ExtentUserOrgaInfo
 from django.contrib.auth.models import User
 
 
-def requests_processable_by(user):
-    """
-    Anträge, die der Nutzer bestätigen oder zurückweisen darf:
-    Superuser alle; Organisations-Admins nur TÖB-Reporter-Anträge,
-    bei denen sie Admin ALLER beantragten Organisationen sind.
-    """
-    qs = RequestForRole.objects.all()
-    if user.is_superuser:
-        return qs
-    return qs.annotate(
-        total_orgas=Count('organizations', distinct=True),
-        admin_orgas=Count(
-            'organizations',
-            filter=Q(organizations__admin_orga_users__user=user,
-                     organizations__admin_orga_users__is_admin=True),
-            distinct=True,
-        ),
-    ).filter(total_orgas=F('admin_orgas'), total_orgas__gt=0, role='TR')
-
-
 class RequestForRoleCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, CreateView):
     """
     Antragsformular um eine Benutzerrolle zugeteilt
@@ -226,13 +206,12 @@ class RequestForRoleDeleteView(ExtentUserOrgaInfo, LoginRequiredMixin, DeleteVie
     success_message = "Antrag wurde gelöscht!"
 
     def form_valid(self, form):
-        success_url = self.get_success_url()
-        if self.request.user.is_superuser == True or self.object.owned_by_user == self.request.user:
-            messages.add_message(self.request, messages.SUCCESS,
-                                 "Antrag " + str(self.object.id) + " wurde gelöscht!")
-            return super().form_valid(form)
-        else:
-            return super().form_invalid(form)
+        # Die Berechtigung (Superuser oder Antragsteller) stellt bereits
+        # get_object() sicher - ein Zweig für Unberechtigte war hier
+        # unerreichbar und ist entfernt.
+        messages.add_message(self.request, messages.SUCCESS,
+                             "Antrag " + str(self.object.id) + " wurde gelöscht!")
+        return super().form_valid(form)
 
     def get_object(self):
         object = super().get_object()

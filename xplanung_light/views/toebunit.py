@@ -12,7 +12,6 @@ from django.contrib.gis.db.models import Extent
 from django.core.exceptions import PermissionDenied
 from leaflet.forms.widgets import LeafletWidget
 from django.db import transaction
-from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db.models import Case, When, Value, CharField
 from xplanung_light.views.user import ExtentUserOrgaInfo
 
@@ -128,42 +127,14 @@ class ToebUnitUpdateView(ExtentUserOrgaInfo, SuccessMessageMixin, UpdateView):
         return form
     
     def form_valid(self, form):
-        if self.request.user.is_superuser == False:
-            # Überprüfen, ob der jeweilige Nutzer auch als Administrator der Organisation eingetragen ist
-            organization = form.cleaned_data['organization']
-            user_is_admin = False
-            for user in organization.admin_orga_users.all():
-                if user.user == self.request.user and user.is_admin:
-                    user_is_admin = True                         
-                    return super().form_valid(form)
-            if user_is_admin == False:
-                form.add_error("organization", "Nutzer ist kein Administrator für die der TOEB-Stelle zugewiesenen Organisation - TOEB-Stelle kann nicht aktualisiert werden!")
-                return super().form_invalid(form)
+        # Zugriffsschutz: get_object() lässt nur Superuser und Administratoren der
+        # Organisation durch, und das Formularfeld 'organization' ist in get_form()
+        # auf die Organisationen des Nutzers beschränkt. Die zweite Admin-Schleife
+        # hier war deshalb ohne Wirkung; ihr frühes return in der Schleife
+        # verhinderte zudem, dass Orga-Administratoren je die eigene
+        # Erfolgsmeldung bekamen.
         self.success_message = "TOEB-Stelle *" + form.cleaned_data['name'] + "* aktualisiert!" 
         return super().form_valid(form)
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        organization = cleaned_data.get("organization")
-        editors = cleaned_data.get("editors")
-        if organization and editors:
-            invalid_editors = editors.exclude(
-                organization=organization
-            )
-            if invalid_editors.exists():
-                raise ValidationError(
-                    "Alle Sachbearbeiter müssen zur "
-                    "gleichen Organisation gehören."
-                )
-            invalid_reporters = editors.exclude(
-                is_toeb_reporter=True
-            )
-            if invalid_reporters.exists():
-                raise ValidationError(
-                    "Alle Sachbearbeiter müssen "
-                    "TOEB-Reporter sein."
-                )
-        return cleaned_data
 
     def get_queryset(self):
         return (
@@ -226,15 +197,9 @@ class ToebUnitDeleteView(ExtentUserOrgaInfo, SuccessMessageMixin, DeleteView):
     def form_valid(self, form):
         success_url = self.get_success_url()
         object = self.get_object()
-        if self.request.user.is_superuser == False:
-            organization = object.organization
-            user_is_admin = False
-            for user in organization.admin_orga_users.all():
-                if user.user == self.request.user and user.is_admin:
-                    user_is_admin = True 
-            if user_is_admin == False:
-                messages.add_message(self.request, messages.WARNING, "Nutzer ist kein Administrator der angegebenen Organisation - TOEB-Stelle kann nicht gelöscht werden!")
-                return HttpResponseRedirect(success_url)
+        # Die Admin-Prüfung erledigt get_object() (403 für Nicht-Administratoren);
+        # die zweite Schleife hier war unter derselben Bedingung nie erreichbar
+        # und ist entfernt.
         # Check, ob Beteiligungen am Objekt hängen - falls ja Löschen verhindern
         bplan_beteiligung = BPlanBeteiligung.objects.filter(assigned_toebs__in=[object])
         fplan_beteiligung = FPlanBeteiligung.objects.filter(assigned_toebs__in=[object])

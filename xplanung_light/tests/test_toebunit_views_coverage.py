@@ -11,6 +11,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib import messages
+from django.contrib.messages import get_messages
 
 from xplanung_light.forms import ToebUnitCreateForm, ToebUnitUpdateForm
 from xplanung_light.models import (
@@ -362,6 +363,41 @@ class ToebUnitCoverageTests(TestCase):
         self.unit.refresh_from_db()
         self.assertEqual(self.unit.name, "Wasserbehörde neu")
         self.assertFalse(self.unit.public)
+
+    def test_update_by_organization_admin_receives_own_success_message(self):
+        """
+        Was wird geprüft:
+            Der Administrator der Organisation aktualisiert die Einheit per POST.
+
+        Warum:
+            Der Aktualisierungs-View enthielt eine doppelte Admin-Schleife im
+            form_valid; ihr frühes return in der Schleife verhinderte, dass
+            Orga-Administratoren je die eigene Erfolgsmeldung bekamen. Die
+            Schleife war ohne Effekt (Zugriff prüft get_object, die wählbaren
+            Organisationen filtert get_form) und ist entfernt.
+
+        Erwartung:
+            Status 302, geänderter Name in der Datenbank und die Meldung
+            "TOEB-Stelle *...* aktualisiert!".
+        """
+        self.login(self.admin)
+        payload = {
+            "organization": self.org.pk,
+            "name": "Wasserbehörde umbenannt",
+            "description": "Beschreibung",
+            "theme": self.theme,
+            "public": True,
+            "geometry": "POLYGON((0 0,0 1,1 1,1 0,0 0))",
+            "editors": [self.admin_entry.pk],
+        }
+        response = self.client.post(
+            reverse("toebunit-update", kwargs={"pk": self.unit.pk}), payload)
+        self.assertEqual(response.status_code, 302)
+        self.unit.refresh_from_db()
+        self.assertEqual(self.unit.name, "Wasserbehörde umbenannt")
+        meldungen = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertIn("TOEB-Stelle *Wasserbehörde umbenannt* aktualisiert!",
+                      meldungen)
 
     # ------------------------------------------------------------------
     # List views

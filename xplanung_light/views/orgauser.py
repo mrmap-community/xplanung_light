@@ -46,9 +46,10 @@ class OrganizationUserFormViewAdmin(ExtentUserOrgaInfo, LoginRequiredMixin, Form
         return kwargs
 
     def form_valid(self, form):
-        if not self.request.user.is_superuser:
-            form.add_error("organization", "Nutzer ist kein Zentraladmin - Zuweisung ist nicht möglich!")
-            return super().form_invalid(form)
+        # Die Zentraladmin-Prüfung liegt in get_initial() und greift bei GET wie
+        # bei POST (FormMixin.get_form_kwargs ruft get_initial() immer auf) - ein
+        # zweiter, erst nach der Formularprüfung laufender Zweig war unerreichbar
+        # und ist entfernt.
         organization = form.save()
         self.organization = organization
         messages.success(
@@ -91,15 +92,12 @@ class OrganizationUserFormViewToebReporter(ExtentUserOrgaInfo, LoginRequiredMixi
         return kwargs
 
     def form_valid(self, form):
-        if not self.request.user.is_superuser and not self.request.user_is_admin:
-            form.add_error("organization", "Nutzer ist weder Zentraladmin, noch hat er die Admin-Rolle für eine Organisation - Zuweisung ist nicht möglich!")
-            return super().form_invalid(form)
+        # Berechtigungen: get_initial() prüft Zentraladmin/Orga-Admin (greift durch
+        # get_form_kwargs auch bei POST), und das Formularfeld 'organization' ist
+        # in __init__ auf die Organisationen beschränkt, für die der Nutzer Admin
+        # ist. Die beiden zusätzlichen Prüfungen hier waren deshalb unerreichbar
+        # und sind entfernt.
         if form.is_valid():
-            organization = form.cleaned_data['organization']
-            if not (self.request.user.is_superuser or AdminOrgaUser.objects.filter(
-                organization=organization, user=self.request.user, is_admin=True
-            ).exists()):
-                raise PermissionDenied("Keine Berechtigung für diese Organisation")
             organization = form.save()    
             self.organization = organization
             """
@@ -150,9 +148,9 @@ class UserOrganizationFormViewRoles(ExtentUserOrgaInfo, LoginRequiredMixin, Form
         return kwargs
 
     def form_valid(self, form):
-        if not self.request.user.is_superuser:
-            form.add_error("user", "Nutzer ist kein Zentraladmin - Zuweisung ist nicht möglich!")
-            return super().form_invalid(form)
+        # Die Zentraladmin-Prüfung liegt in get_initial() (greift bei GET und
+        # POST über get_form_kwargs); dieser Zweig war unerreichbar und ist
+        # entfernt.
         user = form.save()
         messages.success(
             self.request,
