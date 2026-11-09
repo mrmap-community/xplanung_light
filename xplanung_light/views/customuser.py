@@ -18,8 +18,15 @@ class CustomPasswordResetView(PasswordResetView):
     template_name = "registration/password_reset_form.html"
     success_url = reverse_lazy("password_reset_done")
     from_email = settings.XPLANUNG_LIGHT_CONFIG['metadata_contact']['email']
-    if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https'] == True:
-        extra_email_context = {'protocol': 'https'}
+
+    @property
+    def extra_email_context(self):
+        # Das Protokoll der Links in der Reset-Mail wurde früher schon im
+        # Klassenrumpf beim Import festgelegt; so wird die Einstellung pro
+        # Anfrage gelesen und eine Umstellung wirkt ohne Neustart.
+        if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https'] == True:
+            return {'protocol': 'https'}
+        return None
 
 
 class CustomProfileUpdateView(ExtentUserOrgaInfo, LoginRequiredMixin, SuccessMessageMixin, UpdateView):
