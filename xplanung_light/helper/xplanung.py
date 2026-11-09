@@ -590,12 +590,11 @@ class XPlanung():
                     if str(getattr(bplan, value['name'])) != 'None':
                         new_element = ET.Element(
                             '{' + xplan_namespace + '}' + key)
-                        if value['type'] == "string":
-                            new_element.text = str(
-                                getattr(bplan, value['name']))
-                        if value['type'] == "boolean":
-                            new_element.text = str(
-                                getattr(bplan, value['name'])).lower()
+                        # Nur string-Typen erreichen dieses Einfügen (die Bedingung
+                        # oben prüft value['type'] == "string"); ein boolean-Zweig
+                        # hier war unerreichbar und ist entfernt.
+                        new_element.text = str(
+                            getattr(bplan, value['name']))
                         bplan_element.insert(
                             last_element_index + 1, new_element)
                         last_found_element_name = key
@@ -756,12 +755,11 @@ class XPlanung():
                     if str(getattr(fplan, value['name'])) != 'None':
                         new_element = ET.Element(
                             '{' + xplan_namespace + '}' + key)
-                        if value['type'] == "string":
-                            new_element.text = str(
-                                getattr(fplan, value['name']))
-                        if value['type'] == "boolean":
-                            new_element.text = str(
-                                getattr(fplan, value['name'])).lower()
+                        # Nur string-Typen erreichen dieses Einfügen (die Bedingung
+                        # oben prüft value['type'] == "string"); ein boolean-Zweig
+                        # hier war unerreichbar und ist entfernt.
+                        new_element.text = str(
+                            getattr(fplan, value['name']))
                         fplan_element.insert(
                             last_element_index + 1, new_element)
                         last_found_element_name = key
