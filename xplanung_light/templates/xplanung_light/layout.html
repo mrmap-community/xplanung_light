@@ -19,7 +19,7 @@
     {% leaflet_js plugins="ALL" %}
     {# Display django.contrib.messages as Bootstrap alerts #}
     {% bootstrap_messages %}
-    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+    <script src="{% static 'vendor/turf-7/turf.min.js' %}"></script>
     <script src="{% url 'javascript-catalog' %}"></script>
     <link rel="stylesheet" type="text/css" href="{% static 'xplanung_light/site.css' %}"/>
     <!-- django-formset -->
@@ -28,7 +28,7 @@
     <link href="{% static 'formset/css/collections.css' %}" rel="stylesheet">
     <!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">-->
     <!-- https://django-formset.fly.dev/installation/ -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome-4.7.0/css/font-awesome.min.css' %}">
     <!-- <link rel="stylesheet" type="text/css" href="{% static 'xplanung_light/site.css' %}"/> -->
 </head>
 <body>
