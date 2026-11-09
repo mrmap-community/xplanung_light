@@ -379,7 +379,8 @@ def bplan_content_validator(xplan_file):
                         # der zugehoerige Zweig war toter Code und ist entfernt.
                         result[key] = test
                     else:
-                       validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!"))
+                        validation_error_messages.append(forms.ValidationError(
+                            "Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!"))
                 else:
                     if value['type'] == 'array':
                         test = root.findall(value['xpath'], ns)
@@ -411,12 +412,16 @@ def bplan_content_validator(xplan_file):
                                         validation_error_messages.append(forms.ValidationError(
                                             "Es wurden kein ags-Attribut im XP_Gemeinde-Objekt gefunden!"))
             # Erst mal alle Geometrietypen erlauben - ggf. Einschränkung auf MultiPolygon und Polygon
-            geltungsbereich_element = root.find("gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/*", ns)
+            geltungsbereich_element = root.find(
+                "gml:featureMember/xplan:BP_Plan/xplan:raeumlicherGeltungsbereich/*", ns)
             if geltungsbereich_element is None:
-                validation_error_messages.append(forms.ValidationError("Geltungsbereich nicht gefunden!"))
+                validation_error_messages.append(
+                    forms.ValidationError("Geltungsbereich nicht gefunden!"))
             else:
-                geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()
+                geltungsbereich_text = ET.tostring(
+                    geltungsbereich_element, encoding="utf-8").decode()
                 # Bauen eines GEOS Geometrie-Objektes aus dem GML
+                geometry = None
                 try:
                     geometry = GEOSGeometry.from_gml(geltungsbereich_text)
                 except:
@@ -438,6 +443,7 @@ def bplan_content_validator(xplan_file):
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#raising-multiple-errors
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
+
 
 def fplan_content_validator(xplan_file):
     from xplanung_light.models import AdministrativeOrganization
@@ -478,7 +484,12 @@ def fplan_content_validator(xplan_file):
             "Die GML-Datei überschreitet die maximale Größe (> " + str(
                 limits["max_gml_size"] / 1_000_000) + "MB)."
         )
-    xml_string = xplan_file.read().decode('UTF-8')
+    try:
+        xml_string = xplan_file.read().decode('UTF-8')
+    except:
+        validation_error_messages.append(
+            "Das decodieren nach UTF-8 war nicht erfolgreich!")
+        raise forms.ValidationError(validation_error_messages)
     # validation_error_messages.append('test')
     try:
         ET.register_namespace("gml", "http://www.opengis.net/gml/3.2")
@@ -522,7 +533,8 @@ def fplan_content_validator(xplan_file):
                         # der zugehoerige Zweig war toter Code und ist entfernt.
                         result[key] = test
                     else:
-                       validation_error_messages.append(forms.ValidationError("Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!"))
+                        validation_error_messages.append(forms.ValidationError(
+                            "Das Pflichtelement *" + value['xplan_element'] + "* wurde nicht gefunden!"))
                 else:
                     # kein direktes text Element
                     if value['type'] == 'array':
@@ -555,12 +567,16 @@ def fplan_content_validator(xplan_file):
                                         validation_error_messages.append(forms.ValidationError(
                                             "Es wurden kein ags-Attribut im XP_Gemeinde-Objekt gefunden!"))
             # Erst mal alle Geometrietypen erlauben - ggf. Einschränkung auf MultiPolygon und Polygon
-            geltungsbereich_element = root.find("gml:featureMember/xplan:FP_Plan/xplan:raeumlicherGeltungsbereich/*", ns)
+            geltungsbereich_element = root.find(
+                "gml:featureMember/xplan:FP_Plan/xplan:raeumlicherGeltungsbereich/*", ns)
             if geltungsbereich_element is None:
-                validation_error_messages.append(forms.ValidationError("Geltungsbereich nicht gefunden!"))
+                validation_error_messages.append(
+                    forms.ValidationError("Geltungsbereich nicht gefunden!"))
             else:
-                geltungsbereich_text = ET.tostring(geltungsbereich_element, encoding="utf-8").decode()
+                geltungsbereich_text = ET.tostring(
+                    geltungsbereich_element, encoding="utf-8").decode()
                 # Bauen eines GEOS Geometrie-Objektes aus dem GML
+                geometry = None
                 try:
                     geometry = GEOSGeometry.from_gml(geltungsbereich_text)
                 except:
@@ -582,6 +598,7 @@ def fplan_content_validator(xplan_file):
     # https://docs.djangoproject.com/en/5.2/ref/forms/validation/#raising-multiple-errors
     if len(validation_error_messages) > 0:
         raise forms.ValidationError(validation_error_messages)
+
 
 def bplan_datum_validator():
     pass
