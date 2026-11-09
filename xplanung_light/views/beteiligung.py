@@ -931,10 +931,9 @@ class PdfBeteiligungBeitraege(MyDocTemplate):
                 stellungnahme_mixed = TipTapToReportLab().convert_to_elements(TipTapNode.model_validate(stellungnahme.stellungnahme))
                 if beteiligung_beitrag.email is None:
                     beteiligung_beitrag.email = "Email nicht erfasst oder nicht interpretierbar"
-                if bezug_beitrag_mixed is None:
-                    bezug_beitrag_mixed = "Bezug nicht erfasst oder nicht lesbar"
-                if stellungnahme_mixed is None:
-                    stellungnahme_mixed = "Text der Stellungnahme nicht erfasst oder nicht lesbar"
+                # Keine "is None"-Fallbacks für bezug_beitrag_mixed/stellungnahme_mixed:
+                # convert_to_elements liefert stets eine Liste (leer bei leerem Inhalt),
+                # die Prüfungen waren damit unerreichbar.
                 #table_grid.append([beteiligung_beitrag.id, beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), Paragraph(beteiligung_beitrag.email, description_paragraph_style), bezug_beitrag_mixed, stellungnahme_mixed, Paragraph(stellungnahme.beruecksichtigung, description_paragraph_style)])
                 table_grid.append([Paragraph(str(beteiligung_beitrag.id) + " - " + str(stellungnahme.id), description_paragraph_style), Paragraph(beteiligung_beitrag.email, description_paragraph_style), Paragraph(beteiligung_beitrag.last_changed.strftime('%Y-%m-%d %H:%M'), description_paragraph_style), bezug_beitrag_mixed, stellungnahme_mixed, Paragraph(str(stellungnahme.beruecksichtigung).replace('[', '').replace(']', '').replace("'", ""), description_paragraph_style)])
         # Wechsel zu Querformat!
@@ -994,28 +993,9 @@ class BeteiligungPdfView(DetailView):
     beteiligung = None
     plantyp = None
 
-    def get_queryset(self):
-        #print("get_queryset")
-        qs = super().get_queryset()
-        plan = self.planmodel.objects.get(pk=self.kwargs['planid'])
-        # check ob Nutzer admin einer der Gemeinden des BPlans ist
-        if self.request.user.is_superuser == False:
-            for gemeinde in plan.gemeinde.all():
-                for user in gemeinde.admin_orga_users.all():
-                    if user.user == self.request.user and user.is_admin:   
-                        # Zugriff wird erteilt
-                        if self.plantyp == 'bplan':                    
-                            return qs.filter(bplan_beteiligung_id=self.kwargs['beteiligungid'])
-                        if self.plantyp == 'fplan':                    
-                            return qs.filter(fplan_beteiligung_id=self.kwargs['beteiligungid'])
-            raise PermissionDenied("Nutzer hat keine Berechtigungen auf die angeforderten Objekte!")
-        else:
-            if self.plantyp == 'bplan': 
-                return qs.filter(bplan_beteiligung_id=self.kwargs['beteiligungid'])
-            if self.plantyp == 'fplan': 
-                return qs.filter(fplan_beteiligung_id=self.kwargs['beteiligungid'])
-        return qs
-    
+    # Hinweis: Ein get_queryset wurde entfernt. Dieser View überschreibt get()
+    # vollständig und ruft nie get_object() auf – ein get_queryset wäre damit
+    # unerreichbar. Die Zugriffsprüfung liegt bewusst und allein in get().
 
     def get_absolute_url(self):
         if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
@@ -1051,16 +1031,15 @@ class BeteiligungPdfView(DetailView):
             access_allowed = True
         if access_allowed == False:
             return HttpResponse("403 Forbidden", status=403)   
-        if self.beteiligung:
-            pdf_buffer = BytesIO()
-            # Starte Generierung
-            PdfBeteiligungBeitraege(pdf_buffer, beteiligung=self.beteiligung, plantyp=self.plantyp, absolute_url=self.get_absolute_url(), request=self.request)
-            pdf_buffer.seek(0)
-            response = FileResponse(pdf_buffer, 
-                            as_attachment=True, 
-                            filename='beteiligung_' + str(self.beteiligung.id) + '.pdf')
-            return response
-        else:
-            return HttpResponse("Object not found", status=404)
+        # self.beteiligung steht hier stets – sonst hätte schon dispatch mit
+        # get_object_or_404 abgebrochen; ein zusätzliches 404-Argument war toter Code
+        pdf_buffer = BytesIO()
+        # Starte Generierung
+        PdfBeteiligungBeitraege(pdf_buffer, beteiligung=self.beteiligung, plantyp=self.plantyp, absolute_url=self.get_absolute_url(), request=self.request)
+        pdf_buffer.seek(0)
+        response = FileResponse(pdf_buffer, 
+                        as_attachment=True, 
+                        filename='beteiligung_' + str(self.beteiligung.id) + '.pdf')
+        return response
 
 

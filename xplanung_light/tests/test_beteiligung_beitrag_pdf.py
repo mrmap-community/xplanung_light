@@ -1,6 +1,8 @@
 """Tests des PDF-Exports aller Beiträge einer Beteiligung."""
 
 import json
+from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -14,6 +16,10 @@ from xplanung_light.models import (
     FPlanBeteiligung, 
     BPlanBeteiligungBeitrag, 
     FPlanBeteiligungBeitrag,
+    BPlanBeteiligungBeitragAnhang,
+    FPlanBeteiligungBeitragAnhang,
+    BPlanBeitragStellungnahme,
+    FPlanBeitragStellungnahme,
     AdministrativeOrganization,
     AdminOrgaUser
 )
@@ -151,5 +157,92 @@ class BeteiligungBeitragListPdfViewTests(TestCase):
         
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
+
+    def test_pdf_enthaelt_beschreibung_anlagen_und_stellungnahmen(self):
+        """
+        Was wird geprüft:
+            Ein PDF-Export, dessen Verfahren eine Beteiligungsbeschreibung hat und
+            dessen Beitrag einen Anhang, eine Verwaltungsstellungnahme und keine
+            E-Mail-Adresse besitzt — für BPlan und FPlan.
+
+        Warum:
+            Deckblatt-Absatz, Anlagenliste und der Zeilenaufbau der
+            Abwägungstabelle wurden vorher nie mit Inhalt durchlaufen; insbesondere
+            der Platzhalter für fehlende E-Mail-Adressen ist nur ohne Mail-Beitrag
+            erreichbar.
+
+        Erwartung:
+            Für beide Planarten ein gültiges PDF (HTTP 200, Header %PDF).
+        """
+        self.client.login(username="admin_pdf", password="password123")
+        faelle = (
+            ("bplan", self.bplan, self.bplan_beteiligung,
+             BPlanBeteiligungBeitrag, BPlanBeteiligungBeitragAnhang, BPlanBeitragStellungnahme),
+            ("fplan", self.fplan, self.fplan_beteiligung,
+             FPlanBeteiligungBeitrag, FPlanBeteiligungBeitragAnhang, FPlanBeitragStellungnahme),
+        )
+        for plantyp, plan, beteiligung, beitrag_model, anhang_model, stellungnahme_model in faelle:
+            with self.subTest(plantyp=plantyp):
+                beitrag = beitrag_model.objects.get(**{f"{plantyp}_beteiligung": beteiligung})
+                beteiligung.beschreibung = self.tiptap_beschreibung
+                beteiligung.save()
+                beitrag.email = None
+                beitrag.save()
+                anhang_model.objects.create(
+                    beitrag=beitrag,
+                    name="Lichtbild zur Einfahrt",
+                    typ=BPlanBeteiligungBeitragAnhang.FOTO,
+                    attachment=SimpleUploadedFile(
+                        "foto.jpg", b"bild-inhalt", content_type="image/jpeg"),
+                )
+                stellungnahme_model.objects.create(
+                    beitrag=beitrag,
+                    bezug_beitrag=self.tiptap_beschreibung,
+                    stellungnahme=self.tiptap_beschreibung,
+                    beruecksichtigung=["B"],
+                )
+                url = reverse("beteiligungbeitrag-list-pdf", kwargs={
+                    "plantyp": plantyp,
+                    "planid": plan.id,
+                    "beteiligungid": beteiligung.id,
+                })
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response["Content-Type"], "application/pdf")
+                self.assertTrue(b"".join(response.streaming_content).startswith(b"%PDF"))
+
+    def test_pdf_erzwingt_https_urls(self):
+        """
+        Was wird geprüft:
+            PDF-Export mit Anhang bei gesetztem mapfile_force_online_resource_https.
+
+        Warum:
+            Für die Download-Links der Anlagen und die URL im Zahlencode muss die
+            Erzeugung von http auf https umgeschaltet werden; beide Stellen hängen
+            an derselben Einstellung und waren bisher nur im http-Zweig getestet.
+
+        Erwartung:
+            Gültiges PDF (HTTP 200, Header %PDF).
+        """
+        self.client.login(username="admin_pdf", password="password123")
+        beitrag = BPlanBeteiligungBeitrag.objects.get(bplan_beteiligung=self.bplan_beteiligung)
+        BPlanBeteiligungBeitragAnhang.objects.create(
+            beitrag=beitrag,
+            name="Stellungnahme als Scan",
+            typ=BPlanBeteiligungBeitragAnhang.BESCHREIBUNG,
+            attachment=SimpleUploadedFile(
+                "scan.pdf", b"%PDF-1.4 scan", content_type="application/pdf"),
+        )
+        konfiguration = dict(settings.XPLANUNG_LIGHT_CONFIG)
+        konfiguration["mapfile_force_online_resource_https"] = True
+        url = reverse("beteiligungbeitrag-list-pdf", kwargs={
+            "plantyp": "bplan",
+            "planid": self.bplan.id,
+            "beteiligungid": self.bplan_beteiligung.id,
+        })
+        with self.settings(XPLANUNG_LIGHT_CONFIG=konfiguration):
+            response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(b"".join(response.streaming_content).startswith(b"%PDF"))
 
 

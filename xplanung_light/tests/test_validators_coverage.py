@@ -627,3 +627,149 @@ class ValidatorCoverageTests(TestCase):
             Gibt None zurück.
         """
         self.assertIsNone(validators.bplan_datum_validator())
+
+    # ------------------------------------------------------------------
+    # Ergänzungen für die Restabdeckung (Spiegelzweige FPlan, Sonderfälle)
+    # ------------------------------------------------------------------
+    def test_geotiff_validator_rejects_oversized_file(self):
+        """
+        Was wird geprüft:
+            Ein GeoTIFF mit korrektem Typ, Overviews und LZW, das aber die zugelassene
+            Dateigröße überschreitet (Limit auf 2 Bytes gesetzt).
+
+        Warum:
+            Die Größenprüfung gehört zu den core-Abweisungen des Raster-Validators und
+            darf nicht nur zusammen mit anderen Fehlern auftreten.
+
+        Erwartung:
+            ValidationError, die nur die Dateigröße nennt.
+        """
+        upload = SimpleUploadedFile('x.tif', b'abc', content_type='image/tiff')
+        fake_raster = Mock(info='Overviews: 2\nCOMPRESSION=LZW')
+        fake_raster.srs.srid = 25832
+        fake_raster.extent = (0, 0, 1, 1)
+        with patch.object(validators.magic, 'from_buffer', return_value='image/tiff'), \
+             patch.object(validators, 'GDALRaster', return_value=fake_raster), \
+             patch.object(validators.settings, 'XPLANUNG_LIGHT_CONFIG',
+                          {'limits': {'upload_file_size_limits': {'tiff': 2}}}):
+            with self.assertRaisesRegex(ValidationError, 'Dateigröße'):
+                validators.geotiff_raster_validator(upload)
+
+    @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
+        'max_gml_size': 20000, 'max_files_in_zip': 5,
+        'max_uncompressed_file_size': 5000, 'max_uncompressed_zip_size': 20000,
+        'upload_file_size_limits': {'tiff': 1000000},
+    }})
+    def test_upload_validators_accept_zip_with_directory_entries(self):
+        """
+        Was wird geprüft:
+            ZIP-Archive mit einem Verzeichniseintrag ("ordner/") neben einer gültigen
+            GML-Datei, für BPlan und FPlan.
+
+        Warum:
+            Verzeichniseinträge sollen bei den Größenprüfungen übersprungen werden und
+            nicht als Datei mit unzulässigem MimeType oder fehlender GML zählen.
+
+        Erwartung:
+            Kein Fehler; der jeweilige Inhalts-Validator wird genau einmal aufgerufen.
+        """
+        data = BytesIO()
+        with zipfile.ZipFile(data, 'w') as zf:
+            zf.writestr('ordner/', b'')
+            zf.writestr('plan.gml', self._gml())
+        for validator, content_name in ((validators.bplan_upload_file_validator, 'bplan_content_validator'),
+                                        (validators.fplan_upload_file_validator, 'fplan_content_validator')):
+            with self.subTest(validator=content_name):
+                upload = SimpleUploadedFile('plan.zip', data.getvalue(), content_type='application/zip')
+                with patch.object(validators.magic, 'from_buffer', return_value='text/xml'), \
+                     patch.object(validators, content_name) as content_mock:
+                    validator(upload)
+                content_mock.assert_called_once()
+
+    @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
+        'max_gml_size': 1000, 'max_files_in_zip': 10,
+        'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
+        'upload_file_size_limits': {'tiff': 1000000},
+    }})
+    def test_bplan_content_validator_rejects_bad_bytesio_mimetype_and_oversized(self):
+        """
+        Was wird geprüft:
+            Der BPlan-Inhalts-Validator mit BytesIO und unzulässigem MimeType (gemockt)
+            sowie mit einer hochgeladenen Datei über dem Größenlimit.
+
+        Warum:
+            Diese beiden Abweisungen existieren parallel zum FPlan-Zweig; bisher war nur
+            die FPlan-Variante getestet.
+
+        Erwartung:
+            ValidationError mit dem Hinweis MimeType bzw. maximale Größe.
+        """
+        with patch.object(validators.magic, 'from_buffer', return_value='text/html'):
+            with self.assertRaisesRegex(ValidationError, 'MimeType'):
+                validators.bplan_content_validator(BytesIO(self._gml()))
+        big = SimpleUploadedFile('x.gml', b'x' * 1001, content_type='text/xml')
+        with self.assertRaisesRegex(ValidationError, 'maximale Größe'):
+            validators.bplan_content_validator(big)
+
+    @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
+        'max_gml_size': 10000, 'max_files_in_zip': 10,
+        'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
+        'upload_file_size_limits': {'tiff': 1000000},
+    }})
+    def test_content_validators_reject_empty_name_and_empty_ags(self):
+        """
+        Was wird geprüft:
+            GML mit leerem <xplan:name/>-Element und GML mit leerem <xplan:ags/>-Attribut,
+            für BPlan und FPlan. (Das bisherige "fehlendes ags"-Beispiel entfernte das
+            Element komplett; das bricht earlier mit einem Parse-Fehler.)
+
+        Warum:
+            Leere Elemente werden beim Parsen zu None — genau der Zweig, der die Meldung
+            "Pflichtelement ... nicht gefunden" bzw. "kein ags-Attribut" liefert.
+
+        Erwartung:
+            ValidationError mit den jeweiligen Hinweisen.
+        """
+        leerer_name = self._gml().replace(b'<xplan:name>Testplan</xplan:name>', b'<xplan:name></xplan:name>')
+        leerer_name_fplan = leerer_name.replace(b'BP_Plan', b'FP_Plan')
+        leerer_ags = self._gml().replace(b'<xplan:ags>07316000</xplan:ags>', b'<xplan:ags></xplan:ags>')
+        leerer_ags_fplan = leerer_ags.replace(b'BP_Plan', b'FP_Plan')
+        for xml, validator in ((leerer_name, validators.bplan_content_validator),
+                               (leerer_name_fplan, validators.fplan_content_validator)):
+            with self.subTest(fall='leerer Name'), self.assertRaisesRegex(ValidationError, 'nicht gefunden'):
+                validator(SimpleUploadedFile('x.gml', xml, content_type='text/xml'))
+        for xml, validator in ((leerer_ags, validators.bplan_content_validator),
+                               (leerer_ags_fplan, validators.fplan_content_validator)):
+            with self.subTest(fall='leere AGS'), self.assertRaisesRegex(ValidationError, 'ags-Attribut'):
+                validator(SimpleUploadedFile('x.gml', xml, content_type='text/xml'))
+
+    @override_settings(XPLANUNG_LIGHT_CONFIG={'limits': {
+        'max_gml_size': 10000, 'max_files_in_zip': 10,
+        'max_uncompressed_file_size': 1000, 'max_uncompressed_zip_size': 1000,
+        'upload_file_size_limits': {'tiff': 1000000},
+    }})
+    def test_fplan_content_validator_rejects_missing_orga_mismatch_and_geometry(self):
+        """
+        Was wird geprüft:
+            Die FPlan-Spiegelzweige: fehlende Gemeinde-Elemente, unbekannte AGS, falscher
+            Gemeindename und fehlender Geltungsbereich.
+
+        Warum:
+            Diese Fälle waren bisher nur für den BPlan-Zweig durchgetestet; der
+            FPlan-Validator ist einekopierte Variante und muss dieselben Meldungen
+            liefern.
+
+        Erwartung:
+            ValidationError mit den Hinweisen Pflichtelemente, kein Eintrag,
+            gemeindeName und Geltungsbereich.
+        """
+        faelle = [
+            ('keine Gemeinde-Elemente', self._gml(plan_type='FP_Plan', include_gemeinde=False), 'Pflichtelemente'),
+            ('unbekannte AGS', self._gml(plan_type='FP_Plan', ags='07999999', org_name='Unbekannt'), 'kein Eintrag'),
+            ('Name weicht ab', self._gml(plan_type='FP_Plan', org_name='Anderer Name'), 'gemeindeName'),
+            ('ohne Geltungsbereich', self._gml(plan_type='FP_Plan', include_geometry=False), 'Geltungsbereich'),
+        ]
+        for beschreibung, xml, erwartung in faelle:
+            with self.subTest(fall=beschreibung), self.assertRaisesRegex(ValidationError, erwartung):
+                validators.fplan_content_validator(
+                    SimpleUploadedFile('x.gml', xml, content_type='text/xml'))
