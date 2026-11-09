@@ -398,3 +398,42 @@ class BeteiligungBeitragAnhangRedacted(TestCase):
         # test_gemeinde_admin_can_create_redacted_version.
         anhang = BPlanBeteiligungBeitragAnhang.objects.get(pk=self.anhang.pk)
         self.assertFalse(hasattr(anhang, 'redacted_version'))
+
+    def test_create_form_is_rendered_for_gemeinde_admin(self):
+        """
+        Was wird geprüft:
+            Der Aufruf des leeren Formulars zum Hochladen der geschwärzten Fassung.
+
+        Warum:
+            Vor dem ersten Upload müssen Admins das Formular sehen; dabei bereitet die
+            View die URL-Parameter für das Formular und die Erfolgs-URL auf.
+
+        Erwartung:
+            Status 200 und das Formular enthält das Feld attachment.
+        """
+        self.client.force_login(self.gemeinde_admin)
+        response = self.client.get(self._create_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment", response.context["form"].fields)
+
+    def test_detail_without_history_shows_no_edit_information(self):
+        """
+        Was wird geprüft:
+            Die Detailseite einer geschwärzten Fassung ohne Änderungsgeschichte.
+
+        Warum:
+            Die Anzeige von „Letzte Änderung" und „durch" liest den letzten
+            Historieneintrag. Fehlt die Historie komplett (z. B. nach einem
+            Datenimport ohne History-Schreibung), darf die Seite nicht scheitern.
+
+        Erwartung:
+            Status 200; beide Felder im Context sind None.
+        """
+        self.client.force_login(self.gemeinde_admin)
+        redacted = self._make_redacted()
+        # History-Einträge stammen aus django-simple-history; hier bewusst geleert
+        redacted.history.all().delete()
+        response = self.client.get(self._detail_url(redacted))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context["letzte_aenderung_am"])
+        self.assertIsNone(response.context["bearbeitet_von"])
