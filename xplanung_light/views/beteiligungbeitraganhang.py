@@ -5,7 +5,6 @@ from django_tables2 import SingleTableView
 from xplanung_light.views.mixins import PlantypMixin, GemeindeAdminRequiredMixin
 from xplanung_light.views.user import ExtentUserOrgaInfo
 from django.shortcuts import get_object_or_404
-from django.core.exceptions import PermissionDenied
 
 class BeteiligungBeitragAnhangListView(
     PlantypMixin, GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableView
@@ -38,8 +37,9 @@ class BeteiligungBeitragAnhangListView(
                 fplan_beteiligung_id=self.beteiligungid,
                 fplan_beteiligung__fplan_id=self.planid,
             )
-        else:
-            raise PermissionDenied("Unbekannter Plantyp.")
+        # Ein anderer Plantyp kann hier nicht ankommen: die Routen erlauben per
+        # Regex nur bplan|fplan, und PlantypMixin.setup() scheitert an der
+        # PLANTYP_CONFIG-Tabelle, bevor dispatch() überhaupt läuft.
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -89,4 +89,3 @@ class BeteiligungBeitragAnhangListView(
                 redacted_document_id=F('redacted_version__id'),
                 redacted_document_generic_id=F('redacted_version__generic_id'),
             )
-        raise PermissionDenied("Unbekannter Plantyp.")

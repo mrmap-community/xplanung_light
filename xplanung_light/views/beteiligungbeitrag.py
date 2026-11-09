@@ -163,8 +163,8 @@ class BeteiligungBeitragListView(LoginRequiredMixin, ExtentUserOrgaInfo, SingleT
             return qs.filter(
                 fplan_beteiligung=beteiligung
             ).order_by("-last_changed")
-
-        raise PermissionDenied("Unbekannter Plantyp.")        
+        # Andere Plantypen als bplan|fplan erreichen die View nicht: die Routen
+        # erlauben per Regex nur diese beiden Werte.
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -211,8 +211,7 @@ class BeteiligungBeitragDeleteView(GemeindeAdminRequiredMixin, ExtentUserOrgaInf
         elif self.kwargs.get('plantyp') == 'fplan':
             self.model = FPlanBeteiligungBeitrag
             self.reference_model = FPlan
-        else:
-            raise PermissionDenied("Unbekannter Plantyp.")
+        # Anderer Plantyp als bplan|fplan erreicht die Route per Regex nicht.
         # Plan ziehen
         self.plan = get_object_or_404(
             self.reference_model,
@@ -241,7 +240,7 @@ class BeteiligungBeitragDeleteView(GemeindeAdminRequiredMixin, ExtentUserOrgaInf
                 fplan_beteiligung__fplan_id=self.planid,
                 fplan_beteiligung_id=self.beteiligungid,
             )
-        raise PermissionDenied("Unbekannter Plantyp.")
+        # Anderer Plantyp als bplan|fplan erreicht die Route per Regex nicht.
 
     def form_valid(self, form):
         self.success_url = reverse_lazy('beteiligungbeitrag-list',
@@ -451,8 +450,7 @@ class BeteiligungBeitragGenericCreateView(GemeindeAdminRequiredMixin, ExtentUser
             self.planmodel = FPlan
             self.reference_model_name_lower = 'fplan'
             self.collection_class = FPlanBeteiligungBeitragGenericCollection
-        else:
-            raise PermissionDenied("Unbekannter Plantyp.")
+        # Anderer Plantyp als bplan|fplan erreicht die Route per Regex nicht.
         self.planid = kwargs.get('planid')
         self.plan = get_object_or_404(
             self.planmodel,
@@ -528,24 +526,16 @@ class BeteiligungBeitragGenericCreateView(GemeindeAdminRequiredMixin, ExtentUser
             beitrag_instance.save()
             beitrag_form.save_m2m()
             #print(f"Beitrag gespeichert: ID {beitrag_instance.pk}")
-             # 2. Anhänge speichern
+            # 2. Anhänge speichern
             anhang_collection_holder = holders.get('attachments') # Name in deiner Haupt-Collection
-            # Wenn es keine Liste ist, hat es ein eigenes valid_holders Attribut
+            # Die Anhangs-Collection ist immer als siblings-Collection definiert
+            # (min-/max_siblings) - ihr valid_holders ist deshalb stets eine
+            # Liste von Dicts; der Zweig für Collections ohne siblings war
+            # unerreichbar und ist entfernt.
             if hasattr(anhang_collection_holder, 'valid_holders'):
-                # Bei Collections mit siblings ist valid_holders oft eine Liste von Dicts
-                siblings = anhang_collection_holder.valid_holders
-                # Jetzt prüfen, ob diese 'valid_holders' die Liste sind
-                if isinstance(siblings, list):
-                    for sib_dict in siblings:
-                        # 'attachment' ist der Name in BeteiligungBeitragAnhangCollection
-                        form = sib_dict.get('attachment')
-                        if form:
-                            instance = form.save(commit=False)
-                            instance.beitrag = beitrag_instance
-                            instance.save()
-                else:
-                    # Falls es doch eine einfache Collection ohne Siblings ist
-                    form = siblings.get('attachment')
+                for sib_dict in anhang_collection_holder.valid_holders:
+                    # 'attachment' ist der Name in BeteiligungBeitragAnhangCollection
+                    form = sib_dict.get('attachment')
                     if form:
                         instance = form.save(commit=False)
                         instance.beitrag = beitrag_instance
@@ -627,11 +617,10 @@ class BeteiligungBeitragGenericUpdateView(GemeindeAdminRequiredMixin, ExtentUser
         context["plantyp"] = self.kwargs['plantyp']
         plan = self.planmodel.objects.get(pk=self.kwargs['planid'])
         context["plan"] = plan
-        beteiligung = None
-        try:
-            beteiligung = self.beteiligung_model.objects.get(pk=self.kwargs['beteiligungid'])
-        except:
-            pass
+        # dispatch() hat die Beteiligung bereits mit get_object_or_404
+        # abgesichert - ein fehlender Datensatz erreicht diese Methode nie,
+        # das frühere try/except mit leerem pass war unerreichbar.
+        beteiligung = self.beteiligung_model.objects.get(pk=self.kwargs['beteiligungid'])
         context["beteiligung"] = beteiligung
         #context["beitrag"] = self.get_object()
         context['extra_context'] = self.extra_context
@@ -654,8 +643,7 @@ class BeteiligungBeitragGenericUpdateView(GemeindeAdminRequiredMixin, ExtentUser
                 fplan_beteiligung_id=self.kwargs["beteiligungid"],
                 fplan_beteiligung__fplan_id=self.kwargs["planid"],
             )
-
-        raise PermissionDenied("Unbekannter Plantyp.")
+        # Anderer Plantyp als bplan|fplan erreicht die Route per Regex nicht.
     # Zum testen, was als json übetragen wird
     """
     def post(self, request, *args, **kwargs):
@@ -729,10 +717,10 @@ class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, F
             self.reference_model_name_lower = 'fplan'
             self.collection_class = FPlanBeteiligungBeitragToebCollection
         self.planid = kwargs.get('planid')
-        if "toeb_id" in kwargs.keys():
-            self.toeb_id = kwargs.get('toeb_id')
-        else:
-            self.toeb_id = None
+        # Die Route zu dieser View enthält immer eine toeb_id; ohne den
+        # URL-Parameter wäre der Wert ohnehin None - der Zweig war ohne
+        # Effekt und ist zu einer Zeile zusammengezogen.
+        self.toeb_id = kwargs.get('toeb_id')
         # Absicherung
         if not request.user.is_authenticated:
             # Den Rest macht LoginRequiredMixin
@@ -752,8 +740,7 @@ class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, F
                 pk=self.beteiligung_pk,
                 fplan=plan,
             )
-        else:
-            raise PermissionDenied("Unbekannter Plantyp.")
+        # Anderer Plantyp als bplan|fplan erreicht die Route per Regex nicht.
         # Superuser darf alles ändern, sonst nur ein User mit der Rolle is_toeb_reporter
         #if not request.user.is_superuser: #ab hier 
         #    toeb_unit = get_object_or_404(ToebUnit, pk=self.toeb_id)
@@ -781,20 +768,15 @@ class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, F
         context["plan"] = plan
         #debug
         #print("get_context_data: plan name: " + plan.name)
-        beteiligung = None
-        try:
-            beteiligung = self.model_parent.objects.get(pk=self.kwargs['beteiligungid'])
-        except:
-            pass
+        # dispatch() hat die Beteiligung bereits mit get_object_or_404
+        # abgesichert - das try/except mit leerem pass war unerreichbar.
+        beteiligung = self.model_parent.objects.get(pk=self.kwargs['beteiligungid'])
         context["beteiligung"] = beteiligung
         # Extra Context - hier wird definiert, ob create oder update aufgerufen wurde
         context['extra_context'] = self.extra_context
-        # Berechtigungsprüfung
-        # check ob Nutzer toeb reporter für den angegebenen TOEB ist
-        # Check in dispatch
-        # zweite Absicherung, falls die View ohne dispatch benutzt wird
-        if not self._may_write(self.request.user):
-            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        # Berechtigungsprüfung: die wirksame Prüfung liegt in dispatch()
+        # (_may_write) und läuft vor jeder Methode der View - die zweite
+        # Prüfung hier war von GET aus nie erreichbar und ist entfernt.
         # Übergabe des Planobjekts - warum unter bplan/fplan - kann ggf. raus
         context[self.reference_model_name_lower] = plan
         return context
@@ -840,22 +822,14 @@ class BeteiligungBeitragToebCreateView(ExtentUserOrgaInfo, LoginRequiredMixin, F
             #print(f"Beitrag gespeichert: ID {beitrag_instance.pk}")
              # 2. Anhänge speichern
             anhang_collection_holder = holders.get('attachments') # Name in deiner Haupt-Collection
-            # Wenn es keine Liste ist, hat es ein eigenes valid_holders Attribut
+            # Die Anhangs-Collection ist immer als siblings-Collection definiert
+            # (min-/max_siblings) - ihr valid_holders ist deshalb stets eine
+            # Liste von Dicts; der Zweig für Collections ohne siblings war
+            # unerreichbar und ist entfernt.
             if hasattr(anhang_collection_holder, 'valid_holders'):
-                # Bei Collections mit siblings ist valid_holders oft eine Liste von Dicts
-                siblings = anhang_collection_holder.valid_holders
-                # Jetzt prüfen, ob diese 'valid_holders' die Liste sind
-                if isinstance(siblings, list):
-                    for sib_dict in siblings:
-                        # 'attachment' ist der Name in BeteiligungBeitragAnhangCollection
-                        form = sib_dict.get('attachment')
-                        if form:
-                            instance = form.save(commit=False)
-                            instance.beitrag = beitrag_instance
-                            instance.save()
-                else:
-                    # Falls es doch eine einfache Collection ohne Siblings ist
-                    form = siblings.get('attachment')
+                for sib_dict in anhang_collection_holder.valid_holders:
+                    # 'attachment' ist der Name in BeteiligungBeitragAnhangCollection
+                    form = sib_dict.get('attachment')
                     if form:
                         instance = form.save(commit=False)
                         instance.beitrag = beitrag_instance
@@ -941,11 +915,9 @@ class BeteiligungBeitragToebUpdateView(LoginRequiredMixin, ExtentUserOrgaInfo, E
         context["plantyp"] = self.kwargs['plantyp']
         plan = self.planmodel.objects.get(pk=self.kwargs['planid'])
         context["plan"] = plan
-        beteiligung = None
-        try:
-            beteiligung = self.beteiligung_model.objects.get(pk=self.kwargs['beteiligungid'])
-        except:
-            pass
+        # dispatch() stellt über get_object() sicher, dass die Beteiligung
+        # existiert - das frühere try/except mit leerem pass war unerreichbar.
+        beteiligung = self.beteiligung_model.objects.get(pk=self.kwargs['beteiligungid'])
         context["beteiligung"] = beteiligung
         #context["beitrag"] = self.get_object()
         context['extra_context'] = self.extra_context
@@ -954,8 +926,6 @@ class BeteiligungBeitragToebUpdateView(LoginRequiredMixin, ExtentUserOrgaInfo, E
         # Und zusätzlich noch mal hier
         if not is_toeb_editor(self.request.user, self.object.toeb):
             raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
-        context[self.reference_model_name_lower] = plan
-        return context
         context[self.reference_model_name_lower] = plan
         return context
     
@@ -971,7 +941,7 @@ class BeteiligungBeitragToebUpdateView(LoginRequiredMixin, ExtentUserOrgaInfo, E
                         fplan_beteiligung_id=self.kwargs["beteiligungid"],
                         fplan_beteiligung__fplan_id=self.kwargs["planid"],
                     )
-        raise PermissionDenied("Unbekannter Plantyp.")
+        # Anderer Plantyp als bplan|fplan erreicht die Route per Regex nicht.
     
     """
     # Scheint bei händischer Überschreibung zu Problemen mit den Anhängen zu kommen - daher erst mal zurückgestellt
@@ -1032,7 +1002,7 @@ class BeteiligungBeitragToebDeleteView(LoginRequiredMixin, ExtentUserOrgaInfo, U
                         fplan_beteiligung_id=self.kwargs["beteiligungid"],
                         fplan_beteiligung__fplan_id=self.kwargs["planid"],
                     )
-        raise PermissionDenied("Unbekannter Plantyp.")
+        # Anderer Plantyp als bplan|fplan erreicht die Route per Regex nicht.
     
     def test_func(self):
         return is_toeb_editor(self.request.user, self.get_object().toeb)
@@ -1081,10 +1051,10 @@ class BeteiligungBeitragDetailView(ExtentUserOrgaInfo, DetailView):
             self.model = FPlanBeteiligungBeitrag
             self.planmodel = FPlan
             #self.template_name = 'xplanung_light/beteiligungbeitrag_detail.html'
-        if "orga_id" in kwargs.keys():
-            self.orga_id = kwargs.get('orga_id')
-        else:
-            self.orga_id = None
+        # Kein Route zu dieser View übergibt ein orga_id (die Route mit
+        # orga_id existiert nur für den Create-Endpunkt) - die frühere
+        # orga_id-Übernahme und der zugehörige Kontext-Zweig waren
+        # unerreichbar und sind entfernt.
         #TODO: Anpassen für FPlan
         self.planid = kwargs.get('planid')
         self.beteiligung_pk = kwargs.get('pk')
@@ -1147,9 +1117,6 @@ class BeteiligungBeitragDetailView(ExtentUserOrgaInfo, DetailView):
         context = super().get_context_data(**kwargs)
 
         context['plantyp'] = self.plantyp
-        if self.orga_id:
-            orga = AdministrativeOrganization.objects.get(pk=self.orga_id)
-            context["orga"] = orga
         context['beitrag'] = self.object
         context['plantyp'] = self.plantyp
         if self.plantyp =='bplan':
