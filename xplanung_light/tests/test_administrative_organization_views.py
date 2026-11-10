@@ -120,3 +120,120 @@ class AdministrativeOrganizationViewTests(TestCase):
         # KORREKTUR: Durch die hinzugefügte Geometrie ist das Resultat-Set befüllt und durchsuchbar
         result_titles = [res["text"] for res in data["results"]]
         self.assertTrue(any("Schilda" in title for title in result_titles) or len(data["results"]) >= 0)
+
+    # ==============================================================================
+    # 4. AUTOCOMPLETE FÜR ANGERMELDETE NUTZER
+    # ==============================================================================
+
+    def test_autocomplete_returns_results_for_authenticated_user(self):
+        """
+        Was wird geprüft:
+            Die Select2-Autocomplete-Schnittstelle mit angemeldetem Nutzer,
+            einmal mit Suchbegriff und einmal ohne.
+
+        Warum:
+            Ohne Anmeldung liefert die Schnittstelle bewusst nichts - erst
+            angemeldete Nutzer sehen Organisationen, und der Suchbegriff soll
+            nach Namensteilanfang filtern (case-insensitive).
+
+        Erwartung:
+            Mit q="verbandsgemeinde" nur die Verbandsgemeinde Schilda
+            (Groß-/Kleinschreibung egal, Filter greift am Namenanfang),
+            ohne q beide Organisationen.
+        """
+        self.client.login(username="local_orga_admin", password="password123")
+        url = reverse("administrativeorganization-autocomplete")
+
+        response = self.client.get(url, {"q": "verbandsgemeinde"})
+        self.assertEqual(response.status_code, 200)
+        ids = [r["id"] for r in response.json()["results"]]
+        self.assertEqual(ids, [str(self.orga_a.id)])
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        ids = {r["id"] for r in response.json()["results"]}
+        self.assertEqual(ids, {str(self.orga_a.id), str(self.orga_b.id)})
+
+    # ==============================================================================
+    # 5. SUPERUSER-SICHT AUF BEIDE ORGANISATIONSLISTEN
+    # ==============================================================================
+
+    def test_superuser_sees_all_organizations_in_both_lists(self):
+        """
+        Was wird geprüft:
+            Der Aufruf der Bereitstellungsliste und der
+            Organisations-Verwaltungsliste als Superuser.
+
+        Warum:
+            Beide Listen verzweigen in get_queryset zwischen Superuser (alle
+            Organisationen) und normalem Nutzer (nur eigene) - der
+            Superuser-Zweig war bisher ungetestet.
+
+        Erwartung:
+            Jeweils Status 200; in der Verwaltungsliste erscheinen beide
+            Organisationen trotz fehlender Admin-Rolle.        """
+        User.objects.create_superuser(
+            username="orga_boss", email="boss@example.com", password="password123")
+        self.client.login(username="orga_boss", password="password123")
+
+        response = self.client.get(reverse("organization-publishing-list"))
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.get(reverse("organization-list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Verbandsgemeinde Schilda")
+        self.assertContains(response, "Landkreis Musterhausen")
+
+    def test_superuser_opens_organization_update_form(self):
+        """
+        Was wird geprüft:
+            Der Aufruf des Bearbeitungsformulars einer Organisation als
+            Superuser ohne Admin-Rolle in dieser Organisation.
+
+        Warum:
+            get_object() prüft die Admin-Rolle nur für Nicht-Superuser - der
+            Superuser-Pfad (direktes return ohne Rollenprüfung) muss offen
+            bleiben, sonst ist Verwaltung unmöglich.
+
+        Erwartung:
+            Status 200 mit geöffnetem Formular.
+        """
+        User.objects.create_superuser(
+            username="orga_boss", email="boss@example.com", password="password123")
+        self.client.login(username="orga_boss", password="password123")
+        response = self.client.get(
+            reverse("organization-update", kwargs={"pk": self.orga_a.id}))
+        self.assertEqual(response.status_code, 200)
+
+    # ==============================================================================
+    # 6. METADATEN-BEARBEITUNG OHNE ADMIN-ROLLE
+    # ==============================================================================
+
+    def test_organization_update_denies_user_without_admin_role(self):
+        """
+        Was wird geprüft:
+            Der Aufruf des Bearbeitungsformulars einer Organisation durch einen
+            angemeldeten Nutzer ohne Admin-Rolle in dieser Organisation.
+
+        Warum:
+            get_object() lässt nur Superuser oder Admins der Organisation durch
+            und wirft sonst PermissionDenied - der Zweig muss gegen
+            Rechte-Ausweitung abgesichert sein.
+
+        Erwartung:
+            Status 403, der Datensatz bleibt unverändert.
+        """
+        self.client.login(username="normalo_user", password="password123")
+        url = reverse("organization-update", kwargs={"pk": self.orga_a.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        response = self.client.post(url, data={
+            "coat_of_arms_url": "https://getroffen.example",
+            "published_data_license": self.mock_license.id,
+            "published_data_rights": "Keine Einschraenkungen",
+            "published_data_accessrights": "public",
+        })
+        self.assertEqual(response.status_code, 403)
+        self.orga_a.refresh_from_db()
+        self.assertEqual(self.orga_a.coat_of_arms_url, None)

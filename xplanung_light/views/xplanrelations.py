@@ -2,7 +2,6 @@ from django.views.generic import (CreateView, UpdateView, DeleteView)
 from xplanung_light.models import BPlan
 from django.urls import reverse_lazy
 from django_tables2 import SingleTableView
-from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import LoginRequiredMixin
 from xplanung_light.views.user import ExtentUserOrgaInfo
 from xplanung_light.views.mixins import PlantypMixin, GemeindeAdminRequiredMixin
@@ -28,15 +27,8 @@ class XPlanRelationsCreateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, L
         planid = self.kwargs['planid']
         context = super().get_context_data(**kwargs)
         plan = self.reference_model.objects.get(pk=planid)
-        # check ob Nutzer admin einer der Gemeinden des BPlans ist - ggf. weglassen, da das in dispatch geregelt wird 
-        # folgendes nicht mehr nötig, wenn schon im dispatch geprüft!
-        #if self.request.user.is_superuser == False:
-        #    for gemeinde in plan.gemeinde.all():
-        #        for user in gemeinde.admin_orga_users.all():
-        #            if user.user == self.request.user and user.is_admin:                        
-        #                 context[self.reference_model_name_lower] = plan
-        #                 return context
-        #    raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
+        # Die Berechtigungsprüfung läuft vollständig über dispatch()
+        # (check_gemeinde_admin), hier wird nur der Plan fürs Template gesetzt.
         context[self.reference_model_name_lower] = plan
         return context
 
@@ -101,19 +93,16 @@ class XPlanRelationsListView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, Log
         return context
     
     def get_queryset(self):
-        planid = self.kwargs['planid']
-        if planid:
-            if self.reference_model_name_lower == 'bplan':
-                return self.model.objects.filter(
-                    bplan=self.reference_model.objects.get(pk=planid)
-                )#.order_by('-created')
-            if self.reference_model_name_lower == 'fplan':
-                # TODO alter to fplan
-                return self.model.objects.filter(
-                    fplan=self.reference_model.objects.get(pk=planid)
-                )#.order_by('-created')
-        else:
-            return self.model.objects#.order_by('-created')
+        # planid kommt aus der Routen-Regex (\d+) und ist nie leer; ein
+        # unfilterbares "alle"-Ergebnis gab es hier nur theoretisch.
+        if self.reference_model_name_lower == 'bplan':
+            return self.model.objects.filter(
+                bplan=self.reference_model.objects.get(pk=self.kwargs['planid'])
+            )#.order_by('-created')
+        if self.reference_model_name_lower == 'fplan':
+            return self.model.objects.filter(
+                fplan=self.reference_model.objects.get(pk=self.kwargs['planid'])
+            )#.order_by('-created')
         
 
 class XPlanRelationsUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, LoginRequiredMixin, UpdateView):
@@ -140,23 +129,6 @@ class XPlanRelationsUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, L
         form = super().get_form(form_class=None)
         #form.fields['bplan'].queryset = form.fields['bplan'].queryset.filter(owned_by_user=self.request.user.id)
         return form 
-    
-    """
-    def get_object(self):
-        object = super().get_object()
-        if self.request.user.is_superuser == False:
-            if self.reference_model_name_lower == 'bplan':
-                gemeinden = object.bplan.gemeinde.all()
-            if self.reference_model_name_lower == 'fplan':  
-                # TODO alter to fplan
-                gemeinden = object.fplan.gemeinde.all()
-            for gemeinde in gemeinden:
-                for user in gemeinde.admin_orga_users.all():
-                    if user.user == self.request.user and user.is_admin:                        
-                        return object
-            raise PermissionDenied("Nutzer hat keine Berechtigungen das Objekt zu bearbeiten oder zu löschen!")
-        return object
-    """
 
     def form_valid(self, form):
         planid = self.kwargs['planid']
@@ -177,8 +149,8 @@ class XPlanRelationsUpdateView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, L
 
         if self.reference_model_name_lower == "fplan":
             return queryset.filter(fplan=self.reference_object)
-
-        raise PermissionDenied("Unbekannter Plantyp.")
+        # reference_model ist in allen Subklassen BPlan oder FPlan,
+        # ein anderer Wert ist pro Klassenattribut nicht möglich.
 
     def get_success_url(self):
         return reverse_lazy(self.list_url_name, kwargs={'planid': self.kwargs['planid']})
@@ -197,12 +169,11 @@ class XPlanRelationsDeleteView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, L
     
     def get_object(self):
         object = super().get_object()
+        # reference_model ist in allen Subklassen BPlan oder FPlan
         if self.reference_model_name_lower == "bplan":
             plan = object.bplan
-        elif self.reference_model_name_lower == "fplan":
-            plan = object.fplan
         else:
-            raise PermissionDenied("Unbekannter Plantyp.")
+            plan = object.fplan
         self.check_gemeinde_all_admin(plan)
         return object
 
@@ -212,8 +183,9 @@ class XPlanRelationsDeleteView(GemeindeAdminRequiredMixin, ExtentUserOrgaInfo, L
             return queryset.filter(
                 bplan_id=self.kwargs["planid"]
             )
-        elif self.reference_model_name_lower == "fplan":
+        else:
             return queryset.filter(
                 fplan_id=self.kwargs["planid"]
             )
-        raise PermissionDenied("Unbekannter Plantyp.")
+        # reference_model ist in allen Subklassen BPlan oder FPlan,
+        # ein anderer Wert ist pro Klassenattribut nicht möglich.
