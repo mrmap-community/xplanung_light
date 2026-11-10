@@ -85,6 +85,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'xplanung_light.context_processors.style',
             ],
         },
     },
@@ -175,6 +176,15 @@ USE_L10N = False
 STATIC_URL = 'static/'
 
 STATIC_ROOT = BASE_DIR / 'static_collected'
+
+# Aktiver visueller Style der Anwendung. Alle Style-Assets (CSS, Bilder)
+# liegen unter static/style/<XPLANUNG_STYLE>/; der Context-Processor
+# xplanung_light.context_processors.style stellt den Pfad als
+# style_static_prefix allen Templates bereit. Pro Umgebung/deployender
+# Fork ueberschreibbar. Sobald ein Style abweichendes HTML benoetigt, kann
+# zusaetzlich ein Template-Verzeichnis templates/style/<XPLANUNG_STYLE>/
+# vor den App-Templates in TEMPLATES["DIRS"] aufgenommen werden.
+XPLANUNG_STYLE = "default"
 
 # django-bootstrap5 zeigt standardmaessig auf die CDN-Defaults (jsDelivr,
 # siehe django_bootstrap5/core.py). Dieselben Versionen werden lokal aus
