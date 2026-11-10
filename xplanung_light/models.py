@@ -240,8 +240,9 @@ class AdministrativeOrganization(GenericMetadata, AbstractOrganization):
     coat_of_arms_url = models.URLField(blank=True, null=True, verbose_name='Link zum Wappen',
                                        help_text='Hier bietet sich an den Link von Wikipedia zu übernehmen.')
 
+    # räumlicher Index wie bei XPlan.geltungsbereich (siehe dort)
     geometry = models.GeometryField(
-        blank=True, null=True, verbose_name='Gebiet')
+        blank=True, null=True, spatial_index=True, verbose_name='Gebiet')
 
     history = HistoricalRecords()
 
@@ -460,8 +461,10 @@ class ToebUnit(GenericMetadata):
         max_length=256, blank=True, null=True, verbose_name='Stadt')
     address_phone = models.CharField(
         max_length=256, blank=True, null=True, verbose_name='Telefon')
+    # räumlicher Index wie bei XPlan.geltungsbereich (siehe dort)
     geometry = models.GeometryField(
-        blank=True, null=True, verbose_name='Zuständigkeitsbereich')
+        blank=True, null=True, spatial_index=True,
+        verbose_name='Zuständigkeitsbereich')
     organization = HistoricForeignKey(AdministrativeOrganization, blank=False,
                                       verbose_name="Übergeordnete Organisation", related_name="toebs", on_delete=models.CASCADE)
     editors = models.ManyToManyField(
@@ -553,8 +556,15 @@ class XPlan(GenericMetadata):
     # hoehenbezug [0..1]
     # technischerPlanersteller, [0..1]
     # raeumlicherGeltungsbereich [1], GM_Object
+    # spatial_index=True ist bei Django der Default und erscheint deshalb nie in
+    # einem Migrationspunkt. Auf Spatialite ist das irreführend: SQLite baut für
+    # jeden AlterField die ganze Tabelle neu und Django stellt danach die
+    # Geometrie-Metadaten, aber nicht den R-tree wieder her – der Index ist dann
+    # deaktiviert, ohne dass makemigrations etwas anzeigt. Siehe
+    # helper/spatial_index.py und Migrationspunkt 0093_repariere_spatiale_indizes.
     geltungsbereich = models.GeometryField(
-        null=False, blank=False, verbose_name='Grenze des räumlichen Geltungsbereiches des Plans.')
+        null=False, blank=False, spatial_index=True,
+        verbose_name='Grenze des räumlichen Geltungsbereiches des Plans.')
     # verfahrensMerkmale [0..*], XP_VerfahrensMerkmal
     # hatGenerAttribut [0..*], XP_GenerAttribut
     # externeReferenz, [0..*], XP_SpezExterneReferenz
