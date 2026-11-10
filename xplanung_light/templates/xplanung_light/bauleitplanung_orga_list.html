@@ -15,7 +15,7 @@
     <title>{% block title %}{% endblock %}</title>
     {% load static %}
     <!--<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>-->
-    <link rel="stylesheet" type="text/css" href="{% static 'xplanung_light/site.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static style_static_prefix|add:'/css/site.css' %}"/>
     <!-- django-formset -->
     <script type="module" src="{% static 'formset/js/django-formset.js' %}"></script>
     <link href="{% static 'formset/css/bootstrap5-extra.css' %}" rel="stylesheet">
@@ -23,7 +23,6 @@
     <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"> -->
     <!-- https://django-formset.fly.dev/installation/ -->
     <link rel="stylesheet" href="{% static 'vendor/fontawesome-7.0.1/css/all.min.css' %}">
-    <!-- <link rel="stylesheet" type="text/css" href="{% static 'xplanung_light/site.css' %}"/> -->
     {% leaflet_css plugins="ALL" %}
     {% leaflet_js plugins="ALL" %}
     <style>
