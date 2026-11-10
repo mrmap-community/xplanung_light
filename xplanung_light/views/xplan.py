@@ -40,6 +40,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.gis.geos import GEOSGeometry
 from xplanung_light.views.user import ExtentUserOrgaInfo
 from xplanung_light.views.mixins import GemeindeAdminRequiredMixin, PublicOrGemeindeAdminRequiredMixin
+from xplanung_light.views.obergrenzen import (max_plaene_getfeatureinfo,
+                                              kuerze_id_parameter)
 
 
 def qualify_gml_geometry(gml_from_db: str):
@@ -653,6 +655,31 @@ class XPlanListViewHtml(FilterView, ListView):
         # Anonyme dürfen nur öffentliche Pläne sehen, analog zu
         # XPlanPublicListView und dem Layer-Filter des WMS.
         return super().get_queryset().filter(public=True)
+
+    def get(self, request, *args, **kwargs):
+        # Die übergebene ID-Liste auf die Obergrenze kürzen, bevor django-filter
+        # sie auswertet (XPLANUNG_LIGHT_CONFIG['getfeatureinfo_max_plaene']).
+        kuerze_id_parameter(request, 'pk__in', max_plaene_getfeatureinfo())
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        # Die Seite ist unpaginiert; ausgeliefert werden trotzdem höchstens so
+        # viele Pläne wie bei GetFeatureInfo - sonst ist der anonyme Endpunkt
+        # bei großen Beständen (35.000 Pläne) nicht bedienbar.
+        max_plaene = max_plaene_getfeatureinfo()
+        if 'object_list' in kwargs:
+            kwargs['object_list'] = kwargs['object_list'][:max_plaene]
+        context = super().get_context_data(**kwargs)
+        # Sicherheitsnetz: auch die Kontextschlüssel nach der Kürzung schneiden,
+        # falls object_list nicht schon über kwargs hereinkam. Den Namen der
+        # Modell-Liste (z. B. bplan_list) aus der Objektliste selbst ableiten,
+        # das Klassenattribut model_name_lower stimmt in Subklassen nicht immer.
+        if 'object_list' in context:
+            context['object_list'] = context['object_list'][:max_plaene]
+            list_key = self.get_context_object_name(context['object_list'])
+            if list_key and list_key in context:
+                context[list_key] = context[list_key][:max_plaene]
+        return context
 
 
 class XPlanDetailView(PublicOrGemeindeAdminRequiredMixin, DetailView):

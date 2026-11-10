@@ -6,6 +6,9 @@
     <title>BPlan template</title>
   </head>
   <body>
+    <!-- Obergrenze 50 Plaene pro Antwort: setzt der Django-OWS-Proxy per
+         FEATURE_COUNT (XPLANUNG_LIGHT_CONFIG['getfeatureinfo_max_plaene']).
+         Klassische Templates koennen die Feature-Zahl nicht selbst begrenzen. -->
     Name: [name]
   </body>
 </html>

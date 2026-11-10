@@ -291,6 +291,13 @@ XPLANUNG_LIGHT_CONFIG = {
     'metadata_keywords': ['bebauungsplan', 'kommunal', ],
     'mapfile_cache_duration_seconds': 20,
     "mapfile_force_online_resource_https": False,
+    # Obergrenze der Pläne, die eine GetFeatureInfo-Anfrage maximal liefern soll:
+    # Der OWS-Proxy begrenzt FEATURE_COUNT und die Treffer-IDs auf diesen Wert,
+    # die anonymen html-Listen (bplan/html-list, xplan/html) kürzen ebenfalls auf
+    # diese Zahl. Klassische MapServer-Templates (xplanung_light/mapserver/
+    # templates/) können die Feature-Zahl nicht selbst begrenzen, dort steht nur
+    # ein Hinweis auf diese Einstellung.
+    'getfeatureinfo_max_plaene': 50,
     "further_base_layers": [
         # {"name": "dop20rp", "title": "DOP20 RP", "url": "https://geo4.service24.rlp.de/wms/rp_dop20.fcgi?", "attribution": "Lizenz ...", "layer_name": "rp_dop20"},
         {"name": "topplusfarbe", "title": "TopPlus Farbe", "url": "https://sgx.geodatenzentrum.de/wms_topplus_open?",
