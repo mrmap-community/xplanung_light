@@ -23,6 +23,9 @@ from django.contrib import messages
 from xplanung_light.forms import RegistrationForm, BPlanImportForm, BPlanImportArchivForm, FPlanImportForm, FPlanImportArchivForm
 from xplanung_light.forms import RequestForRoleRefuseForm, RequestForRoleConfirmForm
 from xplanung_light.filter import BPlanIdFilter, FPlanIdFilter
+from xplanung_light.views.obergrenzen import (max_plaene_getfeatureinfo,
+                                              kuerze_feature_count,
+                                              kuerze_id_parameter)
 from django.http import HttpResponse
 import mapscript
 from django.shortcuts import get_object_or_404
@@ -185,6 +188,13 @@ def xplan_html(request, pk: int):
     # bplan_list = BPlan.objects.filter(gemeinde=orga)
     # print(bplaene)
     # print(request.GET)
+    # Obergrenze: ein Klick in eine Übersichtskarte (und ein direkter Aufruf
+    # dieser Seite mit übergroßer ID-Liste) darf höchstens die in den Settings
+    # definierte Zahl von Plänen liefern - sonst hängt die anonyme Seite bei
+    # großen Beständen fest (XPLANUNG_LIGHT_CONFIG['getfeatureinfo_max_plaene']).
+    max_plaene = max_plaene_getfeatureinfo()
+    kuerze_id_parameter(request, 'bplan_id__in', max_plaene)
+    kuerze_id_parameter(request, 'fplan_id__in', max_plaene)
     if 'bplan_id__in' in request.GET.keys():
         if len(request.GET['bplan_id__in']) == 0:
             bplan_filter = []
@@ -238,6 +248,12 @@ def ows_beteiligungen(request):
     qs = parse_qs(request.META['QUERY_STRING'])
     req = mapscript.OWSRequest()
     # TODO - auch POST unterstützen!
+    # FEATURE_COUNT auf die Obergrenze begrenzen: diese View liefert die
+    # HTML-Trefferliste (Template offenlagen.html) ohne weitere Bearbeitung an
+    # den Client und ein klassisches MapServer-Template kann die Zahl der
+    # Features nicht selbst begrenzen
+    # (XPLANUNG_LIGHT_CONFIG['getfeatureinfo_max_plaene']).
+    kuerze_feature_count(qs, max_plaene_getfeatureinfo())
     for k, v in qs.items():
         req.setParameter(k, ','.join(v))
         # print(str(k) + "-" + str(v))
@@ -496,6 +512,11 @@ def ows(request, pk: int):
         if k.lower() == 'info_format':
             if v[0] == 'text/html':
                 is_featureinfo_format_html = True
+    # FEATURE_COUNT des Clients auf die Obergrenze aus den Settings begrenzen,
+    # damit der MapServer gar nicht erst eine Feature-Liste beliebiger Größe
+    # liefert, die hier komplett geparst werden müsste
+    # (XPLANUNG_LIGHT_CONFIG['getfeatureinfo_max_plaene']).
+    kuerze_feature_count(qs, max_plaene_getfeatureinfo())
     for k, v in qs.items():
         if is_featureinfo and k.lower() == 'info_format' and is_featureinfo_format_html:
             v[0] = 'application/vnd.ogc.gml'
@@ -633,6 +654,11 @@ def ows_all_orgas_xplan(request, plantyp: str):
         if k.lower() == 'info_format':
             if v[0] == 'text/html':
                 is_featureinfo_format_html = True
+    # FEATURE_COUNT des Clients auf die Obergrenze aus den Settings begrenzen,
+    # damit der MapServer gar nicht erst eine Feature-Liste beliebiger Größe
+    # liefert, die hier komplett geparst werden müsste
+    # (XPLANUNG_LIGHT_CONFIG['getfeatureinfo_max_plaene']).
+    kuerze_feature_count(qs, max_plaene_getfeatureinfo())
     for k, v in qs.items():
         if is_featureinfo and k.lower() == 'info_format' and is_featureinfo_format_html:
             v[0] = 'application/vnd.ogc.gml'
