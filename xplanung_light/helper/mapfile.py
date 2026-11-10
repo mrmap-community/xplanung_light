@@ -21,6 +21,56 @@ class MapfileGenerator():
     https://github.com/geographika/mappyfile
     """
 
+    def _vereinigungsgeometrie(self, plaene):
+        """
+        Vereinigungsmenge der Geltungsbereiche einer Planebene, oder None.
+
+        PARAMETER:
+            plaene: QuerySet von BPlan oder FPlan
+
+        Rückgabe:
+            OGR-Geometrie der Vereinigungsmenge oder None, wenn die Ebene keine
+            Pläne enthält. Leere Ebenen müssen als None erkennbar bleiben: ohne
+            veröffentlichte Pläne liefert ST_Union NULL, und die NULL wird beim
+            Umgang mit OGR sonst zu dem Text "None", den OGR nicht lesen kann
+            (Meldung: Invalid geometry pointer returned from OGR_G_CreateGeometry).
+        """
+        ogr_geom = None
+        union_queryset = plaene.annotate(
+            union_geom=Func(F('geltungsbereich'), function='ST_Union')
+        ).values('union_geom')
+        for item in union_queryset:
+            ogr_geom = item['union_geom']
+        return ogr_geom
+
+    def _ows_extent(self, orga, ogr_geom, fallback_extent):
+        """
+        Extent-Angabe auf Service-Ebene als Text für die Mapfile-Metadaten.
+
+        PARAMETER:
+            orga: Gebietskörperschaft, deren Gebiet als Ausweichextent dient,
+                oder None für den Dienst über alle Organisationen
+            ogr_geom: Vereinigungmenge der Pläne oder None
+            fallback_extent: EXTENT-Wert aus der Vorlage, als letzte Möglichkeit
+
+        Rückgabe:
+            Vier Zahlen als Leerzeichen-Text.
+
+        Ohne veröffentlichte Pläne ist ogr_geom None. Das Gebiet der
+        Gebietskörperschaft ist dann das naheliegende Extent; fehlt auch das,
+        bleibt der Wert der Vorlage stehen.
+        """
+        geometrie = ogr_geom
+        if geometrie is None and orga is not None and orga.geometry:
+            geometrie = orga.geometry
+        if geometrie is None:
+            # mappyfile liest den EXTENT-Wert der Vorlage als Liste von vier
+            # Zahlen, in den Metadaten steht er als Leerzeichen-Text
+            if isinstance(fallback_extent, (list, tuple)):
+                return " ".join(str(wert) for wert in fallback_extent)
+            return str(fallback_extent)
+        return " ".join([str(i) for i in OGRGeometry(str(geometrie), srs=4326).extent])
+
     def generate_mapfile(self, admin_orga_pk: int, ows_uri: str, metadata_uri: str):
         """
         Die Funktion generiert einen Mapfile für die jeweils angefragte Gebietskörperschaft.
@@ -87,24 +137,16 @@ class MapfileGenerator():
             "ows_contactelectronicmailaddress"  ""
         """
         # Berechnen des Extents aller Pläne - TODO: hier ggf. ein Aggregat aus BPlan und FPlan generieren!
-        union_queryset_bplaene = bplaene.annotate(
-            union_geom=Func(F('geltungsbereich'), function='ST_Union')
-        ).values('union_geom')
-        for item in union_queryset_bplaene:
-            ogr_geom_bplaene = item['union_geom']
-        union_queryset_fplaene = fplaene.annotate(
-            union_geom=Func(F('geltungsbereich'), function='ST_Union')
-        ).values('union_geom')
-        for item in union_queryset_fplaene:
-            ogr_geom_fplaene = item['union_geom']
+        ogr_geom_bplaene = self._vereinigungsgeometrie(bplaene)
+        ogr_geom_fplaene = self._vereinigungsgeometrie(fplaene)
         # If both are valid, merge them
         if ogr_geom_bplaene and ogr_geom_fplaene:
             ogr_geom = ogr_geom_bplaene.union(ogr_geom_fplaene)
         else:
             ogr_geom = ogr_geom_bplaene or ogr_geom_fplaene
-        map["web"]["metadata"]["ows_extent"] = " ".join(
-            [str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
-        map["extent"] = map["web"]["metadata"]["ows_extent"]
+        extent = self._ows_extent(orga, ogr_geom, map["extent"])
+        map["web"]["metadata"]["ows_extent"] = extent
+        map["extent"] = extent
         """
         Einlesen der Templates
         """
@@ -359,8 +401,12 @@ class MapfileGenerator():
             umring_layer["classes"] = []
             umring_layer["classes"].append(layer_class)
             map["layers"].append(umring_layer)
-            # print(mappyfile.dumps(map))
-            return mappyfile.dumps(map, quote="'")
+        # Die Rueckgabe liegt ausserhalb der Bedingung fuer Bebauungsplaene:
+        # eine Gebietskoerperschaft ohne Bebauungsplaene - etwa eine Verbandsgemeinde,
+        # die nur den Flächennutzungsplan veröffentlicht - hatte sonst kein
+        # Mapfile und der aufrufende OWS-View eine 500er-Antwort.
+        # print(mappyfile.dumps(map))
+        return mappyfile.dumps(map, quote="'")
 
     def generate_mapfile_all_orgas_xplan(self, ows_uri: str, metadata_uri: str, plantyp: str):
         """
@@ -436,15 +482,10 @@ class MapfileGenerator():
         Die Gechwindigkeit kann später problematisch werden - dann sollten die fixen Werte aus den settings
         genutzt werden! - TODO: Abhängig von Zahl der Pläne machen - nur bis 300 so verwenden.
         """
-        union_queryset_plaene = plaene.annotate(
-            union_geom=Func(F('geltungsbereich'), function='ST_Union')
-        ).values('union_geom')
-        for item in union_queryset_plaene:
-            ogr_geom_plaene = item['union_geom']
-        ogr_geom = ogr_geom_plaene
-        map["web"]["metadata"]["ows_extent"] = " ".join(
-            [str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
-        map["extent"] = map["web"]["metadata"]["ows_extent"]
+        ogr_geom = self._vereinigungsgeometrie(plaene)
+        extent = self._ows_extent(None, ogr_geom, map["extent"])
+        map["web"]["metadata"]["ows_extent"] = extent
+        map["extent"] = extent
         """
         Einlesen der Layer-Templates
         """
@@ -476,8 +517,7 @@ class MapfileGenerator():
         if plantyp == 'bplan':
             metadata["ows_title"] = "Bebauungspläne Geltungsbereiche"
             metadata["ows_abstract"] = "Bebauungspläne Geltungsbereiche - Abstract"
-        metadata["ows_extent"] = " ".join(
-            [str(i) for i in OGRGeometry(str(ogr_geom), srs=4326).extent])
+        metadata["ows_extent"] = extent
         metadata["ows_metadataurl_href"] = metadata_uri.replace(
             "/1000000/", "/" + "umring" + "/")
         # Metadaten an Umring Layer anfügen
