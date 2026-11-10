@@ -1,10 +1,12 @@
 {% extends "xplanung_light/layout.html" %}
+{% load static %}
 {% load crispy_forms_tags %}
 {% block title %}
     Organisation bearbeiten
 {% endblock %}
 {% block content %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.js"></script>
+<script src="{% static 'vendor/select2-4.0.13/js/select2.full.js' %}"></script>
+<link href="{% static 'vendor/select2-4.0.13/css/select2.min.css' %}" rel="stylesheet">
 <h3>{{ administrativeorganization.name }}{%if administrativeorganization.name_part %} - {{ administrativeorganization.name_part }}{% endif %}</h3>
 <h3>{{ administrativeorganization.ags }}{%if administrativeorganization.ts %} - {{ administrativeorganization.ts }}{% endif %}</h3>
 

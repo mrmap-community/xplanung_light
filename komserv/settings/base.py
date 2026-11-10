@@ -175,6 +175,15 @@ USE_L10N = False
 STATIC_URL = 'static/'
 
 STATIC_ROOT = BASE_DIR / 'static_collected'
+
+# django-bootstrap5 zeigt standardmaessig auf die CDN-Defaults (jsDelivr,
+# siehe django_bootstrap5/core.py). Dieselben Versionen werden lokal aus
+# xplanung_light/static/vendor/bootstrap-5.3.8/ ausgeliefert, damit die
+# Anwendung ohne externe CDN-Verfuegbarkeit laeuft.
+BOOTSTRAP5 = {
+    "css_url": {"url": "/" + STATIC_URL.strip("/") + "/vendor/bootstrap-5.3.8/css/bootstrap.min.css"},
+    "javascript_url": {"url": "/" + STATIC_URL.strip("/") + "/vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js"},
+}
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
@@ -205,7 +214,10 @@ LEAFLET_CONFIG = {
     'NO_GLOBALS': False,
     'PLUGINS': {
         'filelayer': {
-            'js': ['https://unpkg.com/@tmcw/togeojson@7.1.2/dist/togeojson.umd.js', 'https://cdn.jsdelivr.net/npm/leaflet-filelayer@1.2.0/src/leaflet.filelayer.min.js'],
+            # Kopien von https://unpkg.com/@tmcw/togeojson@7.1.2 und
+            # https://cdn.jsdelivr.net/npm/leaflet-filelayer@1.2.0, lokal
+            # unter xplanung_light/static/vendor/leaflet-filelayer/
+            'js': ['vendor/leaflet-filelayer/togeojson.umd.js', 'vendor/leaflet-filelayer/leaflet.filelayer.min.js'],
             'auto-include': True,
         },
         'geocoder': {
