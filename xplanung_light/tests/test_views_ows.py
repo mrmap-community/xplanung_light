@@ -247,10 +247,15 @@ class OwsViewTests(TestCase):
         r = self.client.get(url, GETCAP)
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r["Access-Control-Allow-Origin"], "*")
-        self.assertIn("date()", self._loaded_mapfile()
-                      )          # SpatiaLite-SQL
-        self.assertIn("CONNECTIONTYPE OGR", self._loaded_mapfile()
-                      )          # SpatiaLite liest ueber OGR
+        erste_Ebene = self._loaded_mapfile()
+        if views.connection.vendor == "sqlite":
+            self.assertIn("date()", erste_Ebene)          # SpatiaLite-SQL
+            self.assertIn("CONNECTIONTYPE OGR", erste_Ebene)
+        else:
+            # Auf PostGIS erzeugt schon dieser erste Aufruf die POSTGIS-Fassung;
+            # die SpatiaLite-Zweige sind dann nicht erreichbar.
+            self.assertIn("now()", erste_Ebene)           # PostGIS-SQL
+            self.assertIn("CONNECTIONTYPE POSTGIS", erste_Ebene)
 
         pg = MagicMock(vendor="postgresql")
         pg.settings_dict = {"HOST": "localhost", "NAME": "db",
