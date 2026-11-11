@@ -52,6 +52,12 @@ jobs:
       run: |
         source .venv/bin/activate
         python manage.py shell -c "import django; django.db.connection.cursor().execute('SELECT InitSpatialMetaData(1);')"
+        # Modellzustand und Migrationspunkte müssen zusammenbleiben: ohne diesen
+        # Schritt fällt eine Änderung an einem Modellfeld auf, die niemand als
+        # Migration festgehalten hat, erst bei den Installationen auf, die
+        # migrieren. Die Prüfung läuft vor den Tests, damit die Meldung die
+        # Migration nennt und nicht nur ein fehlgeschlagener Test.
+        python manage.py makemigrations --check --dry-run
         coverage run manage.py test
         coverage html
 
