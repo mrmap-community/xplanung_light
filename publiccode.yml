@@ -4,7 +4,7 @@ categories:
   - data-collection
 name: "XPlanung-light"    # Name ihres Projekts
 url: "https://github.com/mrmap-community/xplanung_light/"    # URL zu Ihrem Projekt (es muss sich um eine URL zu einem Projekt, nicht zu einer Gruppe handeln)
-softwareVersion: "0.2.0"    # Version ihrer Software
+softwareVersion: "0.3.0"    # Version ihrer Software - muss mit xplanung_light.__version__ uebereinstimmen, siehe RELEASING.md
 platforms:    # Unterstützte Plattformen. Mögliche Angaben: web, windows, mac, linux, ios, android
   - linux
 developmentStatus: development    # Entwicklungsstatus (Mögliche Angaben: concept, development, beta, stable, obsolete)
