@@ -38,9 +38,25 @@ def validate_xplan_attachment_mimetype(value):
             "Dateiendung und Dateiinhalt passen nicht zusammen.")
 
 
-validate_xplan_attachment_extension = FileExtensionValidator(
-    allowed_extensions=settings.XPLANUNG_LIGHT_CONFIG['xplan_attachments']['allowed_extensions']
-)
+def validate_xplan_attachment_extension(value):
+    """
+    Dateiendung einer Anlage gegen die Einstellungen pruefen.
+
+    Der eigentliche Pruefer wird erst beim Aufruf aus den Settings gebaut. Als
+    einmal beim Import erzeugte FileExtensionValidator-Instanz waere er
+    dagegen Teil des Migrationszustands der Felder: Validatoren dekonstruieren
+    sich mit ihren Argumenten, die Liste der erlaubten Endungen wandert damit
+    in die Migrationsdateien. Jede Installation mit eigener Einstellung und
+    jede Aenderung der Liste meldet dann eine offene Migration, obwohl die
+    zugehoerige Migration am Schema nichts aendert (sqlmigrate: no-op). Die
+    Nachbarn unten (Mimetype, Dateigroesse) lesen die Einstellungen ebenso erst
+    hier - aus demselben Grund.
+    """
+    if not value:
+        return
+    FileExtensionValidator(
+        allowed_extensions=settings.XPLANUNG_LIGHT_CONFIG['xplan_attachments']['allowed_extensions']
+    )(value)
 
 
 def validate_xplan_attachment_file_size(value):

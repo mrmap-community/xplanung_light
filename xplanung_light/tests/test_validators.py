@@ -1,16 +1,26 @@
 """Tests der Validatoren für XPlanung-Dateien, ZIP-Archive und Rasterdateien."""
 
+import inspect
 import zipfile
-from django.test import TestCase
+from copy import deepcopy
+
+from django.apps import apps
+from django.conf import settings
+from django.db.migrations.autodetector import MigrationAutodetector
+from django.db.migrations.loader import MigrationLoader
+from django.db.migrations.questioner import NonInteractiveMigrationQuestioner
+from django.db.migrations.state import ProjectState
+from django.test import TestCase, override_settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from xplanung_light.models import AdministrativeOrganization 
+from xplanung_light.models import AdministrativeOrganization, BPlanSpezExterneReferenz 
 from xplanung_light.validators import (
     bplan_content_validator,
     fplan_content_validator,
     bplan_upload_file_validator,
     fplan_upload_file_validator,
-    geotiff_raster_validator
+    geotiff_raster_validator,
+    validate_xplan_attachment_extension
 )
 
 class XPlanValidatorsTests(TestCase):
@@ -129,3 +139,149 @@ class XPlanValidatorsTests(TestCase):
         
         with self.assertRaises(ValidationError):
             geotiff_raster_validator(uploaded_file)
+
+
+class AnlageErlaubteDateiendungenTests(TestCase):
+    """
+    Der Prüfer für erlaubte Dateiendungen der Anlagen
+    (validators.validate_xplan_attachment_extension).
+
+    Er wurde als FileExtensionValidator-Instanz beim Import aus den settings
+    gebaut. Validatoren dekonstruieren sich aber mit ihren Argumenten - die
+    Liste der erlaubten Endungen wanderte damit in den Migrationszustand der
+    Attachment-Felder. Seit dem Nachziehen der Liste (Commit 7a09f7e) meldete
+    makemigrations --check offen: vier AlterField-Operationen, deren Migration
+    am Schema nichts ändert (sqlmigrate: no-op). Der Prüfer wird deshalb erst
+    beim Aufruf gebaut, wie die Nachbarn für Mimetype und Dateigröße.
+    """
+
+    def _einstellungen_mit(self, erlaubte_endungen):
+        """Die laufende Konfiguration, aber mit einer anderen Endungsliste."""
+        konfiguration = deepcopy(dict(settings.XPLANUNG_LIGHT_CONFIG))
+        konfiguration['xplan_attachments']['allowed_extensions'] = erlaubte_endungen
+        return override_settings(XPLANUNG_LIGHT_CONFIG=konfiguration)
+
+    def _datei(self, name):
+        return SimpleUploadedFile(name, b"Inhalt", content_type="application/octet-stream")
+
+    def _offene_aenderungen(self):
+        """Was makemigrations ohne Dateien zu schreiben finden würde, je App."""
+        lader = MigrationLoader(None, ignore_no_migrations=True)
+        autodetektor = MigrationAutodetector(
+            lader.project_state(),
+            ProjectState.from_apps(apps),
+            NonInteractiveMigrationQuestioner(specified_apps=set(), dry_run=True),
+        )
+        return autodetektor.changes(graph=lader.graph, trim_to_apps={'xplanung_light'})
+
+    def test_keine_Endungsliste_im_Modellfeld(self):
+        """
+        Was wird geprüft:
+            Die Dekonstruktion des Attachment-Felds einer spezifizierten
+            externen Referenz: welche Validatoren dort landen und ob eine
+            Endungsliste darin enthalten ist.
+
+        Warum:
+            Nur was ein Feld bei der Dekonstruktion mitgibt, steht später im
+            Migrationszustand. Ein Validierungsobjekt, das die Liste aus den
+            settings kennt, macht das Modell von einer Deployment-Einstellung
+            abhängig - der eigentliche Fehler.
+
+        Erwartung:
+            Der Endungsprüfer ist eine Funktion ohne eigene Listen-Mitgabe, das
+            Feld dekonstruiert sich in allen vier Modellen gleich und ohne
+            etwas, das von den Einstellungen käme.
+        """
+        feld = BPlanSpezExterneReferenz._meta.get_field('attachment')
+
+        selbst = dict(feld.deconstruct()[3])['validators']
+        pruefer = [v for v in selbst
+                   if getattr(v, '__name__', '') == 'validate_xplan_attachment_extension']
+        self.assertEqual(len(pruefer), 1)
+        self.assertTrue(inspect.isfunction(pruefer[0]))
+        for validator in selbst:
+            self.assertFalse(
+                hasattr(validator, 'allowed_extensions'),
+                "Das Feld trägt eine Endungsliste mit - sie wandert in den "
+                "Migrationszustand und hängt dann von den settings ab")
+
+    def test_abweichende_Einstellungen_erzeugen_keine_Migrationsdifferenz(self):
+        """
+        Was wird geprüft:
+            Ob der Migrationsautodetektor ein AlterField für die
+            Attachment-Felder will, wenn die Liste der erlaubten Endungen von
+            den Auslieferungs-Einstellungen abweicht - wie in einer
+            Installation mit eigener Vorgabe.
+
+        Warum:
+            Genau diese Konstellation war unauffällig kaputt: wich die
+            Einstellung von dem in Migration 0092 gemerkten Stand ab, forderte
+            der Autodetektor vier AlterFields - deren Migration am Schema nichts
+            ändert (sqlmigrate: no-op). Installationen mit eigener Liste
+            liefen dauerhaft mit "offenen" Migrationen mit.
+
+        Erwartung:
+            Keine Operation für ein attachment-Feld. Über die ganze App wird
+            das hier nicht geprüft: die choices von simple_historys history_type
+            werden beim Laden der Migrationsdateien in der gerade aktiven
+            Sprache ausgelesen, ein App-weiter Vergleich hängt deshalb an der
+            Sprache. Dafür läuft makemigrations --check in der Integration.
+        """
+        with self._einstellungen_mit(['pdf', 'webp']):
+            aenderungen = self._offene_aenderungen()
+
+        betroffen = [
+            (operation.model_name, operation.name)
+            for migration in aenderungen.get('xplanung_light', [])
+            for operation in migration.operations
+            if getattr(operation, "name", "") == "attachment"
+        ]
+        self.assertEqual(betroffen, [])
+
+    def test_Liste_gilt_zum_Zeitpunkt_des_Aufrufs(self):
+        """
+        Was wird geprüft:
+            Welche Dateiendungen der Prüfer durchlässt, wenn die Einstellung
+            während der Laufzeit verschwindet bzw. auftaucht.
+
+        Warum:
+            Die Liste ist eine Deployment-Einstellung. Die Validierung muss ihr
+            folgen, sonst entscheidet der Stand beim Import des Moduls - und
+            eine Installation, die die Liste pflegt, validiert gegen falsche
+            Endungen.
+
+        Erwartung:
+            Mit den Auslieferungs-Einstellungen gehen .jpg und .pdf durch; mit
+            der Vorgabe nur "pdf" geht .pdf weiter, .jpg wird abgelehnt.
+        """
+        self.assertIsNone(validate_xplan_attachment_extension(self._datei("Plan.jpg")))
+        self.assertIsNone(validate_xplan_attachment_extension(self._datei("Plan.pdf")))
+
+        with self._einstellungen_mit(['pdf']):
+            self.assertIsNone(validate_xplan_attachment_extension(self._datei("Plan.pdf")))
+            with self.assertRaises(ValidationError):
+                validate_xplan_attachment_extension(self._datei("Plan.jpg"))
+
+    def test_leere_Werte_und_Datei_ohne_Eendung(self):
+        """
+        Was wird geprüft:
+            Der Prüfer mit leerem Feldwert und mit einer Datei ohne Endung.
+
+        Warum:
+            Das Feld ist null=True und blank=True; Field.run_validators sortiert
+            leere Werte aus, der Prüfer bekommt sie im Formularlauf also nie zu
+            sehen. Der eigene Aufrufpfad darf an beiden Enden nicht anders
+            reagieren: weder mit einer Ausnahme für leere Werte - Djangos
+            FileExtensionValidator fasst in Django 5.2 value.name an und meldet
+            für None einen AttributeError - noch mit einer stillschweigenden
+            Erlaubnis für Namen ohne Endung.
+
+        Erwartung:
+            Für None und den Leerstring passiert nichts, eine Datei ohne Endung
+            wird abgelehnt.
+        """
+        self.assertIsNone(validate_xplan_attachment_extension(None))
+        self.assertIsNone(validate_xplan_attachment_extension(""))
+
+        with self.assertRaises(ValidationError):
+            validate_xplan_attachment_extension(self._datei("Planohneendung"))
