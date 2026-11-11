@@ -1,0 +1,57 @@
+{#
+  Umschalter zwischen den Doku-Fassungen (master und die Versionstags).
+
+  Die Vorlage überschreibt die leere Vorlage des Themes: sphinx_rtd_theme bindet
+  versions.html in layout.html ein, liefert die Datei aber mit 0 Byte. Gefüllt
+  wird sie nur, wenn sphinx-multiversion läuft und mehr als eine Fassung gebaut
+  wurde — beim einfachen Bau (make html, ohne das Paket) bleibt der Block weg und
+  die Seite sieht aus wie vorher.
+
+  Die Werte liefert die Erweiterung:
+    versions         eine Fassung nach der anderen (zuerst Tags, dann Zweige),
+                     jede mit name, url, version, release, is_released
+    current_version  die Fassung, aus der diese Seite gebaut wurde
+  url ist schon der passende relative Weg zur selben Seite in der anderen
+  Fassung; fehlt diese dort, führt der Weg zur Startseite jener Fassung.
+#}
+{%- set faessungen = (versions | list) if versions is defined and versions else [] -%}
+{%- if faessungen | length > 1 -%}
+  {%- set aktuell = current_version.name if current_version is defined and current_version else '' -%}
+<div class="rst-versions rst-badge" data-toggle="rst-versions" role="navigation"
+     aria-label="Fassungen der Dokumentation">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    Fassung: {{ aktuell or (faessungen | first).name }}
+    <span class="fa fa-caret-down"></span>
+  </span>
+  <div class="rst-other-versions">
+    <dl>
+      <dt>Fassungen</dt>
+      {# Veröffentlichte Fassungen zuerst, innerhalb gruppiert nach Namen;
+         die Sortierung ist stabil, deshalb darf sie in zwei Schritten geschehen. #}
+      {%- for f in faessungen | sort(attribute='name', reverse=True)
+                          | sort(attribute='is_released', reverse=True) %}
+      <dd{% if f.name == aktuell %} class="rst-current-item"{% endif %}>
+        <a href="{{ f.url }}">{{ f.name }}</a>{% if not f.is_released %}
+        <small>(Entwicklung)</small>{% endif %}</dd>
+      {%- endfor %}
+    </dl>
+    <hr>
+    <dl>
+      <dt>Projekt</dt>
+      <dd><a href="https://github.com/mrmap-community/xplanung_light">XPlanung-light auf GitHub</a></dd>
+    </dl>
+  </div>
+</div>
+<script>
+  /* Das Theme schaltet diese Klappe mit einem eigenen Skript, das die Fassungsangaben
+     von readthedocs erwartet; auf GitHub Pages gibt es die nicht. Deshalb die
+     zwei Zeilen selbst: ein Klick auf die Kopfzeile klappt die Liste auf und zu. */
+  (function () {
+    var kasten = document.querySelector('.rst-versions');
+    if (!kasten) { return; }
+    kasten.querySelector('.rst-current-version').addEventListener('click', function () {
+      kasten.classList.toggle('shift-up');
+    });
+  })();
+</script>
+{%- endif -%}
