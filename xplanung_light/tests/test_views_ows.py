@@ -20,6 +20,7 @@ from xplanung_light.models import BPlan, AdminOrgaUser
 from django.contrib.auth import get_user_model
 import requests
 from django.test import RequestFactory
+from xplanung_light.helper.mapfile import srid_der_geometriespalte
 from xplanung_light.views import views
 from xplanung_light.models import FPlan
 from xplanung_light.models import AdministrativeOrganization as Orga, FPlan
@@ -232,11 +233,15 @@ class OwsViewTests(TestCase):
             Mapfile geschrieben.
 
         Erwartung:
-            SpatiaLite: date() im Mapfile. PostgreSQL: SQL mit srid=25832 und
-            host=localhost.
+            SpatiaLite: date() im Mapfile. PostgreSQL: SQL mit dem SRID der
+            Geometriespalte aus der Bank (hier 4326) und host=localhost.
 
         Hinweis:
             Das PostgreSQL-SQL wird nicht ausgeführt, nur der erzeugte Mapfile-Text geprüft.
+            Der SRID war hier fest mit 25832 behauptet - die Geometrien liegen aber
+            in 4326, und PostGIS lehnt jede Kachelanfrage ab, wenn die DATA-Klausel
+            ein anderes System nennt als die Spalte. Geprüft wird deshalb der Wert
+            der Bank, nicht eine Zahl aus der Vorlage.
         """
         url = reverse("beteiligungen-map")
         r = self.client.get(url, GETCAP)
@@ -244,6 +249,8 @@ class OwsViewTests(TestCase):
         self.assertEqual(r["Access-Control-Allow-Origin"], "*")
         self.assertIn("date()", self._loaded_mapfile()
                       )          # SpatiaLite-SQL
+        self.assertIn("CONNECTIONTYPE OGR", self._loaded_mapfile()
+                      )          # SpatiaLite liest ueber OGR
 
         pg = MagicMock(vendor="postgresql")
         pg.settings_dict = {"HOST": "localhost", "NAME": "db",
@@ -251,9 +258,13 @@ class OwsViewTests(TestCase):
         with patch(f"{VIEWS}.connection", pg):
             self.assertEqual(self.client.get(url, GETCAP).status_code, 200)
         loaded = self._loaded_mapfile()
-        self.assertIn("using unique plan_id using srid=25832",
-                      loaded)  # PostGIS-SQL
+        self.assertIn("using unique plan_id using srid={}".format(
+            srid_der_geometriespalte()), loaded)      # PostGIS-SQL
+        self.assertNotIn("srid=25832", loaded)
         self.assertIn("host=localhost", loaded)
+        # Die Klausel ist POSTGIS-Syntax, also muss auch der Treiber gesetzt sein
+        self.assertIn("CONNECTIONTYPE POSTGIS", loaded)
+        self.assertNotIn("CONNECTIONTYPE OGR", loaded)
 
     def test_ows_beteiligungen_invalid_request(self):
         """

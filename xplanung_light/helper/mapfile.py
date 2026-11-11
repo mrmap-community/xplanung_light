@@ -4,7 +4,7 @@ from django.contrib.gis.gdal import OGRGeometry, SpatialReference
 from django.utils.timezone import datetime
 import os
 from django.conf import settings
-from django.db import connection
+from django.db import DatabaseError, connection
 
 
 """
@@ -21,6 +21,99 @@ HUELLEN_FUNKTIONEN = {
     "sqlite": ("Extent", ("MBRMinX", "MBRMinY", "MBRMaxX", "MBRMaxY")),
     "postgresql": ("ST_Extent", ("ST_XMin", "ST_YMin", "ST_XMax", "ST_YMax")),
 }
+
+
+# SRID je Geometriespalte, einmal je Prozess gelesen
+_SRID_PRO_SPALTE = {}
+
+
+def srid_der_geometriespalte(modell=None, spalte="geltungsbereich"):
+    """
+    SRID, mit dem eine Geometriespalte in der Datenbank tatsächlich angelegt ist.
+
+    PARAMETER:
+        modell: Modell der Tabelle, Standard BPlan
+        spalte: Name des Geometriefeldes
+
+    Die Sicht geometry_columns heisst bei PostGIS und bei Spatialite gleich und
+    listspalte f_table_name, f_geometry_column, srid - eine Abfrage deckt beide
+    Backends ab. Sagt die Spalte nichts aus (bei einer ohne Typvorgabe, wie sie
+    eine Wiederherstellung aus einer Dump-Datei hinterlassen kann), fragt der
+    zweite Versuch die gespeicherten Werte. Beides läuft ins Leere, solange die
+    Bank leer ist; dann nimmt der Modellwert ein.
+
+    Abgefragt wird die Bank und nicht das Modell, weil die beiden auseinanderlaufen
+    koennen: Altdaten, die vor der Umstellung auf 4326 eingespielt wurden, liegen
+    mit einem anderen SRID in der Tabelle als es das Modell heute sagt. Die
+    DATA-Klausel muss zu dem passen, was in der Tabelle steht - sie beschreibt die
+    Ablage, nicht die Anfrage.
+    """
+    feld = (modell if modell is not None else BPlan)._meta.get_field(spalte)
+    tabelle = feld.model._meta.db_table
+    spaltenname = feld.column
+    schluessel = (tabelle.lower(), spaltenname.lower())
+    if schluessel in _SRID_PRO_SPALTE:
+        return _SRID_PRO_SPALTE[schluessel]
+
+    srid = None
+    try:
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT srid FROM geometry_columns "
+                "WHERE lower(f_table_name) = lower(%s) "
+                "AND lower(f_geometry_column) = lower(%s)", (tabelle, spaltenname))
+            zeile = cur.fetchone()
+            if zeile and zeile[0]:
+                srid = zeile[0]
+            else:
+                cur.execute(
+                    "SELECT ST_SRID({0}) FROM {1} WHERE {0} IS NOT NULL LIMIT 1".format(
+                        connection.ops.quote_name(spaltenname),
+                        connection.ops.quote_name(tabelle)))
+                zeile = cur.fetchone()
+                if zeile and zeile[0]:
+                    srid = zeile[0]
+    except DatabaseError:
+        srid = None
+    if not isinstance(srid, int) or srid <= 0:
+        # Auch die Bank kann schweigen: fehlende Sicht, leere Tabelle, oder ein
+        # Verbindungsnachbau im Test. Dann gilt, was das Modell fuer die Spalte
+        # vorgibt.
+        srid = feld.srid
+    _SRID_PRO_SPALTE[schluessel] = srid
+    return srid
+
+
+def postgis_data_klausel(geometrie_spalte, unterabfrage,
+                         eindeutige_spalte="id", srid=None, modell=None):
+    """
+    DATA-Klausel eines Layers mit CONNECTIONTYPE POSTGIS.
+
+    PARAMETER:
+        geometrie_spalte: Name der Geometriespalte im Ergebnis der Unterrabfrage
+        unterabfrage: die SELECT-Anweisung, die die Features liefert
+        eindeutige_spalte: Spalte mit den Zeilenkennungen fuer MapServer
+        srid: SRID der Geometriespalte; Standard fragt die Bank
+        modell: Modell der abgefragten Tabelle, Standard BPlan
+
+    Die Angabe hinter "using srid=" ist keine Information ueber die Anfrage,
+    sondern darueber, in welchem referenzsystem die Spalte in der Datenbank
+    steht: MapServer kennzeichnet den BBOX-Filter, den es fuer jede Kachel an
+    PostGIS schickt, mit diesem Wert. Steht dort eine andere Zahl als in der
+    Spalte, antwortet PostGIS auf jede Kachel mit
+    "ST_Intersects: Operation on mixed SRID geometries" und der Dienst wird
+    500. Die Vorlagen nannten hier 25832, die Felder stehen seit je in 4326 -
+    aufgefallen ist das nie, weil Spatialite ueber CONNECTIONTYPE OGR laeuft und
+    dort kein nach SRID geprueftes SQL entsteht.
+
+    Das Modell wird weitergereicht, weil BPlan und FPlan eigene Tabellen sind:
+    bei einem Altbestand kann die eine Spalte in einem anderen System liegen als
+    die andere.
+    """
+    if srid is None:
+        srid = srid_der_geometriespalte(modell)
+    return "{0} from ({1}) as foo using unique {2} using srid={3}".format(
+        geometrie_spalte, unterabfrage, eindeutige_spalte, srid)
 
 
 class MapfileGenerator():
@@ -309,7 +402,10 @@ class MapfileGenerator():
                 if connection.vendor == "postgresql":
                     layer["connectiontype"] = "POSTGIS"
                     layer["connection"] = connection_string
-                    layer["data"] = "geltungsbereich from (select geltungsbereich, id from xplanung_light_fplan where public = true) as foo using unique id using srid=25832"
+                    layer["data"] = postgis_data_klausel(
+                        "geltungsbereich",
+                        "select geltungsbereich, id from xplanung_light_fplan where public = true",
+                        modell=FPlan)
                 layer["filter"] = "( '[id]' = '" + str(fplan.pk) + "' )"
                 layer["classes"] = []
                 # Layer nur hinzufügen, wenn auch ein Geltungsbereich existiert
@@ -341,8 +437,10 @@ class MapfileGenerator():
             if connection.vendor == "postgresql":
                 umring_layer["connectiontype"] = "POSTGIS"
                 umring_layer["connection"] = connection_string
-                umring_layer["data"] = "geltungsbereich from (SELECT fplan.* FROM xplanung_light_fplan fplan INNER JOIN xplanung_light_fplan_gemeinde gemeinde ON fplan.id = gemeinde.fplan_id WHERE public=true AND gemeinde.administrativeorganization_id = " + str(
-                    orga.pk) + ") as foo using unique id using srid=25832"
+                umring_layer["data"] = postgis_data_klausel(
+                    "geltungsbereich",
+                    "SELECT fplan.* FROM xplanung_light_fplan fplan INNER JOIN xplanung_light_fplan_gemeinde gemeinde ON fplan.id = gemeinde.fplan_id WHERE public=true AND gemeinde.administrativeorganization_id = " + str(orga.pk),
+                    modell=FPlan)
             # umring_layer["data"] = "SELECT fplan.* FROM xplanung_light_fplan fplan INNER JOIN xplanung_light_fplan_gemeinde gemeinde ON fplan.id = gemeinde.fplan_id WHERE public=true AND gemeinde.administrativeorganization_id = " + str(orga.pk)
             # TODO: add active Filter when it will be available
             umring_layer["classes"] = []
@@ -421,7 +519,10 @@ class MapfileGenerator():
                 if connection.vendor == "postgresql":
                     layer["connectiontype"] = "POSTGIS"
                     layer["connection"] = connection_string
-                    layer["data"] = "geltungsbereich from (select geltungsbereich, id from xplanung_light_bplan where public = true) as foo using unique id using srid=25832"
+                    layer["data"] = postgis_data_klausel(
+                        "geltungsbereich",
+                        "select geltungsbereich, id from xplanung_light_bplan where public = true",
+                        modell=BPlan)
                 # print(layer['data'])
                 layer["filter"] = "( '[id]' = '" + str(bplan.pk) + "' )"
                 layer["classes"] = []
@@ -453,8 +554,10 @@ class MapfileGenerator():
             if connection.vendor == "postgresql":
                 umring_layer["connectiontype"] = "POSTGIS"
                 umring_layer["connection"] = connection_string
-                umring_layer["data"] = "geltungsbereich from (SELECT bplan.* FROM xplanung_light_bplan bplan INNER JOIN xplanung_light_bplan_gemeinde gemeinde ON bplan.id = gemeinde.bplan_id WHERE public = true AND gemeinde.administrativeorganization_id = " + str(
-                    orga.pk) + ") as foo using unique id using srid=25832"
+                umring_layer["data"] = postgis_data_klausel(
+                    "geltungsbereich",
+                    "SELECT bplan.* FROM xplanung_light_bplan bplan INNER JOIN xplanung_light_bplan_gemeinde gemeinde ON bplan.id = gemeinde.bplan_id WHERE public = true AND gemeinde.administrativeorganization_id = " + str(orga.pk),
+                    modell=BPlan)
             # TODO: add active Filter when it will be available
             umring_layer["classes"] = []
             umring_layer["classes"].append(layer_class)
@@ -591,13 +694,14 @@ class MapfileGenerator():
             umring_layer["connection"] = connection_string
             umring_layer["data"] = "SELECT * FROM xplanung_light_" + plantyp + \
                 " WHERE public=true AND " + date_name_part + "_datum <= date()"
-        # print("geltungsbereich from (select geltungsbereich, id FROM xplanung_light_" + plantyp + " WHERE public=true AND " + date_name_part + "_datum <= now()) as foo using unique id using srid=25832")
         if connection.vendor == "postgresql":
             umring_layer["connectiontype"] = "POSTGIS"
             umring_layer["connection"] = connection_string
-            umring_layer["data"] = "geltungsbereich from (select geltungsbereich, id, planart FROM xplanung_light_" + \
-                plantyp + " WHERE public=true AND " + date_name_part + \
-                "_datum <= now()) foo using unique id using srid=25832"
+            umring_layer["data"] = postgis_data_klausel(
+                "geltungsbereich",
+                "select geltungsbereich, id, planart FROM xplanung_light_" + plantyp +
+                " WHERE public=true AND " + date_name_part + "_datum <= now()",
+                modell=FPlan if plantyp == 'fplan' else BPlan)
         # Sichtbarkeitsmaßstäbe definieren
         umring_layer["maxscaledenom"] = 50000
         umring_layer["minscaledenom"] = 1
@@ -645,9 +749,11 @@ class MapfileGenerator():
         if connection.vendor == "postgresql":
             cluster_layer["connectiontype"] = "POSTGIS"
             cluster_layer["connection"] = connection_string
-            cluster_layer["data"] = "geltungsbereich from (select st_centroid(geltungsbereich) AS geltungsbereich, id, planart FROM xplanung_light_" + \
-                plantyp + " WHERE public = true AND " + date_name_part + \
-                "_datum <= now()) foo using unique id using srid=25832"
+            cluster_layer["data"] = postgis_data_klausel(
+                "geltungsbereich",
+                "select st_centroid(geltungsbereich) AS geltungsbereich, id, planart FROM xplanung_light_" + plantyp +
+                " WHERE public = true AND " + date_name_part + "_datum <= now()",
+                modell=FPlan if plantyp == 'fplan' else BPlan)
         map["layers"].append(cluster_layer)
         # print(mappyfile.dumps(map))
         return mappyfile.dumps(map, quote="'")

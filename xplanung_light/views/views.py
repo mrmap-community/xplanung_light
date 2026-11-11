@@ -30,7 +30,7 @@ from django.http import HttpResponse
 import mapscript
 from django.shortcuts import get_object_or_404
 from urllib.parse import parse_qs
-from xplanung_light.helper.mapfile import MapfileGenerator
+from xplanung_light.helper.mapfile import MapfileGenerator, postgis_data_klausel
 # for caching mapfiles ;-)
 from django.core.cache import cache
 from django.conf import settings
@@ -313,15 +313,25 @@ def ows_beteiligungen(request):
             """
 
         if connection.vendor == "postgresql":
-            datastring_polygon = "geom from (" + datastring_polygon + \
-                ") as foo using unique plan_id using srid=25832"
-            datastring_point = "geom from (" + datastring_point + \
-                ") as foo using unique plan_id using srid=25832"
+            # Die Unterrabfrage vereinigt BPlan- und FPlan-Geometrien in der Spalte
+            # 'geom'. Beide Felder werden von den Modellen gleich definiert, und die
+            # DATA-Klausel kann nur ein System nennen; gefragt wird darum nach der
+            # BPlan-Spalte, deren SRID fuer beide gilt.
+            datastring_polygon = postgis_data_klausel(
+                "geom", datastring_polygon, eindeutige_spalte="plan_id", modell=BPlan)
+            datastring_point = postgis_data_klausel(
+                "geom", datastring_point, eindeutige_spalte="plan_id", modell=BPlan)
         # map_file_string = map_file_string.replace('<datastring>', str(offengelegte_plaene.query).replace('CAST (AsEWKB(', '').replace(') AS BLOB)', ''))
         map_file_string = map_file_string.replace(
             '<datastring_polygon>', datastring_polygon).replace('<datastring_point>', datastring_point)
+        # CONNECTIONTYPE muss zur DATA-Klausel passen: die PostgreSQL-Fassung ist
+        # mit 'geom from (...) as foo using unique ... using srid=...' für den
+        # POSTGIS-Treiber geschrieben, die OGR-Lesart versteht davon nichts. Der
+        # Typ stand hier fest auf OGR, also konnte MapServer auf PostGIS keine
+        # der beiden Ebenen öffnen.
+        verbindungstyp = "POSTGIS" if connection.vendor == "postgresql" else "OGR"
         map_file_string = map_file_string.replace(
-            '<connection_type>', 'OGR').replace('<connection>', connection_string)
+            '<connection_type>', verbindungstyp).replace('<connection>', connection_string)
         # print(map_file_string)
     # Die Konfiguration wird einmalig beim Start erzeugt — AppConfig.ready()
     config = apps.get_app_config('xplanung_light')
