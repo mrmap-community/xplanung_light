@@ -6,6 +6,7 @@ erzeugt und der Dienst über die Views real aufgerufen.
 import pathlib
 import re
 from datetime import datetime
+from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.gis.geos import GEOSGeometry
@@ -719,3 +720,241 @@ class ExtentBerechnungTests(TestCase):
         ohne_Auskommentiertes = re.sub(r'"""(?:.|\n)*?"""', '', selbst)
         self.assertNotIn('ST_Union', ohne_Auskommentiertes)
         self.assertNotIn('_vereinigungsgeometrie', ohne_Auskommentiertes)
+
+
+class PostGisDataKlauselTests(TestCase):
+    """
+    Die DATA-Klausel der PostGIS-Ebenen muss denselben SRID nennen wie die Spalte.
+
+    MapServer kennzeichnet den BBOX-Filter, den es fuer jede Kachel an die
+    Datenbank schickt, mit dem SRID aus der DATA-Klausel. PostGIS prueft diesen
+    Wert gegen die gespeicherten Geometrien und lehnt die Anfrage ab, wenn die
+    beiden auseinanderlaufen. Die Vorlagen nannten hart 25832, die Spalten stehen
+    in 4326 - auf Spatialite fiel das nie auf, weil dort der OGR-Zweig laeuft.
+    """
+
+    GEOMETRIE = "POLYGON((8.0 50.3, 8.2 50.3, 8.2 50.5, 8.0 50.5, 8.0 50.3))"
+
+    def setUp(self):
+        # Der Helper merkt sich den SRID je Prozess und Spalte
+        mapfile_mod._SRID_PRO_SPALTE.clear()
+        self.plan = BPlan.objects.create(
+            name="SRID-Plan", planart="10000", public=True,
+            geltungsbereich=GEOSGeometry(self.GEOMETRIE, srid=4326))
+
+    def tearDown(self):
+        mapfile_mod._SRID_PRO_SPALTE.clear()
+
+    def srid_aus_der_bank(self):
+        """Der Wert, den die Bank fuer die Geometriespalte fuehrt."""
+        from django.db import connection
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT srid FROM geometry_columns "
+                "WHERE lower(f_table_name) = lower(%s) "
+                "AND lower(f_geometry_column) = lower(%s)",
+                (BPlan._meta.db_table, "geltungsbereich"))
+            return cur.fetchone()[0]
+
+    def test_die_Data_Klausel_nennt_den_SRID_der_Spalte(self):
+        """
+        Was wird geprüft:
+            Der SRID in der DATA-Klausel gegen den Wert, den die Bank fuer die
+            Geometriespalte fuehrt.
+
+        Warum:
+            Eine Zahl im Generator ist eine Behauptung ueber jede einzelne
+            Installation. Altdaten koennen in einem anderen System liegen als das
+            Modell heute sagt; nur die Bank weiss, was in der Tabelle steht.
+
+        Erwartung:
+            Klausel und Bank nennen dieselbe Zahl, und zwar ueber beide Backends
+            hinweg dieselbe Abfrage.
+        """
+        klausel = mapfile_mod.postgis_data_klausel(
+            "geltungsbereich", "select geltungsbereich, id from xplanung_light_bplan")
+        bank = self.srid_aus_der_bank()
+        self.assertIn("using srid={}".format(bank), klausel)
+        self.assertEqual(bank, BPlan._meta.get_field("geltungsbereich").srid,
+                         "Bank und Modell sind sich uneins - dann ist die Bank massgebend")
+
+    def test_ohne_Markierung_in_der_Sicht_fragt_der_Helfer_die_Werte_ab(self):
+        """
+        Was wird geprüft:
+            Der SRID, wenn geometry_columns nichts hergibt (Spalte ohne
+            Typvorgabe, etwa nach einer Wiederherstellung aus einer Dump-Datei).
+
+        Warum:
+            Genau in dem Fall ist die Zahl in der DATA-Klausel entscheidend: Die
+            Spalte schreibt nichts vor, also entscheidet der gespeicherte Wert.
+
+        Erwartung:
+            Der Helper liest den SRID aus einer Zeile der Tabelle.
+        """
+        class Verbindung:
+            """Bank, deren Sicht nichts weiss und deren erste Zeile 31467 meldet."""
+
+            class Ops:
+                @staticmethod
+                def quote_name(name):
+                    return '"{}"'.format(name)
+
+            def __init__(self, antworten):
+                self.ops = self.Ops()
+                self.antworten = antworten
+                self.befehle = []
+
+            def cursor(self):
+                return self
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *ausnahme):
+                return False
+
+            def execute(self, befehl, parameter=None):
+                self.befehle.append(befehl)
+                return None
+
+            def fetchone(self):
+                return self.antworten.pop(0)
+
+        mapfile_mod._SRID_PRO_SPALTE.clear()
+        with patch.object(mapfile_mod, "connection", Verbindung([None, (31467,)])):
+            self.assertEqual(mapfile_mod.srid_der_geometriespalte(), 31467)
+
+    def test_ohne_beides_gilt_der_Wert_des_Modells(self):
+        """
+        Was wird geprüft:
+            Der SRID, wenn die Bank nicht antwortet (Abfrage wirft Fehler).
+
+        Warum:
+            Auf einer ganz frischen Bank ist weder die Sicht gefüllt noch eine
+            Zeile vorhanden; die Dienste muessen trotzdem ein Mapfile bekommen.
+
+        Erwartung:
+            Der Wert des Modellfeldes, ohne dass die Anfrage den Aufrufer stoert.
+        """
+        from django.db import DatabaseError
+
+        class FehlerndeVerbindung:
+            def cursor(self):
+                raise DatabaseError("keine Sicht")
+
+        mapfile_mod._SRID_PRO_SPALTE.clear()
+        with patch.object(mapfile_mod, "connection", FehlerndeVerbindung()):
+            self.assertEqual(mapfile_mod.srid_der_geometriespalte(),
+                             BPlan._meta.get_field("geltungsbereich").srid)
+
+    def test_die_Data_Klausel_fragt_die_abgefragte_Tabelle(self):
+        """
+        Was wird geprüft:
+            Welche Tabelle nach dem SRID gefragt wird, wenn die Unterrabfrage eine
+            andere Tabelle nennt als das Standardmodell.
+
+        Warum:
+            Der Generator bedient BPlan- und FPlan-Ebenen aus verschiedenen
+            Tabellen. Ein Altbestand kann die eine Spalte in 4326 und die andere
+            in einem anderen System haben; fragt der Generator immer dieselbe
+            Tabelle ab, gilt die Antwort auch fuer die andere.
+
+        Erwartung:
+            Mit dem Flächennutzungsplan-Modell heisst die abgefragte Tabelle
+            wie dessen Tabelle, nicht wie die der Bebauungspläne.
+        """
+        befehle = []
+
+        class Verbindung:
+            """Bank, die den SRID nicht kennt und nur die Fragen mitschreibt."""
+
+            class Ops:
+                @staticmethod
+                def quote_name(name):
+                    return '"{}"'.format(name)
+
+            def __init__(self, befehle):
+                self.ops = self.Ops()
+                self.befehle = befehle
+
+            def cursor(self):
+                return self
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *ausnahme):
+                return False
+
+            def execute(self, befehl, parameter=None):
+                self.befehle.append(parameter)
+                return None
+
+            def fetchone(self):
+                return None
+
+        mapfile_mod._SRID_PRO_SPALTE.clear()
+        with patch.object(mapfile_mod, "connection", Verbindung(befehle)):
+            mapfile_mod.postgis_data_klausel(
+                "geltungsbereich",
+                "select geltungsbereich, id from xplanung_light_fplan",
+                modell=FPlan)
+        mapfile_mod._SRID_PRO_SPALTE.clear()
+        abgefragte_tabelle = [p[0] for p in befehle if p][0]
+        self.assertEqual(abgefragte_tabelle, FPlan._meta.db_table)
+        self.assertNotEqual(abgefragte_tabelle, BPlan._meta.db_table)
+
+    def test_im_Generator_steht_kein_SRID_mehr_als_Zahl(self):
+        """
+        Was wird geprüft:
+            Der Quelltext des Generators und der OWS-Views auf fest geschriebene
+            SRID-Angaben in DATA-Klauseln.
+
+        Warum:
+            Acht Stellen im Projekt nannten 25832; ein einzelnes Umschreiben waere
+            beim naechsten Datenbestand wieder eine falsche Behauptung.
+
+        Erwartung:
+            In den betroffenen Dateien kommt "using srid=" nur noch mit dem
+            Wert aus dem Helfer vor, nie als Zahl.
+        """
+        for datei in (mapfile_mod.__file__,
+                      pathlib.Path(mapfile_mod.__file__).parent.parent / "views" / "views.py"):
+            quelltext = pathlib.Path(datei).with_suffix(".py").read_text()
+            aktive = "\n".join(z for z in quelltext.splitlines()
+                               if not z.lstrip().startswith("#"))
+            aktive = re.sub(r'"""(?:.|\n)*?"""', '', aktive)
+            funde = re.findall(r"using srid=(\d+)", aktive)
+            self.assertEqual(funde, [],
+                             "SRID in DATA-Klauseln steht fest: {}".format(funde))
+
+    def test_Kachelanfrage_mit_dem_deklarierten_SRID_laeuft(self):
+        """
+        Was wird geprüft:
+            Die Kachelanfrage, die MapServer auf PostGIS absetzt - einmal mit dem
+            SRID aus der DATA-Klausel, einmal mit dem frueher festen 25832.
+
+        Warum:
+            Der Fehler ist eine abgewiesene Datenbankabfrage, kein Pythonfehler.
+            Nur die echte Abfrage zeigt, dass die Klausel jetzt passt.
+
+        Erwartung:
+            Mit dem deklarierten SRID läuft die Anfrage durch, mit 25832 wirft
+            PostGIS "Operation on mixed SRID geometries".
+        """
+        from django.db import connection
+        if connection.vendor != "postgresql":
+            self.skipTest("Die Pruefung gehoert auf PostGIS.")
+        klausel = mapfile_mod.postgis_data_klausel(
+            "geltungsbereich", "select geltungsbereich, id from xplanung_light_bplan")
+        deklariert = int(re.search(r"using srid=(\d+)", klausel).group(1))
+        kassten = ("ST_GeomFromText('POLYGON((8.0 50.3,8.0 50.5,8.2 50.5,"
+                   "8.2 50.3,8.0 50.3))', {})")
+        with connection.cursor() as cur:
+            cur.execute("SELECT count(*) FROM xplanung_light_bplan WHERE "
+                        "ST_Intersects(geltungsbereich, {})".format(kassten.format(deklariert)))
+            self.assertEqual(cur.fetchone()[0], 1)
+            with self.assertRaises(Exception) as fall:
+                cur.execute("SELECT count(*) FROM xplanung_light_bplan WHERE "
+                            "ST_Intersects(geltungsbereich, {})".format(kassten.format(25832)))
+            self.assertIn("mixed SRID", str(fall.exception))
