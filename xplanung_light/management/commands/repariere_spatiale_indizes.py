@@ -42,7 +42,9 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(
                 "{0} Spalten brauchen eine Reparatur (ohne --pruefen ausfuehren)."
                 .format(len(funde))))
-            return
+            # Eigener Exit-Code: nur so taugt --pruefen als Wächter in CI oder
+            # Betriebs-Skripten. Mit "return" wäre der Erfolg auch bei Funden 0.
+            raise SystemExit(1)
 
         funde = repariere_spatiale_indizes(using=options["database"])
         if funde:
