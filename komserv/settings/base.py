@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import os
 
+# Die Versionsnummer steht an einer Stelle: im Paketrumpf der App. Von dort lesen
+# auch docs/source/conf.py (version/release) und die Fußzeile mit. siehe RELEASING.md
+from xplanung_light import __version__ as XPLANUNG_LIGHT_VERSION
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # Wichtig: Das dritte parent, weil wir jetzt ein Verzeichnis tiefer sitzen!
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -273,7 +277,8 @@ ORGS_SLUGFIELD = 'django_extensions.db.fields.AutoSlugField'
 # REGISTRATION_BACKEND = 'xplanung_light.backends.MyRegistrationBackend'
 
 # Konfigurationen für xplanung_light
-XPLANUNG_LIGHT_VERSION = "0.3.0"
+# XPLANUNG_LIGHT_VERSION kommt vom Import oben (xplanung_light.__version__) und
+# wird hier bewusst nicht mehr gesetzt - zwei Zahlen an zwei Orten laufen auseinander.
 # Kontaktinformationen für Metadaten und Dienste
 XPLANUNG_LIGHT_CONFIG = {
     'metadata_contact': {
