@@ -33,6 +33,24 @@ Markierung und liefert dann **keine** Features mehr - die Karte wird leer
 gezeichnet, ohne dass ein Fehler fällt. Die Reparatur entfernt deshalb zuerst die
 überstehenden Tabellen und die alten Auslöser und prüft danach Markierung,
 Füllung und Auslöser nach.
+
+PostGIS
+-------
+Dort legt Django den GiST-Index selbst an und behält ihn bei AlterField; der
+Zweig ist das Sicherheitsnetz nach Wiederherstellungen. Nachgesehen am 11.11.2026
+mit PostGIS 3.5: eine frisch migrierte Bank hat 8 von 8 gesunden Indizes, ein
+abhanden gekommener GiST-Index wird erkannt und neu angelegt.
+
+Zwei Dinge, die hier leicht schiefgehen. Erstens gibt `execute()` bei psycopg und
+psycopg2 `None` zurück, nur sqlite3 gibt den Cursor zurück: `execute()` und
+`fetchall()` in einem Ausdruck zu verketten funktioniert deshalb ausschließlich auf
+Spatialite und wirft auf PostGIS `AttributeError: 'NoneType' object has no
+attribute 'fetchall'` - mitten im Migrationslauf, weil 0093 den Helper aufruft.
+Zweitens steht in `pg_indexes.indexdef` der Spaltenname nur in Anführungszeichen,
+wenn der Name sie braucht; die Spalten dieses Projekts sind kleingeschrieben, dort
+steht `USING gist (geltungsbereich)`. Eine Prüfung auf `'"spalte"'` meldete darum
+einen gesunden Index als deaktiviert. Die Erkennung liest stattdessen die
+Katalogtabellen.
 """
 
 from collections import namedtuple
@@ -156,10 +174,11 @@ def _ausloeser_names(tabelle, spalte):
 def _zustand_spatialite(verbindung, tabelle, spalte):
     """Prueft Markierung, Fuellung und Pflege-Ausloeser des R-tree."""
     with verbindung.cursor() as cur:
-        zeile = cur.execute(
+        cur.execute(
             "SELECT spatial_index_enabled FROM geometry_columns "
             "WHERE f_table_name = %s AND f_geometry_column = %s",
-            (tabelle, spalte)).fetchone()
+            (tabelle, spalte))
+        zeile = cur.fetchone()
     if zeile is None:
         return ZUSTAND_FEHLEND
     if not zeile[0]:
@@ -168,9 +187,9 @@ def _zustand_spatialite(verbindung, tabelle, spalte):
     index_tabelle = f"idx_{tabelle}_{spalte}"
     try:
         with verbindung.cursor() as cur:
-            index_zeilen = cur.execute(
-                "SELECT count(*) FROM %s" % verbindung.ops.quote_name(index_tabelle)
-            ).fetchone()[0]
+            cur.execute("SELECT count(*) FROM %s"
+                        % verbindung.ops.quote_name(index_tabelle))
+            index_zeilen = cur.fetchone()[0]
     except DatabaseError:
         # Markierung sagt "aktiv", die R-tree-Tabelle fehlt aber
         return ZUSTAND_LEER
@@ -181,10 +200,11 @@ def _zustand_spatialite(verbindung, tabelle, spalte):
     if index_zeilen != erwartet:
         return ZUSTAND_UNVOLLSTAENDIG
     with verbindung.cursor() as cur:
-        ausloeser = cur.execute(
+        cur.execute(
             "SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name IN (%s)"
             % ", ".join(["%s"] * len(RTREE_AUSLOESER_PRAEFIXE)),
-            _ausloeser_names(tabelle, spalte)).fetchone()[0]
+            _ausloeser_names(tabelle, spalte))
+        ausloeser = cur.fetchone()[0]
     if ausloeser < len(RTREE_AUSLOESER_PRAEFIXE):
         return ZUSTAND_UNVOLLSTAENDIG
     return ZUSTAND_OK
@@ -193,10 +213,10 @@ def _zustand_spatialite(verbindung, tabelle, spalte):
 def _zahl_geometrien(verbindung, tabelle, spalte):
     """Zahlen der Zeilen mit Geometrie - nur die kommen in den R-tree."""
     with verbindung.cursor() as cur:
-        return cur.execute(
+        cur.execute(
             "SELECT count(*) FROM %s WHERE %s IS NOT NULL"
-            % (verbindung.ops.quote_name(tabelle), verbindung.ops.quote_name(spalte))
-        ).fetchone()[0]
+            % (verbindung.ops.quote_name(tabelle), verbindung.ops.quote_name(spalte)))
+        return cur.fetchone()[0]
 
 
 def _repariere_spatialite(verbindung, tabelle, spalte):
@@ -205,10 +225,11 @@ def _repariere_spatialite(verbindung, tabelle, spalte):
         # 1. Vorhandenen Index sauber abbauen. Die Funktion meldet einen Fehler,
         #    wenn gar keiner angelegt ist - den vermeiden wir, indem wir vorher
         #    die Markierung lesen, und fangen ihn trotzdem ab.
-        markiert = cur.execute(
+        cur.execute(
             "SELECT spatial_index_enabled FROM geometry_columns "
             "WHERE f_table_name = %s AND f_geometry_column = %s",
-            (tabelle, spalte)).fetchone()
+            (tabelle, spalte))
+        markiert = cur.fetchone()
         if markiert and markiert[0]:
             try:
                 cur.execute("SELECT DisableSpatialIndex(%s, %s)", (tabelle, spalte))
@@ -217,16 +238,18 @@ def _repariere_spatialite(verbindung, tabelle, spalte):
         # 2. Ueberstehende Ausloeser und R-tree-Tabellen beseitigen: sonst
         #    entsteht ein leerer, aber als aktiv markierter Index.
         for name in _ausloeser_names(tabelle, spalte):
-            vorhanden = cur.execute(
+            cur.execute(
                 "SELECT count(*) FROM sqlite_master WHERE type = 'trigger' AND name = %s",
-                (name,)).fetchone()[0]
+                (name,))
+            vorhanden = cur.fetchone()[0]
             if vorhanden:
                 cur.execute("DROP TRIGGER %s" % verbindung.ops.quote_name(name))
         for ende in RTREE_ENDUNGEN:
             name = f"idx_{tabelle}_{spalte}{ende}"
-            vorhanden = cur.execute(
+            cur.execute(
                 "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = %s",
-                (name,)).fetchone()[0]
+                (name,))
+            vorhanden = cur.fetchone()[0]
             if not vorhanden:
                 continue
             try:
@@ -237,9 +260,10 @@ def _repariere_spatialite(verbindung, tabelle, spalte):
                 cur.execute("DROP TABLE %s" % verbindung.ops.quote_name(name))
             except DatabaseError:
                 pass
-        uebrig = cur.execute(
+        cur.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE %s",
-            (f"idx_{tabelle}_{spalte}%",)).fetchall()
+            (f"idx_{tabelle}_{spalte}%",))
+        uebrig = cur.fetchall()
         if uebrig:
             raise RuntimeError(
                 "Ueberstehende R-tree-Tabellen fuer {0}.{1} konnten nicht entfernt "
@@ -265,13 +289,33 @@ def _pruefe_spatialite(verbindung, tabelle, spalte):
 # ------------------------------------------------------------------- PostGIS --
 
 def _zustand_postgis(verbindung, tabelle, spalte):
-    """Ein GiST-Index auf der Spalte gilt als vorhanden (Django legt ihn selbst an)."""
+    """
+    Ein GiST-Index auf der Spalte gilt als vorhanden (Django legt ihn selbst an).
+
+    Ueber die Katalogtabellen, nicht ueber den Text der Sicht pg_indexes: dessen
+    indexdef nennt die Spalte nur in Anfuehrungszeichen, wenn ihr Name sie
+    braucht - bei den kleingeschriebenen Spalten dieses Projekts steht dort
+    "USING gist (geltungsbereich)". Eine Pruefung auf '"spalte"' ginge also
+    fehl und meldete einen gesunden Index als fehlend, woraufhin die Reparatur
+    ihn anzulegen versucht, ihn nicht findet und als Fehler meldet.
+    """
     with verbindung.cursor() as cur:
-        definitionen = [z[0] for z in cur.execute(
-            "SELECT indexdef FROM pg_indexes WHERE tablename = %s", (tabelle,)).fetchall()]
-    fuer_spalte = [d for d in definitionen
-                   if "using gist" in d.lower() and f'"{spalte}"' in d]
-    return ZUSTAND_OK if fuer_spalte else ZUSTAND_DEAKTIVIERT
+        cur.execute(
+            """
+            SELECT c.relname
+              FROM pg_index i
+              JOIN pg_class t     ON t.oid = i.indrelid
+              JOIN pg_class c     ON c.oid = i.indexrelid
+              JOIN pg_am am       ON am.oid = c.relam
+              JOIN pg_attribute a ON a.attrelid = t.oid
+                                  AND a.attnum = ANY (i.indkey)
+             WHERE t.relname = %s
+               AND a.attname = %s
+               AND am.amname = 'gist'
+               AND pg_table_is_visible(t.oid)
+            """, (tabelle, spalte))
+        treffer = cur.fetchall()
+    return ZUSTAND_OK if treffer else ZUSTAND_DEAKTIVIERT
 
 
 def _repariere_postgis(verbindung, tabelle, spalte):
