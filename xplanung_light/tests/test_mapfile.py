@@ -3,12 +3,17 @@ Integrationstests für die OGC-Dienste (WMS und WFS) mit echtem MapServer: Das M
 erzeugt und der Dienst über die Views real aufgerufen.
 """
 
+import pathlib
 import re
+from datetime import datetime
 
+from django.conf import settings
+from django.contrib.gis.geos import GEOSGeometry
 from django.core.cache import cache
-from django.test import TestCase, Client, TransactionTestCase
+from django.test import TestCase, Client, TransactionTestCase, override_settings
 from django.urls import reverse
 
+from xplanung_light.helper import mapfile as mapfile_mod
 from xplanung_light.helper.mapfile import MapfileGenerator
 from xplanung_light.models import AdministrativeOrganization, BPlan, FPlan
 # Importieren Sie hier Ihre relevanten Models (z. B. BPlan, Bereich, etc.)
@@ -458,3 +463,259 @@ class MapfileOhneBPlaeneTestCase(TransactionTestCase):
                                      [max(gebiet[0], gebiet[2]), max(gebiet[1], gebiet[3])]):
             self.assertGreaterEqual(ist, klein - 0.01)
             self.assertLessEqual(ist, gross + 0.01)
+
+
+def konfiguration_mit(**einstellungen):
+    """
+    Decorator/Helfer: die laufende XPLANUNG_LIGHT_CONFIG mit einzelnen Werten
+    überschrieben.
+
+    override_settings ersetzt ein Wörterbuch vollständig - deshalb wird hier
+    erst die bestehende Konfiguration kopiert.
+    """
+    konfiguration = dict(settings.XPLANUNG_LIGHT_CONFIG)
+    konfiguration.update(einstellungen)
+    return override_settings(XPLANUNG_LIGHT_CONFIG=konfiguration)
+
+
+def extents_aus_dem_mapfile(mapfile):
+    """Alle ows_extent-Angaben des Mapfiles, in der Reihenfolge ihres Auftretens."""
+    return [tuple(float(zahl) for zahl in werte.split())
+            for werte in re.findall(r"'ows_extent'\s+'([^']+)'", mapfile)]
+
+
+def extent_des_maps(mapfile):
+    """Der EXTENT-Wert auf Kartenebene."""
+    return tuple(float(zahl) for zahl in re.search(
+        r'^\s*EXTENT\s+([0-9.eE+-]+(?: [0-9.eE+-]+){3})', mapfile, re.MULTILINE).group(1).split())
+
+
+class ExtentBerechnungTests(TestCase):
+    """
+    Extent-Angaben der Dienste (helper/mapfile.py, _hullbox und _ows_extent).
+
+    Das Service-Extent kam bisher aus ST_Union ueber allen Geltungsbereichen.
+    Diese Vereinigungsmenge baut eine neue Geometrie und kostet bei großem
+    Bestand Sekunden (gemessen 5,4 s bei 35.000 Plänen), waehrend sie am Ende
+    nur als Hüllbox in die Metadaten geschrieben wird. Die Hüllbox gibt es als
+    Aggregat direkt - auf Spatialite Extent(), auf PostGIS ST_Extent() - mit
+    demselben Ergebnis in Zehntelsekunden.
+    """
+
+    # Zwei getrennte Rechtecke: die Hüllbox muss die Ecken beider verbinden
+    NORDWEST = "POLYGON((6.1 50.8, 6.2 50.8, 6.2 50.9, 6.1 50.9, 6.1 50.8))"
+    SUEDOST = "POLYGON((6.8 50.1, 6.9 50.1, 6.9 50.2, 6.8 50.2, 6.8 50.1))"
+    # Ein Plan, der absichtlich nicht veröffentlicht ist: weit weg, damit seine
+    # Geometrie in der Hüllbox sofort auffällt
+    VERSTECKT = "POLYGON((2.0 45.0, 2.1 45.0, 2.1 45.1, 2.0 45.1, 2.0 45.0))"
+    GEBIET = "POLYGON((6.0 50.0, 7.0 50.0, 7.0 51.0, 6.0 51.0, 6.0 50.0))"
+    # Verbundene Hüllbox der beiden veröffentlichten Bebauungspläne
+    KASTEN = (6.1, 50.1, 6.9, 50.9)
+
+    def setUp(self):
+        cache.clear()
+        self.orga = AdministrativeOrganization.objects.create(
+            name="Testort", ls="07", ks="316", gs="999",
+            geometry=GEOSGeometry(self.GEBIET, srid=4326))
+        self.bplan_nordwest = self._plan(BPlan, "Nordwest", self.NORDWEST)
+        self.bplan_suedost = self._plan(BPlan, "Suedost", self.SUEDOST)
+        self.bplan_versteckt = self._plan(BPlan, "Versteckt", self.VERSTECKT, public=False)
+        self.fplan = self._plan(FPlan, "FNP", self.SUEDOST)
+
+    def tearDown(self):
+        cache.clear()
+
+    def _plan(self, modell, name, geometrie, public=True):
+        feld = "inkrafttretens_datum" if modell is BPlan else "wirksamkeits_datum"
+        plan = modell.objects.create(
+            name=name, planart="10000", public=public,
+            geltungsbereich=GEOSGeometry(geometrie, srid=4326),
+            **{feld: datetime(2020, 1, 1).date()})
+        plan.gemeinde.add(self.orga)
+        return plan
+
+    def _mapfile(self):
+        return MapfileGenerator().generate_mapfile(
+            self.orga.pk, 'http://localhost/organization/1/ows/',
+            'http://localhost/xplanung_light/bplan/1000000/metadata/')
+
+    def assertExtent(self, erhalten, erwartet):
+        self.assertEqual(len(erwartet), 4)
+        for ist, soll in zip(erhalten, erwartet):
+            self.assertAlmostEqual(ist, soll, places=6)
+
+    def test_extent_ist_die_huellbox_aller_Plaene(self):
+        """
+        Was wird geprüft:
+            Das Service-Extent und der Kartenausdehnungswert des Mapfiles bei
+            zwei räumlich getrennten Bebauungsplänen.
+
+        Warum:
+            Die Angabe soll den Bereich aller veröffentlichten Pläne abdecken,
+            auch über mehrere Ebenen (Bau- und Flächennutzungspläne) hinweg -
+            und zwar ohne die teure Vereinigungsmenge zu bauen.
+
+        Erwartung:
+            Service-Extent und EXTENT der Karte sind die verbundene Hüllbox
+            beider Pläne, und die nicht veröffentlichte Geometrie fehlt.
+        """
+        mapfile = self._mapfile()
+
+        extents = extents_aus_dem_mapfile(mapfile)
+        self.assertExtent(extents[0], self.KASTEN)
+        self.assertExtent(extent_des_maps(mapfile), self.KASTEN)
+        # die weit weg liegende, nicht veröffentlichte Geometrie wirkt nicht mit
+        self.assertGreater(extents[0][0], 5.0)
+        self.assertGreater(extents[0][1], 49.0)
+
+    def test_extent_der_Umring_Ebene_ist_die_Huellbox_ihrer_Plaene(self):
+        """
+        Was wird geprüft:
+            Die Extent-Angabe der Umringe-Ebene der Bebauungspläne.
+
+        Warum:
+            Die Ebene zeichnet alle Pläne einer Gebietskörperschaft und hatte
+            bisher das Extent ihrer Vereinigungsmenge; das muss die Hüllbox
+            derselben Planebene bleiben, unabhängig von den othern Plänen.
+
+        Erwartung:
+            Die letzte Extent-Angabe des Mapfiles (die zuletzt angehängte
+            Umringe-Ebene) ist die Hüllbox der Bebauungspläne.
+        """
+        extents = extents_aus_dem_mapfile(self._mapfile())
+
+        self.assertExtent(extents[-1], self.KASTEN)
+
+    def test_huellbox_gilt_fuer_die_Bedingungen_des_QuerySets(self):
+        """
+        Was wird geprüft:
+            Die Hüllbox-Abfrage direkt, mit einem gefilterten QuerySet.
+
+        Warum:
+            Die Abfrage stellt den SQL-Text des QuerySets unter ihr Aggregat.
+            Dabei dürfen die Bedingungen - hier public - nicht verloren gehen,
+            sonst melden die Dienste ein Extent über Daten, die gar nicht
+            veröffentlicht sind.
+
+        Erwartung:
+            Nur die veröffentlichten Pläne zählen; für ein QuerySet ohne Treffer
+            kommt None zurück.
+        """
+        generator = MapfileGenerator()
+
+        self.assertExtent(generator._hullbox(BPlan.objects.filter(public=True)),
+                          self.KASTEN)
+        self.assertIsNone(generator._hullbox(BPlan.objects.filter(public=False,
+                                                                  name="unbekannt")))
+
+    def test_ueber_der_Schwelle_nimmt_die_Orga_sein_eigenes_Gebiet(self):
+        """
+        Was wird geprüft:
+            Das Service-Extent, wenn die Zahl der Pläne über der eingestellten
+            Grenze für die Berechnung liegt.
+
+        Warum:
+            Bei sehr großen Beständen soll gar nicht mehr gerechnet werden; das
+            Gebiet der Gebietskörperschaft steht in der Datenbank und ist eine
+            brauchbare, nur etwas weitere Angabe.
+
+        Erwartung:
+            Extent ist das Organgebiet, nicht die engere Hüllbox der Pläne.
+        """
+        # beide Planebenen müssen über der Schwelle liegen, sonst bleibt ihre
+        # Hüllbox die bessere Angabe und geht in die Schachtel ein
+        self._plan(FPlan, "Zweiter FNP", self.NORDWEST)
+        with konfiguration_mit(extent_berechnung_max_plaene=1):
+            extents = extents_aus_dem_mapfile(self._mapfile())
+
+        self.assertExtent(extents[0], GEOSGeometry(self.GEBIET, srid=4326).extent)
+        self.assertNotAlmostEqual(extents[0][0], self.KASTEN[0], places=6)
+
+    def test_Schwelle_0_rechnet_gar_nicht(self):
+        """
+        Was wird geprüft:
+            Die Grenze auf 0 gesetzt.
+
+        Warum:
+            Installationen müssen die Berechnung ganz abschalten koennen, etwa
+            wenn das Extent aus den Settings vorgegeben wird.
+
+        Erwartung:
+            Die Hüllbox-Funktion liefert None, ohne die Pläne anzusehen.
+        """
+        with konfiguration_mit(extent_berechnung_max_plaene=0):
+            mapfile = self._mapfile()
+
+        self.assertExtent(extents_aus_dem_mapfile(mapfile)[0],
+                          GEOSGeometry(self.GEBIET, srid=4326).extent)
+
+    def test_dienst_ueber_alle_Organisationen_nutzt_die_Vorgabe(self):
+        """
+        Was wird geprüft:
+            Der Dienst über alle Organisationen mit einer festen Extent-Angabe
+            in den Settings.
+
+        Warum:
+            Dieser Dienst fasst den ganzen Bestand zusammen; für ihn soll die
+            Angabe aus den Settings kommen koennen, ohne jede Abfrage.
+
+        Erwartung:
+            Service-Extent, Kartenausdehnung und die Angabe der Umringe-Ebene
+            sind die Vorgabe. Der Cluster-Ebene bleibt ihre eigene Angabe aus
+            der Vorlage - die deckt das Bundesgebiet ab und ist hier nicht
+            gemeint.
+        """
+        mit_vorgabe = konfiguration_mit(extent_alle_organisationen="6.5 49.5 7.5 50.5")
+        with mit_vorgabe:
+            mapfile = MapfileGenerator().generate_mapfile_all_orgas_xplan(
+                'http://localhost/bplan/map/',
+                'http://localhost/xplanung_light/bplan/1000000/metadata/', 'bplan')
+
+        extents = extents_aus_dem_mapfile(mapfile)
+        self.assertGreater(len(extents), 1)
+        self.assertExtent(extents[0], (6.5, 49.5, 7.5, 50.5))
+        self.assertExtent(extents[1], (6.5, 49.5, 7.5, 50.5))
+        self.assertExtent(extent_des_maps(mapfile), (6.5, 49.5, 7.5, 50.5))
+
+    def test_dienst_ueber_alle_Organisationen_ohne_Vorgabe_rechnet(self):
+        """
+        Was wird geprüft:
+            derselbe Dienst ohne Vorgabe in den Settings.
+
+        Warum:
+            Ohne Vorgabe darf nicht stillschweigend der Wert der Vorlage
+            uebrig bleiben - die Vorlage liegt bei Musterwerten und hat mit dem
+            Datenbestand nichts zu tun. Ein Ausweichgebiet gibt es hier nicht.
+
+        Erwartung:
+            Die Hüllbox aller veröffentlichten Pläne, nicht der Vorlagenwert.
+        """
+        mapfile = MapfileGenerator().generate_mapfile_all_orgas_xplan(
+            'http://localhost/bplan/map/',
+            'http://localhost/xplanung_light/bplan/1000000/metadata/', 'bplan')
+
+        extents = extents_aus_dem_mapfile(mapfile)
+        self.assertExtent(extents[0], self.KASTEN)
+        self.assertExtent(extent_des_maps(mapfile), self.KASTEN)
+
+    def test_vereinigungsgeometrie_wird_nicht_mehr_benutzt(self):
+        """
+        Was wird geprüft:
+            Dass die Mapfile-Erzeugung keine Vereinigungsmenge mehr anstoesst.
+
+        Warum:
+            Genau die Vereinigungsmenge war der langsame Teil; wer sie
+            zurueckholt, läuft in diesem Test auf - bei großem Bestand merkt
+            das niemand im Betrieb, weil 20 s Mapfile-Cache dazwischenliegen.
+
+        Erwartung:
+            Im Quelltext des Generators kommt keine ST_Union-Anweisung mehr vor.
+        """
+        quelltext = pathlib.Path(mapfile_mod.__file__).with_suffix(".py").read_text()
+        aktive_Zeilen = [zeile for zeile in quelltext.splitlines()
+                         if not zeile.lstrip().startswith('#')]
+        selbst = "\n".join(aktive_Zeilen)
+        # Kommentare und der historisch mitgefuehrte String-Block bleiben unberuecksichtigt
+        ohne_Auskommentiertes = re.sub(r'"""(?:.|\n)*?"""', '', selbst)
+        self.assertNotIn('ST_Union', ohne_Auskommentiertes)
+        self.assertNotIn('_vereinigungsgeometrie', ohne_Auskommentiertes)

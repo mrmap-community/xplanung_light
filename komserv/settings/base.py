@@ -298,6 +298,18 @@ XPLANUNG_LIGHT_CONFIG = {
     # templates/) können die Feature-Zahl nicht selbst begrenzen, dort steht nur
     # ein Hinweis auf diese Einstellung.
     'getfeatureinfo_max_plaene': 50,
+    # Ab wie vielen Plänen ein Dienst sein Extent nicht mehr aus den
+    # Plangeometrien berechnet: die Hullbox-Abfrage läuft in Zehntelsekunden
+    # (gemessen 123 ms bei 35.000 Plänen, gegen 6,5 s für die bisherige
+    # Vereinigungsmenge), bei sehr großen Beständen übernimmt dann aber das
+    # Gebiet der Gebietskörperschaft, das ohnehin in der Datenbank steht. 0
+    # schaltet die Berechnung ganz ab. Der Dienst über alle Organisationen
+    # rechnet immer, weil er kein Gebiet als Ausweichextent hat.
+    'extent_berechnung_max_plaene': 5000,
+    # Feste Extent-Angabe für den Dienst über alle Organisationen, als
+    # "minx miny maxx maxy" in EPSG:4326 (Text oder Liste). None lässt die
+    # Hullbox aller Pläne berechnen.
+    'extent_alle_organisationen': None,
     "further_base_layers": [
         # {"name": "dop20rp", "title": "DOP20 RP", "url": "https://geo4.service24.rlp.de/wms/rp_dop20.fcgi?", "attribution": "Lizenz ...", "layer_name": "rp_dop20"},
         {"name": "topplusfarbe", "title": "TopPlus Farbe", "url": "https://sgx.geodatenzentrum.de/wms_topplus_open?",
