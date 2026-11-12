@@ -32,6 +32,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Ohne diese beiden Zeilen gibt es keine Fassungen: fetch-depth: 1
+          # (der Standard) holt weder die Versionstags noch genug Historie.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Zweig master als lokale Referenz anlegen
+        # sphinx-multiversion sieht nur lokale Referenzen; bei der Auslösung
+        # über workflow_run steht nach dem Auschecken oft kein lokales
+        # refs/heads/master, dann fehlt die Fassung des Hauptzweigs.
+        # Nicht "git branch -f master HEAD" verwenden: das bricht mit Exit 128
+        # ab, wenn master gerade ausgecheckt ist, und wirft den Job raus.
+        run: git update-ref refs/heads/master HEAD
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -40,12 +53,11 @@ jobs:
 
       - name: Sphinx Abhängigkeiten installieren
         run: |
-          pip install sphinx sphinx_rtd_theme myst_parser
+          pip install -r docs/requirements.txt
 
       - name: Sphinx Dokumentation bauen
         run: |
-          cd docs
-          make html
+          docs/build-versionen.sh
 
       # KORREKTUR: Expliziter Download über Github API Kontext
       - name: Download Coverage-Artefakt
@@ -66,4 +78,4 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v4t
