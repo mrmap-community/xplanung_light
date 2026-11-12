@@ -14,9 +14,9 @@ mapscript==8.4.0
 python-magic
 django-select2
 django-autocomplete-light
-sphinx
+sphinx==7.4.7
 django-docs
-sphinx-rtd-theme
+sphinx-rtd-theme==3.0.2
 Pillow
 django-organizations
 django-formset==1.7.9
