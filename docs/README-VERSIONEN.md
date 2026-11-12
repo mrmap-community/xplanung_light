@@ -98,6 +98,33 @@ Empfohlen bleibt für die Doku ein eigenes venv — die Anwendungs-Umgebung brau
 die Baupakete nicht, und `django-docs` (in beiden Anforderungslisten, aber im
 Projekt nirgends eingebunden) ändert daran nichts.
 
+### Warum dieses Paket — und nicht ein anderes
+
+Geprüft am 12.11.2026:
+
+- **Upstream** (`sphinx-contrib/multiversion`, früher `Holzhaus/sphinx-multiversion`):
+  das Repo ist aktiv, aber es gibt nichts Neueres als 0.2.4 auf PyPI, und der
+  unveröffentlichte main-Stand (0.2.5) ruft weiterhin `Config.read(confdir,
+  confoverrides)` auf — mit Sphinx 8 und 9 also unbrauchbar.
+- **`sphinx-multiversion-scylla` 0.3.9** (Fork, PyPI 10/2026): gemessen laufend mit
+  Sphinx 7.4.7 wie mit 9.2.0; Modul- und Programmname sind dieselben, der Tausch
+  wäre eine Zeile in `docs/requirements.txt` und die Sphinx-Bindung könnte wieder
+  raus. Was dagegen spricht, ist entscheidbar und nicht technisch: die 0.3.x liegen
+  auf keinem öffentlichen Repo, der Quelltext steckt nur als Quellpaket auf PyPI
+  (1070 Zeilen Python in vier Modulen; die Korrektur selbst ist klein).
+- **Ein eigenes Bauprogramm** (je Referenz ein Arbeitszweig, dann `sphinx-build`):
+  rund hundert eigene Zeilen, dafür kein Fremdcode — und ein CI-Job, der den
+  Dokubau baut, sonst merkt niemand, wenn er kaputtgeht.
+- **Beim Veröffentlichen ins Archiv legen** statt je Referenz neu zu bauen: ohne
+  Fremdpaket und ohne Sphinx-Bindung, die bestehenden Adressen bleiben ohne jede
+  Weiterleitung gültig. Dafür wird das nachträgliche Ändern einer alten Fassung ein
+  bewusster Schritt statt eines laufenden Baus, und alte Fassungen sehen aus wie am
+  Tag ihrer Veröffentlichung (was auch ein Vorteil ist).
+
+Dieser Stand nimmt die Sphinx-Bindung unter 8 in Kauf — und dass
+Debian-13-Installationen von 9.2 auf 7.4.7 zurückziehen, weil nichts im App-Betrieb
+Sphinx braucht.
+
 ## Die zwei Eigenheiten, die man kennen sollte
 
 **`conf.py` und die Vorlagen kommen aus dem Auscheckvorgang, die Seiten aus der
