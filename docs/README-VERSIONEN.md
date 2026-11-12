@@ -48,10 +48,17 @@ Coverage-Bericht nach `docs/build/html/coverage` legt, passt unverändert dahint
           fetch-tags: true
 
       - name: Zweig master als lokale Referenz anlegen
-        # sphinx-multiversion sieht nur lokale Referenzen; der Auscheckschritt
-        # von actions/checkout lässt bei diesem Auslöser oft keinen lokalen
-        # Zweig master zurück, dann fehlt die Fassung des Hauptzweigs.
-        run: git branch -f master HEAD
+        # sphinx-multiversion sieht nur lokale Referenzen; bei diesem Auslöser
+        # steht nach dem Auschecken oft kein lokales refs/heads/master, dann
+        # fehlt die Fassung des Hauptzweigs.
+        #
+        # Bewusst update-ref und nicht "git branch -f master HEAD": letzteres
+        # bricht mit Exit 128 ab, wenn master gerade ausgecheckt ist (gemessen:
+        # "cannot force update the branch 'master' checked out at ..."), und ein
+        # fehlgeschlagener Befehl wirft den ganzen Job raus. update-ref
+        # funktioniert in beiden Fällen - losgelöster HEAD (der Normalfall bei
+        # Auslösung über workflow_run) und ausgecheckter Zweige.
+        run: git update-ref refs/heads/master HEAD
 
       - name: Sphinx-Abhängigkeiten installieren
         run: pip install -r docs/requirements.txt
