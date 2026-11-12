@@ -29,22 +29,31 @@ from xplanung_light.views.customuser import CustomPasswordResetView, CustomProfi
 from django.views.i18n import JavaScriptCatalog
 from xplanung_light.views.consentoption import ConsentOptionCreateView, ConsentOptionUpdateView, ConsentOptionListView, ConsentOptionDeleteView
 from django.urls import re_path as url
-#https://learndjango.com/tutorials/django-login-and-logout-tutorial
+# https://learndjango.com/tutorials/django-login-and-logout-tutorial
 urlpatterns = [
     path("", views.home, name="home"),
     path("accounts/login/", auth_views.LoginView.as_view(next_page="home"), name="login"),
-    path("accounts/logout/", auth_views.LogoutView.as_view(next_page="home"), name='logout'),
-    path("accounts/password_change/", auth_views.PasswordChangeView.as_view(template_name="registration/password_change_form.html"), name='password_change'),
-    path("accounts/password_change_done/", auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
-    #path("accounts/password_reset/", auth_views.PasswordResetView.as_view(), name='password_reset'),
-    path("accounts/password_reset/", CustomPasswordResetView.as_view(), name='password_reset'),
-    path("accounts/password_reset_done/", auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
-    path("accounts/reset/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(post_reset_login=True), name='password_reset_confirm'),
-    path("accounts/reset/done/", auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
-    path("accounts/user_profile_update/<int:pk>/", CustomProfileUpdateView.as_view(), name='user_profile_update'),
+    path("accounts/logout/",
+         auth_views.LogoutView.as_view(next_page="home"), name='logout'),
+    path("accounts/password_change/", auth_views.PasswordChangeView.as_view(
+        template_name="registration/password_change_form.html"), name='password_change'),
+    path("accounts/password_change_done/",
+         auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
+    # path("accounts/password_reset/", auth_views.PasswordResetView.as_view(), name='password_reset'),
+    path("accounts/password_reset/",
+         CustomPasswordResetView.as_view(), name='password_reset'),
+    path("accounts/password_reset_done/",
+         auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
+    path("accounts/reset/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(
+        post_reset_login=True), name='password_reset_confirm'),
+    path("accounts/reset/done/", auth_views.PasswordResetCompleteView.as_view(),
+         name='password_reset_complete'),
+    path("accounts/user_profile_update/<int:pk>/",
+         CustomProfileUpdateView.as_view(), name='user_profile_update'),
     # https://dev.to/donesrom/how-to-set-up-django-built-in-registration-in-2023-41hg
-    path("register/", views.register, name = "register"),
+    path("register/", views.register, name="register"),
     path("about/", views.about, name="about"),
+    path("version/", views.version, name="version"),
     path("datenschutz/", views.datenschutz, name="datenschutz"),
     path("impressum/", views.impressum, name="impressum"),
     path("aggregates/", views.aggregates, name="aggregates"),
@@ -55,84 +64,130 @@ urlpatterns = [
     path("bplan/<int:pk>/update/", BPlanUpdateView.as_view(), name="bplan-update"),
     path("bplan/<int:pk>/delete/", BPlanDeleteView.as_view(), name="bplan-delete"),
     path("bplan/<int:pk>/", BPlanDetailView.as_view(), name="bplan-detail"),
-    path("bplan/<int:pk>/overview-map/", views.ows_bplan_overview, name="bplan-overview-map"),
+    path("bplan/<int:pk>/overview-map/",
+         views.ows_bplan_overview, name="bplan-overview-map"),
     # BPlan HTML List - für GetFeatureInfo
     path("bplan/html-list/", BPlanListViewHtml.as_view(), name="bplan-list-html"),
     # BPlan XPlan Export
-    path("bplan/<int:pk>/xplan/", BPlanDetailXPlanLightView.as_view(template_name="xplanung_light/bplan_template_xplanung_light_6.xml"), name="bplan-export-xplan-raster-6"),
-    path("bplan/<int:pk>/xplan-zip/", BPlanDetailXPlanLightZipView.as_view(template_name="xplanung_light/bplan_template_xplanung_light_6.xml"), name="bplan-export-xplan-raster-6-zip"),
-    path("bplan/<int:pk>/iso19139/", BPlanDetailXPlanLightView.as_view(template_name="xplanung_light/bplan_template_iso19139.xml"), name="bplan-export-iso19139"),
+    path("bplan/<int:pk>/xplan/", BPlanDetailXPlanLightView.as_view(
+        template_name="xplanung_light/bplan_template_xplanung_light_6.xml"), name="bplan-export-xplan-raster-6"),
+    path("bplan/<int:pk>/xplan-zip/", BPlanDetailXPlanLightZipView.as_view(
+        template_name="xplanung_light/bplan_template_xplanung_light_6.xml"), name="bplan-export-xplan-raster-6-zip"),
+    path("bplan/<int:pk>/iso19139/", BPlanDetailXPlanLightView.as_view(
+        template_name="xplanung_light/bplan_template_iso19139.xml"), name="bplan-export-iso19139"),
     path("bplan/import/", views.bplan_import, name="bplan-import"),
-    path("bplan/import-archiv/", views.bplan_import_archiv, name="bplan-import-archiv"),
+    path("bplan/import-archiv/", views.bplan_import_archiv,
+         name="bplan-import-archiv"),
     # BPlan Anlagen
-    path("bplan/<int:planid>/attachment/create/", BPlanSpezExterneReferenzCreateView.as_view(), name="bplanattachment-create"),
-    path("bplan/<int:planid>/attachment/", BPlanSpezExterneReferenzListView.as_view(), name="bplanattachment-list"),
-    path("bplan/<int:planid>/attachment/<int:pk>/update/", BPlanSpezExterneReferenzUpdateView.as_view(), name="bplanattachment-update"),
-    path("bplan/<int:planid>/attachment/<int:pk>/delete/", BPlanSpezExterneReferenzDeleteView.as_view(), name="bplanattachment-delete"),
-    path("bplanattachment/<int:pk>/", views.get_bplan_attachment, name="bplanattachment-download"),
+    path("bplan/<int:planid>/attachment/create/",
+         BPlanSpezExterneReferenzCreateView.as_view(), name="bplanattachment-create"),
+    path("bplan/<int:planid>/attachment/",
+         BPlanSpezExterneReferenzListView.as_view(), name="bplanattachment-list"),
+    path("bplan/<int:planid>/attachment/<int:pk>/update/",
+         BPlanSpezExterneReferenzUpdateView.as_view(), name="bplanattachment-update"),
+    path("bplan/<int:planid>/attachment/<int:pk>/delete/",
+         BPlanSpezExterneReferenzDeleteView.as_view(), name="bplanattachment-delete"),
+    path("bplanattachment/<int:pk>/", views.get_bplan_attachment,
+         name="bplanattachment-download"),
     # BPlan Beteiligungen
-    path("bplan/<int:planid>/beteiligung/", BPlanBeteiligungListView.as_view(), name="bplanbeteiligung-list"),
-    path("bplan/<int:planid>/beteiligung/<int:pk>/delete/", BPlanBeteiligungDeleteView.as_view(), name="bplanbeteiligung-delete"),
+    path("bplan/<int:planid>/beteiligung/",
+         BPlanBeteiligungListView.as_view(), name="bplanbeteiligung-list"),
+    path("bplan/<int:planid>/beteiligung/<int:pk>/delete/",
+         BPlanBeteiligungDeleteView.as_view(), name="bplanbeteiligung-delete"),
     # Hinzufügen der Option nicht nur die Objekte, sondern auch deren Historie zu löschen
-    path("bplan/<int:planid>/beteiligung/<int:pk>/delete_recursive_history/", BPlanBeteiligungDeleteRecursiveHistoryView.as_view(), name="bplanbeteiligung-delete-recursive-history"),
+    path("bplan/<int:planid>/beteiligung/<int:pk>/delete_recursive_history/",
+         BPlanBeteiligungDeleteRecursiveHistoryView.as_view(), name="bplanbeteiligung-delete-recursive-history"),
     # Beteiligungsviews mit django-formset - sollte mit einem view möglich sein, klappt aber nicht
-    path("bplan/<int:planid>/beteiligung/create/", BPlanBeteiligungCreateView.as_view(extra_context={'create': True}), name="bplanbeteiligung-create"),
-    path("bplan/<int:planid>/beteiligung/<int:pk>/update/", BPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="bplanbeteiligung-update"),
-    #path("bplan/<int:planid>/beteiligung/<int:pk>/notify/create", BPlanBeteiligungNotifyCreateView.as_view(), name="bplanbeteiligungnotify-create"),
+    path("bplan/<int:planid>/beteiligung/create/", BPlanBeteiligungCreateView.as_view(
+        extra_context={'create': True}), name="bplanbeteiligung-create"),
+    path("bplan/<int:planid>/beteiligung/<int:pk>/update/",
+         BPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="bplanbeteiligung-update"),
+    # path("bplan/<int:planid>/beteiligung/<int:pk>/notify/create", BPlanBeteiligungNotifyCreateView.as_view(), name="bplanbeteiligungnotify-create"),
     # Neue Struktur für Routen, die für alle Plantypen gelten!
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<pk>\d+)/beitrag/create/$', BeteiligungBeitragCreateView.as_view(), name="beteiligungbeitrag-create"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<pk>\d+)/beitrag/create/organization/(?P<orga_id>\d+)/$', BeteiligungBeitragCreateView.as_view(), name="beteiligungbeitrag-create-orga"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/$', BeteiligungBeitragListView.as_view(), name="beteiligungbeitrag-list"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/delete/$', BeteiligungBeitragDeleteView.as_view(), name="beteiligungbeitrag-delete"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<pk>\d+)/beitrag/create/$',
+            BeteiligungBeitragCreateView.as_view(), name="beteiligungbeitrag-create"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<pk>\d+)/beitrag/create/organization/(?P<orga_id>\d+)/$',
+            BeteiligungBeitragCreateView.as_view(), name="beteiligungbeitrag-create-orga"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/$',
+            BeteiligungBeitragListView.as_view(), name="beteiligungbeitrag-list"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/delete/$',
+            BeteiligungBeitragDeleteView.as_view(), name="beteiligungbeitrag-delete"),
     # Formular für die Sachbearbeiter
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-generic/create/$', BeteiligungBeitragGenericCreateView.as_view(extra_context={'create': True}), name="beteiligungbeitrag-generic-create"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-generic/(?P<pk>\d+)/update/$', BeteiligungBeitragGenericUpdateView.as_view(extra_context={'update': True}), name="beteiligungbeitrag-generic-update"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-generic/create/$',
+            BeteiligungBeitragGenericCreateView.as_view(extra_context={'create': True}), name="beteiligungbeitrag-generic-create"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-generic/(?P<pk>\d+)/update/$',
+            BeteiligungBeitragGenericUpdateView.as_view(extra_context={'update': True}), name="beteiligungbeitrag-generic-update"),
     # Formular für TOEB Reporter
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/create/toeb/(?P<toeb_id>\d+)/$', BeteiligungBeitragToebCreateView.as_view(extra_context={'create': True}), name="beteiligungbeitrag-toeb-create"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/(?P<pk>\d+)/update/$', BeteiligungBeitragToebUpdateView.as_view(extra_context={'update': True}), name="beteiligungbeitrag-toeb-update"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/(?P<pk>\d+)/delete/$', BeteiligungBeitragToebDeleteView.as_view(), name="beteiligungbeitrag-toeb-delete"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/create/toeb/(?P<toeb_id>\d+)/$',
+            BeteiligungBeitragToebCreateView.as_view(extra_context={'create': True}), name="beteiligungbeitrag-toeb-create"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/(?P<pk>\d+)/update/$',
+            BeteiligungBeitragToebUpdateView.as_view(extra_context={'update': True}), name="beteiligungbeitrag-toeb-update"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag-toeb/(?P<pk>\d+)/delete/$',
+            BeteiligungBeitragToebDeleteView.as_view(), name="beteiligungbeitrag-toeb-delete"),
     # Aktivierungslink
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/activate$', views.beitrag_activate, name="beteiligungbeitrag-activate"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/withdraw$', views.beitrag_withdraw, name="beteiligungbeitrag-withdraw"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/reactivate$', views.beitrag_reactivate, name="beteiligungbeitrag-reactivate"),
+    re_path(
+        r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/activate$', views.beitrag_activate, name="beteiligungbeitrag-activate"),
+    re_path(
+        r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/withdraw$', views.beitrag_withdraw, name="beteiligungbeitrag-withdraw"),
+    re_path(
+        r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/reactivate$', views.beitrag_reactivate, name="beteiligungbeitrag-reactivate"),
     # Authentifizierung für guest
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/authenticate$', views.beitrag_authenticate, name="beteiligungbeitrag-authenticate"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/detail$', views.beitrag_detail, name="gastbeteiligungbeitrag-detail"),
+    re_path(
+        r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/authenticate$', views.beitrag_authenticate, name="beteiligungbeitrag-authenticate"),
+    re_path(
+        r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<generic_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/detail$', views.beitrag_detail, name="gastbeteiligungbeitrag-detail"),
     # Anlagen zu den Beiträgen / geschwärzte Version priorisiert
-    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitragattachment/(?P<pk>\d+)/$', views.get_beteiligung_beitrag_attachment, name="beteiligung-beitrag-attachment-download"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitragattachment/(?P<pk>\d+)/$',
+            views.get_beteiligung_beitrag_attachment, name="beteiligung-beitrag-attachment-download"),
     # Anlagen zu den Beiträgen / original Version priorisiert
-    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitragattachment_orig/(?P<pk>\d+)/$', views.get_beteiligung_beitrag_attachment_orig, name="beteiligung-beitrag-attachment-download-orig"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitragattachment_orig/(?P<pk>\d+)/$',
+            views.get_beteiligung_beitrag_attachment_orig, name="beteiligung-beitrag-attachment-download-orig"),
     # Detailseite zum Beteiligungsbeitrag
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/$', BeteiligungBeitragDetailView.as_view(), name="beteiligungbeitrag-detail"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/$',
+            BeteiligungBeitragDetailView.as_view(), name="beteiligungbeitrag-detail"),
 
     # Anlagenliste für den Sachbearbeiter um geschwärzte Dokumente beizufügen
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/anhang/$', BeteiligungBeitragAnhangListView.as_view(), name="beteiligungbeitraganhang-list"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<pk>\d+)/anhang/$',
+            BeteiligungBeitragAnhangListView.as_view(), name="beteiligungbeitraganhang-list"),
 
-    #re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/anhang/(?P<anhangid>\d+)/redacted/create/$', BeteiligungBeitragAnhangRedactedCreateView.as_view(), name="beteiligungbeitraganhangredacted-create"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitraganhang/(?P<anhang_generic_id>[0-9a-f-]{36})/redacted/create/$', BeteiligungBeitragAnhangRedactedCreateView.as_view(), name="beteiligungbeitraganhangredacted-create"),
+    # re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/anhang/(?P<anhangid>\d+)/redacted/create/$', BeteiligungBeitragAnhangRedactedCreateView.as_view(), name="beteiligungbeitraganhangredacted-create"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitraganhang/(?P<anhang_generic_id>[0-9a-f-]{36})/redacted/create/$',
+            BeteiligungBeitragAnhangRedactedCreateView.as_view(), name="beteiligungbeitraganhangredacted-create"),
 
-    #re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/anhang/(?P<anhangid>\d+)/redacted/(?P<pk>\d+)/detail/$', BeteiligungBeitragAnhangRedactedDetailView.as_view(), name="beteiligungbeitraganhangredacted-detail"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitraganhang/redacted/(?P<generic_id>[0-9a-f-]{36})/detail/$', BeteiligungBeitragAnhangRedactedDetailView.as_view(), name="beteiligungbeitraganhangredacted-detail"),
+    # re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/anhang/(?P<anhangid>\d+)/redacted/(?P<pk>\d+)/detail/$', BeteiligungBeitragAnhangRedactedDetailView.as_view(), name="beteiligungbeitraganhangredacted-detail"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitraganhang/redacted/(?P<generic_id>[0-9a-f-]{36})/detail/$',
+            BeteiligungBeitragAnhangRedactedDetailView.as_view(), name="beteiligungbeitraganhangredacted-detail"),
 
-    #re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/anhang/(?P<anhangid>\d+)/redacted/(?P<pk>\d+)/delete/$', BeteiligungBeitragAnhangRedactedDeleteView.as_view(), name="beteiligungbeitraganhangredacted-delete"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitraganhang/redacted/(?P<generic_id>[0-9a-f-]{36})/delete/$', BeteiligungBeitragAnhangRedactedDeleteView.as_view(), name="beteiligungbeitraganhangredacted-delete"),
+    # re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/anhang/(?P<anhangid>\d+)/redacted/(?P<pk>\d+)/delete/$', BeteiligungBeitragAnhangRedactedDeleteView.as_view(), name="beteiligungbeitraganhangredacted-delete"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/beteiligungbeitraganhang/redacted/(?P<generic_id>[0-9a-f-]{36})/delete/$',
+            BeteiligungBeitragAnhangRedactedDeleteView.as_view(), name="beteiligungbeitraganhangredacted-delete"),
 
-    
+
     # PDF Dokument mit einer Liste der Beiträge
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/pdf/$', BeteiligungPdfView.as_view(), name="beteiligungbeitrag-list-pdf"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/pdf/$',
+            BeteiligungPdfView.as_view(), name="beteiligungbeitrag-list-pdf"),
     # URLs für die Stellungnahmen der Gebietskörperschaften zu den Beiträgen
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/create/$', XPlanBeitragStellungnahmeCreateView.as_view(extra_context={'create': True}), name="beitragstellungnahme-create"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/(?P<pk>\d+)/update/$', XPlanBeitragStellungnahmeUpdateView.as_view(extra_context={'update': True}), name="beitragstellungnahme-update"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/$', BeitragStellungnahmeListView.as_view(), name="beitragstellungnahme-list"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/(?P<pk>\d+)/delete/$', XPlanBeitragStellungnahmeDeleteView.as_view(), name="beitragstellungnahme-delete"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/create/$',
+            XPlanBeitragStellungnahmeCreateView.as_view(extra_context={'create': True}), name="beitragstellungnahme-create"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/(?P<pk>\d+)/update/$',
+            XPlanBeitragStellungnahmeUpdateView.as_view(extra_context={'update': True}), name="beitragstellungnahme-update"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/$',
+            BeitragStellungnahmeListView.as_view(), name="beitragstellungnahme-list"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/beitrag/(?P<beitragid>\d+)/stellungnahme/(?P<pk>\d+)/delete/$',
+            XPlanBeitragStellungnahmeDeleteView.as_view(), name="beitragstellungnahme-delete"),
     # TOEB Notification
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/notification/create/$', BeteiligungToebNotificationCreateView.as_view(), name="beteiligungnotification-create"),
-    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/notification/$', BeteiligungToebNotificationListView.as_view(), name="beteiligungnotification-list"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/notification/create/$',
+            BeteiligungToebNotificationCreateView.as_view(), name="beteiligungnotification-create"),
+    re_path(r'^(?P<plantyp>bplan|fplan)/(?P<planid>\d+)/beteiligung/(?P<beteiligungid>\d+)/notification/$',
+            BeteiligungToebNotificationListView.as_view(), name="beteiligungnotification-list"),
     # BPlan UVP Info
-    path("bplan/<int:planid>/uvp/create/", UvpCreateView.as_view(), name="uvp-create"),
+    path("bplan/<int:planid>/uvp/create/",
+         UvpCreateView.as_view(), name="uvp-create"),
     path("bplan/<int:planid>/uvp/", UvpListView.as_view(), name="uvp-list"),
-    path("bplan/<int:planid>/uvp/<int:pk>/update/", UvpUpdateView.as_view(), name="uvp-update"),
-    path("bplan/<int:planid>/uvp/<int:pk>/delete/", UvpDeleteView.as_view(), name="uvp-delete"),
+    path("bplan/<int:planid>/uvp/<int:pk>/update/",
+         UvpUpdateView.as_view(), name="uvp-update"),
+    path("bplan/<int:planid>/uvp/<int:pk>/delete/",
+         UvpDeleteView.as_view(), name="uvp-delete"),
     # FPlan
     # BPlan CRUD
     path("fplan/", FPlanListView.as_view(), name="fplan-list"),
@@ -141,100 +196,147 @@ urlpatterns = [
     path("fplan/<int:pk>/update/", FPlanUpdateView.as_view(), name="fplan-update"),
     path("fplan/<int:pk>/delete/", FPlanDeleteView.as_view(), name="fplan-delete"),
     path("fplan/<int:pk>/", FPlanDetailView.as_view(), name="fplan-detail"),
-    path("fplan/<int:pk>/overview-map/", views.ows_fplan_overview, name="fplan-overview-map"),
+    path("fplan/<int:pk>/overview-map/",
+         views.ows_fplan_overview, name="fplan-overview-map"),
     # FPlan HTML List - für GetFeatureInfo
-    #path("fplan/html-list/", FPlanListViewHtml.as_view(), name="fplan-list-html"),
+    # path("fplan/html-list/", FPlanListViewHtml.as_view(), name="fplan-list-html"),
     # FPlan XPlan Export
-    path("fplan/<int:pk>/xplan/", FPlanDetailXPlanLightView.as_view(template_name="xplanung_light/fplan_template_xplanung_light_6.xml"), name="fplan-export-xplan-raster-6"),
-    path("fplan/<int:pk>/xplan-zip/", FPlanDetailXPlanLightZipView.as_view(template_name="xplanung_light/fplan_template_xplanung_light_6.xml"), name="fplan-export-xplan-raster-6-zip"),
-    path("fplan/<int:pk>/iso19139/", FPlanDetailXPlanLightView.as_view(template_name="xplanung_light/fplan_template_iso19139.xml"), name="fplan-export-iso19139"),
+    path("fplan/<int:pk>/xplan/", FPlanDetailXPlanLightView.as_view(
+        template_name="xplanung_light/fplan_template_xplanung_light_6.xml"), name="fplan-export-xplan-raster-6"),
+    path("fplan/<int:pk>/xplan-zip/", FPlanDetailXPlanLightZipView.as_view(
+        template_name="xplanung_light/fplan_template_xplanung_light_6.xml"), name="fplan-export-xplan-raster-6-zip"),
+    path("fplan/<int:pk>/iso19139/", FPlanDetailXPlanLightView.as_view(
+        template_name="xplanung_light/fplan_template_iso19139.xml"), name="fplan-export-iso19139"),
     path("fplan/import/", views.fplan_import, name="fplan-import"),
-    path("fplan/import-archiv/", views.fplan_import_archiv, name="fplan-import-archiv"),
+    path("fplan/import-archiv/", views.fplan_import_archiv,
+         name="fplan-import-archiv"),
     # FPlan Beteiligungen
-    #path("fplan/<int:planid>/beteiligung/create/", FPlanBeteiligungCreateView.as_view(), name="fplanbeteiligung-create"),
-    path("fplan/<int:planid>/beteiligung/", FPlanBeteiligungListView.as_view(), name="fplanbeteiligung-list"),
-    #path("fplan/<int:planid>/beteiligung/<int:pk>/update/", FPlanBeteiligungUpdateView.as_view(), name="fplanbeteiligung-update"),
-    path("fplan/<int:planid>/beteiligung/create/", FPlanBeteiligungCreateView.as_view(extra_context={'create': True}), name="fplanbeteiligung-create"),
-    path("fplan/<int:planid>/beteiligung/<int:pk>/update/", FPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="fplanbeteiligung-update"),
-    path("fplan/<int:planid>/beteiligung/<int:pk>/delete/", FPlanBeteiligungDeleteView.as_view(), name="fplanbeteiligung-delete"),
+    # path("fplan/<int:planid>/beteiligung/create/", FPlanBeteiligungCreateView.as_view(), name="fplanbeteiligung-create"),
+    path("fplan/<int:planid>/beteiligung/",
+         FPlanBeteiligungListView.as_view(), name="fplanbeteiligung-list"),
+    # path("fplan/<int:planid>/beteiligung/<int:pk>/update/", FPlanBeteiligungUpdateView.as_view(), name="fplanbeteiligung-update"),
+    path("fplan/<int:planid>/beteiligung/create/", FPlanBeteiligungCreateView.as_view(
+        extra_context={'create': True}), name="fplanbeteiligung-create"),
+    path("fplan/<int:planid>/beteiligung/<int:pk>/update/",
+         FPlanBeteiligungUpdateView.as_view(extra_context={'update': True}), name="fplanbeteiligung-update"),
+    path("fplan/<int:planid>/beteiligung/<int:pk>/delete/",
+         FPlanBeteiligungDeleteView.as_view(), name="fplanbeteiligung-delete"),
     # Notify
-    #path("fplan/<int:planid>/beteiligung/<int:pk>/notify/create", FPlanBeteiligungNotifyCreateView.as_view(), name="fplanbeteiligungnotify-create"),
+    # path("fplan/<int:planid>/beteiligung/<int:pk>/notify/create", FPlanBeteiligungNotifyCreateView.as_view(), name="fplanbeteiligungnotify-create"),
     # FPlan Anlagen
-    path("fplan/<int:planid>/attachment/create/", FPlanSpezExterneReferenzCreateView.as_view(), name="fplanattachment-create"),
-    path("fplan/<int:planid>/attachment/", FPlanSpezExterneReferenzListView.as_view(), name="fplanattachment-list"),
-    path("fplan/<int:planid>/attachment/<int:pk>/update/", FPlanSpezExterneReferenzUpdateView.as_view(), name="fplanattachment-update"),
-    path("fplan/<int:planid>/attachment/<int:pk>/delete/", FPlanSpezExterneReferenzDeleteView.as_view(), name="fplanattachment-delete"),
-    path("fplanattachment/<int:pk>/", views.get_fplan_attachment, name="fplanattachment-download"),
+    path("fplan/<int:planid>/attachment/create/",
+         FPlanSpezExterneReferenzCreateView.as_view(), name="fplanattachment-create"),
+    path("fplan/<int:planid>/attachment/",
+         FPlanSpezExterneReferenzListView.as_view(), name="fplanattachment-list"),
+    path("fplan/<int:planid>/attachment/<int:pk>/update/",
+         FPlanSpezExterneReferenzUpdateView.as_view(), name="fplanattachment-update"),
+    path("fplan/<int:planid>/attachment/<int:pk>/delete/",
+         FPlanSpezExterneReferenzDeleteView.as_view(), name="fplanattachment-delete"),
+    path("fplanattachment/<int:pk>/", views.get_fplan_attachment,
+         name="fplanattachment-download"),
     # FPlan UP Info
-    path("fplan/<int:planid>/uvp/create/", FPlanUvpCreateView.as_view(), name="fplan-uvp-create"),
-    path("fplan/<int:planid>/uvp/", FPlanUvpListView.as_view(), name="fplan-uvp-list"),
-    path("fplan/<int:planid>/uvp/<int:pk>/update/", FPlanUvpUpdateView.as_view(), name="fplan-uvp-update"),
-    path("fplan/<int:planid>/uvp/<int:pk>/delete/", FPlanUvpDeleteView.as_view(), name="fplan-uvp-delete"),
+    path("fplan/<int:planid>/uvp/create/",
+         FPlanUvpCreateView.as_view(), name="fplan-uvp-create"),
+    path("fplan/<int:planid>/uvp/",
+         FPlanUvpListView.as_view(), name="fplan-uvp-list"),
+    path("fplan/<int:planid>/uvp/<int:pk>/update/",
+         FPlanUvpUpdateView.as_view(), name="fplan-uvp-update"),
+    path("fplan/<int:planid>/uvp/<int:pk>/delete/",
+         FPlanUvpDeleteView.as_view(), name="fplan-uvp-delete"),
     # Organisationen
     # WMS / WFS pro Organisation
     path("organization/<int:pk>/ows/", views.ows, name="ows"),
     # Pfad für Verbandsgemeinden - zur Generierung der Liste/Karte der Gebietsköperschaften
-    path("organization/<int:pk>/childs_map/", views.childs_map, name="childs-map"),
+    path("organization/<int:pk>/childs_map/",
+         views.childs_map, name="childs-map"),
     # Pfad für Liste der Verbandsgemeinden
     path("organization/verbandsgemeinden/", views.vg_list, name="vg-list"),
     # Organisations XPlan-Liste für GetFeatureInfo - hier müssen alle Plantypen zurückgeliefert werden können
-    path("organization/<int:pk>/xplan/html/", views.xplan_html, name="xplan-list-html"),
-    # Liste der aktuell laufeden Beteiligungsverfahren in einer Gebietskörperschaft 
-    path("organization/<int:pk>/beteiligungen/", BeteiligungenOrgaListView.as_view(), name="organization-beteiligungen-list"),
+    path("organization/<int:pk>/xplan/html/",
+         views.xplan_html, name="xplan-list-html"),
+    # Liste der aktuell laufeden Beteiligungsverfahren in einer Gebietskörperschaft
+    path("organization/<int:pk>/beteiligungen/",
+         BeteiligungenOrgaListView.as_view(), name="organization-beteiligungen-list"),
     # Einfache Liste aller Informationen zu Bauleitplänen einer Kommune
-    path("organization/<int:pk>/bauleitplanung/", views.bauleitplanung_orga_html, name="organization-bauleitplanung-list"),
-    # 
-    path("organization/publishing/", AdministrativeOrganizationPublishingListView.as_view(), name="organization-publishing-list"),
-    path("organization/publishing-public/", AdministrativeOrganizationPublishingListPublicView.as_view(), name="organization-publishing-list-public"),
+    path("organization/<int:pk>/bauleitplanung/",
+         views.bauleitplanung_orga_html, name="organization-bauleitplanung-list"),
+    #
+    path("organization/publishing/", AdministrativeOrganizationPublishingListView.as_view(),
+         name="organization-publishing-list"),
+    path("organization/publishing-public/", AdministrativeOrganizationPublishingListPublicView.as_view(),
+         name="organization-publishing-list-public"),
     url(
         r'^administrativeorganization-autocomplete/$',
         AdministrativeOrganizationAutocomplete.as_view(),
         name='administrativeorganization-autocomplete',
     ),
     # Organisationen für die der Nutzer is_amin=True hat
-    path("organization/", AdministrativeOrganizationListView.as_view(), name="organization-list"),
-    path("organization/<int:pk>/update/", AdministrativeOrganizationUpdateView.as_view(), name="organization-update"),
+    path("organization/", AdministrativeOrganizationListView.as_view(),
+         name="organization-list"),
+    path("organization/<int:pk>/update/",
+         AdministrativeOrganizationUpdateView.as_view(), name="organization-update"),
     # Kontaktorganisationen
-    path("contact/create/", ContactOrganizationCreateView.as_view(), name="contact-create"),
+    path("contact/create/", ContactOrganizationCreateView.as_view(),
+         name="contact-create"),
     path("contact/", ContactOrganizationListView.as_view(), name="contact-list"),
-    path("contact/<int:pk>/update/", ContactOrganizationUpdateView.as_view(), name="contact-update"),
-    path("contact/<int:pk>/delete/", ContactOrganizationDeleteView.as_view(), name="contact-delete"),
+    path("contact/<int:pk>/update/",
+         ContactOrganizationUpdateView.as_view(), name="contact-update"),
+    path("contact/<int:pk>/delete/",
+         ContactOrganizationDeleteView.as_view(), name="contact-delete"),
     # TOEB Units - für Organization admins!
     path("toebunit/create/", ToebUnitCreateView.as_view(), name="toebunit-create"),
     path("toebunit/", ToebUnitListView.as_view(), name="toebunit-list"),
-    path("toebunit/<int:pk>/update/", ToebUnitUpdateView.as_view(), name="toebunit-update"),
-    path("toebunit/<int:pk>/delete/", ToebUnitDeleteView.as_view(), name="toebunit-delete"),
+    path("toebunit/<int:pk>/update/",
+         ToebUnitUpdateView.as_view(), name="toebunit-update"),
+    path("toebunit/<int:pk>/delete/",
+         ToebUnitDeleteView.as_view(), name="toebunit-delete"),
     # TOEB Units - für Öffentlichkeit
-    path("toebunitpublic/", ToebUnitPublicListView.as_view(), name="toebunitpublic-list"),
+    path("toebunitpublic/", ToebUnitPublicListView.as_view(),
+         name="toebunitpublic-list"),
     # TOEB Unit Beteiligungen
-    path("toeb/beteiligungen/", ToebUnitBeteiligungenListView.as_view(), name="toebbeteiligungen-list"),
+    path("toeb/beteiligungen/", ToebUnitBeteiligungenListView.as_view(),
+         name="toebbeteiligungen-list"),
     # Berechtigungsanfragen
-    path("requestforrole/create/", RequestForRoleCreateView.as_view(), name="requestforrole-create"),
-    path("requestforrole/", RequestForRoleListView.as_view(), name="requestforrole-list"),
+    path("requestforrole/create/", RequestForRoleCreateView.as_view(),
+         name="requestforrole-create"),
+    path("requestforrole/", RequestForRoleListView.as_view(),
+         name="requestforrole-list"),
     # url für den Zentraladministrator - der darf Anträge bestätigen und zurückweisen
-    path("requestforrole_admin/", RequestForRoleAdminListView.as_view(), name="requestforrole-admin-list"),
-    path("requestforrole/<int:pk>/delete/", RequestForRoleDeleteView.as_view(), name="requestforrole-delete"),
+    path("requestforrole_admin/", RequestForRoleAdminListView.as_view(),
+         name="requestforrole-admin-list"),
+    path("requestforrole/<int:pk>/delete/",
+         RequestForRoleDeleteView.as_view(), name="requestforrole-delete"),
     # RequestForRoleConfirm
-    path("requestforrole/<int:pk>/confirm/", views.RequestForRoleConfirm.as_view(), name="requestforrole-confirm"),
+    path("requestforrole/<int:pk>/confirm/",
+         views.RequestForRoleConfirm.as_view(), name="requestforrole-confirm"),
     # RequestForRoleRefuse
-    path("requestforrole/<int:pk>/refuse/", views.RequestForRoleRefuse.as_view(), name="requestforrole-refuse"),
+    path("requestforrole/<int:pk>/refuse/",
+         views.RequestForRoleRefuse.as_view(), name="requestforrole-refuse"),
     # Verwaltung von Zustimmungsoptionen - nur für superuser
-    path("consentoption/create/", ConsentOptionCreateView.as_view(extra_context={'create': True}), name="consentoption-create"),
-    path("consentoption/", ConsentOptionListView.as_view(), name="consentoption-list"),
-    path("consentoption/<int:pk>/update/", ConsentOptionUpdateView.as_view(extra_context={'update': True}), name="consentoption-update"),
-    path("consentoption/<int:pk>/delete/", ConsentOptionDeleteView.as_view(), name="consentoption-delete"),
+    path("consentoption/create/", ConsentOptionCreateView.as_view(
+        extra_context={'create': True}), name="consentoption-create"),
+    path("consentoption/", ConsentOptionListView.as_view(),
+         name="consentoption-list"),
+    path("consentoption/<int:pk>/update/", ConsentOptionUpdateView.as_view(
+        extra_context={'update': True}), name="consentoption-update"),
+    path("consentoption/<int:pk>/delete/",
+         ConsentOptionDeleteView.as_view(), name="consentoption-delete"),
     # Offenlagen / Beteiligungen
-    # WMS 
+    # WMS
     path("beteiligungen/map/", views.ows_beteiligungen, name="beteiligungen-map"),
     # Alle Pläne
-    re_path(r'^(?P<plantyp>fplan|bplan)/map/$', views.ows_all_orgas_xplan, name="plan-map"),
-    #path("beteiligungen/", views.beteiligungen, name="beteiligungen"),
+    re_path(r'^(?P<plantyp>fplan|bplan)/map/$',
+            views.ows_all_orgas_xplan, name="plan-map"),
+    # path("beteiligungen/", views.beteiligungen, name="beteiligungen"),
     # Liste aller aktuellen Beteiligungsverfahren
     path("beteiligungen/", BeteiligungenListView.as_view(), name="beteiligungen"),
-    # Administrationsviews für die Beziehung zwischen Organisationen und Nutzern 
-    path("organization/manage-users/admin/", OrganizationUserFormViewAdmin.as_view(), name='manage-organization-users-admin'),
-    path("organization/manage-users/toeb-reporter/", OrganizationUserFormViewToebReporter.as_view(), name='manage-organization-users-toeb-reporter'),
-    path("organization/manage-users/roles/", UserOrganizationFormViewRoles.as_view(), name='users-organization-roles'),
+    # Administrationsviews für die Beziehung zwischen Organisationen und Nutzern
+    path("organization/manage-users/admin/", OrganizationUserFormViewAdmin.as_view(),
+         name='manage-organization-users-admin'),
+    path("organization/manage-users/toeb-reporter/", OrganizationUserFormViewToebReporter.as_view(),
+         name='manage-organization-users-toeb-reporter'),
+    path("organization/manage-users/roles/",
+         UserOrganizationFormViewRoles.as_view(), name='users-organization-roles'),
     # Dokumentation
     path('docs/', include('docs.urls')),
     path('jsi18n/', JavaScriptCatalog.as_view(), name='javascript-catalog'),

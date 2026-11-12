@@ -1,0 +1,20 @@
+{% extends "xplanung_light/layout.html" %}
+{% block title %}
+XPlanung-light - Versionen
+{% endblock %}
+{% block content %}
+<table class="table table-sm">
+  <tr><th>XPlanung-light</th><td>{{ angaben.version }}</td></tr>
+  <tr><th>Settings</th><td>{{ angaben.settings_version }}</td></tr>
+  <tr><th>Revision</th><td>{{ angaben.revision|default:"keine Git-Kopie" }}</td></tr>
+  <tr><th>Python / Django</th><td>{{ angaben.python }} / {{ angaben.django }}</td></tr>
+  <tr><th>Datenbank</th><td>{{ angaben.datenbank }}</td></tr>
+  <tr><th>GDAL / GEOS</th><td>{{ angaben.gdal }} / {{ angaben.geos }}</td></tr>
+  <tr><th>Migrationen</th>
+      <td>{{ angaben.migrationen.angewandt }} angewandt,
+          {{ angaben.migrationen.offen|length }} offen</td></tr>
+  <tr><th>Mapserver</th>
+      <td>{{ angaben.kartenserver }}</td></tr>
+</table>
+{% for warnung in angaben.warnungen %}<div class="alert alert-warning">{{ warnung }}</div>{% endfor %}
+{% endblock %}

@@ -226,7 +226,8 @@ def xplan_html(request, pk: int):
         # TODO: Allow integration in website of contact for administrative unit
         return response
     else:
-        response = render(request, 'xplanung_light/xplan_list_html.html', {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
+        response = render(request, 'xplanung_light/xplan_list_html.html',
+                          {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
         response['Access-Control-Allow-Origin'] = "*"
         response['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
         # TODO: Allow integration in website of contact for administrative unit
@@ -1256,6 +1257,19 @@ def about(request):
                                                          'user_is_toeb_reporter': request.user_is_toeb_reporter,
                                                          }
                   )
+
+
+@login_required
+def version(request):
+    from django.core import management
+    from io import StringIO
+    ausgabe = StringIO()
+    management.call_command("versionsstand", json=True, stdout=ausgabe)
+    return render(request, "xplanung_light/version.html", {
+        "angaben": json.loads(ausgabe.getvalue()),
+        "user_is_admin": request.user_is_admin,
+        "user_is_toeb_reporter": request.user_is_toeb_reporter,
+    })
 
 # https://dev.to/balt1794/registration-page-using-usercreationform-django-part-1-21j7
 
