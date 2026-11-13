@@ -473,11 +473,17 @@ form[method="get"] > br { display: none; }
     opacity: 0;
     pointer-events: none;
     transform: translateY(-0.3rem);
-    transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
-.navbar p .btn:nth-of-type(2) { top: calc(100% + 2.65rem); }
-.navbar p .btn:nth-of-type(3) { top: calc(100% + 5.3rem); }
+.navbar p .btn:nth-of-type(2) { top: calc(100% + 2.2rem); }
+.navbar p .btn:nth-of-type(3) { top: calc(100% + 4.4rem); }
+
+/* Schliessen mit kurzem Verzug, Oeffnen sofort: die Punkte ueberlappen
+   sich leicht, so bleibt beim Ueberfahren der Zeilengrenze kein
+   Mausloch offen; der Verzug faengt zusaetzliche Streifzuen */
+.navbar p .btn {
+    transition: opacity 0.15s ease 0.18s, transform 0.15s ease 0.18s;
+}
 
 .navbar p .btn:first-of-type { border-radius: var(--radius) var(--radius) 0 0; }
 .navbar p .btn:last-of-type  { border-radius: 0 0 var(--radius) var(--radius); }
@@ -488,6 +494,7 @@ form[method="get"] > br { display: none; }
     opacity: 1;
     pointer-events: auto;
     transform: none;
+    transition-delay: 0s;
 }
 
 .navbar p .btn:hover,
