@@ -1,6 +1,11 @@
 
 {% load django_bootstrap5 %}
 {% bootstrap_css %}
+{% load static %}
+{# Theme-Anschluss: diese Seite extends nicht layout.html und wuerde ohne #}
+{# eigenes Link-Tag ohne jedes Style-CSS dastehen (upstream-Kommentar in #}
+{# base.py: style_static_prefix ist genau dafuer der vereinbarte Pfad). #}
+<link rel="stylesheet" type="text/css" href="{% static style_static_prefix|add:'/css/site.css' %}"/>
 {% load leaflet_tags %}
 {% block title %}
 {% endblock %}
