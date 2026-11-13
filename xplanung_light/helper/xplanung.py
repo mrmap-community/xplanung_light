@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET
 import defusedxml.ElementTree as defused_ET
 from django import forms
 from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
-from django.contrib.gis.gdal import OGRGeometry
+from xplanung_light.helper.geometrie import ohne_tiefenachse
 from xplanung_light.models import BPlan, FPlan, AdministrativeOrganization, BPlanSpezExterneReferenz, FPlanSpezExterneReferenz
 from io import BytesIO
 from zipfile import ZipFile
@@ -145,16 +145,10 @@ class XPlanung():
         # print(geometry.wkt)
         # Transformation in WGS84 für die Ablage im System
         geometry.transform(4326)
-        # Lösen des Problems, dass manchmal auch 3d Koordinaten geliefert werden - wir transformieren nehmen wir nur die 2d Infos heraus
-        # https://forum.djangoproject.com/t/geodjango-model-field-for-multipoint-with-z-dimension/1217
-        # https://stackoverflow.com/questions/35851577/strip-z-dimension-on-geodjango-force-2d-geometry
-        # if geometry.coord_dim == 3:
-        # Convert to OGR, change dimension, convert back
-        # if geometry.dims == 3:
-        # TODO: check, wie man das anders prüfen könnte
-        ogr_geom = OGRGeometry(geometry.wkt)
-        ogr_geom.coord_dim = 2  # Strip Z
-        geometry = GEOSGeometry(ogr_geom.wkb)  # Convert back to GEOS
+        # Echte Datensätze führen manchmal Höhen mit (gml:posList
+        # srsDimension="3"); die Ablagespalten sind zweidimensional und PostGIS
+        # lehnt solche Geometrien beim Speichern ab. Näheres in helper/geometrie.py.
+        geometry = ohne_tiefenachse(geometry)
         # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
         gemeinde_name = root.find("gml:featureMember/" + path_element +
                                   "/xplan:gemeinde/xplan:XP_Gemeinde/xplan:gemeindeName", ns).text
@@ -304,6 +298,11 @@ class XPlanung():
         # print(geometry.wkt)
         # Transformation in WGS84 für die Ablage im System
         geometry.transform(4326)
+        # Wie in import_plan: Höhenangaben herausnehmen, die Ablage ist
+        # zweidimensional. Ohne diesen Schritt scheitert der Archiv-Upload auf
+        # PostGIS mit "Geometry has Z dimension but column does not", während er
+        # auf Spatialite unbemerkt durchläuft.
+        geometry = ohne_tiefenachse(geometry)
         # Auslesen der Information zur Gemeinde - hier wird aktuell von nur einem XP_Gemeinde-Objekt ausgegangen!
         gemeinde_name = root.find("gml:featureMember/" + path_element +
                                   "/xplan:gemeinde/xplan:XP_Gemeinde/xplan:gemeindeName", ns).text
