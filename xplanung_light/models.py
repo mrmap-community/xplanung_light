@@ -9,6 +9,7 @@ from django.contrib.gis.db import models
 from django.contrib.gis.db.models.functions import Envelope
 from django.contrib.gis.gdal.raster.source import GDALRaster
 from django.contrib.gis.gdal import SpatialReference
+from xplanung_light.helper.geometrie import ohne_tiefenachse
 from django.core.files import File
 from django.core.files.base import ContentFile
 from django.utils.text import slugify
@@ -579,6 +580,25 @@ class XPlan(GenericMetadata):
         null=True, blank=True, max_length=5, verbose_name='XPlan GML-Dokument Version', help_text='')
     public = models.BooleanField(null=False, blank=False, default=False, verbose_name="Plan öffentlich verfügbar",
                                  help_text="Gibt an, ob Informationen zum Plan über die frei verfügbaren Schnittstellen publiziert werden.")
+
+    def save(self, *args, **kwargs):
+        """
+        Geltungsbereich bei jeder Ablage zweidimensional stellen.
+
+        Die Spalte ist ohne Tiefenachse angelegt (Django schreibt
+        `MULTIPOLYGON,4326`). `import_plan` und `import_plan_archiv` normalisieren
+        schon beim Lesen; dieser Schritt gilt den übrigen Wegen - Formulare, die
+        Kommandos `importplans` und `importoffenlagen`, späterer eigener Code.
+        Ohne ihn fällt eine Geometrie mit Höhen erst beim Schreiben auf, und das
+        ist je Datenbank unterschiedlich: Spatialite nimmt sie unbemerkt an,
+        PostGIS wirft `DataError: Geometry has Z dimension but column does not`.
+        Siehe helper/geometrie.py.
+
+        Nicht erfasst, weil ohne save(): `loaddata`, `.update()`, `.bulk_create()`.
+        Darum sind die Beispieldaten in fixtures/fplan.json selbst 2d.
+        """
+        self.geltungsbereich = ohne_tiefenachse(self.geltungsbereich)
+        super().save(*args, **kwargs)
 
     class Meta:
         abstract = True

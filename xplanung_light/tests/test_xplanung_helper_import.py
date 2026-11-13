@@ -58,12 +58,14 @@ REFERENZ_VORLAGE = """<xplan:externeReferenz>
 
 
 def make_gml(plan_element="BP_Plan", name="Testplan", nummer="2099",
-             xplan_ns=XPLAN_NS_60, extra_elemente=""):
+             xplan_ns=XPLAN_NS_60, extra_elemente="", geometrie=None):
     """
     Erzeugt ein minimales XPlanung-GML mit wählbarem Planelement, Version,
-    Nummer und zusätzlichen Elementen (für externe Referenzen). nummer=None
-    lässt das Nummer-Element ganz weg.
+    Nummer, zusätzlichen Elementen (für externe Referenzen) und Geltungsbereich.
+    nummer=None lässt das Nummer-Element ganz weg; geometrie=None nimmt die
+    zweidimensionale Vorlage GEOMETRIE.
     """
+    geometrie = geometrie or GEOMETRIE
     nummer_element = f"<xplan:nummer>{nummer}</xplan:nummer>" if nummer else ""
     return f"""<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <xplan:XPlanAuszug
@@ -76,7 +78,7 @@ def make_gml(plan_element="BP_Plan", name="Testplan", nummer="2099",
     <xplan:{plan_element} gml:id="GML_testplan">
       <xplan:name>{name}</xplan:name>
       {nummer_element}
-      <xplan:raeumlicherGeltungsbereich>{GEOMETRIE}</xplan:raeumlicherGeltungsbereich>
+      <xplan:raeumlicherGeltungsbereich>{geometrie}</xplan:raeumlicherGeltungsbereich>
       <xplan:gemeinde>
         <xplan:XP_Gemeinde>
           <xplan:ags>{AGS}</xplan:ags>
