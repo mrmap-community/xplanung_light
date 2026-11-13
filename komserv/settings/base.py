@@ -188,7 +188,9 @@ STATIC_ROOT = BASE_DIR / 'static_collected'
 # Fork ueberschreibbar. Sobald ein Style abweichendes HTML benoetigt, kann
 # zusaetzlich ein Template-Verzeichnis templates/style/<XPLANUNG_STYLE>/
 # vor den App-Templates in TEMPLATES["DIRS"] aufgenommen werden.
-XPLANUNG_STYLE = "default"
+# Die Umgebungsvariable XPLANUNG_STYLE hat Vorrang, damit ein Deployment
+# den Style waehlen kann, ohne diese Datei zu aendern (z. B. modern).
+XPLANUNG_STYLE = os.environ.get("XPLANUNG_STYLE", "default").strip().lower()
 
 # django-bootstrap5 zeigt standardmaessig auf die CDN-Defaults (jsDelivr,
 # siehe django_bootstrap5/core.py). Dieselben Versionen werden lokal aus

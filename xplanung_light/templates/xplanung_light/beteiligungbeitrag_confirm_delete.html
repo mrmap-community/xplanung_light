@@ -1,5 +1,8 @@
+{% extends "xplanung_light/layout.html" %}
+{% block content %}
 <form method="post">{% csrf_token %}
     <p>Wollen sie den folgenden Beteiligungsbeitrag wirklich löschen "{{ object }}"?</p>
     {{ form }}
     <input type="submit" value="Bestätigen">
 </form>
+{% endblock %}
