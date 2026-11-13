@@ -4,17 +4,25 @@ Aggregationen und die ReportLab-Helferklassen des PDF-Exports.
 """
 
 from io import BytesIO
+import datetime
 import json
 from unittest.mock import MagicMock, patch
 
+from django.contrib.gis.geos import GEOSGeometry
 from django.test import SimpleTestCase, TestCase, override_settings
+from django.utils import timezone
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate
 
-from xplanung_light.models import AdministrativeOrganization
+from xplanung_light.models import (
+    AdministrativeOrganization,
+    BPlan,
+    BPlanBeteiligung,
+    ToebUnit,
+)
 from xplanung_light.views import beteiligung as bv
 from xplanung_light.views.beteiligung import TipTapNode, TipTapToReportLab
 
@@ -148,34 +156,94 @@ class AggregationHelperTests(SimpleTestCase):
                     fn(*args)
 
 
-class JsonGroupArrayTests(TestCase):
+class AggregatAufAktiverBankTests(TestCase):
     """
-    Der Aggregatklasse JsonGroupArray (ältester Stand, funktionsgleich mit
-    SQLiteJSONGroupArray) fehlt jeder Aufruf; getestet wird die SQL-Erzeugung direkt.
+    Die von den Beteiligungs-Listen benutzten JSON-Aggregationen auf der jeweils
+    laufenden Datenbank - jeweils genau auf der Modellabfrage, die die View nutzt.
     """
 
-    def test_aggregation_liefert_distinct_namen(self):
+    def setUp(self):
+        self.orga = AdministrativeOrganization.objects.create(
+            name="Kreis Ahrweiler", ls="07", ks="117", gs="000")
+        self.behoerde = AdministrativeOrganization.objects.create(
+            name="Bezirksregierung", ls="07", ks="000", gs="000")
+        self.bplan = BPlan.objects.create(
+            name="Plan mit Gemeindenaggregat", public=True,
+            geltungsbereich=GEOSGeometry("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))"))
+        self.bplan.gemeinde.add(self.orga)
+        heute = timezone.now().date()
+        self.beteiligung = BPlanBeteiligung.objects.create(
+            bplan=self.bplan, typ="1000", bekanntmachung_datum=heute,
+            start_datum=heute, end_datum=heute + datetime.timedelta(days=14))
+        self.toeb = ToebUnit.objects.create(
+            organization=self.behoerde, name="Fachbereich Umwelt",
+            theme=ToebUnit.OTH, public=True)
+        self.beteiligung.assigned_toebs.add(self.toeb)
+
+    @staticmethod
+    def als_liste(wert):
+        """Das Aggregat kommt je nach Bank als Text oder als Liste zurück."""
+        return json.loads(wert) if isinstance(wert, str) else wert
+
+    def test_gemeinden_aggregat_in_der_planliste(self):
         """
         Was wird geprüft:
-            JsonGroupArray aggregiert Namen einer Organisationstabelle als JSON-Array,
-            mit distinct.
+            organization_json_aggregation() über der Beteiligungsabfrage, wie sie
+            BeteiligungenListView annotiert.
 
         Warum:
-            Die Klasse wird im Code nicht verwendet, blockiert aber sonst die
-            Abdeckung; ihr SQL-Ausdruck muss zumindest lauffähig bleiben.
+            Die Ausdrücke wurden bisher nur konstruiert, nie ausgeführt - der
+            PostgreSQL-Zweig lief in keiner Prüfung gegen eine echte Bank. Genau
+            dort entsteht aber die Spalte "Gemeinden" der Beteiligungslisten.
 
         Erwartung:
-            Beide angelegten Namen erscheinen genau einmal im Aggregat.
+            Ein Eintrag mit id und name der Gemeinde, auf beiden Banken.
         """
-        AdministrativeOrganization.objects.create(name="Alpha")
-        AdministrativeOrganization.objects.create(name="Beta")
-        AdministrativeOrganization.objects.create(name="Beta")
-        ergebnis = AdministrativeOrganization.objects.aggregate(
-            namen=bv.JsonGroupArray("name", distinct=True))
-        wert = ergebnis["namen"]
-        if isinstance(wert, str):
-            wert = json.loads(wert)
-        self.assertEqual(sorted(wert), ["Alpha", "Beta"])
+        beteiligung = BPlanBeteiligung.objects.filter(pk=self.beteiligung.pk).annotate(
+            gemeinden=bv.organization_json_aggregation()).get()
+        self.assertEqual(self.als_liste(beteiligung.gemeinden),
+                         [{"id": self.orga.pk, "name": "Kreis Ahrweiler"}])
+
+    def test_gemeinden_aggregat_in_der_reporterliste(self):
+        """
+        Was wird geprüft:
+            organization_json_aggregation(beteiligung=True) über der Abfrage der
+            Verknüpfungstabelle TÖB-Einheit <-> Beteiligung, wie sie
+            ToebUnitBeteiligungenListView annotiert.
+
+        Warum:
+            Dieser Ast hängt an einer eigenen Beziehungskette (Verknüpfungstabelle
+            -> Beteiligung -> Plan -> Gemeinde) und war nie ausgeführt.
+
+        Erwartung:
+            Derselbe Gemeindeeintrag wie in der Planliste.
+        """
+        verknuepfung = BPlanBeteiligung.assigned_toebs.through.objects.filter(
+            toebunit=self.toeb).annotate(
+            gemeinden=bv.organization_json_aggregation(
+                plantyp="bplan", beteiligung=True)).get()
+        self.assertEqual(self.als_liste(verknuepfung.gemeinden),
+                         [{"id": self.orga.pk, "name": "Kreis Ahrweiler"}])
+
+    def test_aggregat_mit_zwei_gemeinden_ohne_wiederholungen(self):
+        """
+        Was wird geprüft:
+            Das Aggregat über einen Plan mit zwei Gemeinden (der distinct-Zweig).
+
+        Warum:
+            distinct=True ist der Grund, warum diese Aggregate überhaupt
+            Handarbeit brauchen; ein weggefallenes DISTINCT fällt sonst nicht auf.
+
+        Erwartung:
+            Beide Gemeinden genau einmal, unabhängig von der Zahl der Treffer.
+        """
+        zweite = AdministrativeOrganization.objects.create(
+            name="Stadt Bonn", ls="07", ks="221", gs="000")
+        self.bplan.gemeinde.add(zweite)
+        beteiligung = BPlanBeteiligung.objects.filter(pk=self.beteiligung.pk).annotate(
+            gemeinden=bv.organization_json_aggregation()).get()
+        namen = sorted(e["name"] for e in self.als_liste(beteiligung.gemeinden))
+        self.assertEqual(namen, ["Kreis Ahrweiler", "Stadt Bonn"])
 
 
 class ReportLabHelferTests(SimpleTestCase):

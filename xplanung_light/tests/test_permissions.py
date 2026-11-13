@@ -59,13 +59,25 @@ class PermissionTestBase(TestCase):
     def make_gemeinde(name, gs):
         """Erzeugt eine zusätzliche Gemeinde, die für Rechte- und Mehrgemeindetests
         verwendet wird.
+
+        Der Gemeindeschlüssel ist dreistellig (ls 2 + ks 3 + gs 3 = 8-stellige AGS).
+        Ein längerer Wert rutscht durch SQLite durch und fällt erst auf PostgreSQL
+        mit "value too long for type character varying(3)" aus - deshalb prüft die
+        helper-Methode selbst gegen die Feldlänge des Modells.
         """
+        gs = str(gs)
+        max_laenge = AdministrativeOrganization._meta.get_field("gs").max_length
+        if len(gs) > max_laenge:
+            raise ValueError(
+                "Gemeindeschlüssel %r ist %d Stellen lang, die Spalte 'gs' fasst nur "
+                "%d - bitte einen dreistelligen Wert verwenden."
+                % (gs, len(gs), max_laenge))
         return AdministrativeOrganization.objects.create(
             name=name,
             type=AdministrativeOrganization.COM,
             ls="07",
             ks="000",
-            gs=str(gs),
+            gs=gs,
         )
 
     @staticmethod
@@ -456,7 +468,7 @@ class FPlanPermissions(PermissionTestBase):
         """Prüft, dass ein Benutzer keine Gemeinde hinzufügen kann, für die er selbst
         keine Adminrechte besitzt.
         """
-        fremde_gemeinde = self.make_gemeinde("Nicht eigene Gemeinde (FPlan)", 1101)
+        fremde_gemeinde = self.make_gemeinde("Nicht eigene Gemeinde (FPlan)", 981)
         self.client.force_login(self.gemeinde_admin)
 
         response = self.client.post(
@@ -480,7 +492,7 @@ class FPlanPermissions(PermissionTestBase):
 
     def test_admin_can_add_gemeinde_for_which_user_is_admin(self):
         """Prüft, dass ein Benutzer eine Gemeinde hinzufügen darf, in der er Administrator ist."""
-        neue_gemeinde = self.make_gemeinde("Eigene zweite Gemeinde (FPlan)", 1102)
+        neue_gemeinde = self.make_gemeinde("Eigene zweite Gemeinde (FPlan)", 982)
         self.make_admin(self.gemeinde_admin, neue_gemeinde)
         self.client.force_login(self.gemeinde_admin)
 
@@ -501,7 +513,7 @@ class FPlanPermissions(PermissionTestBase):
 
     def test_admin_cannot_remove_gemeinde_for_which_user_is_not_admin(self):
         """Prüft, dass ein Benutzer eine fremde Gemeinde nicht aus dem FPlan entfernen kann."""
-        fremde_gemeinde = self.make_gemeinde("Fremde Gemeinde (FPlan)", 1103)
+        fremde_gemeinde = self.make_gemeinde("Fremde Gemeinde (FPlan)", 983)
         self.fplan.gemeinde.add(fremde_gemeinde)
         self.client.force_login(self.gemeinde_admin)
 
@@ -535,7 +547,7 @@ class FPlanPermissions(PermissionTestBase):
         """Prüft die All-Admin-Regel: Bei mehreren Plan-Gemeinden reicht die Adminrolle
         nur in einer Gemeinde nicht aus.
         """
-        fremde_gemeinde = self.make_gemeinde("Zweite Gemeinde (FPlan)", 1104)
+        fremde_gemeinde = self.make_gemeinde("Zweite Gemeinde (FPlan)", 984)
         self.fplan.gemeinde.add(fremde_gemeinde)
         self.client.force_login(self.gemeinde_admin)
 
@@ -550,7 +562,7 @@ class FPlanPermissions(PermissionTestBase):
         """Prüft, dass ein Benutzer den FPlan löschen darf, wenn er in allen
         zugewiesenen Gemeinden Administrator ist.
         """
-        zweite_gemeinde = self.make_gemeinde("Zweite Admin-Gemeinde (FPlan)", 1105)
+        zweite_gemeinde = self.make_gemeinde("Zweite Admin-Gemeinde (FPlan)", 985)
         self.fplan.gemeinde.add(zweite_gemeinde)
         self.make_admin(self.gemeinde_admin, zweite_gemeinde)
         self.client.force_login(self.gemeinde_admin)
@@ -1029,7 +1041,7 @@ class FPlanRelationPermissions(PermissionTestBase):
         """Prüft, dass das Löschen einer generischen XPlan-Relation die Adminrechte für
         alle Plan-Gemeinden erfordert.
         """
-        zweite_gemeinde = self.make_gemeinde("Zweite Gemeinde (FPlan)", 1106)
+        zweite_gemeinde = self.make_gemeinde("Zweite Gemeinde (FPlan)", 986)
         self.fplan.gemeinde.add(zweite_gemeinde)
         beteiligung = self.make_fplan_toeb_beteiligung(self.fplan)
         self.client.force_login(self.gemeinde_admin)
@@ -1053,7 +1065,7 @@ class FPlanRelationPermissions(PermissionTestBase):
         """Prüft, dass die Relation gelöscht werden darf, wenn der Benutzer in allen
         Plan-Gemeinden Administrator ist.
         """
-        zweite_gemeinde = self.make_gemeinde("Zweite Admin-Gemeinde (FPlan)", 1107)
+        zweite_gemeinde = self.make_gemeinde("Zweite Admin-Gemeinde (FPlan)", 987)
         self.fplan.gemeinde.add(zweite_gemeinde)
         self.make_admin(self.gemeinde_admin, zweite_gemeinde)
         beteiligung = self.make_fplan_toeb_beteiligung(self.fplan)

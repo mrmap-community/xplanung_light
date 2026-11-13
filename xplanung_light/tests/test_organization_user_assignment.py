@@ -51,15 +51,13 @@ class OrganizationUserAssignmentFormToebReporterTests(TestCase):
         )
 
         # 5. TÖB-Einheit (z.B. Umweltamt) anlegen und den user_to_strip als EINZIGEN Editor zuweisen
-        # Das 'theme' wird dynamisch ausgelesen, um Choices-Konflikte zu vermeiden
-        from xplanung_light.forms import ToebUnitCreateForm
-        theme_choices = ToebUnitCreateForm().fields['theme'].choices
-        valid_theme = theme_choices if theme_choices else ''
-
+        # theme ist ein CharField mit choices (max_length=5) - gefragt ist ein Code
+        # vom Modell, nicht die Auswahlliste des Formularfelds (die wäre eine lange
+        # Liste, die nur SQLite kommentlos annimmt).
         self.toeb_unit = ToebUnit.objects.create(
             organization=self.orga,
             name="Naturschutzbehörde",
-            theme=valid_theme,
+            theme=ToebUnit.OTH,
             public=True
         )
         # Verknüpfe den alten User als einzigen Bearbeiter (Single Editor)

@@ -65,6 +65,16 @@ class BeteiligungBeitragUltimateTests(TestCase):
     password123.
     """
 
+    # Beide Verfahren bekommen in setUp dieselbe Nummer (je in ihrer eigenen
+    # Tabelle). Der Test unten prüft, dass die View in der Tabelle des Plantyps
+    # aus der URL nachschlägt - das kann sie nur, wenn die Nummer auch in der
+    # anderen Tabelle vorkommt. Auf Spatialite wären die ersten Nummern beider
+    # Tabellen zwar gleich, auf PostgreSQL driften die Zähler über die Suite
+    # hinweg (Sequenzen werden nicht zurückgerollt); in beiden Fällen wäre die
+    # Gleichheit Zufall. Die Nummer liegt hoch genug, dass sie keine andere
+    # Prüfung in dieser Suite vergibt.
+    VERFAHRENS_NUMMER = 900001
+
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
@@ -117,6 +127,7 @@ class BeteiligungBeitragUltimateTests(TestCase):
             name="BPlan Windpark", geltungsbereich=dummy_polygon)
         self.bplan.gemeinde.add(self.kommune)
         self.bplan_beteiligung = BPlanBeteiligung.objects.create(
+            pk=self.VERFAHRENS_NUMMER,
             bplan=self.bplan, typ="1000", bekanntmachung_datum=self.gestern, start_datum=self.gestern, end_datum=self.in_einem_monat, allow_online_beitrag=True
         )
         self.bplan_beteiligung.assigned_toebs.add(self.toeb_unit)
@@ -132,6 +143,7 @@ class BeteiligungBeitragUltimateTests(TestCase):
             name="FPlan Windkraft", geltungsbereich=dummy_polygon)
         self.fplan.gemeinde.add(self.kommune)
         self.fplan_beteiligung = FPlanBeteiligung.objects.create(
+            pk=self.VERFAHRENS_NUMMER,
             fplan=self.fplan, typ="1000", bekanntmachung_datum=self.gestern, start_datum=self.gestern, end_datum=self.in_einem_monat, allow_online_beitrag=True
         )
         self.fplan_beteiligung.assigned_toebs.add(self.toeb_unit)
@@ -1417,7 +1429,8 @@ class BeteiligungBeitragUltimateTests(TestCase):
             "plantyp": "bplan", "planid": self.bplan.id, "pk": 999999})
         self.assertEqual(self.client.get(unknown).status_code, 404)
 
-        # gleiche ID in beiden Tabellen
+        # dieselbe Nummer in beiden Tabellen - in setUp gesetzt und nicht der
+        # Nummernvergabe überlassen (siehe VERFAHRENS_NUMMER)
         self.assertEqual(self.bplan_beteiligung.pk, self.fplan_beteiligung.pk)
         BPlanBeteiligung.objects.all().update(typ="2000")
         FPlanBeteiligung.objects.all().update(typ="2000")
