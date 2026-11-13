@@ -59,7 +59,7 @@ class RequestForRoleWorkflow(TestCase):
     def setUpTestData(cls):
         cls.gemeinde_a = AdministrativeOrganization.objects.get(pk=cls.ORGA_PK)
         cls.gemeinde_b = AdministrativeOrganization.objects.create(
-            ls='07', ks='000', gs='1401',
+            ls='07', ks='000', gs='141',
             name='Zweite Test-Gemeinde', type=AdministrativeOrganization.COUNTY_FREE_CITY,
         )
         cls.superuser = User.objects.get(pk=1)

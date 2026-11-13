@@ -27,7 +27,6 @@ from xplanung_light.models import (
     RequestForRole,
     ToebUnit,
 )
-from xplanung_light.forms import ToebUnitCreateForm
 from xplanung_light.views.orgauser import (
     OrganizationUserFormViewAdmin,
     OrganizationUserFormViewToebReporter,
@@ -159,10 +158,13 @@ class LetzterReporterMeldungsTests(TestCase):
         self.neuer = User.objects.create_user(
             username="reporter_neu", password="pw", email="neu@example.org")
 
-        theme = ToebUnitCreateForm().fields["theme"].choices
+        # theme ist ein CharField mit choices (max_length=5) - gefragt ist ein
+        # Code vom Modell. Die Auswahlliste des Formularfelds wäre eine lange
+        # Liste aus Tupeln, die nur SQLite kommentlos in die Spalte schreibt
+        # (PostgreSQL meldet "value too long for type character varying(5)").
         self.toeb = ToebUnit.objects.create(
             organization=self.orga, name="Untere Wasserbehörde",
-            theme=theme, public=True)
+            theme=ToebUnit.OTH, public=True)
         self.toeb.editors.add(self.alt_entry)
 
         bplan = BPlan.objects.create(

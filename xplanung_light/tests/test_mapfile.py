@@ -14,11 +14,31 @@ from django.core.cache import cache
 from django.test import TestCase, Client, TransactionTestCase, override_settings
 from django.urls import reverse
 
+import mapscript
+
 from xplanung_light.helper import mapfile as mapfile_mod
 from xplanung_light.helper.mapfile import MapfileGenerator
 from xplanung_light.models import AdministrativeOrganization, BPlan, FPlan
-# Importieren Sie hier Ihre relevanten Models (z. B. BPlan, Bereich, etc.)
-# from xplanung_light.models import BPlan
+
+
+def mapserver_sitzungen_schliessen():
+    """
+    Gibt die Datenbanksitzungen frei, die MapServer für die Layer geöffnet hat.
+
+    Die Layer des erzeugten Mapfiles haben CONNECTIONTYPE POSTGIS (bzw. OGR); ein
+    GetMap-Request öffnet dafür eine eigene Verbindung über die C-Bibliothek, nicht
+    über Djangos Connection-Objekt. MapServer hält sie prozessweit in einem
+    Verbindungscache, auch nachdem das mapObj wieder abgebaut ist. Die Verbindung
+    entzieht sich Djangos Verbindungspflege und blockiert am Ende des Laufs das
+    DROP DATABASE der Testbank ("database ... is being accessed by other users"),
+    weshalb der Runner trotz grüner Tests mit Exit-Code 1 ausgeht.
+
+    Nötig nach Klassen, die GetMap oder GetFeatureInfo spielen: ein
+    GetCapabilities liest nur die Mapdatei und öffnet die Layer nicht.
+    """
+    schliessen = getattr(mapscript, "msConnPoolCloseUnreferenced", None)
+    if schliessen is not None:
+        schliessen()
 
 
 class OGCServiceViewsTestCase(TransactionTestCase):
@@ -44,6 +64,12 @@ class OGCServiceViewsTestCase(TransactionTestCase):
     def setUp(self):
         """Legt einen Test-Client an."""
         self.client = Client()
+
+    @classmethod
+    def tearDownClass(cls):
+        """Siehe mapserver_sitzungen_schliessen(): die Tests hier rufen GetMap."""
+        super().tearDownClass()
+        mapserver_sitzungen_schliessen()
 
     """
     Dienst für organization

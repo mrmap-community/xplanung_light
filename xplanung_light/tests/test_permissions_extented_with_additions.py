@@ -637,7 +637,7 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
             Weiterleitung (302) und der Beitrag existiert nicht mehr.
         """
     # Admin, der nur für eine von mehreren Plan-Gemeinden zuständig ist, darf trotzdem löschen.
-        second_gemeinde = self.make_gemeinde("Zweite Gemeinde", 1201)
+        second_gemeinde = self.make_gemeinde("Zweite Gemeinde", 988)
         self.plan.gemeinde.add(second_gemeinde)
 
         beitrag = self.make_beitrag_for_plan(self.plan)
@@ -957,7 +957,7 @@ class BeitragStellungnahmePermissions(PermissionTestBase):
         """
     # Admin einer von mehreren Plan-Gemeinden darf die Stellungnahme löschen.
         second_gemeinde = self.make_gemeinde(
-            "Zweite Stellungnahme-Gemeinde", 1202)
+            "Zweite Stellungnahme-Gemeinde", 990)
         self.plan.gemeinde.add(second_gemeinde)
 
         beitrag = self.make_beitrag_for_plan(self.plan)
@@ -1748,7 +1748,7 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
             Weiterleitung (302) und der Beitrag existiert nicht mehr.
         """
     # Admin, der nur für eine von mehreren Plan-Gemeinden zuständig ist, darf trotzdem löschen.
-        second_gemeinde = self.make_gemeinde("Zweite Gemeinde (FPlan)", 1301)
+        second_gemeinde = self.make_gemeinde("Zweite Gemeinde (FPlan)", 989)
         self.fplan.gemeinde.add(second_gemeinde)
 
         beitrag = self.make_beitrag_for_plan(self.fplan)
@@ -2068,7 +2068,7 @@ class FPlanBeitragStellungnahmePermissions(PermissionTestBase):
         """
     # Admin einer von mehreren Plan-Gemeinden darf die Stellungnahme löschen.
         second_gemeinde = self.make_gemeinde(
-            "Zweite Stellungnahme-Gemeinde (FPlan)", 1302)
+            "Zweite Stellungnahme-Gemeinde (FPlan)", 998)
         self.fplan.gemeinde.add(second_gemeinde)
 
         beitrag = self.make_beitrag_for_plan(self.fplan)

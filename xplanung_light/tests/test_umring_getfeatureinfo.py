@@ -15,6 +15,9 @@ from django.test import TransactionTestCase, Client
 from django.urls import reverse
 
 from xplanung_light.models import AdministrativeOrganization, BPlan
+# Der Helfer wohnt in test_mapfile.py, das den MapServer ebenfalls real fährt
+# (wie test_getfeatureinfo_obergrenze von test_views_ows.py).
+from xplanung_light.tests.test_mapfile import mapserver_sitzungen_schliessen
 
 try:
     import mapscript  # noqa: F401
@@ -118,6 +121,12 @@ class UmringLayerGetFeatureInfo(TransactionTestCase):
         self.orga = AdministrativeOrganization.objects.get(pk=self.ORGA_PK)
         self.plan = BPlan.objects.get(pk=self.PLAN_PK)
         self.umring_layer = "BPlan." + self.orga.ags + ".0"
+
+    @classmethod
+    def tearDownClass(cls):
+        """Siehe mapserver_sitzungen_schliessen(): die Queries hier öffnen den Layer."""
+        super().tearDownClass()
+        mapserver_sitzungen_schliessen()
 
     def _getfeatureinfo(self, lon, lat, delta=0.001, size=101):
         """
