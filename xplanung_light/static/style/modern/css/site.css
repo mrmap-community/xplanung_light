@@ -561,13 +561,59 @@ form:has(table) ~ p {
     text-align: center;
 }
 
-/* ── Detailseiten (BPlan-/FPlan-Einzelansicht, ohne Navbar) ── */
+/* ── Detailseiten (BPlan-/FPlan-Einzelansicht, ohne Navbar) ──
+   Diese Seiten erben nicht von layout.html: ihre Blöcke liegen direkt
+   im <body>. Die Korper-Regeln unten zielen daher auf body > ... und
+   lassen die Listenseiten ausserhalb (deren Inhalt sitzt in
+   .body-content). */
 h3 {
     font-size: 1.4rem;
     color: var(--color-primary-dk);
+    margin-top: 1.5rem;
 }
 
 hr { border-color: var(--color-border); opacity: 1; }
+
+/* Kopfblock: Titel, Wappenbilder, Kommunen- und Datumszeile */
+body > center { margin: 0.25rem 0; }
+
+body > center:first-of-type { margin-top: 1.5rem; }
+
+body > center img {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    background-color: var(--color-surface);
+    object-fit: contain;
+}
+
+/* Attributtabelle: zentrierte, breitbegrenzte Karte mit getoenter
+   Wertspalte gegenueber der Attributspalte */
+body > table.table {
+    max-width: 60rem;
+    margin: 1.25rem auto 2rem;
+    border: 1px solid var(--color-border);
+}
+
+body > table.table > tbody > tr > th[scope="row"] {
+    width: 34%;
+    background-color: rgba(135, 29, 51, 0.04);
+    color: var(--color-primary-dk);
+    font-weight: 600;
+}
+
+/* Uebersichts- und Detailkarten in der Tabelle */
+body > table.table td img {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+}
+
+/* Verschachtelte Dokumenten-/Anlagetabellen: eigener Schatten und
+   Randung innerhalb der Karte waeren Doppelrahmen */
+.table .table {
+    box-shadow: none;
+    border-radius: 0;
+}
 
 /* ── Funktionsregeln aus dem urspruenglichen site.css ── */
 .message {
