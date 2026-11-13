@@ -27,26 +27,14 @@ from django.db.models.functions import ( ExtractDay )
 from django.shortcuts import get_object_or_404
 #from django.db.models.aggregates import Aggregate
 
-# https://stackoverflow.com/questions/74111981/django-aggregate-into-array
-# TODO: for sqlite - für Postgres gibt es eigene Aggregatfunktionen!
-class JsonGroupArray(Aggregate):
-    function = 'JSON_GROUP_ARRAY'
-    output_field = JSONField()
-    template = '%(function)s(%(distinct)s%(expressions)s)'
-
-    def __init__(self, *expressions, distinct=False, **extra):
-        super().__init__(*expressions, **extra)
-        self.distinct = 'DISTINCT ' if distinct else ''
-    
-    def as_sql(self, compiler, connection, **extra_context):
-        extra_context['distinct'] = self.distinct
-        return super().as_sql(compiler, connection, **extra_context)
-
-"""
-Nach KI-Recherche - Abstraktion für postgresql und sqlite
-Eigentlich wird JSONAgg vorgeschlagen - ob JSONBAgg klappt müssen wir noch ausprobieren
-
-"""
+# Abstraktion für PostgreSQL und Spatialite: unten wählen
+# organization_json_aggregation() und beitrag_json_aggregation() je nach
+# connection.vendor. Auf Spatialite steht JSON_GROUP_ARRAY zur Verfügung, auf
+# PostgreSQL das eingebaute JSONBAgg - beide Zweige laufen jetzt gegen eine
+# echte Bank (tests/test_views_beteiligung.py, AggregatAufAktiverBankTests).
+# Ein früherer Stand hatte stattdessen eine einzige JSON_GROUP_ARRAY-Klasse für
+# beide Banken; die ist entfernt, weil sie auf PostgreSQL kein SQL liefert und
+# im Code nirgends aufgerufen wurde.
 from django.contrib.postgres.aggregates import JSONBAgg
 from django.db.models.functions import JSONObject
 from django.db import connection
