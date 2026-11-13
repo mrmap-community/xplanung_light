@@ -1,4 +1,45 @@
-#https://www.sphinx-doc.org/en/master/tutorial/deploying.html
-#furo==2021.11.16
-#sphinx
-#sphinx_rtd_theme
+# Baut die Dokumentation (siehe docs/README-VERSIONEN.md).
+#
+# Die Liste ist für den Bau in der CI und für die lokale Fassung desselben Baus:
+#     python3 -m venv /tmp/venv-docs && /tmp/venv-docs/bin/pip install -r docs/requirements.txt
+#     PATH="/tmp/venv-docs/bin:$PATH" docs/build-versionen.sh
+#
+# In der Anwendungsumgebung (.venv) gehört nichts davon hin — die Pakete werden
+# nur zum Bauen gebraucht. Die beiden Pakete, die auch in requirements.txt und
+# requirements_deb13.txt stehen (sphinx, sphinx-rtd-theme), stehen hier auf
+# derselben Fassung: sonst baut ein Rechner mit Debian-13-Umgebung die Doku
+# anders als eine mit Debian 11/12 und als der Runner. In der Test-Workflow
+# (django-tests.yml) wird nichts davon gebaut.
+#
+# Aufgelöste Fassung, gemessen am 12.11.2026 mit trockenen pip-Durchläufen
+# (pip 26.3) für die Python-Fassungen der unterstützten Stände:
+#
+#     Debian 11 (Python 3.9)   Sphinx 7.4.7, docutils 0.21.2, rtd_theme 3.0.2, multiversion 0.2.4
+#     Debian 12 (Python 3.11)  dito
+#     Runner     (Python 3.12) dito
+#     Debian 13 (Python 3.13)  dito
+#
+# Ohne diese Bindungen wäre es je Python-Fassung etwas anderes: Sphinx 7.4.7 auf
+# 3.9, 9.0.4 auf 3.11, 9.1.1 auf 3.12, 9.2.0 auf 3.13 — und ab Sphinx 8 ist der
+# Fassungsbaum zu (sphinx-multiversion 0.2.4 ruft Config.read(confdir,
+# confoverrides) auf, das es seit Sphinx 8 nicht mehr gibt). Wer bei einem
+# neueren Sphinx bleiben will, lässt sphinx-multiversion weg:
+# docs/build-versionen.sh weicht dann von selbst auf den einfachen Bau aus.
+
+sphinx==7.4.7
+sphinx_rtd_theme==3.0.2
+
+# Fassungen nebeneinander (master und die Versionstags, mit Umschalter). Es gibt
+# von diesem Paket nur die eine Fassung 0.2.4; die Bindung kann, wenn es eine
+# neuere gibt, die mit einem neueren Sphinx zusammenarbeitet. Fehlt das Paket,
+# baut docs/build-versionen.sh die aktuelle Fassung wie bisher.
+sphinx-multiversion==0.2.4
+
+# Markdown gibt es in der Doku derzeit nicht (alle 14 Seiten sind .rst) und
+# conf.py bindet die Erweiterung nicht ein. Die Doku-Workflow installierte das
+# Paket bisher trotzdem; es steht hier, damit der Umbau der pip-Zeile auf diese
+# Liste kein Paket verliert. Wer niemals Markdown-Seiten will, kann die Zeile
+# streichen — oder conf.py um 'myst_parser' in extensions ergänzen. Zwischen den
+# Python-Fassungen ist es eine andere Fassung (3.0.1 auf 3.9, 4.0.1 auf
+# 3.11+), gleichgültig, weil nichts daraus gebaut wird.
+myst-parser
