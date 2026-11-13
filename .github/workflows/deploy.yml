@@ -61,6 +61,7 @@ jobs:
 
       # KORREKTUR: Expliziter Download über Github API Kontext
       - name: Download Coverage-Artefakt
+        if: github.event_name == 'workflow_run'
         uses: actions/download-artifact@v4
         with:
           name: django-coverage-report
