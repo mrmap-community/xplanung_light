@@ -1,0 +1,590 @@
+/* ============================================================
+   XPlanung light - Theme 'modern'
+   Haengt ausschliesslich an den urspruenglichen Templates; alle
+   Regeln zielen auf deren vorhandene Bootstrap-/Eigenklassen.
+   Funktionsregeln (Kartengroessen, Pflichtstern, select2-Hoehe)
+   sind aus dem urspruenglichen site.css uebernommen.
+   ============================================================ */
+
+:root {
+    --color-primary:    #871d33;
+    --color-primary-dk: #6b1628;
+    --color-primary-lt: #fdf0f3;
+    --color-bg:         #f1f5f9;
+    --color-surface:    #ffffff;
+    --color-border:     #e2e8f0;
+    --color-text:       #1e293b;
+    --color-text-muted: #64748b;
+    --shadow-sm:        0 1px 3px rgba(0, 0, 0, .08), 0 1px 2px rgba(0, 0, 0, .06);
+    --shadow-md:        0 4px 6px rgba(0, 0, 0, .07), 0 2px 4px rgba(0, 0, 0, .06);
+    --radius:           8px;
+    --font-sans:        'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ── Basis ── */
+body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+}
+
+a { color: var(--color-primary); }
+a:hover { color: var(--color-primary-dk); }
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+/* ── Navbar: urspruenglich "navbar-dark bg-dark" ── */
+.navbar {
+    background: linear-gradient(135deg, #4a0f1d 0%, var(--color-primary) 100%) !important;
+    font-size: 0.9375rem;
+    padding: 0.55rem 1rem;
+    box-shadow: var(--shadow-md);
+}
+
+.navbar-brand {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #fff !important;
+}
+
+.navbar .nav-link {
+    color: rgba(255, 255, 255, 0.82);
+    border-radius: var(--radius);
+    padding: 0.35rem 0.7rem;
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link:focus {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+/* Dropdown-Menues im Original: dropdown-menu-dark */
+.dropdown-menu {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    padding: 0.35rem;
+}
+
+.dropdown-menu-dark {
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+}
+
+.dropdown-menu-dark .nav-link,
+.dropdown-menu-dark .dropdown-item {
+    color: var(--color-text);
+    border-radius: 6px;
+}
+
+.dropdown-menu-dark .nav-link:hover,
+.dropdown-menu-dark .dropdown-item:hover {
+    background-color: var(--color-primary-lt);
+    color: var(--color-primary-dk);
+}
+
+/* Buttons in der Navbar (Anmelden/Profil/...) */
+.navbar .btn-primary {
+    background: #fff;
+    border-color: #fff;
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.navbar .btn-primary:hover {
+    background: var(--color-primary-lt);
+    border-color: var(--color-primary-lt);
+    color: var(--color-primary-dk);
+}
+
+/* ── Seiteninhalt + Fusszeile ── */
+.body-content {
+    padding: 1.25rem 1.25rem 2rem;
+}
+
+.body-content > hr {
+    border-color: var(--color-border);
+}
+
+footer {
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+}
+
+footer p { margin-bottom: 0.15rem; }
+footer a { color: var(--color-text-muted); text-decoration: underline; }
+footer a:hover { color: var(--color-primary); }
+
+/* ── Karten (Startseite und Listen) ── */
+.card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.card-title { font-weight: 600; }
+
+.card-footer {
+    background-color: var(--color-surface);
+    border-top-color: var(--color-border);
+}
+
+/* ── Tabellen (django-tables2: Bootstrap-Klasse .table) ── */
+/* Kolonreiche Listen (BPlan-/FPlan-Tabellen) skalieren nicht: der
+   Container bekommt eigenes waagerechtes Scrollen, damit die Seite
+   selbst nie breiter wird als das Browserfenster. */
+.table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table {
+    background-color: var(--color-surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    margin-top: 0.75rem;
+}
+
+.table > thead {
+    background-color: var(--color-primary-lt);
+}
+
+.table > thead th {
+    color: var(--color-primary-dk);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 2px solid var(--color-border);
+    white-space: nowrap;
+}
+
+.table > tbody tr:hover { background-color: #f8fafc; }
+
+/* ── Buttons (Formulare, Listen) ── */
+.btn {
+    font-weight: 500;
+    font-size: 0.875rem;
+    border-radius: 6px;
+    padding: 0.45rem 1rem;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.btn-primary:hover {
+    background: var(--color-primary-dk);
+    border-color: var(--color-primary-dk);
+}
+
+/* ── Formulare (crispy + einfache Templates wie login) ── */
+.form-label, label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--color-text);
+}
+
+.form-control, .form-select {
+    border-radius: 6px;
+    border-color: var(--color-border);
+    font-size: 0.9375rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 0.2rem rgba(135, 29, 51, 0.15);
+}
+
+/* Einfache Formulare ohne Bootstrap-Klassen (login, password_reset):
+   nackte Eingabefelder und Tabellen-Layouts mitziehen */
+form table { margin-bottom: 0.75rem; }
+form table td { padding: 0.25rem 0.5rem 0.25rem 0; vertical-align: middle; }
+
+form input[type="text"],
+form input[type="password"],
+form input[type="email"],
+form input[type="number"],
+form input[type="url"],
+form input[type="date"],
+form textarea {
+    display: block;
+    width: 100%;
+    max-width: 32rem;
+    padding: 0.45rem 0.75rem;
+    margin-top: 0.2rem;
+    font-size: 0.9375rem;
+    color: var(--color-text);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+}
+
+form input[type="text"]:focus,
+form input[type="password"]:focus,
+form input[type="email"]:focus,
+form textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 0.2rem rgba(135, 29, 51, 0.15);
+}
+
+form input[type="submit"],
+form button[type="submit"] {
+    display: inline-block;
+    padding: 0.45rem 1.25rem;
+    margin-top: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: #fff;
+    background-color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+form input[type="submit"]:hover,
+form button[type="submit"]:hover {
+    background-color: var(--color-primary-dk);
+}
+
+/* ── Meldungen (bootstrap_messages) ── */
+.alert {
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    font-size: 0.9375rem;
+}
+
+/* ── Seitensaender (django-tables2 Pagination) ── */
+.pagination .page-link {
+    color: var(--color-primary);
+    border-color: var(--color-border);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+
+/* ── Formularabschnitte (crispy fieldsets: Verwaltung, Pflichtfelder ...) ── */
+fieldset {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 1rem 1.25rem 1.25rem;
+    margin-bottom: 1.25rem;
+    min-width: 0;
+}
+
+legend {
+    float: none;
+    width: auto;
+    padding: 0 0.5rem;
+    margin-left: 0.25rem;
+    margin-bottom: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    border: 0;
+}
+
+.form-text {
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    margin-top: 0.25rem;
+}
+
+.form-check { margin: 0.25rem 0; }
+.form-check-label { font-weight: 400; }
+
+/* Hilfetexte unter Eingabefeldern (urspruenglich <small>-Absaetze) */
+small.text-muted, .text-muted { font-size: 0.8125rem; }
+
+/* ── Filterformulare der Listen (django-filter: GET-Formularer mit
+   klassenlosen Eingaben) - als Karte mit Felderraster ── */
+form[method="get"] {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 0.9rem 1.25rem;
+    align-items: end;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 1rem 1.25rem 1.25rem;
+    margin: 0.75rem 0 1.25rem;
+}
+
+form[method="get"] legend {
+    grid-column: 1 / -1;
+    padding: 0;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+form[method="get"] p { margin: 0; }
+
+form[method="get"] label {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+/* Checkboxfelder: Label und Kaestchen in einer Zeile */
+form[method="get"] p:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.2rem;
+}
+
+form[method="get"] p:has(input[type="checkbox"]) label {
+    margin: 0;
+}
+
+form[method="get"] input[type="checkbox"] {
+    width: 1.05rem;
+    height: 1.05rem;
+    accent-color: var(--color-primary);
+}
+
+/* Klassenlose Eingaben und Auswahlfelder (Filter und einfache Formulare) */
+form input[type="text"]:not(.form-control),
+form select:not(.form-select) {
+    padding: 0.45rem 0.75rem;
+    font-size: 0.9375rem;
+    color: var(--color-text);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+}
+
+form[method="get"] input[type="text"]:not(.form-control),
+form[method="get"] select:not(.form-select) {
+    width: 100%;
+    max-width: none;
+    margin-top: 0;
+}
+
+form input[type="text"]:not(.form-control):focus,
+form select:not(.form-select):focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 0.2rem rgba(135, 29, 51, 0.15);
+}
+
+/* "Filter loeschen" (Link) vom "Filter anwenden" (Button) abheben */
+form[method="get"] a.btn-primary {
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-primary);
+}
+
+form[method="get"] a.btn-primary:hover {
+    background-color: var(--color-primary-lt);
+    border-color: var(--color-primary-lt);
+    color: var(--color-primary-dk);
+}
+
+/* Buttons und Seitengroessen-Auswahl am Zeilenende ausrichten */
+form[method="get"] > button,
+form[method="get"] > a.btn,
+form[method="get"] > br,
+form[method="get"] label[for="per_page"],
+form[method="get"] div:has(select[name="per_page"]) {
+    align-self: end;
+}
+
+form[method="get"] > br { display: none; }
+
+/* ── Navbar-Benutzer-Menue ──
+   Das <p> der angemeldeten Sitzung wird ueber :has(b) erkannt (der
+   "Anmelden"-Knopf des ausgeloggten Zustands steht ausserhalb eines <p>).
+   Sichtbar sind nur Benutzername und Zahnrad; Abmelden, Passwort aendern
+   und Profil werden ein nach unten aufgehendes Menue (Hover oder
+   Tastatur-Fokus). Versteckte Menuepunkte bleiben tabbar (opacity statt
+   visibility), :focus-within oeffnet das Menue auch ohne Maus. */
+.navbar p {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    position: relative;
+    font-size: 0;
+}
+
+.navbar p > br { display: none; }
+
+/* Benutzername (erstes <b>) sichtbar; "Angemeldeter Benutzer:" und die
+   Rollen-Angaben bleiben ueber font-size: 0 verdeckt */
+.navbar p > b:first-of-type {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+/* Zahnrad-Symbol als Menue-Hinweis */
+.navbar p:has(b)::after {
+    content: "\2699\FE0E";
+    font-size: 1.2rem;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.85);
+    transition: transform 0.25s ease;
+}
+
+.navbar p:hover:has(b)::after {
+    transform: rotate(40deg);
+    color: #fff;
+}
+
+/* Buttons als Menuepunkte: untereinander, rechtsbuendig am Anker */
+.navbar p .btn {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 1030;
+    width: 13.5rem;
+    display: block;
+    text-align: left;
+    white-space: nowrap;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-primary-dk);
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-0.3rem);
+}
+
+.navbar p .btn:nth-of-type(2) { top: calc(100% + 2.2rem); }
+.navbar p .btn:nth-of-type(3) { top: calc(100% + 4.4rem); }
+
+/* Schliessen mit kurzem Verzug, Oeffnen sofort: die Punkte ueberlappen
+   sich leicht, so bleibt beim Ueberfahren der Zeilengrenze kein
+   Mausloch offen; der Verzug faengt zusaetzliche Streifzuen */
+.navbar p .btn {
+    transition: opacity 0.15s ease 0.18s, transform 0.15s ease 0.18s;
+}
+
+.navbar p .btn:first-of-type { border-radius: var(--radius) var(--radius) 0 0; }
+.navbar p .btn:last-of-type  { border-radius: 0 0 var(--radius) var(--radius); }
+.navbar p .btn:not(:first-of-type):not(:last-of-type) { border-radius: 0; }
+
+.navbar p:hover .btn,
+.navbar p:focus-within .btn {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+    transition-delay: 0s;
+}
+
+.navbar p .btn:hover,
+.navbar p .btn:focus {
+    background-color: var(--color-primary-lt);
+    color: var(--color-primary-dk);
+}
+
+/* Schmaler Bildschirm: die Navbar-Elemente stecken im Toggler-Panel,
+   Hover-Menues waeren dort unbedienbar - Menuepunkte wieder inline */
+@media (max-width: 991.98px) {
+    .navbar p { flex-wrap: wrap; }
+
+    .navbar p .btn {
+        position: static;
+        width: auto;
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+        box-shadow: none;
+        border-radius: var(--radius);
+    }
+}
+
+/* ── Login-Seite: zentrierte Anmelde-Karte ── */
+form:has(table) {
+    max-width: 26rem;
+    margin: 2.5rem auto 1rem;
+    padding: 1.75rem 2rem 2rem;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+}
+
+form:has(table) table { width: 100%; margin: 0; }
+
+/* Tabellenzellen untereinander: Label ueber dem Eingabefeld */
+form:has(table) td { display: block; padding: 0; }
+form:has(table) td:first-child { padding-top: 0.9rem; }
+form:has(table) tr:first-child td:first-child { padding-top: 0; }
+
+form:has(table) input[type="text"],
+form:has(table) input[type="password"] {
+    display: block;
+    width: 100%;
+    max-width: none;
+    margin-top: 0.3rem;
+    box-sizing: border-box;
+}
+
+form:has(table) input[type="submit"] {
+    width: 100%;
+    margin-top: 1.25rem;
+    padding: 0.6rem 1rem;
+    font-size: 1rem;
+}
+
+/* Registrieren-/Zuruecksetzen-Hinweise unter der Karte zentrieren */
+form:has(table) ~ p {
+    max-width: 26rem;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+/* ── Detailseiten (BPlan-/FPlan-Einzelansicht, ohne Navbar) ── */
+h3 {
+    font-size: 1.4rem;
+    color: var(--color-primary-dk);
+}
+
+hr { border-color: var(--color-border); opacity: 1; }
+
+/* ── Funktionsregeln aus dem urspruenglichen site.css ── */
+.message {
+    font-weight: 600;
+    color: blue;
+}
+
+#bplan_list_map { height: 180px; }
+#fplan_list_map { height: 180px; }
+
+.asteriskField { color: red; }
+
+.select2-container .select2-selection--single {
+    height: 38px !important; /* Single Select */
+}
+
+.metadata_attributes {
+    color: grey;
+    font-style: italic;
+}
