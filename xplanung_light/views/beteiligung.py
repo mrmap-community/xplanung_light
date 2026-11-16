@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.db.models import Count, F, Q, Value, OuterRef, Subquery, Exists
 from django.db.models.functions import Concat
 from django_tables2 import SingleTableView
+from django_tables2.paginators import LazyPaginator
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core import serializers
 from django.db.models import JSONField, CharField, Func, Aggregate
@@ -169,8 +170,50 @@ def beitrag_json_aggregation(plantyp='bplan'):
     raise NotImplementedError
 
 
+class TrefferzahlMixIn:
+    """
+    Hilfstklasse für die Beteiligungslisten: Trefferzahl und Seite getrennt ermitteln.
 
-class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
+    Warum das noetig ist: die Listen vereinigen zwei annotierte Abfragen und zaehlen
+    dabei Beitraege, Anlagen und Gemeinden mit hoch. django-tables2 paginiert
+    standardmaessig nummeriert und loest dafuer ein count() ueber genau diesem Queryset
+    aus — dieselbe teure Berechnung, die die Seite selbst schon kostet. In den Vorlagen
+    stand zusaetzlich ``{{ object_list.count }}``, damit lief die Rechnung pro
+    Seitenaufruf dreimal. Auf einem Bestand mit 20.000 Plaenen und 500.000
+    TÖB-Zuweisungen waren das 8,5 Sekunden fuer eine Seite mit 25 Zeilen.
+
+    Diese Klasse
+      1. stellt die Seiteneinteilung auf ``LazyPaginator`` um — die Gesamtzahl wird
+         nicht vorab ermittelt, der Blätterblock zeigt deshalb die Seiten bis eine über
+         die aktuelle und erst am Ende die korrekte Gesamtzahl,
+      2. liefert ``context['anzahl']`` aus den kahlen Filter-Querysets, die die View in
+         ``self.zaehler_basis`` hinterlegt, und
+      3. erspart damit auch der "Anzahl"-Zeile der Vorlage die teure Abfrage.
+
+    Die Trefferzahl darf aus den Querysets vor den Annotationen kommen: die Aggregate
+    rechnen je Verfahren hoch, sie veraendern die Zahl der Zeilen nicht, und die
+    Vereinigung beider Haelften ist duplikatfrei (siehe die Kommentare in get_queryset).
+    """
+
+    # verhindert das count() der nummerierten Seiteneinteilung, siehe Docstring
+    table_pagination = {"paginator_class": LazyPaginator}
+
+    # wird von get_queryset gefuellt; leer, wenn eine View den Mixin ohne Zähler nutzt
+    zaehler_basis = ()
+
+    def get_context_data(self, **kwargs):
+        """Kontext um die Trefferzahl der Liste ergaenzen (Schluessel ``anzahl``)."""
+        context = super().get_context_data(**kwargs)
+        if self.zaehler_basis:
+            context['anzahl'] = sum(basis.count() for basis in self.zaehler_basis)
+        else:
+            # Ausweichfall: ueber den Listenqueryset zahlen, damit die Vorlage nie ohne
+            # Zahl dasteht. Langsam, aber richtig — sieht man einer View an.
+            context['anzahl'] = context['object_list'].count()
+        return context
+
+
+class BeteiligungenListView(TrefferzahlMixIn, ExtentUserOrgaInfo, SingleTableView):
     """
     Klasse zur Anzeige der laufenden BPlan- und FPlan-Verfahren einer Gebietskörperschaft.
     View ist nicht beschränkt und soll vom Bürger angesehen werden. In Dashboard verlinkt.
@@ -183,31 +226,47 @@ class BeteiligungenListView(ExtentUserOrgaInfo, SingleTableView):
     def get_queryset(self):
         """
         Überschreiben von get_queryset um ein union verschiedener Modelle zu ermöglichen.
-        
+
+        Die Trefferzahl für die Vorlage liegt in self.zaehler_basis und wird von
+        TrefferzahlMixIn gezählt: ein count() über dem vereinigten, annotierten Queryset
+        wäre dieselbe teure Abfrage wie die Seite selbst.
+
         :param self: Description
         """
         beteiligungen_bplaene = BPlanBeteiligung.objects.filter(
             end_datum__gte=timezone.now()
             ).filter(
                 bekanntmachung_datum__lte=timezone.now(), bplan__public=True
-                ).distinct().annotate(
-                    xplan_name=F('bplan__name'), plantyp=Value('BPlan'), xplan_id=F('bplan__id'), gemeinden=organization_json_aggregation()
-                    )
+                )
         beteiligungen_fplaene = FPlanBeteiligung.objects.filter(
             end_datum__gte=timezone.now()
             ).filter(
                 bekanntmachung_datum__lte=timezone.now(), fplan__public=True
-                ).distinct().annotate(
-                    xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), gemeinden=organization_json_aggregation(plantyp='fplan')
-                    )
+                )
         # Filter für Administratoren
         if not self.request.user.is_superuser and not self.request.user.is_anonymous:
             beteiligungen_bplaene = beteiligungen_bplaene.filter(bplan__gemeinde__admin_orga_users__user=self.request.user, bplan__gemeinde__admin_orga_users__is_admin=True)
-            beteiligungen_fplaene = beteiligungen_fplaene.filter(fplan__gemeinde__admin_orga_users__user=self.request.user, fplan__gemeinde__admin_orga_users__is_admin=True)        
+            beteiligungen_fplaene = beteiligungen_fplaene.filter(fplan__gemeinde__admin_orga_users__user=self.request.user, fplan__gemeinde__admin_orga_users__is_admin=True)
+        # Zahl der Verfahren: dieselben Filter, aber ohne die Annotationen. Das distinct()
+        # ist hier noetig, weil ein Plan mehreren Gemeinden zugeordnet sein kann
+        # (ManyToManyField) und der Admin-Filter ueber die Gemeinden dasselbe Verfahren
+        # sonst mehrfach zaehlen wuerde.
+        self.zaehler_basis = (
+            beteiligungen_bplaene.values('id').distinct(),
+            beteiligungen_fplaene.values('id').distinct(),
+        )
+        beteiligungen_bplaene = beteiligungen_bplaene.distinct().annotate(
+            xplan_name=F('bplan__name'), plantyp=Value('BPlan'), xplan_id=F('bplan__id'), gemeinden=organization_json_aggregation()
+            )
+        beteiligungen_fplaene = beteiligungen_fplaene.distinct().annotate(
+            xplan_name=F('fplan__name'), plantyp=Value('FPlan'), xplan_id=F('fplan__id'), gemeinden=organization_json_aggregation(plantyp='fplan')
+            )
         # Info:
         # union(), intersection(), and difference() return model instances of the type of the first QuerySet even if the arguments are QuerySets of other models. Passing different models works as long as the SELECT list is the same in all QuerySets (at least the types, the names don’t matter as long as the types in the same order).   
         # https://pythonguides.com/union-operation-on-models-django/
-        beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
+        # all=True: die beiden Hälften sind durch plantyp zu unterscheiden, ein DISTINCT
+        # über beide wäre reine Mehrarbeit — jede Hälfte ist ohnehin schon distinct.
+        beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene, all=True).order_by('end_datum')
         return beteiligungen_plaene  
     
 
@@ -253,27 +312,13 @@ class BeteiligungenOrgaListView(LoginRequiredMixin, BeteiligungenListView):
         ).filter(
             end_datum__gte=timezone.now(),
             bekanntmachung_datum__lte=timezone.now()
-        ).annotate(
-            xplan_name=F('bplan__name'),
-            xplan_id=F('bplan__id'),
-            plantyp=Value('BPlan')
         )
-        #).annotate(
-        #    count_comments=Count('comments', distinct=True)
-        #)
         beteiligungen_fplaene = FPlanBeteiligung.objects.filter(
             fplan__gemeinde__id=self.kwargs['pk']
         ).filter(
             end_datum__gte=timezone.now(),
             bekanntmachung_datum__lte=timezone.now()
-        ).annotate(
-            xplan_name=F('fplan__name'),
-            xplan_id=F('fplan__id'),
-            plantyp=Value('FPlan')
         )
-        #).annotate(
-        #    count_comments=Count('comments', distinct=True)
-        #)    
         if not self.request.user.is_superuser and not self.request.user.is_anonymous:
             beteiligungen_bplaene = beteiligungen_bplaene.filter(
                 bplan__gemeinde__admin_orga_users__user=self.request.user, bplan__gemeinde__admin_orga_users__is_admin=True
@@ -281,18 +326,43 @@ class BeteiligungenOrgaListView(LoginRequiredMixin, BeteiligungenListView):
             beteiligungen_fplaene = beteiligungen_fplaene.filter(
                 fplan__gemeinde__admin_orga_users__user=self.request.user, fplan__gemeinde__admin_orga_users__is_admin=True
                 )
-                
+        # Zahl der Verfahren ohne die Annotationen; distinct, weil ein Plan mehreren
+        # Gemeinden zugeordnet sein kann und die Filter ueber die Gemeinden (zwei
+        # ManyToMany-Sprünge) dasselbe Verfahren mehrfach zaehlen.
+        self.zaehler_basis = (
+            beteiligungen_bplaene.values('id').distinct(),
+            beteiligungen_fplaene.values('id').distinct(),
+        )
+        # Das distinct() uebernimmt die Aufgabe, die bisher die Vereinigung geleistet
+        # hat: dieselbe Zeile mehrmals aus den Gemeinde-Sprüngen herauskommt.
+        beteiligungen_bplaene = beteiligungen_bplaene.annotate(
+            xplan_name=F('bplan__name'),
+            xplan_id=F('bplan__id'),
+            plantyp=Value('BPlan')
+        ).distinct()
+        #).annotate(
+        #    count_comments=Count('comments', distinct=True)
+        #)
+        beteiligungen_fplaene = beteiligungen_fplaene.annotate(
+            xplan_name=F('fplan__name'),
+            xplan_id=F('fplan__id'),
+            plantyp=Value('FPlan')
+        ).distinct()
+        #).annotate(
+        #    count_comments=Count('comments', distinct=True)
+        #)    
         # https://pythonguides.com/union-operation-on-models-django/
-        beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
-        return beteiligungen_plaene  
-    
+        # all=True: die beiden Hälften sind durch plantyp zu unterscheiden, ein DISTINCT
+        # über beide wäre reine Mehrarbeit — jede Hälfte ist ohnehin schon distinct.
+        beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene, all=True).order_by('end_datum')
+        return beteiligungen_plaene    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['gemeinde'] = AdministrativeOrganization.objects.get(pk=self.kwargs['pk'])
         return context
     
 
-class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableView):
+class ToebUnitBeteiligungenListView(TrefferzahlMixIn, ExtentUserOrgaInfo, LoginRequiredMixin, SingleTableView):
     """
     Klasse für die Anzeige der Liste der Beteiligungsverfahren für eine TOEB-Unit. Diese bekommt nur die Beteiligungsverfahren zu sehen,
     denen sie zugewiesen wurde. Daher der Filter nach Typ und TOEB-Unit editors.
@@ -303,7 +373,22 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
     def get_queryset(self):
         """
         Überschreiben von get_queryset um ein union verschiedener Modelle zu ermöglichen.
-        
+
+        Drei Punkte an der Abfrageform, die zusammen einige Sekunden auf Hundertstel
+        bringen (gemessen auf PostGIS mit 20.000 Plänen und 500.000 TÖB-Zuweisungen):
+
+        1. Die TÖB-Units des Nutzers stehen als ausgerechnete Zahlliste in der
+           Einschränkung, nicht als Unterrabfrage. Als Unterrabfrage wird die Bedingung
+           erst nach dem Voraggregieren geprüft — die Zuweisungstabelle läuft dann
+           voll durch, obwohl ein Reporter nur einen Bruchteil ihrer Zeilen sieht.
+        2. union(all=True): die beiden Hälften sind durch plantyp zu unterscheiden, ein
+           DISTINCT über beide ist reine Mehrarbeit — über Zeilen mit JSON-Spalten.
+        3. Kein distinct() in den Hälften: die Aggregate gruppieren über die Kennung der
+           Zuweisung, jede Ausgabezeile ist damit schon eindeutig.
+
+        Die Zahl der Treffer kommt aus self.zaehler_basis, also aus den Querysets vor
+        den Annotationen; gezählt wird sie von TrefferzahlMixIn.
+
         :param self: Description
         """
         # Check ob der angemeldete user irgendeine Orga hat, für die is_admin = True ist
@@ -319,7 +404,31 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 bplanbeteiligung__end_datum__gte=timezone.now()
             ).filter(
                 bplanbeteiligung__bekanntmachung_datum__lte=timezone.now(), bplanbeteiligung__bplan__public=True, bplanbeteiligung__typ__in=['2000', '20001']
-            ).annotate(
+            )
+        beteiligungen_fplaene = FPlanBeteiligung.assigned_toebs.through.objects.filter(
+                fplanbeteiligung__end_datum__gte=timezone.now()
+            ).filter(
+                fplanbeteiligung__bekanntmachung_datum__lte=timezone.now(), fplanbeteiligung__fplan__public=True, fplanbeteiligung__typ__in=['2000', '20001']
+            )
+        #if self.request.user.is_anonymous:
+        #    raise PermissionDenied("Keine Berechtigung!")
+        # Die TÖB-Units, deren Verfahren der Nutzer sieht — als Liste von Kennungen,
+        # damit die Einschränkung vor dem Aggregieren greift (siehe Docstring). Eine
+        # leere Liste schliesst alle Verfahren aus: wer keiner Einheit zugeteilt ist,
+        # sieht nichts.
+        if not self.request.user.is_superuser:
+            toeb_ids = list(ToebUnit.objects.filter(
+                editors__user=self.request.user, editors__is_toeb_reporter=True
+            ).values_list('id', flat=True))
+            beteiligungen_bplaene = beteiligungen_bplaene.filter(toebunit__in=toeb_ids)
+            beteiligungen_fplaene = beteiligungen_fplaene.filter(toebunit__in=toeb_ids)
+
+        # Zahl der Verfahren: die Querysets vor den Annotationen. Die Aggregate rechnen
+        # je Verfahren hoch, sie veraendern die Zahl der Zeilen nicht — gruppiert wird
+        # ueber die Kennung der Zuweisung — und die Vereinigung ist duplikatfrei.
+        self.zaehler_basis = (beteiligungen_bplaene, beteiligungen_fplaene)
+
+        beteiligungen_bplaene = beteiligungen_bplaene.annotate(
                 xplan_name=F('bplanbeteiligung__bplan__name'), 
                 plantyp=Value('BPlan'), 
                 beteiligung_typ=F('bplanbeteiligung__typ'),
@@ -364,16 +473,12 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 ),
                 default=0,
             ),
-        ).distinct()
+        )
         kommentar_existiert = FPlanBeteiligungBeitrag.objects.filter(
             fplan_beteiligung__id=OuterRef('fplanbeteiligung__id'), 
             toeb=OuterRef('toebunit__id')
         )
-        beteiligungen_fplaene = FPlanBeteiligung.assigned_toebs.through.objects.filter(
-                fplanbeteiligung__end_datum__gte=timezone.now()
-            ).filter(
-                fplanbeteiligung__bekanntmachung_datum__lte=timezone.now(), fplanbeteiligung__fplan__public=True, fplanbeteiligung__typ__in=['2000', '20001']
-            ).annotate(
+        beteiligungen_fplaene = beteiligungen_fplaene.annotate(
                 xplan_name=F('fplanbeteiligung__fplan__name'), 
                 plantyp=Value('FPlan'), 
                 beteiligung_typ=F('fplanbeteiligung__typ'),
@@ -417,20 +522,15 @@ class ToebUnitBeteiligungenListView(ExtentUserOrgaInfo, LoginRequiredMixin, Sing
                 ),
                 default=0,
             )
-        ).distinct()
-        #if self.request.user.is_anonymous:
-        #    raise PermissionDenied("Keine Berechtigung!")
-        if not self.request.user.is_superuser:
-            toeb_units = ToebUnit.objects.filter(
-                editors__user=self.request.user, editors__is_toeb_reporter=True
-            )
-            beteiligungen_bplaene = beteiligungen_bplaene.filter(toebunit__in=toeb_units)
-            beteiligungen_fplaene = beteiligungen_fplaene.filter(toebunit__in=toeb_units)
+        )
         # Info:
         # union(), intersection(), and difference() return model instances of the type of the first QuerySet even if the arguments are QuerySets of other models. Passing different models works as long as the SELECT list is the same in all QuerySets (at least the types, the names don’t matter as long as the types in the same order).   
         # https://pythonguides.com/union-operation-on-models-django/
-        beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene).order_by('end_datum')
-        return beteiligungen_plaene  
+        # all=True: die beiden Hälften sind durch plantyp zu unterscheiden, ein DISTINCT
+        # über beide wäre reine Mehrarbeit — die Gruppierung läuft über die Kennung der
+        # Zuweisung, jede Zeile der Vereinigung ist ohnehin eindeutig.
+        beteiligungen_plaene = beteiligungen_bplaene.union(beteiligungen_fplaene, all=True).order_by('end_datum')
+        return beteiligungen_plaene
 
 
 import copy, csv

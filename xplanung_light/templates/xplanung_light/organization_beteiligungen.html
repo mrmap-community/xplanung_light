@@ -10,5 +10,7 @@ Gemeinde: {{ gemeinde.name }}
 {% load django_bootstrap5 %}
 <!-- https://stackoverflow.com/questions/44572682/dynamically-set-per-page-in-django-tables2 -->
 {% render_table table %}
-<p>Anzahl: {{ object_list.count }}</p>
+{# anzahl liefert die View über TrefferzahlMixIn: ein object_list.count() hier waere
+   dieselbe teure Abfrage noch einmal (siehe Befund in den PR-Notizen). #}
+<p>Anzahl: {{ anzahl }}</p>
 {% endblock %}
