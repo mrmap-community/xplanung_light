@@ -26,8 +26,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# The key ist only for local testing, overridden in production settings
-SECRET_KEY = 'django-insecure-x0@(n#0!f(wy^b4=r7&@0dn30$10n-92nb=lxzcwz@!gl_jsln'  # noqa # NOSONAR
+# Der Schlüssel kommt aus der Umgebung (XPLANUNG_LIGHT_SECRET_KEY). Der Ersatzwert ist
+# ausdrücklich ein unsicherer Entwicklungsschlüssel: er hält lokale Arbeitsumgebungen
+# am Laufen, darf aber nie in einer Produktion landen. Ein Systemcheck (siehe
+# xplanung_light/checks.py) meldet ihn als Fehler, sobald DEBUG=False ist — und
+# komserv/settings/prod.example.py liest den Schlüssel ohnehin aus der Umgebung und
+# bricht den Start ab, wenn dort nichts gesetzt ist.
+SECRET_KEY = os.environ.get(
+    'XPLANUNG_LIGHT_SECRET_KEY',
+    'django-insecure-entwurfsschluessel-nicht-fuer-produktion',  # noqa # NOSONAR
+)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
@@ -46,8 +54,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # 'xplanung_light',
-    'debug_toolbar',
+    # debug_toolbar gehoert nur in die Arbeitsumgebung, nicht in die Grundlage jeder
+    # Produktion: bei DEBUG=False ist die Toolbar zwar inert, sie waere aber trotzdem
+    # installiert, gemappt (/__debug__/) und zeigte allen Besuchern SQL und Header,
+    # sobald jemand hinter einem lokalen Reverse-Proxy den Schalter fuer einen Moment
+    # dreht. dev.py liegt in .gitignore und kann die Zeilen nicht mitliefern — das
+    # README (Abschnitt "Beispiel dev.py") macht sie vor.
     'django_bootstrap5',
     'simple_history',
     'leaflet',
@@ -70,7 +82,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
+    # DebugToolbarMiddleware nur in dev.py (siehe INSTALLED_APPS oben)
     'simple_history.middleware.HistoryRequestMiddleware',
     'xplanung_light.middleware.UserRoleInfoMiddleware',
     # 'xplanung_light.middleware.SystemInfoMiddleware',
@@ -181,6 +193,18 @@ STATIC_URL = 'static/'
 
 STATIC_ROOT = BASE_DIR / 'static_collected'
 
+# Ablageort der hochgeladenen Anhänge (drei FileField in models.py: Plananlagen,
+# Anhang zu einer Planreferenz, Stellungnahme-Anhang). Ohne diese Zeile hängt der Ort
+# vom Arbeitsverzeichnis des Prozessstarters ab — Gunicorn, systemd und ein manueller
+# `manage.py runserver` aus einem anderen Ordner heraus schreiben dann in verschiedene
+# Verzeichnisse, und die Sicherung findet die Dateien nicht wieder.
+#
+# In Produktion gehört MEDIA_ROOT **ausserhalb** des Projektbaums und ausserhalb des
+# Auslieferungswegs statischer Dateien (siehe komserv/settings/prod.example.py); die
+# Anhänge werden ausschliesslich über die Views der App ausgeliefert, nicht direkt.
+MEDIA_ROOT = BASE_DIR / 'uploads'
+MEDIA_URL = 'media/'
+
 # Aktiver visueller Style der Anwendung. Alle Style-Assets (CSS, Bilder)
 # liegen unter static/style/<XPLANUNG_STYLE>/; der Context-Processor
 # xplanung_light.context_processors.style stellt den Pfad als
@@ -271,7 +295,12 @@ DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap5.html"
 
 # https://www.515tech.com/post/integrating-sphinx-documentation-into-your-django-project
 DOCS_ROOT = os.path.join(BASE_DIR, 'docs/build/html')
-DOCS_ACCESS = 'public'
+# Die eingebaute Doku-Auslieferung liert DOCS_ACCESS beim Import von docs/views.py,
+# ein Override in dev.py/prod.py wirkt also NICHT — die Einstellung gehoert hierher.
+# 'public' lieferte die lokal gebaute Doku (im CI auch die Coverage-Seiten) an alle
+# Besucher aus. Wer sie in einer Arbeitsumgebung offen braucht, setzt den Wert hier
+# auf 'public' — die Offizielle Doku läuft davon unabhängig über die GitHub-Seiten.
+DOCS_ACCESS = 'login_required'
 
 ORGS_SLUGFIELD = 'django_extensions.db.fields.AutoSlugField'
 

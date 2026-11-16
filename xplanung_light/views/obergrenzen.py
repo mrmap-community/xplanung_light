@@ -1,5 +1,9 @@
 """
-Obergrenzen für GetFeatureInfo und die anonymen html-Listen.
+Obergrenzen und Cross-Origin-Werte für die OGC-Endpunkte.
+
+Zwei Dinge, die beide an einer Stelle sitzen müssen, weil sie mehrere Views
+gleichermaßen angehen: die Obergrenze der Pläne pro Antwort und der Wert des
+Cross-Origin-Headers.
 
 Ohne Begrenzung kann ein einzelner GetFeatureInfo-Klick in eine übersichtsseite
 (oder ein direkter Aufruf der html-Listen) bei großen Planbeständen beliebig
@@ -86,3 +90,37 @@ def kuerze_id_parameter(request, parameter, max_anzahl):
     request.GET._mutable = True
     request.GET[parameter] = ','.join(ids[:max_anzahl])
     request.GET._mutable = war_mutable
+
+
+def cors_erlaubnis(request=None):
+    """
+    Wert für den Header 'Access-Control-Allow-Origin' einer OGC-Antwort.
+
+    Ohne Konfiguration (Standard) ist der Wert '*' — die Karten- und Objektdienste waren
+    immer für jede Einbettung offen, und eine stillschweigende Einengung reißt
+    bestehende Einbettungen in Portalen ab. Wer es eng haben will, trägt die erlaubten
+    Origin-Adressen in XPLANUNG_LIGHT_CORS_ERLAUBTE_HOSTS ein (Vorlage:
+    komserv/settings/prod.example.py). Dann gilt:
+
+      * Anfrage ohne Origin-Kopf (kein Browser-Cross-Origin-Fall, z. B. ein direkter
+        Aufruf oder ein Kartenclient) -> '*', damit solche Clients nicht scheitern
+      * Anfrage mit Origin aus der Liste -> genau dieser Origin
+      * Anfrage mit einem anderen Origin -> '*' nicht mehr; die Antwort bekommt keine
+        Cross-Origin-Erlaubnis und der Browser verwirft sie
+
+    Rückgabe:
+        Header-Wert als Zeichenkette.
+    """
+    erlaubt = getattr(settings, 'XPLANUNG_LIGHT_CORS_ERLAUBTE_HOSTS', None) or []
+    if erlaubt == '*':
+        return '*'
+    if not erlaubt:
+        return '*'
+    if request is None:
+        # Kein Request bekannt (außerhalb eines Request-Kontexts aufgerufen): die
+        # engste mögliche Antwort ist der erste erlaubte Origin.
+        return erlaubt[0]
+    origin = request.META.get('HTTP_ORIGIN', '')
+    if not origin:
+        return '*'
+    return origin if origin in erlaubt else ''

@@ -156,12 +156,26 @@ Die Konfiguration der Anwendung erfolgt unter Django grundsätzlich in der setti
 Die Grundkonfiguration ist im git als settings/base.py hinterlegt und kann durch verschiedene Konfigurationsdateien überschrieben werden. Derzeit sind **dev.py** sowie **prod.py** vorgesehen. Diese Dateien muss man selbst im settings-Folder anlegen.
 Zunächst und als Fallback wird base.py geladen. Danach werden die Inhalte durch dev.py bzw. prod.py überschrieben. Zur weiteren Erhöhung der Sicherheit sollten der SECRET_KEY, sowie die Zugangsdaten für die Datenbank ebenfalls in speziell gesicherte Files ausgelagert werden.
 
+Die Debug-Werkzeuge (`debug_toolbar`) sind in `base.py` **nicht** installiert — sie gehören
+nicht in die Grundlage einer Produktion. `dev.py` liegt nicht im Git, eine Arbeitsumgebung
+ergänzt sie also selbst; das Beispiel unten zeigt die drei Zeilen dafür (Hintergrund im
+Abschnitt „Produktion härten" weiter unten).
+
 ## Beispiel dev.py (einfach das überschreiben was man benötigt)
 
 ```python
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+# Debug-Toolbar: in base.py bewusst nicht mehr enthalten, hier selbst ergänzen.
+# Die beiden Grundlagen-Listen muss man sich zuerst holen — dev.py wird als eigenes
+# Settings-Modul geladen, die Werte aus base.py liegen dort nicht einfach im Namespace.
+from komserv.settings.base import INSTALLED_APPS, MIDDLEWARE
+
+INSTALLED_APPS = INSTALLED_APPS + ['debug_toolbar']
+MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
+INTERNAL_IPS = ['127.0.0.1', '::1']
 
 # Datenbankverbindung PostGIS statt spatiallite
 DATABASES = {
@@ -213,6 +227,133 @@ LOGGING = {
 
 > [!IMPORTANT]
 > **WICHTIG:** Die json-Datei muss existieren, sonst wird der Server aus Sicherheitsgründen nicht gestartet!
+
+# Produktion härten
+
+`komserv/settings/base.py` ist die Grundlage — sie enthält bewusst **keine**
+Debug-Werkzeuge und liefert die eingebaute Doku nur an angemeldete Personen aus. Für den
+Produktionsbetrieb kommt eine eigene Konfiguration dazu. Die Vorlage dafür liegt im Git:
+
+```bash
+cp komserv/settings/prod.example.py komserv/settings/prod.py
+# dann in prod.py die mit "ANPASSEN" markierten Werte eintragen
+```
+
+und in `komserv/.my_xplanung_light_env.json`:
+
+```json
+{
+    "ENV_NAME": "prod"
+}
+```
+
+`prod.py` ist in `.gitignore` eingetragen — Geheimnisse gehören nicht ins Git.
+
+## Der Geheimschlüssel
+
+`SECRET_KEY` wird aus der Prozessumgebung gelesen; ein in `base.py` hinterlegter
+Ausweichwert ist ausdrücklich ein unsicherer Entwicklungsschlüssel. Für Produktion:
+
+```bash
+.venv/bin/django-admin generate-secret-key
+```
+
+und den Wert der Prozessumgebung mitgeben, z. B. in der Unit-Datei von Gunicorn:
+
+```ini
+Environment=XPLANUNG_LIGHT_SECRET_KEY=der-erzeugte-wert
+```
+
+`prod.example.py` bricht ohne diese Variable mit einer klaren Meldung ab, statt mit einem
+bekannten Schlüssel weiterzulaufen. Wer den Austausch vergisst, bemerkt es beim nächsten
+`manage.py check`.
+
+## Was die Vorlage setzt und warum
+
+| Einstellung | Wirkung |
+|---|---|
+| `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` | Sitzungs- und CSRF-Cookie gehen nur noch über HTTPS — ohne diese beiden Zeilen kann dasselbe Netz die Sitzung mitlesen |
+| `SECURE_PROXY_SSL_HEADER` | sagt Django, dass der vorgelagerte Proxy verschlüsselt hat; ohne diese Zeile nutzen die beiden oben nichts |
+| `ALLOWED_HOSTS` | ohne diese Liste antwortet die Anwendung auf keiner Anfrage (HTTP 400) |
+| `CSRF_TRUSTED_ORIGINS` | https-Adressen, von denen Formulare kommen dürfen (auch das Portal, das das Beitragsformular einbettet) |
+| `SESSION_COOKIE_AGE`, `SESSION_EXPIRE_AT_BROWSER_CLOSE` | Sitzungen laufen ab, statt wochenlang gültig zu bleiben |
+| `MEDIA_ROOT` (absolut, außerhalb des Projektbaums) | Ablageort der drei Upload-Felder; siehe unten |
+| HSTS, `SECURE_SSL_REDIRECT` | bewusst auskommentiert und mit „ANPASSEN" markiert — beides hängt vom Betrieb ab (HSTS wirkt im Browser bis zum Ablaufdatum, die Weiterleitung übernimmt üblicherweise der Proxy) |
+
+## Wohin die Anhänge
+
+Drei Felder speichern Dateien auf der Platte (Plananlagen, Referenzanhang,
+Stellungnahmeanhang). Ohne `MEDIA_ROOT` löst Django `upload_to='uploads'` gegen das
+**aktuelle Arbeitsverzeichnis** auf — Gunicorn, systemd und ein manuell gestarteter
+Entwicklungsserver schreiben dann in verschiedene Ordner, und die Sicherung findet die
+Dateien nicht wieder. `base.py` setzt deshalb `MEDIA_ROOT = BASE_DIR / 'uploads'`; für
+Produktion gehört der Ordner **außerhalb** des Projektbaums und außerhalb des Weges, über
+den statische Dateien ausgeliefert werden (Anhänge werden ausschließlich über die Views
+der App ausgeliefert). Bank und Dateiablage gehören in denselben Sicherungsdurchlauf mit
+demselben Zeitstempel — der GML-Bestand steckt in der Bank, die Anhänge auf der Platte.
+
+## Die mitgeführten Prüfungen
+
+`xplanung_light/checks.py` meldet einer Produktion, die mit Entwicklungswerten läuft.
+`E001` läuft bei jedem `manage.py check` mit — also bei jedem Start, bei `migrate` im
+Deployment und im CI; die übrigen sind Deployment-Prüfungen und melden bei
+`manage.py check --deploy`:
+
+| Kennung | Wann | Bedeutung |
+|---|---|---|
+| `xplanung_light.E001` | Fehler | `SECRET_KEY` ist ein bekannter Entwicklungswert, die Installation läuft aber mit `DEBUG=False` |
+| `xplanung_light.E002` | Fehler (nur `--deploy`) | `MEDIA_ROOT` fehlt oder ist relativ |
+| `xplanung_light.W001` | Warnung (nur `--deploy`) | `MEDIA_ROOT` liegt im Projektbaum |
+| `xplanung_light.W002` | Warnung (nur `--deploy`) | `DEBUG=False` ohne `ENV_NAME=prod` (json-Datei oder Variable), die Härtung fehlt also vermutlich ganz |
+| `xplanung_light.W003` | Warnung (nur `--deploy`) | OGC-Antworten senden weiterhin `Access-Control-Allow-Origin: *` |
+
+Nach dem Kopieren der Vorlage prüfen:
+
+```bash
+.venv/bin/python manage.py check --deploy
+```
+
+Angemeldet werden die Prüfungen in `xplanung_light/apps.py` (`AppConfig.ready()`).
+Nötig, weil Django die `checks.py` einer App **nicht** von selbst importiert: ohne diesen
+Import sind die Prüfungen nur im Testlauf registriert (die Testdatei importiert sie) und
+in einer echten Installation wirkungslos.
+
+Was bleibt, sind drei Punkte, und alle drei sind Absicht: `security.W004` (HSTS) und
+`security.W008` (HTTPS-Weiterleitung durch Django statt durch den Proxy) hängen vom
+Betrieb ab; `xplanung_light.W003` meldet, solange die Liste der erlaubten Origin-Adressen
+leer ist — die Vorlage lässt sie bewusst leer, weil sie niemand raten kann.
+
+## Cross-Origin auf den Karten- und Objektdiensten
+
+Die OGC-Antworten (WMS/WFS) senden `Access-Control-Allow-Origin: *`, damit jede Karte sie
+einbetten kann. Eine Einengung reißt bestehende Einbettungen ab, deshalb ist der Wert
+nicht verstellt; die Portale, die einbetten, lassen sich in
+`XPLANUNG_LIGHT_CORS_ERLAUBTE_HOSTS` (siehe Vorlage) auflisten. `xplanung_light.W003`
+erinnert daran, solange die Liste leer ist.
+
+## Debug-Werkzeuge und eingebaute Doku
+
+`debug_toolbar` ist aus `base.py` heraus — App, Middleware und die `/__debug__/`-Routen.
+`komserv/settings/dev.py` liegt in `.gitignore`, kann die Zeilen also nicht enthalten;
+eine Arbeitsumgebung ergänzt sie selbst, wie im Beispiel oben (Abschnitt „Beispiel dev.py"):
+
+```python
+from komserv.settings.base import INSTALLED_APPS, MIDDLEWARE
+
+INSTALLED_APPS = INSTALLED_APPS + ['debug_toolbar']
+MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
+INTERNAL_IPS = ['127.0.0.1', '::1']
+```
+
+Warum die Importzeile: `dev.py` wird von Django als eigenes Settings-Modul geladen, die
+Listen aus `base.py` liegen dort nicht im Namespace. Ohne sie gibt es `NameError`.
+
+`komserv/urls.py` mappt die Routen nur, wenn die App tatsächlich installiert ist.
+
+Die eingebaute Doku-Auslieferung (`/docs/`) steht in `base.py` auf `login_required`;
+`docs/views.py` liest die Einstellung beim Import, ein Override in `dev.py`/`prod.py`
+wirkt also nicht. Wer sie in einer Arbeitsumgebung offen sehen will, setzt den Wert in
+`base.py`. Die maßgebliche Doku läuft davon unabhängig über die Projektseiten.
 
 # Wechsel von spatialite zu PostGIS
 

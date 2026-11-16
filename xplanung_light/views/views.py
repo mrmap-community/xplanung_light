@@ -25,7 +25,8 @@ from xplanung_light.forms import RequestForRoleRefuseForm, RequestForRoleConfirm
 from xplanung_light.filter import BPlanIdFilter, FPlanIdFilter
 from xplanung_light.views.obergrenzen import (max_plaene_getfeatureinfo,
                                               kuerze_feature_count,
-                                              kuerze_id_parameter)
+                                              kuerze_id_parameter,
+                                              cors_erlaubnis)
 from django.http import HttpResponse
 import mapscript
 from django.shortcuts import get_object_or_404
@@ -221,14 +222,18 @@ def xplan_html(request, pk: int):
         fplan_filter = []
     if bplan_filter == [] and fplan_filter == []:
         response = render(request, 'xplanung_light/empty_feature_info.html')
-        response['Access-Control-Allow-Origin'] = "*"
+        # CORS-Wert: '*' ohne Konfiguration, sonst der erlaubte Origin
+        # (obergrenzen.cors_erlaubnis, XPLANUNG_LIGHT_CORS_ERLAUBTE_HOSTS)
+        response['Access-Control-Allow-Origin'] = cors_erlaubnis(request)
         response['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
         # TODO: Allow integration in website of contact for administrative unit
         return response
     else:
         response = render(request, 'xplanung_light/xplan_list_html.html',
                           {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
-        response['Access-Control-Allow-Origin'] = "*"
+        # CORS-Wert: '*' ohne Konfiguration, sonst der erlaubte Origin
+        # (obergrenzen.cors_erlaubnis, XPLANUNG_LIGHT_CORS_ERLAUBTE_HOSTS)
+        response['Access-Control-Allow-Origin'] = cors_erlaubnis(request)
         response['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
         # TODO: Allow integration in website of contact for administrative unit
         return response
@@ -378,7 +383,8 @@ def ows_beteiligungen(request):
     http_response = HttpResponse(result)
     http_response['Content-Type'] = content_type
     http_response['Content-Length'] = str(len(result))
-    http_response['Access-Control-Allow-Origin'] = "*"
+    # '*' ohne Konfiguration, siehe obergrenzen.cors_erlaubnis
+    http_response['Access-Control-Allow-Origin'] = cors_erlaubnis(request)
     return http_response
 
 
@@ -634,8 +640,9 @@ def ows(request, pk: int):
     http_response = HttpResponse(result)
     http_response['Content-Type'] = content_type
     http_response['Content-Length'] = str(len(result))
-    # Setzen der CORS Header, um allen Web-Clients die Nutzung des Webservice zu erlauben
-    http_response['Access-Control-Allow-Origin'] = "*"
+    # CORS-Wert: '*' ohne Konfiguration, sonst der erlaubte Origin
+    # (obergrenzen.cors_erlaubnis, XPLANUNG_LIGHT_CORS_ERLAUBTE_HOSTS)
+    http_response['Access-Control-Allow-Origin'] = cors_erlaubnis(request)
     return http_response
 
 
@@ -775,8 +782,9 @@ def ows_all_orgas_xplan(request, plantyp: str):
     http_response = HttpResponse(result)
     http_response['Content-Type'] = content_type
     http_response['Content-Length'] = str(len(result))
-    # Setzen der CORS Header, um allen Web-Clients die Nutzung des Webservice zu erlauben
-    http_response['Access-Control-Allow-Origin'] = "*"
+    # CORS-Wert: '*' ohne Konfiguration, sonst der erlaubte Origin
+    # (obergrenzen.cors_erlaubnis, XPLANUNG_LIGHT_CORS_ERLAUBTE_HOSTS)
+    http_response['Access-Control-Allow-Origin'] = cors_erlaubnis(request)
     return http_response
 
 
