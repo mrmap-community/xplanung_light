@@ -213,7 +213,7 @@ class BeteiligungenTable(tables.Table):
     plantyp = tables.columns.TemplateColumn(
         template_code=u"""{{ record.plantyp }}""", orderable=True, verbose_name='Typ des Plans')
     gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
-  <a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a><br />{% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
+  {% if value.id %}<a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a>{% elif value.name %}{{ value.name }}{% endif %}<br />{% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
     bearbeiten = tables.columns.TemplateColumn(
         verbose_name="", template_code=u"""{% if not user.is_anonymous %}<a href="{% if record.plantyp == 'BPlan' %}{% url 'bplanbeteiligung-update' planid=record.xplan_id pk=record.id %}{% endif %}{% if record.plantyp == 'FPlan' %}{% url 'fplanbeteiligung-update' planid=record.xplan_id pk=record.id %}{% endif %}">Bearbeiten</a>{% endif %}""")
     alle_verfahren = tables.columns.TemplateColumn(
@@ -245,7 +245,7 @@ class ToebUnitBeteiligungenTable(tables.Table):
     beteiligung_typ = tables.columns.TemplateColumn(verbose_name='Verfahren', template_code=u"""{% if record.beteiligung_typ == '2000' %}Träger öffentlicher Belange{% endif %}
                                                                                                          {% if record.beteiligung_typ == '20001' %}Frühzeitige Trägerbeteiligung{% endif %}""")
     gemeinden = tables.columns.TemplateColumn(template_code=u"""{% for value in record.gemeinden %}
-                                              <a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a><br />
+                                              {% if value.id %}<a href="{% url 'organization-bauleitplanung-list' pk=value.id %}">{{ value.name }}</a>{% elif value.name %}{{ value.name }}{% endif %}<br />
                                               {% endfor %}""", orderable=False, verbose_name='Gemeinde(n)')
     toeb_unit_name = tables.columns.TemplateColumn(
         verbose_name='TOEB', template_code=u"""{{ record.toeb_unit_orga_name }} - {{ record.toeb_unit_name }} ({{ record.toeb_unit_id }})""")
