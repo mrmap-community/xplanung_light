@@ -3,7 +3,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<title>[stadt] - Bauleitplanung Offenlagen gem. §4a (4) BauGB</title>
+<title>Bauleitplanung Offenlagen gem. BauGB</title>
 <style type="text/css">
 </style>
 
@@ -14,18 +14,22 @@
 	<br>
 	<table border="1" width="400" bgcolor="#ffffff" cellspacing="1" cellpadding="2" style="font-family:Verdana, Geneva, Arial, Helvetica, sans-serif; font-size:10pt;background-color:#A6B1BB;color:#000000;" rules='rows'>
 		<tr>
-        		<th align="left" bgcolor='#871e32' style="color:#FFFFFF" colspan='2'>Informationen</td>
+        		<th align="left" bgcolor='#871e32' style="color:#FFFFFF" colspan='2'>Informationen zum Beteiligungsverfahren</td>
         	</tr>
         	<tr align="left" style="background-color:#0000FF">
-        		<th align="left" bgcolor='#F0F0F0' width="50%">Veröffentlichende Stelle:</td>
-        		<th align="left" bgcolor='#FFFFFF'>[stadt] ([gkz])</td>
+        		<!--<th align="left" bgcolor='#F0F0F0' width="50%">Veröffentlichende Stelle:</td>
+        		<th align="left" bgcolor='#FFFFFF'>[stadt] ([gkz])</td>-->
         	</tr>
 <!-- Obergrenze der Plaene pro Antwort: setzt der Django-OWS-Proxy per
      FEATURE_COUNT (XPLANUNG_LIGHT_CONFIG['getfeatureinfo_max_plaene']).
      Klassische Templates koennen die Feature-Zahl nicht selbst begrenzen. -->
         	<tr>
         		<td bgcolor='#F0F0F0' width="50%">Bezeichnung des Plans:</td>
-        		<td bgcolor='#FFFFFF'>[name] ([typ])</td>
+        		<td bgcolor='#FFFFFF'>[plantyp]:[plan_id] - [name]</td>
+        	</tr>
+			<tr>
+        		<td bgcolor='#F0F0F0' width="50%">Verfahrenstyp:</td>
+        		<td bgcolor='#FFFFFF'>[typ]</td>
         	</tr>
                 <tr>
                         <td bgcolor='#F0F0F0' width="50%">Ortsübliche Bekanntmachung:</td>
@@ -40,8 +44,8 @@
         		<td bgcolor='#FFFFFF'>[end_datum]</td>
         	</tr>
 		<tr>
-        		<td bgcolor='#F0F0F0' width="50%">Link zur Offenlage:</td>
-        		<td bgcolor='#FFFFFF'><a href="[publikation_internet]" target="_blank">Offenlage im Internet</a></td>
+        		<td bgcolor='#F0F0F0' width="50%">Link:</td>
+        		<td bgcolor='#FFFFFF'><a href="[base_uri]/[plantyp]/[plan_id]" target="_blank">Informationen zum Plan</a></td>
         	</tr>
 <!--		<tr>
         		<td bgcolor='#F0F0F0' width="50%">E-Mail:</td>
