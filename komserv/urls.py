@@ -15,11 +15,20 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.conf import settings
 from django.urls import include, path
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-from debug_toolbar.toolbar import debug_toolbar_urls
 from organizations.backends import invitation_backend
 from django.urls import re_path as url
+
+# Die Debug-Toolbar wird nur in der Entwicklungsumgebung installiert (dev.py). Sie hier
+# unbedingt zu importieren wuerde bedeuten: jede Produktion haette die Toolbar-App und
+# ihre Routen, auch wenn sie nie eingeschaltet ist.
+if 'debug_toolbar' in settings.INSTALLED_APPS:
+    from debug_toolbar.toolbar import debug_toolbar_urls
+else:
+    def debug_toolbar_urls():
+        return []
 
 urlpatterns = [
     url(r'^accounts/', include('organizations.urls')),
