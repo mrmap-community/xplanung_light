@@ -2,7 +2,7 @@
 Systemchecks für Produktionsbetrieb (xplanung_light).
 
 Der Schlüssel-Check läuft bei jedem ``manage.py check`` mit — und damit bei jedem Start
-über Gunicorn/uWSGI, bei ``migrate`` im Deployment und im CI. Die beiden anderen sind
+über Gunicorn/uWSGI, bei ``migrate`` im Deployment und im CI. Die anderen sind
 Deployment-Prüfungen (``register(deploy=True)``) und melden nur bei
 ``manage.py check --deploy``: sie beanstanden Werte, die eine Arbeits- und Testumgebung
 nicht leisten kann. Die Checks ersetzen keine Konfigurationsdatei, sondern sagen
@@ -149,3 +149,48 @@ def pruefe_haertung(app_configs, **kwargs):
         ))
 
     return meldungen
+
+
+@register(deploy=True)
+def pruefe_mapfile_bankzugang(app_configs, **kwargs):
+    """Ohne libpq-Dienst schreibt die Anwendung das Bank-Passwort in die Mapfiles.
+
+    MapServer verbindet sich für jede Ebene selbst zur Bank. Steht kein Dienst
+    bereit, werden Rechner, Bank, Benutzer, Passwort und Port aus
+    ``settings.DATABASES`` in den Mapfile-Text gesetzt — und derselbe Text liegt
+    zwanzig Sekunden im Cache (``cache.set("mapfile_…")``). Mit Dienst lautet die
+    Angabe nur ``service=<name>``; Passwort und Benutzername kommen dann weder im
+    Mapfile noch im Cache vor.
+    """
+    if not _produktion_aktiv():
+        return []
+
+    bank = (getattr(settings, 'DATABASES', None) or {}).get('default', {}) or {}
+    triebwerk = str(bank.get('ENGINE', ''))
+    if 'postgis' not in triebwerk and 'postgresql' not in triebwerk:
+        # Spatialite: die Ebene nennt nur die Datei, ein Geheimnis gibt es nicht.
+        return []
+
+    # Erst hier und nicht im Modulrumpf importieren: der Helper zieht die Modelle
+    # der App mit sich, und die Prüfungen werden schon in AppConfig.ready()
+    # angemeldet.
+    from xplanung_light.helper.mapfile import libpq_dienst
+
+    if libpq_dienst(bank) or not bank.get('PASSWORD'):
+        # Dienst vorhanden, oder die Bank erreicht die Anwendung ohnehin nur über
+        # .pgpass/Umgebung — dann liegt in den Mapfiles nichts Geheimnisvolles.
+        return []
+
+    return [Warning(
+        'xplanung_light.W004: Das Bank-Passwort wird in den Mapfile-Text '
+        'geschrieben (Bankzugang über settings.DATABASES, kein libpq-Dienst).',
+        hint='Einen Dienst in einer pg_service.conf anlegen und benennen — über '
+             "DATABASES['default']['OPTIONS']['service'] (dann verbindet sich auch "
+             'Django darüber) oder über '
+             "XPLANUNG_LIGHT_CONFIG['postgis_pg_service'] bzw. die Umgebungsvariable "
+             'XPLANUNG_LIGHT_PG_SERVICE (nur für die Kartenebenen). Der Pfad zu der '
+             'Datei gehört als PGSERVICEFILE in die Unit-Datei von Gunicorn, das '
+             'Geheimnis über PGPASSFILE in eine Datei mit Rechten 0600. Ohne Dienst '
+             'steht das Passwort auch im zwanzig Sekunden langen Mapfile-Cache.',
+        id='xplanung_light.W004',
+    )]

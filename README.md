@@ -306,6 +306,7 @@ Deployment und im CI; die übrigen sind Deployment-Prüfungen und melden bei
 | `xplanung_light.W001` | Warnung (nur `--deploy`) | `MEDIA_ROOT` liegt im Projektbaum |
 | `xplanung_light.W002` | Warnung (nur `--deploy`) | `DEBUG=False` ohne `ENV_NAME=prod` (json-Datei oder Variable), die Härtung fehlt also vermutlich ganz |
 | `xplanung_light.W003` | Warnung (nur `--deploy`) | OGC-Antworten senden weiterhin `Access-Control-Allow-Origin: *` |
+| `xplanung_light.W004` | Warnung (nur `--deploy`) | PostGIS mit Passwort in `settings.DATABASES` und ohne libpq-Dienst — das Passwort wird damit in den Mapfile-Text geschrieben (siehe „Bankzugang ohne Passwort im Mapfile") |
 
 Nach dem Kopieren der Vorlage prüfen:
 
@@ -397,6 +398,37 @@ DATABASES = {
     }
 }
 ```
+
+### Bankzugang ohne Passwort im Mapfile (pg_service.conf)
+
+So steht das Passwort zweimal in der Gegend: einmal in den Einstellungen für Django und
+einmal in den Kartenebenen. MapServer verbindet sich für jede Ebene selbst zur Bank, und
+ohne weitere Angabe werden Rechner, Bank, Benutzer, Passwort und Port aus
+`settings.DATABASES` in den Mapfile-Text gesetzt — derselbe Text liegt 20 Sekunden im
+Mapfile-Cache (`cache.set("mapfile_…")`).
+
+Ist ein libpq-Dienst benannt, lautet die Angabe in der Ebene nur `service=<name>`;
+Passwort und Benutzername kommen dann im Mapfile nirgends vor. Vorrang hat
+`XPLANUNG_LIGHT_CONFIG['postgis_pg_service']` (auch als Umgebungsvariable
+`XPLANUNG_LIGHT_PG_SERVICE`), sonst die Bankoption:
+
+```python
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': '',
+        'OPTIONS': {'service': 'xplanung-light'},
+    }
+}
+```
+
+Den Dienst beschreibt eine `pg_service.conf` (Rechte 0644), das Geheimnis eine `.pgpass`
+(Rechte 0600, Eigentum des Prozesses) — beide Pfade gehören als `PGSERVICEFILE` und
+`PGPASSFILE` in die Unit-Datei des Prozesses, der die Karten ausliefert. Einzelheiten und
+der Fall, dass nur die Kartenebenen über den Dienst laufen, stehen in
+`docs/source/operation/produktivbetrieb.rst`. Solange eine Produktionsinstallation ohne
+Dienst mit Passwort in den Einstellungen arbeitet, meldet das
+`manage.py check --deploy` mit `xplanung_light.W004`.
 
 ### Konfiguration der Zugangsberechtigungen für die Datenbank
 

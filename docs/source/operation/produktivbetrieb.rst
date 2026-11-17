@@ -86,6 +86,69 @@ Da sich unter Linux gunicorn anbietet, sollte man die notwendigen Umgebungsvaria
 
 https://docs.djangoproject.com/en/6.1/ref/databases/#postgresql-connection-settings
 
+**Bankzugang der Kartenebenen: der Dienst erscheint direkt im Mapfile**
+
+Die Kartenebenen verbinden sich unabhängig von Django selbst zur Bank: MapServer öffnet
+pro Anfrage (und danach prozessweit cached) eine eigene libpq-Verbindung. Steht der
+Bankzugang allein in ``settings.DATABASES``, werden Rechner, Bank, Benutzer, Passwort und
+Port in den Mapfile-Text geschrieben — und derselbe Text liegt
+``XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds']`` (Standard 20 Sekunden) lang im
+Cache. Ist ein libpq-Dienst aus der obigen ``pg_service.conf`` benannt, lautet die
+Verbindungsangabe der Ebene nur noch ``service=<name>``: Passwort und Benutzername kommen
+dann im Mapfile nirgends vor.
+
+Genügt eine der beiden Angaben:
+
+.. code-block:: python
+
+   # 1) Djangos eigene Angabe: die Anwendung ist selbst darüber verbunden, und die
+   #    Kartenebenen bekommen dieselbe. NAME und OPTIONS['service'] schließen sich
+   #    nicht aus, aber NAME darf leer bleiben — die Dienstdatei nennt die Bank.
+   DATABASES = {
+       'default': {
+           'ENGINE': 'django.contrib.gis.db.backends.postgis',
+           'NAME': '',
+           'OPTIONS': {'service': 'xplanung-light'},
+       }
+   }
+
+   # 2) Nur für die Kartenebenen, wenn die Anwendung die Bank selbst über Rechner
+   #    und Passwort erreicht. Diese Angabe hat Vorrang vor 1) und gilt allein für
+   #    die Mapfile-Ebenen:
+   XPLANUNG_LIGHT_CONFIG['postgis_pg_service'] = 'karten-lesen'
+
+   # dasselbe ohne Settings-Datei, in der Unit-Datei von Gunicorn:
+   # Environment=XPLANUNG_LIGHT_PG_SERVICE=karten-lesen
+
+So sieht ein Dienst in der Datei aus, die die Unit-Datei oben über ``PGSERVICEFILE``
+anhilft:
+
+.. code-block:: ini
+
+   # /data/xplanung_light/config/pg_service.conf — Rechte 0644
+   [xplanung-light]
+   host=/var/run/postgresql
+   port=5432
+   dbname=xplanung_light
+   user=xplanung_anwendung
+   # bewusst kein password-Wert: das Geheimnis steht in .pgpass
+
+.. code-block:: text
+
+   # /data/xplanung_light/config/.pgpass — Rechte 0600, Eigentum xplanung_light
+   /var/run/postgresql:5432:xplanung_light:xplanung_anwendung:GEHEIMNIS
+
+Zwei Formen der Verbindungsangabe funktionieren dagegen nicht — gemessen mit MapServer 8.4
+an PostgreSQL 17/PostGIS 3.5: Ein ``PG:``-Präfix, wie es der OGR-Treiber kennt, versteht
+der Verbindungstyp ``POSTGIS`` nicht, und ein ausdrücklich leeres ``password=``-Feld gilt
+libpq als Angabe mit leerem Wert und sperrt den Rückgriff auf die ``.pgpass`` aus. In beiden
+Fällen erreicht die Ebene die Bank nicht mehr, während die Anwendung selbst weiter läuft —
+die Karten bleiben dann leer, ohne dass ein Fehler fällt.
+
+``manage.py check --deploy`` erinnert daran, solange eine Produktionsinstallation mit
+Passwort in ``settings.DATABASES`` und ohne Dienst arbeitet
+(``xplanung_light.W004``).
+
 **Sicherheitsvergleich: Django Settings vs. Externe Konfigurationsdateien**
 (Gemini - 2026-10-07)
 
