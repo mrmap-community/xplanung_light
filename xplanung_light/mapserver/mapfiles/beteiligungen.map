@@ -90,7 +90,7 @@ MAP
         CLASS
 			NAME 'einfacher Bebauungsplan (Entwurf- und Beteiligungsphase)'
 			GROUP "default"
- 			EXPRESSION (("[typ]" = "BPlan") AND ([planart] = 10000))
+ 			EXPRESSION (("[typ]" = "BPlan") AND (([planart] = 10000 OR [planart] = 1000)))
 			STYLE
 				WIDTH 3
 				OUTLINECOLOR 0 0 255

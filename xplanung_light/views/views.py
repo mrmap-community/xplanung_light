@@ -25,7 +25,8 @@ from xplanung_light.forms import RequestForRoleRefuseForm, RequestForRoleConfirm
 from xplanung_light.filter import BPlanIdFilter, FPlanIdFilter
 from xplanung_light.views.obergrenzen import (max_plaene_getfeatureinfo,
                                               kuerze_feature_count,
-                                              kuerze_id_parameter)
+                                              kuerze_id_parameter,
+                                              cors_erlaubnis)
 from django.http import HttpResponse
 import mapscript
 from django.shortcuts import get_object_or_404
@@ -221,20 +222,25 @@ def xplan_html(request, pk: int):
         fplan_filter = []
     if bplan_filter == [] and fplan_filter == []:
         response = render(request, 'xplanung_light/empty_feature_info.html')
-        response['Access-Control-Allow-Origin'] = "*"
+        # CORS-Wert: '*' ohne Konfiguration, sonst der erlaubte Origin
+        # (obergrenzen.cors_erlaubnis, XPLANUNG_LIGHT_CORS_ERLAUBTE_HOSTS)
+        response['Access-Control-Allow-Origin'] = cors_erlaubnis(request)
         response['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
         # TODO: Allow integration in website of contact for administrative unit
         return response
     else:
         response = render(request, 'xplanung_light/xplan_list_html.html',
                           {'bplan_list': bplan_filter, 'fplan_list': fplan_filter})
-        response['Access-Control-Allow-Origin'] = "*"
+        # CORS-Wert: '*' ohne Konfiguration, sonst der erlaubte Origin
+        # (obergrenzen.cors_erlaubnis, XPLANUNG_LIGHT_CORS_ERLAUBTE_HOSTS)
+        response['Access-Control-Allow-Origin'] = cors_erlaubnis(request)
         response['Content-Security-Policy'] = "frame-ancestors 'self' https://www.geoportal.rlp.de"
         # TODO: Allow integration in website of contact for administrative unit
         return response
 
 
 def ows_beteiligungen(request):
+    from django.contrib.sites.shortcuts import get_current_site
     """
     OWS für die laufenden Beteiligungsverfahren, hier müssen wir zwischen Spatialite und PostGIS unterscheiden!
     """
@@ -267,9 +273,11 @@ def ows_beteiligungen(request):
         if settings.XPLANUNG_LIGHT_CONFIG['mapfile_force_online_resource_https']:
             map_file_string = map_file_string.replace('<wms_onlineresource>', request.build_absolute_uri(
                 reverse('beteiligungen-map')).replace('http://', 'https://'))
+            base_uri = 'https://' + str(get_current_site(request).domain)
         else:
             map_file_string = map_file_string.replace(
                 '<wms_onlineresource>', request.build_absolute_uri(reverse('beteiligungen-map')))
+            base_uri = 'http://' + str(get_current_site(request).domain)
         # Alternativer Versuch das SQL aus django generieren zu lassen
         #
         # offengelegte_plaene = BPlan.objects.filter(beteiligungen__end_datum__lte=timezone.now()).filter(beteiligungen__bekanntmachung_datum__gte=timezone.now()).only('geltungsbereich', 'name','id')
@@ -279,39 +287,39 @@ def ows_beteiligungen(request):
         # print(str(connection.vendor))
         if connection.vendor == "sqlite":
             # print('sqlite used')
-            datastring_point = """select st_centroid(geltungsbereich), xplanung_light_bplan.id as plan_id from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on
+            datastring_point = """select st_centroid(geltungsbereich), xplanung_light_bplan.id as plan_id, '{base_uri}' as base_uri from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on
                         xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true
                         and bekanntmachung_datum <= date() and end_datum >= date()
                         union
-                        select st_centroid(geltungsbereich), xplanung_light_fplan.id as plan_id from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on
+                        select st_centroid(geltungsbereich), xplanung_light_fplan.id as plan_id, '{base_uri}' as base_uri from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on
                         xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
                         and bekanntmachung_datum <= date() and end_datum >= date()
-            """
-            datastring_polygon = """select geltungsbereich, xplanung_light_bplan.id as plan_id, 'BPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on
+            """.format(base_uri=base_uri)
+            datastring_polygon = """select geltungsbereich, xplanung_light_bplan.id as plan_id, typ, 'bplan' as plantyp, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet, '{base_uri}' as base_uri from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on
                         xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true
                         and bekanntmachung_datum <= date() and end_datum >= date()
                         union
-                        select geltungsbereich, xplanung_light_fplan.id as plan_id, 'FPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on
+                        select geltungsbereich, xplanung_light_fplan.id as plan_id, typ, 'fplan' as plantyp, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet, '{base_uri}' as base_uri from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on
                         xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
                         and bekanntmachung_datum <= date() and end_datum >= date()
-            """
+            """.format(base_uri=base_uri)
         if connection.vendor == "postgresql":
-            datastring_point = """select st_centroid(geltungsbereich) as geom, xplanung_light_bplan.id as plan_id from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on
+            datastring_point = """select st_centroid(geltungsbereich) as geom, xplanung_light_bplan.id as plan_id, '{base_uri}' as base_uri from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on
                         xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true
                         and bekanntmachung_datum <= now() and end_datum >= now()
                         union
-                        select st_centroid(geltungsbereich) as geom, xplanung_light_fplan.id as plan_id from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on
+                        select st_centroid(geltungsbereich) as geom, xplanung_light_fplan.id as plan_id, '{base_uri}' as base_uri from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on
                         xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
                         and bekanntmachung_datum <= now() and end_datum >= now()
-            """
-            datastring_polygon = """select geltungsbereich as geom, xplanung_light_bplan.id as plan_id, 'BPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on
+            """.format(base_uri=base_uri)
+            datastring_polygon = """select geltungsbereich as geom, xplanung_light_bplan.id as plan_id, typ, 'bplan' as plantyp, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet, '{base_uri}' as base_uri from xplanung_light_bplan inner join xplanung_light_bplanbeteiligung on
                         xplanung_light_bplan.id = xplanung_light_bplanbeteiligung.bplan_id where public = true
                         and bekanntmachung_datum <= now() and end_datum >= now()
                         union
-                        select geltungsbereich as geom, xplanung_light_fplan.id as plan_id, 'FPlan' as typ, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on
+                        select geltungsbereich as geom, xplanung_light_fplan.id as plan_id, typ, 'fplan' as plantyp, name, planart, bekanntmachung_datum, end_datum, start_datum, publikation_internet, '{base_uri}' as base_uri from xplanung_light_fplan inner join xplanung_light_fplanbeteiligung on
                         xplanung_light_fplan.id = xplanung_light_fplanbeteiligung.fplan_id where public = true
                         and bekanntmachung_datum <= now() and end_datum >= now()
-            """
+            """.format(base_uri=base_uri)
 
         if connection.vendor == "postgresql":
             # Die Unterrabfrage vereinigt BPlan- und FPlan-Geometrien in der Spalte
@@ -378,7 +386,8 @@ def ows_beteiligungen(request):
     http_response = HttpResponse(result)
     http_response['Content-Type'] = content_type
     http_response['Content-Length'] = str(len(result))
-    http_response['Access-Control-Allow-Origin'] = "*"
+    # '*' ohne Konfiguration, siehe obergrenzen.cors_erlaubnis
+    http_response['Access-Control-Allow-Origin'] = cors_erlaubnis(request)
     return http_response
 
 
@@ -634,8 +643,9 @@ def ows(request, pk: int):
     http_response = HttpResponse(result)
     http_response['Content-Type'] = content_type
     http_response['Content-Length'] = str(len(result))
-    # Setzen der CORS Header, um allen Web-Clients die Nutzung des Webservice zu erlauben
-    http_response['Access-Control-Allow-Origin'] = "*"
+    # CORS-Wert: '*' ohne Konfiguration, sonst der erlaubte Origin
+    # (obergrenzen.cors_erlaubnis, XPLANUNG_LIGHT_CORS_ERLAUBTE_HOSTS)
+    http_response['Access-Control-Allow-Origin'] = cors_erlaubnis(request)
     return http_response
 
 
@@ -775,8 +785,9 @@ def ows_all_orgas_xplan(request, plantyp: str):
     http_response = HttpResponse(result)
     http_response['Content-Type'] = content_type
     http_response['Content-Length'] = str(len(result))
-    # Setzen der CORS Header, um allen Web-Clients die Nutzung des Webservice zu erlauben
-    http_response['Access-Control-Allow-Origin'] = "*"
+    # CORS-Wert: '*' ohne Konfiguration, sonst der erlaubte Origin
+    # (obergrenzen.cors_erlaubnis, XPLANUNG_LIGHT_CORS_ERLAUBTE_HOSTS)
+    http_response['Access-Control-Allow-Origin'] = cors_erlaubnis(request)
     return http_response
 
 

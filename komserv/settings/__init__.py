@@ -28,3 +28,8 @@ else:
         f"Keine Umgebungskonfiguration gefunden (weder DJANGO_ENV_NAME noch {CONFIG_FILE})"
         "Ohne explizite dev/prod/test-Config wird aus Sicherheitsgründen nicht gestartet."
     )
+
+# Die aufgeloeste Umgebung auch als Einstellung. Die Systempruefungen der App
+# (xplanung_light/checks.py) fragen danach — und die Antwort steckt je nach Installation
+# in der Umgebungsvariable ODER in der json-Datei, nach der hier aufgeloest wurde.
+ENV_NAME = env
