@@ -163,6 +163,28 @@ XPLANUNG_LIGHT_CORS_ERLAUBTE_HOSTS = [
 #         'PORT': '5432',
 #     }
 # }
+#
+# Besser: ein libpq-Dienst in einer pg_service.conf. Dann braucht die Anwendung kein
+# Passwort in den Einstellungen — und die Kartenebene nennt im Mapfile nur den
+# Dienstnamen, statt Rechner, Bank, Benutzer und Passwort in den Mapfile-Text zu
+# schreiben (derselbe Text liegt zwanzig Sekunden im Mapfile-Cache):
+#
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.contrib.gis.db.backends.postgis',
+#         'NAME': '',
+#         'OPTIONS': {'service': 'xplanung-light'},
+#     }
+# }
+#
+# Den Dienst allein für die Kartenebenen nennen (Vorrang vor der Bankoption), wenn
+# die Anwendung die Bank selbst über Host und Passwort erreicht:
+# ANPASSEN: XPLANUNG_LIGHT_CONFIG['postgis_pg_service'] = 'karten-lesen'
+# oder ohne diese Datei: Environment=XPLANUNG_LIGHT_PG_SERVICE=karten-lesen in der
+# Unit-Datei von Gunicorn. PGSERVICEFILE und PGPASSFILE gehören dort ebenfalls hin —
+# Einzelheiten in docs/source/operation/produktivbetrieb.rst. Solange weder die eine
+# noch die andere Angabe gesetzt ist und in DATABASES ein Passwort steht, meldet
+# 'manage.py check --deploy' xplanung_light.W004.
 
 # ---------------------------------------------------------------------------
 # Virenscan fuer hochgeladene Dateien

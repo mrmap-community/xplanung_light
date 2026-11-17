@@ -27,6 +27,7 @@ from xplanung_light.checks import (
     pruefe_dateiablage,
     pruefe_geheimnisschluessel,
     pruefe_haertung,
+    pruefe_mapfile_bankzugang,
 )
 from xplanung_light.models import AdministrativeOrganization
 from xplanung_light.views.obergrenzen import cors_erlaubnis
@@ -453,3 +454,120 @@ class ProduktionsvorlageTests(TestCase):
         self.assertIn('XPLANUNG_LIGHT_SECRET_KEY', str(werte.get('SECRET_KEY')))
         media_root = str(werte.get('MEDIA_ROOT'))
         self.assertTrue(media_root.startswith('/'), f"MEDIA_ROOT nicht absolut: {media_root}")
+
+
+class MapfileBankzugangCheckTests(TestCase):
+    """W004: ohne libpq-Dienst steht das Bank-Passwort im Mapfile-Text."""
+
+    PRODUKTION = {'DEBUG': False}
+    # Bankzugang so, wie er ohne Dienst in den Mapfile geschrieben würde
+    POSTGIS = {'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'xplanung', 'USER': 'xplan', 'PASSWORD': 'geheim',
+        'HOST': 'db.example.de', 'PORT': '5432', 'OPTIONS': {}}}
+    POSTGIS_DIENST = {'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': '', 'OPTIONS': {'service': 'xplanung-light'}}}
+    SPATIALITE = {'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.spatialite',
+        'NAME': '/opt/xplanung/db.sqlite3'}}
+
+    def test_postgis_ohne_dienst_meldet_das_passwort_im_mapfile(self):
+        """
+        Was wird geprüft: PostGIS mit Passwort in den Einstellungen und ohne Dienst.
+
+        Warum: MapServer verbindet sich für jede Ebene selbst zur Bank. Ohne Dienst
+        wird das Passwort aus settings.DATABASES in den Mapfile-Text gesetzt, und
+        derselbe Text liegt zwanzig Sekunden im Mapfile-Cache. Das ist der Fall, den
+        eine Produktionsinstallation sehen soll.
+
+        Erwartung: xplanung_light.W004.
+        """
+        self.assertEqual(
+            meldungen(pruefe_mapfile_bankzugang, DATABASES=self.POSTGIS,
+                      **self.PRODUKTION),
+            ['xplanung_light.W004'])
+
+    def test_dienst_in_den_bankoptionen_erfuellt_die_pruefung(self):
+        """
+        Was wird geprüft: Der Dienst steht in DATABASES['default']['OPTIONS']['service'].
+
+        Warum: das ist Djangos eigene Angabe — die Anwendung ist damit selbst
+        verbunden, und die Kartenebenen bekommen dieselbe Angabe als 'service=…'.
+        Zwei Quellen für ein und dasselbe Geheimnis wären einer zu viel.
+
+        Erwartung: keine Meldung.
+        """
+        self.assertEqual(
+            meldungen(pruefe_mapfile_bankzugang, DATABASES=self.POSTGIS_DIENST,
+                      **self.PRODUKTION), [])
+
+    def test_ausdruecklicher_kartendienst_erfuellt_die_pruefung(self):
+        """
+        Was wird geprüft: Der Dienst wird nur für die Kartenebenen über
+        XPLANUNG_LIGHT_CONFIG['postgis_pg_service'] genannt.
+
+        Warum: eine Installation kann die Bank selbst über Host und Passwort
+        erreichen und die Ebenen über einen Dienst mit weniger Rechten. Beides ist
+        gedeckt, Vorrang hat die ausdrückliche Angabe.
+
+        Erwartung: keine Meldung, obwohl in DATABASES ein Passwort steht.
+        """
+        self.assertEqual(
+            meldungen(pruefe_mapfile_bankzugang, DATABASES=self.POSTGIS,
+                      XPLANUNG_LIGHT_CONFIG={'postgis_pg_service': 'karten-lesen'},
+                      **self.PRODUKTION), [])
+
+    def test_bank_ohne_passwort_in_den_einstellungen_meldet_nicht(self):
+        """
+        Was wird geprüft: PostGIS ohne Dienst, aber auch ohne Passwort in den
+        Einstellungen.
+
+        Warum: erreicht die Anwendung die Bank über .pgpass oder die Umgebung, steht
+        in DATABASES kein Geheimnis — und damit auch nicht im Mapfile. Die Prüfung
+        soll nicht an etwas erinnern, das hier gar nicht vorkommt.
+
+        Erwartung: keine Meldung.
+        """
+        ohne = {k: dict(v) for k, v in self.POSTGIS.items()}
+        ohne['default']['PASSWORD'] = ''
+        self.assertEqual(
+            meldungen(pruefe_mapfile_bankzugang, DATABASES=ohne, **self.PRODUKTION), [])
+
+    def test_spatialite_und_entwicklung_melden_nicht(self):
+        """
+        Was wird geprüft: Spatialite, und PostGIS in der Arbeitsumgebung.
+
+        Warum: eine Spatialite-Ebene nennt nur die Datei, da gibt es kein Passwort.
+        Und in der Arbeitsumgebung (DEBUG=True) darf Deployment-Härtung nicht gemeldet
+        werden — die Prüfung ist als Deployment-Prüfung angemeldet.
+
+        Erwartung: beide Fälle ohne Meldung.
+        """
+        self.assertEqual(
+            meldungen(pruefe_mapfile_bankzugang, DATABASES=self.SPATIALITE,
+                      **self.PRODUKTION), [])
+        self.assertEqual(
+            meldungen(pruefe_mapfile_bankzugang, DATABASES=self.POSTGIS,
+                      DEBUG=True), [])
+
+    def test_basis_kennt_den_schluessel_fuer_den_kartendienst(self):
+        """
+        Was wird geprüft: base.py führt den Schlüssel 'postgis_pg_service' und liest
+        die Umgebungsvariable XPLANUNG_LIGHT_PG_SERVICE.
+
+        Warum: die Prüfung oben verweist auf beide Angaben. Fehlt der Schlüssel in
+        der Basis, steht Betreiber:innen ins Leere — und helper/mapfile.py fällt
+        still auf die Einzelangaben zurück.
+
+        Erwartung: der Schlüssel ist in XPLANUNG_LIGHT_CONFIG enthalten.
+        """
+        werte = zuweisungen(BASE_PY)
+        konfiguration = werte.get('XPLANUNG_LIGHT_CONFIG')
+        if isinstance(konfiguration, str):
+            # ast kann ein Wörterbuch mit nicht-literalen Werten nicht auswerten —
+            # dann wird der Quelltext geprüft
+            self.assertIn('postgis_pg_service', konfiguration)
+            self.assertIn('XPLANUNG_LIGHT_PG_SERVICE', konfiguration)
+        else:
+            self.assertIn('postgis_pg_service', konfiguration)

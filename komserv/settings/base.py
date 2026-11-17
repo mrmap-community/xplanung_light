@@ -327,6 +327,16 @@ XPLANUNG_LIGHT_CONFIG = {
     'metadata_keywords': ['bebauungsplan', 'kommunal', ],
     'mapfile_cache_duration_seconds': 20,
     "mapfile_force_online_resource_https": False,
+    # libpq-Dienst (pg_service.conf) für die MapServer-Ebenen. MapServer
+    # verbindet sich für jede Ebene selbst zur Bank: ohne diese Angabe werden
+    # Rechner, Bank, Benutzer, Passwort und Port aus settings.DATABASES in den
+    # Mapfile-Text geschrieben — und derselbe Text liegt zwanzig Sekunden im
+    # Cache. Ist hier oder in DATABASES['default']['OPTIONS']['service'] ein
+    # Dienst benannt, steht im Mapfile nur "service=<name>"; Passwort und
+    # Benutzername kommen darin dann nirgends vor. Die Datei findet der Prozess
+    # über PGSERVICEFILE, das Geheimnis über PGPASSFILE — beide Angaben gehören
+    # in die Unit-Datei von Gunicorn (docs/source/operation/produktivbetrieb.rst).
+    'postgis_pg_service': os.environ.get('XPLANUNG_LIGHT_PG_SERVICE', ''),
     # Obergrenze der Pläne, die eine GetFeatureInfo-Anfrage maximal liefern soll:
     # Der OWS-Proxy begrenzt FEATURE_COUNT und die Treffer-IDs auf diesen Wert,
     # die anonymen html-Listen (bplan/html-list, xplan/html) kürzen ebenfalls auf

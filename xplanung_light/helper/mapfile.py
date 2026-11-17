@@ -23,6 +23,96 @@ HUELLEN_FUNKTIONEN = {
 }
 
 
+def libpq_dienst(datenbank=None):
+    """
+    Name des libpq-Dienstes (pg_service.conf), falls einer angegeben ist.
+
+    PARAMETER:
+        datenbank: ein Eintrag aus settings.DATABASES, Standard ist der aktive
+
+    Vorrang hat die ausdrückliche Angabe
+    ``XPLANUNG_LIGHT_CONFIG['postgis_pg_service']`` (Umgebungsvariable
+    ``XPLANUNG_LIGHT_PG_SERVICE``): eine Installation kann die Kartenebene über
+    einen anderen Dienst erreichen lassen, als sie selbst die Bank anspricht.
+    Sonst gilt Djangos eigene Angabe ``DATABASES['default']['OPTIONS']['service']``
+    — dasselbe Feld, mit dem auch die Anwendung selbst verbunden wird. Leer, wenn
+    beides fehlt; dann bleibt die Verbindung über Rechner, Benutzer und Passwort.
+    """
+    konfiguration = getattr(settings, "XPLANUNG_LIGHT_CONFIG", {}) or {}
+    dienst = konfiguration.get("postgis_pg_service") or ""
+    if not dienst:
+        optionen = (datenbank if datenbank is not None
+                    else connection.settings_dict).get("OPTIONS") or {}
+        dienst = optionen.get("service") or ""
+    return str(dienst).strip()
+
+
+def bankverbindungszeichenkette(datenbank=None):
+    """
+    CONNECTION-Angabe einer MapServer-Ebene auf einer PostgreSQL-Bank.
+
+    PARAMETER:
+        datenbank: ein Eintrag aus settings.DATABASES, Standard ist der aktive
+
+    MapServer verbindet sich für jede Ebene selbst zur Bank. Die bisherige
+    Fassung setzte dafür host, dbname, user, password und port aus
+    settings.DATABASES zusammen — das Bank-Passwort stand damit im Klartext in
+    dem Text, den ``cache.set("mapfile_…")`` zwanzig Sekunden lang hält.
+
+    Ist ein Dienst angegeben, lautet die Angabe nur ``service=<name>``:
+    Rechner, Bank, Benutzer und Passwort kommen dann aus der Dienstdatei und der
+    .pgpass, die der Prozess über ``PGSERVICEFILE`` und ``PGPASSFILE`` findet.
+    Im Mapfile-Text steht damit weder ein Passwort noch ein Benutzername.
+
+    Ohne Dienst werden die vier Verbindungsdaten gesetzt — aber nur die, die
+    wirklich einen Wert haben. Das ist keine Kosmetik: ein ausdrücklich leeres
+    ``password=`` gilt libpq als Angabe mit leerem Wert und sperrt den Rückgriff
+    auf die .pgpass aus (gemessen mit MapServer 8.4 und PostgreSQL 17: die
+    Verbindung scheitert, während sie ohne das Feld durchläuft).
+
+    Ein ``PG:``-Präfix, wie es der OGR-Treiber kennt, versteht der
+    Verbindungstyp POSTGIS von MapServer 8.4 nicht — ebenfalls gemessen: die
+    Verbindung scheitert.
+    """
+    datenbank = connection.settings_dict if datenbank is None else datenbank
+    dienst = libpq_dienst(datenbank)
+    if dienst:
+        return "service=" + dienst
+    angaben = (
+        ("host", datenbank.get("HOST")),
+        ("dbname", datenbank.get("NAME")),
+        ("user", datenbank.get("USER")),
+        ("password", datenbank.get("PASSWORD")),
+        ("port", datenbank.get("PORT")),
+    )
+    return " ".join(
+        "{}={}".format(name, wert) for name, wert in angaben if wert not in (None, ""))
+
+
+def verbindung_fuer_mapserver(bank=None):
+    """
+    CONNECTION-Angabe einer MapServer-Ebene auf einer Bank.
+
+    PARAMETER:
+        bank: ein Verbindungsobjekt mit ``vendor`` und ``settings_dict``,
+            Standard ist die aktive Bank dieses Moduls
+
+    Spatialite bleibt bei dem Dateinamen, den die Ebene als OGR-Quelle versteht;
+    auf PostgreSQL entscheidet ``bankverbindungszeichenkette()`` über Dienst oder
+    Einzelangaben. An den drei früheren Stellen stand derselbe Zusammenbau — und
+    damit dreimal dieselbe Gefahr, ein Passwort in den Mapfile-Text zu schreiben.
+
+    Die Bank wird als Parameter angenommen, weil dieselbe Zeile aus zwei Modulen
+    gebaut wird: Aufrufer in views.py geben ihre eigene Verbindung weiter, sonst
+    entscheidet dieses Modul über die seinige — und eine Prüfung, die views.py
+    mockt, würde sonst still an der echten Spatialite-Bank hängen bleiben.
+    """
+    bank = connection if bank is None else bank
+    if bank.vendor == "sqlite":
+        return str(bank.settings_dict["NAME"])
+    return bankverbindungszeichenkette(bank.settings_dict)
+
+
 # SRID je Geometriespalte, einmal je Prozess gelesen
 _SRID_PRO_SPALTE = {}
 
@@ -238,16 +328,11 @@ class MapfileGenerator():
         orga = AdministrativeOrganization.objects.get(pk=admin_orga_pk)
         bplaene = BPlan.objects.filter(gemeinde=admin_orga_pk, public=True)
         fplaene = FPlan.objects.filter(gemeinde=admin_orga_pk, public=True)
-        # Datenbank Verbindung vorbereiten
-        if connection.vendor == "sqlite":
-            # "db.sqlite3"
-            connection_string = str(connection.settings_dict['NAME'])
-        if connection.vendor == "postgresql":
-            # TODO: Fall abfangen, dass die Zugangsdaten nicht in settings.py stehen, sondern über in Konfigurationsdateien, die über Umgebungsvariablen bekannt sind
-            # 'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
-            connection_string = 'host=' + str(connection.settings_dict['HOST']) + ' dbname=' + str(connection.settings_dict['NAME']) + ' user=' + str(
-                connection.settings_dict['USER']) + ' password=' + str(connection.settings_dict['PASSWORD']) + ' port=' + str(connection.settings_dict['PORT'])
-        # print("Mapserver connection_string: " + connection_string)
+        # Datenbank Verbindung vorbereiten: bei angegebenem libpq-Dienst nur
+        # "service=…", sonst die Einzelangaben ohne leere Felder. Siehe
+        # verbindung_fuer_mapserver() — hier stand früher das Bank-Passwort im
+        # Mapfile-Text, und derselbe Text liegt zwanzig Sekunden im Cache.
+        connection_string = verbindung_fuer_mapserver()
         # Map Objekt Template
         current_dir = os.path.dirname(__file__)
         map = mappyfile.open(os.path.join(
@@ -583,16 +668,9 @@ class MapfileGenerator():
             plaene = BPlan.objects.filter(
                 public=True, inkrafttretens_datum__lte=datetime.now())
             date_name_part = 'inkrafttretens'
-        # Datenbank Verbindung vorbereiten
-        if connection.vendor == "sqlite":
-            # "db.sqlite3"
-            connection_string = str(connection.settings_dict['NAME'])
-        if connection.vendor == "postgresql":
-            # TODO: Fall abfangen, dass die Zugangsdaten nicht in settings.py stehen, sondern über in Konfigurationsdateien, die über Umgebungsvariablen bekannt sind
-            connection_string = 'host=' + str(connection.settings_dict['HOST']) + ' dbname=' + str(connection.settings_dict['NAME']) + ' user=' + str(
-                connection.settings_dict['USER']) + ' password=' + str(connection.settings_dict['PASSWORD']) + ' port=' + str(connection.settings_dict['PORT'])
-        # Für DEBUG Zwecke
-        # print("Mapserver connection_string: " + connection_string)
+        # Datenbank Verbindung vorbereiten — siehe verbindung_fuer_mapserver(),
+        # dieselbe Begründung wie in generate_mapfile()
+        connection_string = verbindung_fuer_mapserver()
         # Öffnen des Map Objekt Templates
         current_dir = os.path.dirname(__file__)
         map = mappyfile.open(os.path.join(

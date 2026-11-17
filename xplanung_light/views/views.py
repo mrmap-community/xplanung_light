@@ -31,7 +31,8 @@ from django.http import HttpResponse
 import mapscript
 from django.shortcuts import get_object_or_404
 from urllib.parse import parse_qs
-from xplanung_light.helper.mapfile import MapfileGenerator, postgis_data_klausel
+from xplanung_light.helper.mapfile import (MapfileGenerator, postgis_data_klausel,
+                                           verbindung_fuer_mapserver)
 # for caching mapfiles ;-)
 from django.core.cache import cache
 from django.conf import settings
@@ -244,14 +245,13 @@ def ows_beteiligungen(request):
     """
     OWS für die laufenden Beteiligungsverfahren, hier müssen wir zwischen Spatialite und PostGIS unterscheiden!
     """
-    if connection.vendor == "sqlite":
-        # "db.sqlite3"
-        connection_string = str(connection.settings_dict['NAME'])
-    if connection.vendor == "postgresql":
-        # TODO: Fall abfangen, dass die Zugangsdaten nicht in settings.py stehen, sondern über in Konfigurationsdateien, die über Umgebungsvariablen bekannt sind
-        # 'host=' + str(settings.DATABASES['default']['HOST']) + ' dbname=' + str(settings.DATABASES['default']['NAME']) + ' user=' + str(settings.DATABASES['default']['USER']) + ' password=' + str(settings.DATABASES['default']['PASSWORD']) + ' port='+ str(settings.DATABASES['default']['PORT'])
-        connection_string = 'host=' + str(connection.settings_dict['HOST']) + ' dbname=' + str(connection.settings_dict['NAME']) + ' user=' + str(
-            connection.settings_dict['USER']) + ' password=' + str(connection.settings_dict['PASSWORD']) + ' port=' + str(connection.settings_dict['PORT'])
+    # Verbindung für die Ebenen: bei angegebenem libpq-Dienst nur "service=…",
+    # sonst die Einzelangaben ohne leere Felder. Früher stand hier das
+    # Bank-Passwort im Klartext, und derselbe Text ging in den Mapfile-Cache.
+    # Die eigene connection wird weitergegeben: der Helper kommt aus
+    # helper/mapfile.py und würde sonst dessen Verbindung ansehen, nicht die des
+    # Views.
+    connection_string = verbindung_fuer_mapserver(connection)
     qs = parse_qs(request.META['QUERY_STRING'])
     req = mapscript.OWSRequest()
     # TODO - auch POST unterstützen!
