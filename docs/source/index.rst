@@ -42,6 +42,7 @@ Willkommen zur Dokumentation des XPlanung-light Projekts
    :caption: Betrieb
 
    operation/produktivbetrieb
+   operation/sicherung
 
 .. toctree::
    :maxdepth: 2
