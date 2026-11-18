@@ -39,6 +39,37 @@ und AGG eingebaut hat und ob Migrationen offen sind, entscheidet über die
 Fehlersuche mehr als der Blick in den Code. Mit `--json` sind die Angaben auch für
 Skripte zu haben.
 
+## Einmalig vor 1.0.0: neu aufgebaute Migrationshistorie
+
+Die 94 Migrationspunkte der Fassung 0.x sind zu einem Punkt `0001_initial`
+zusammengefasst; danach stellt `0002_spatiale_indizes` die räumlichen Indizes der
+Geometriespalten fertig (Nachfolger von 0093, siehe `helper/spatial_index.py`).
+Der Schnitt ist vor dem ersten Tag bewusst gegangen — nach `v1.0.0` ist er nicht
+mehr bezahlbar.
+
+Bestehende Banken laufen nicht von allein durch: sie kennen die alten Punkte, die
+Dateien dazu fehlen aber. Die Reihenfolge ist deshalb — vorher sichern
+(`docs/source/operation/sicherung.rst`):
+
+1. App-Zeilen aus der Migrations-Tabelle nehmen, auf beiden Triebwerken gleich:
+
+       manage.py shell -c "from django.db import connection; \
+       connection.cursor().execute(\"DELETE FROM django_migrations WHERE app='xplanung_light'\")"
+
+2. Migrieren mit Annahme vorhandener Tabellen:
+
+       manage.py migrate --fake-initial
+
+   `--fake-initial` prüft, ob die Tabellen der `0001_initial` vorhanden sind, und
+   überspringt sie dann (`FAKED` statt `OK`); `0002` läuft echt und legt fehlende
+   Raumindizes an. Passen Tabellen nicht zur neuen ersten Migration, bricht der
+   Vorgang sichtbar ab — er räumt nichts still um.
+
+3. Nachprüfen: `manage.py repariere_spatiale_indizes --pruefen` und
+   `manage.py versionsstand` (danach zählt die Migrationsanzeige 2 Punkte).
+
+Neue Punkte zählen ab `0003`.
+
 ## Schritt für Schritt (Beispiel 1.0.0)
 
 1. **Änderungen zusammenführen.** Der Stand auf `master` ist der Kandidat. CI

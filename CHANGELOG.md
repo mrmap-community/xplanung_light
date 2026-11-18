@@ -24,6 +24,22 @@ hierher. Das Verfahren steht in `RELEASING.md`.
   zweite Zahl in `komserv/settings/base.py` und eine dritte, hintendrein, in
   `publiccode.yml`.
 - Die Sphinx-Doku zeigt erstmals eine Versionsnummer (Seitenkopf, Titel, Metadaten).
+- Die Migrationshistorie der Fassung 0.x (94 Punkte) ist vor dem ersten Release-Tag
+  zu einem einzigen Punkt `0001_initial` zusammengefasst, gefolgt von
+  `0002_spatiale_indizes`, das die räumlichen Indizes der Geometriespalten prüft und
+  anlegt, wo das Triebwerk sie schuldig bleibt (Nachfolger des bisherigen Punkts 0093).
+  **Update für bestehende Banken:** vor dem Migrieren die App-Zeilen aus
+  `django_migrations` nehmen und `manage.py migrate --fake-initial` laufen lassen —
+  `0001` wird dann als vorhanden erkannt, `0002` läuft echt und richtet fehlende
+  Raumindizes her. Einzelheiten (Befehlsfolge, Sicherung vorher): `RELEASING.md`.
+  Frische Banken sind deutlich schneller gebaut: 117 → 36 s (Spatialite),
+  54 → 16 s (PostGIS).
+
+### Removed
+
+- Die Migrationspunkte `0002`…`0094` der Fassung 0.x. Ihre Wirkung liegt jetzt
+  geschlossen in `0001_initial`; wer die alte Historie nachvollziehen will, findet
+  sie unverändert im Tag `migrations-vor-v1-reset`.
 
 ## [1.0.0] – in Vorbereitung
 

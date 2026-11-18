@@ -562,7 +562,7 @@ class XPlan(GenericMetadata):
     # jeden AlterField die ganze Tabelle neu und Django stellt danach die
     # Geometrie-Metadaten, aber nicht den R-tree wieder her – der Index ist dann
     # deaktiviert, ohne dass makemigrations etwas anzeigt. Siehe
-    # helper/spatial_index.py und Migrationspunkt 0093_repariere_spatiale_indizes.
+    # helper/spatial_index.py und Migrationspunkt 0002_spatiale_indizes.
     geltungsbereich = models.GeometryField(
         null=False, blank=False, spatial_index=True,
         verbose_name='Grenze des räumlichen Geltungsbereiches des Plans.')
