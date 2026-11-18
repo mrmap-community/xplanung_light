@@ -45,7 +45,7 @@ Zwei Dinge, die hier leicht schiefgehen. Erstens gibt `execute()` bei psycopg un
 psycopg2 `None` zurück, nur sqlite3 gibt den Cursor zurück: `execute()` und
 `fetchall()` in einem Ausdruck zu verketten funktioniert deshalb ausschließlich auf
 Spatialite und wirft auf PostGIS `AttributeError: 'NoneType' object has no
-attribute 'fetchall'` - mitten im Migrationslauf, weil 0093 den Helper aufruft.
+attribute 'fetchall'` - mitten im Migrationslauf, weil 0002_spatiale_indizes den Helper aufruft.
 Zweitens steht in `pg_indexes.indexdef` der Spaltenname nur in Anführungszeichen,
 wenn der Name sie braucht; die Spalten dieses Projekts sind kleingeschrieben, dort
 steht `USING gist (geltungsbereich)`. Eine Prüfung auf `'"spalte"'` meldete darum

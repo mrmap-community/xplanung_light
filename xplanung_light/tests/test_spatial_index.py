@@ -6,7 +6,7 @@ einen AlterField neu baut - `spatial_index_enabled` bleibt 0 und der R-tree wird
 nicht mehr gepflegt. Weil `GeometryField.spatial_index` auf True steht und das
 Feld diesen Wert nur bei Abweichung dekonstruiert, zeigt `makemigrations` dafür
 nichts an. Diese Tests halten fest, dass die Migrationskette die Indizes heile
-(0093_repariere_spatiale_indizes), dass die Reparatur die drei Schadensbilder
+(0002_spatiale_indizes), dass die Reparatur die drei Schadensbilder
 wieder herstellt und dass ein leerer, aber als aktiv stehender Index nie als
 gesund durchgeht.
 """
@@ -216,9 +216,11 @@ class RaumindexNachMigrationslaufTests(TestCase):
 
         Warum:
             Die Testbank wird mit denselben Migrationen erzeugt wie eine
-            Installation. Ohne den Reparatur-Punkt 0093 stünde hier auf
-            Spatialite "deaktiviert" (gemessen: eine frisch migrierte Datenbank
-            hat spatial_index_enabled=0 auf bplan.geltungsbereich).
+            Installation. Ohne den Reparatur-Punkt 0002_spatiale_indizes stünde
+            hier auf Spatialite „deaktiviert" (an der alten Kette gemessen: eine
+            frisch migrierte Datenbank hatte spatial_index_enabled=0 auf
+            bplan.geltungsbereich; an der neuen Kette traf es die
+            Geometriespalte der Gebietskörperschaft).
 
         Erwartung:
             Jede geprüfte Spalte meldet einen gesunden Zustand.
