@@ -58,6 +58,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+from komserv.settings.base import INSTALLED_APPS, MIDDLEWARE
+
+INSTALLED_APPS = INSTALLED_APPS + ['debug_toolbar']
+MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
+INTERNAL_IPS = ['127.0.0.1', '::1']
+
 # Geocoder BKG
 BKG_GEOCODER_CONFIG = {
     'base_url': 'https://sg.geodatenzentrum.de/gdz_geokodierung__',
@@ -70,6 +76,7 @@ REQUESTS_PROXIES = {
 }
 
 ```
+
 Setzen der Umgebungsvariablen
 **komserv/.my_xplanung_light_env.json**
 ```json
@@ -78,7 +85,7 @@ Setzen der Umgebungsvariablen
 }
 ```
 
-Anlegen der dev.py Konfigurationsdatei - siehe Abschnitt **Konfiguration**
+Weitere Hinweise zur dev.py Konfigurationsdatei - siehe Abschnitt **Konfiguration**
 
 
 Django Initialisierung
@@ -248,7 +255,7 @@ bekannten Schlüssel weiterzulaufen. Wer den Austausch vergisst, bemerkt es beim
 ## Wo werden die Dokumente abgelegt
 
 Drei Felder speichern Dateien auf der Platte (Plananlagen, Referenzanhang,
-Stellungnahmeanhang). Ohne `MEDIA_ROOT` löst Django `upload_to='uploads'` relativ 
+Stellungnahmeanhang). Ohne `MEDIA_ROOT` löst Django `upload_to='uploads'` relativ zum 
 **aktuellen Arbeitsverzeichnis** auf — Gunicorn, systemd und ein manuell gestarteter
 Entwicklungsserver schreiben dann in **verschiedene** Ordner, und die Sicherung findet die
 Dateien nicht wieder. `base.py` setzt deshalb `MEDIA_ROOT = BASE_DIR / 'uploads'`; für
@@ -322,7 +329,7 @@ wirkt also nicht. Wer sie in einer Arbeitsumgebung offen sehen will, setzt den W
 
 # Wechsel von spatialite zu PostGIS
 
-## Debian 11
+## Debian 13
 
 ### Installieren der Betriebssystempakete
 
@@ -406,7 +413,7 @@ python3 manage.py createsuperuser
 ### DB-Zugriff ohne Passwort im Mapfile (pg_service.conf)
 
 Normalerweise wird das Passwort zweimal angegeben: Einmal in den Einstellungen für Django und
-einmal bei den DB-Verbindungen an den Layern des MapServer (Rechner, Bank, Benutzer, Passwort und Port).
+einmal bei den DB-Verbindungen an den Layern des MapServer (Rechner, Name der DB, Benutzer, Passwort und Port).
 Die werden im Test- und Entwicklungsbetrieb aus `settings.DATABASES` in den Mapfile-Text geschrieben -
 derselbe Text liegt 20 Sekunden im Mapfile-Cache (`cache.set("mapfile_…")`).
 
