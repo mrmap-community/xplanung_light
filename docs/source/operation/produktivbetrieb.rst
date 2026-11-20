@@ -207,6 +207,11 @@ Verzeichnisse
 
    mkdir -p /data/xplanung_light_db
    mkdir /data/xplanung_light_log
+   mkdir /data/xplanung_light_static
+   chown -R xplanung_light xplanung_light_static
+   sudo chgrp -R www-data /data/xplanung_light_static
+   sudo find /data/xplanung_light_static -type d -exec chmod g+rx {} +
+   sudo find /data/xplanung_light_static -type f -exec chmod g+r {} +
 
 Datenbank
 +++++++++
@@ -232,7 +237,7 @@ Passwort setzen und shell verlassen
 .. code-block:: shell
 
    \password geodjango
-   # ... eingeben
+   # ... eingeben - und notieren ;-)
    exit
 
 Erstellen der der DB und Einrichten der GIS-Erweiterung
@@ -326,7 +331,9 @@ Basisinstallation
    cp /usr/lib/python3/dist-packages/mapscript/_mapscript.cpython-313-x86_64-linux-gnu.so _mapscript.so
    exit
 
-Konfigurationsdateteien erstellen / anpassen
+Konfigurationsdateien erstellen / anpassen
+
+Einstellung für das zu nutzende Profil der Anwendnung - im Fall des Produktionssystems **prod**.
 
 /data/xplanung_light/komserv/.my_xplanung_light_env.json
 
@@ -338,17 +345,127 @@ Konfigurationsdateteien erstellen / anpassen
 
 /data/xplanung_light/komserv/settings/prod.py
 
-.. code-block:: python
+Die initiale Datei wird aus dem Template erstellt
 
-   #
+   .. code-block:: bash
+
+      cp /data/xplanung_light/komserv/setings/prod.example.py /data/xplanung_light/komserv/setings/prod.py
+
+Danach sind die Defaultwerte in der Datei anzupassen.
+
+Wichtig:
+
+   * Verzeichnis für die statischen Dateien
+
+      .. code-block:: python
+
+         STATIC_ROOT = '/data/xplanung_light_static'
+
+   * Zugriffsberechtigungen
+
+      .. code-block:: Python
+
+         # Adressen unter denen die Anwendnung erreichbar sein darf
+         ALLOWED_HOSTS = ['{server}',]
+         # Adressen, von denen Formulare stammen dürfen
+         CSRF_TRUSTED_ORIGINS = ['http://{server}',]
+
+   * Upload Verzeichnis
+
+      .. code-block:: Python
+
+         MEDIA_ROOT = '/data/xplanung_light_upload'
+
+   * Datenbankverbindung
+
+      .. code-block:: python
+
+         DATABASES = {
+            'default': {
+               'ENGINE': 'django.contrib.gis.db.backends.postgis',
+               'NAME': 'xplanung_light',
+               'OPTIONS': {'service': 'xplanung_light_db'},
+            }
+         }
+
+   * Virenscanner aktivieren
+
+      .. code-block:: python
+
+         CLAMD_ENABLED = True
+         CLAMD_SOCKET = '/var/run/clamav/clamd.ctl'
+
+   * Logging einschalten
+
+      .. code-block:: python
+
+         LOGGING = {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'handlers': {
+               'datei': {
+                     'level': 'ERROR',
+                     'class': 'logging.handlers.WatchedFileHandler',
+                     'filename': '/data/xplanung_light_log/error.log',
+               },
+            },
+            'loggers': {
+               'django': {'handlers': ['datei'], 'level': 'ERROR', 'propagate': True},
+            },
+         }
+
+   * TODO: Weitere Einstellungen
 
 Umgebungsvariablen / Konfigurationen 
 
+Die Umgebungsvariablen werden zur Sicherheit in einem speziellen Verzeichnis abgelegt. Dieses muss zunächst erstellt werden.
+
 .. code-block:: shell
-  
-  #
+
+   mkdir /data/xplanung_light_config
+
+Datei mit den Umgebungsvariablen: /data/xplanung_light_config/env
+
+.. code-block:: ini
+
+   XPLANUNG_LIGHT_SECRET_KEY={django_security_key}
+   PGSERVICEFILE=/data/xplanung_light_config/pg_service.conf
+   PGPASSFILE=/data/xplanung_light_config/.pgpass
+   MAPSERVER_CONFIG_FILE=/data/xplanung_light_config/mapserver.conf
+
+**Der security_key wird später über den manage.py Wrapper erzeugt und in diese Datei eingetragen!**
+
+Datei mit den Vebindungsinformationen zur Postgres-DB: /data/xplanung_light_config/pg_service.conf
+
+.. code-block:: ini
+
+   [xplanung_light_db]
+   host=127.0.0.1
+   port=5432
+   dbname=xplanung_light
+   user=geodjango
+   passfile=/data/xplanung_light_config/.pgpass
+
+Datei mit dem Passwortinformationen für die Postgres-DB: /data/xplanung_light_config/.pgpass
+
+.. code-block:: ini
+
+   127.0.0.1:5432:xplanung_light:geodjango:{db-passwort}
+
+Datei für die Mapserver Konfiguration: /data/xplanung_light_config/mapserver.conf
+
+.. code-block:: ini
+
+   CONFIG
+      ENV
+         PGSERVICEFILE "/data/xplanung_light_config/pg_service.conf"
+      END
+   END
 
 Systemd script als Wrapper für manage.py - /usr/local/bin/xplanung-light-manage
+
+Das Script läuft unter dem Nutzer **xplanung_light** und wrapped das normale manage.py Kommando.
+
 
 .. code-block:: bash
 
@@ -369,11 +486,125 @@ Berechtigung für script setzen
 
    chmod 755 /usr/local/bin/xplanung-light-manage
 
+nginx
++++++
 
+Bei nginx liegen die Konfigurationsdateien unter /etc/nginx/sites-available/ und werden durch symbolische Links aktiviert.
+Wir brauchen eine neue Konfiguration: /etc/nginx/sites-available/django
+
+   .. code-block:: ini
+
+      server {
+         listen 80;
+         server_name {servername/-ip};
+         location = /favicon.ico { access_log off; log_not_found off; }
+         client_max_body_size 250M;
+
+         location /static {
+               alias /data/xplanung_light_static;
+         expires 30d;
+         }
+
+         location / {
+               include proxy_params;
+               proxy_pass http://unix:/run/gunicorn.sock;
+         }
+      }
+
+Dann deaktivieren wir die default Seite, aktivieren unsere Konfiguration und starten den Service neu (als root):
+
+   .. code-block:: bash
+
+      rm /etc/nginx/sites-enabled/default
+      ln -s /etc/nginx/sites-available/django /etc/nginx/sites-enabled/django
+      systemctl restart nginx
+
+gunicorn
+++++++++
+
+Der Prozess wird über systemd gesteuert - wir legen also eine Konfigurationsdatei **/etc/systemd/system/gunicorn.service** mit folgendem Inhalt an:
+
+   .. code-block:: ini
+
+      [Unit]
+      Description=gunicorn daemon
+      Requires=gunicorn.socket
+      After=network.target
+      [Service]
+      User=xplanung_light
+      Group=www-data
+      # Hier werden die Umgebungsvariablen gelesen - gleiche Stelle wir auch im manage.py Wrapper:
+      EnvironmentFile=/data/xplanung_light_config/env
+      WorkingDirectory=/data/xplanung_light/
+      ExecStart=/data/xplanung_light/.venv/bin/gunicorn \
+               --log-file /tmp/gunicorn.log \
+               --workers 3 \
+               --bind unix:/run/gunicorn.sock \
+               komserv.wsgi:application
+
+      [Install]
+      WantedBy=multi-user.target
+
+Ausserdem brauchen wir eine Socket-Datei **/etc/systemd/system/gunicorn.socket** mit folgendem Inhalt:
+
+   .. code-block:: ini
+
+      [Unit]
+      Description=gunicorn socket
+
+      [Socket]
+      ListenStream=/run/gunicorn.sock
+
+      [Install]
+      WantedBy=sockets.target
+
+Danach müssen wir den Daemon installieren und starten.
+
+   .. code-block:: shell
+
+      systemctl daemon-reload
+      sudo systemctl status gunicorn
+      sudo systemctl start gunicorn
+      sudo systemctl status gunicorn
+
+Initialisierung der Anwendung
++++++++++++++++++++++++++++++
+
+Die Anwednung kann jetzt über den Wrapper gesteuert werden. Zunächst testet man, ob alles für den Produktivbetrieb fertig ist:
+
+   .. code-block:: shell
+
+      xplanung-light-manage check --deploy
+
+Danach kopiert man die statics in den dafür vorgesehenen Folder:
+
+   .. code-block:: shell
+
+      xplanung-light-manage collectstatic --noinput
+
+Initialisierung der Datenbank:
+
+   .. code-block:: shell
+
+      xplanung-light-manage migrate
+
+Anlegen des superuser-Accounts:
+
+   .. code-block:: shell
+
+      xplanung-light-manage createsuperuser
+
+Security Key erzeugen:
+
+   .. code-block:: shell
+
+      xplanung-light-manage shell -c "from django.core.management.utils import get_random_secret_key as g; print(g())"
+
+**Der Key muss in /data/xplanung_light_config/env eingefügt werden (da steht momentan noch ein Platzhalter).**
 
 Verzeichnisstruktur
 +++++++++++++++++++
-Wir teilen das Projekt in verschiedenen Verzeichnisse mit speziellen Berechtigungen auf.
+Das Projekt ist jetzt in verschiedene Verzeichnisse aufgeteilt und die Zugangsdaten liegen sind sicher über Umgebungsvariablen eingebunden.
 
 
 
