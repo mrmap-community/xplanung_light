@@ -346,6 +346,7 @@ Umgebungsvariablen / Konfigurationen
 
 .. code-block:: shell
   
+  #
 
 Systemd script als Wrapper für manage.py - /usr/local/bin/xplanung-light-manage
 
