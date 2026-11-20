@@ -3,10 +3,6 @@ Produktivbetrieb
 
 **Empfohlene Betriebssysteme**
 
-* `Debian`_ 11:
-
-* `Debian`_ 12:
-
 * `Debian`_ 13:
 
 .. _Debian: https://www.debian.org/index.de.html
@@ -34,7 +30,6 @@ Produktivbetrieb
    Restart erfordert **zwei** Befehle:
 
    .. code-block:: shell
-      :linenos:
 
       sudo systemctl daemon-reload
       sudo systemctl restart gunicorn
@@ -44,7 +39,6 @@ Produktivbetrieb
    Ausgabe der Fehlermeldungen:
 
    .. code-block:: shell
-      :linenos:
 
       sudo journalctl -u gunicorn
 
@@ -86,11 +80,11 @@ Da sich unter Linux gunicorn anbietet, sollte man die notwendigen Umgebungsvaria
 
 https://docs.djangoproject.com/en/6.1/ref/databases/#postgresql-connection-settings
 
-**Bankzugang der Kartenebenen: der Dienst erscheint direkt im Mapfile**
+**DB-Zugang der Kartenebenen: der Dienst erscheint direkt im Mapfile**
 
 Die Kartenebenen verbinden sich unabhängig von Django selbst zur Bank: MapServer öffnet
 pro Anfrage (und danach prozessweit cached) eine eigene libpq-Verbindung. Steht der
-Bankzugang allein in ``settings.DATABASES``, werden Rechner, Bank, Benutzer, Passwort und
+Bankzugang allein in ``settings.DATABASES``, werden Rechner, DB, Benutzer, Passwort und
 Port in den Mapfile-Text geschrieben — und derselbe Text liegt
 ``XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds']`` (Standard 20 Sekunden) lang im
 Cache. Ist ein libpq-Dienst aus der obigen ``pg_service.conf`` benannt, lautet die
@@ -171,6 +165,216 @@ Passwort in ``settings.DATABASES`` und ohne Dienst arbeitet
    * - **Erzwungene Dateirechte**
      - **Nein** (Django startet auch mit unsicheren Dateirechten wie ``0644``)
      - **Ja** (Datenbankverbindung schlägt bei falscher Permission sofort fehl)
+
+Konkrete Anleitung Debian 13 (netinstall)
+-----------------------------------------
+
+Wir gehen davon aus, dass wir auf der Maschine root-Rechte haben.
+
+Verwendete Komponeten
++++++++++++++++++++++
+
+* nginx
+* postgresql
+* gunicorn
+* python-venv
+
+Für den Betrieb nutzen wir verschiedene Komponeten aus den Standardpaketen von Debian. Die 
+werden einfach über apt installiert.
+
+.. code-block:: shell
+
+   apt install nginx git rsync binutils libproj-dev gdal-bin spatialite-bin \ 
+   libsqlite3-mod-spatialite python3-mapscript git \
+   python3.13-venv python3-dev libpq-dev build-essential libmagic-dev gunicorn \
+   postgresql-17 postgresql-17-postgis-3 postgresql-server-dev-17 python3-psycopg2
+
+Nutzer
+++++++
+
+Für die Datenbank gibt es unter Debian schon den postgres als Zentraladmin. Hier benötigen wir nur eine Rolle.
+Der App-Server gunicorn läuft unter dem neu anzulegenden Nutzer **xplanung_light** und nginx standardmäßig unter 
+**www-data**.
+
+.. code-block:: shell
+
+   udo useradd -M -s /bin/bash xplanung_light
+
+Verzeichnisse
++++++++++++++
+
+.. code-block:: shell
+
+   mkdir -p /data/xplanung_light_db
+   mkdir /data/xplanung_light_log
+
+Datenbank
++++++++++
+
+Das Anlegen der Datenbank erfolgt mit **postgres**. Es macht Sinn den Eigentümer der DB vorher anzulegen.
+
+root-Shell:
+
+.. code-block:: shell
+
+   sudo -u postgres psql -p 5432 -c "CREATE USER geodjango;"
+
+Damit das Passwort nicht irgendwo in der history auftaucht öffnet man eine SQL-Shell und setzt es dort interaktiv.
+
+Shell öffnen
+
+.. code-block:: shell
+
+   sudo -u postgres psql -p 5432
+
+Passwort setzen und shell verlassen
+
+.. code-block:: shell
+
+   \password geodjango
+   # ... eingeben
+   exit
+
+Erstellen der der DB und Einrichten der GIS-Erweiterung
+
+.. code-block:: shell
+
+   su - postgres -c "createdb -p 5432 -E UTF8 xplanung_light -T template0"
+   sudo -u postgres psql -p 5432 -d xplanung_light -c "CREATE EXTENSION postgis;"
+   sudo -u postgres psql -p 5432 -c "ALTER DATABASE xplanung_light OWNER TO geodjango;"
+
+Anpassen der Zugangsberechtigungen in der /etc/postgresql/17/main/pg_hba.conf
+
+.. code-block:: ini
+
+   # ...
+   # TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+   # "local" is for Unix domain socket connections only
+   # ...
+   # IPv4 local connections:
+   # ...
+   host    xplanung_light  geodjango       127.0.0.1/32            scram-sha-256 
+   # IPv6 local connections:
+   # ...
+   host    xplanung_light  geodjango       ::1/128                 scram-sha-256 
+   # ...
+
+Datenbank neustarten
+
+.. code-block:: shell
+
+   /etc/init.d/postgresql restart
+
+Umzug der DB und logs in eigene Verzeichnisse
+
+.. code-block:: shell
+
+   # Stop der DB
+   sudo systemctl stop postgresql
+   # Anzeige des Clusters
+   pg_lsclusters
+   # Anlegen der Datenbank-/Logverzeichnisse und setzen der Berechtigungen
+   sudo mkdir -p /data/xplanung_light_db/postgresql/17/main
+   sudo mkdir -p /data/xplanung_light_log/postgresql
+
+   sudo chown -R postgres:postgres /data/xplanung_light_db/postgresql
+   sudo chown -R postgres:postgres /data/xplanung_light_log/postgresql
+
+   sudo chmod 700 /data/xplanung_light_db/postgresql/17/main
+   sudo chmod 700 /data/xplanung_light_log/postgresql
+   # Übetragung der DB ins neue Verzeichnis
+   sudo rsync -av /var/lib/postgresql/17/main/ /data/xplanung_light_db/postgresql/17/main/
+   # Sicherheitskopie für DB-Verzeichnis
+   sudo mv /var/lib/postgresql/17/main /var/lib/postgresql/17/main.bak
+
+Umstellung des Datenbank- und Logverzeicnisses in der Konfigurationsdatei
+
+.. code-block:: shell
+
+   sudo nano /etc/postgresql/17/main/postgresql.conf
+   # Folgendes eintragen bzw. anpassen
+   #data_directory = '/data/xplanung_light_db/postgresql/17/main'
+   #log_directory = '/data/xplanung_light_log/postgresql/'
+
+Datenbank neustarten und Prüfausgaben
+
+.. code-block:: shell
+
+   sudo systemctl start postgresql
+   sudo systemctl status postgresql
+   sudo -u postgres psql -c "SHOW data_directory;"
+
+Django App
+++++++++++
+
+Basisinstallation
+
+.. code-block:: shell
+
+   mkdir /data/xplanung_light/
+   chown -R xplanung_light xplanung_light
+   su xplanung_light
+   git clone https://github.com/mrmap-community/xplanung_light.git
+   cd xplanung_light
+   python3 -m venv .venv
+   source .venv/bin/activate
+   python3 -m pip install --upgrade pip
+   python3 -m pip install -r requirements.txt
+   python3 -m pip install gunicorn
+   cd /data/xplanung_light/.venv/lib64/python3.13/site-packages/mapscript
+   cp /usr/lib/python3/dist-packages/mapscript/_mapscript.cpython-313-x86_64-linux-gnu.so _mapscript.so
+   exit
+
+Konfigurationsdateteien erstellen / anpassen
+
+/data/xplanung_light/komserv/.my_xplanung_light_env.json
+
+.. code-block:: json
+
+   {
+      "ENV_NAME": "prod"
+   }
+
+/data/xplanung_light/komserv/settings/prod.py
+
+.. code-block:: python
+
+   #
+
+Umgebungsvariablen / Konfigurationen 
+
+.. code-block:: shell
+  
+
+Systemd script als Wrapper für manage.py - /usr/local/bin/xplanung-light-manage
+
+.. code-block:: bash
+
+   #!/usr/bin/env bash
+   # /usr/local/bin/xplanung-light-manage  (chmod 755)
+   set -euo pipefail
+   mode=--pipe; [ -t 0 ] && mode=--pty
+   exec systemd-run "$mode" --quiet --wait --collect \
+   -p User=xplanung_light -p Group=www-data \
+   -p UMask=0027 \
+   -p EnvironmentFile=/data/xplanung_light_config/env \
+   -p WorkingDirectory=/data/xplanung_light \
+   /data/xplanung_light/.venv/bin/python manage.py "$@"
+
+Berechtigung für script setzen
+
+.. code-block:: bash
+
+   chmod 755 /usr/local/bin/xplanung-light-manage
+
+
+
+Verzeichnisstruktur
++++++++++++++++++++
+Wir teilen das Projekt in verschiedenen Verzeichnisse mit speziellen Berechtigungen auf.
+
+
 
 **Weitere Infos**
 
