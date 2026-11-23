@@ -201,7 +201,8 @@ class AdministrativeOrganization(GenericMetadata, AbstractOrganization):
     ]
     # Übergang zu etwas umfangreicherem django-organization model - mit slugs ... - damit wir auch Historisieren können - nur beim initialen Import müssen die slugs jetzt generiert werden!
     # Dazu muss das Import-script angepasst werden! - slugs müssen unique sein, daher sinnvoll Namen der Orga in Kombination mit AGS für Gebietskörperschaften
-    slug = models.SlugField(unique=True, blank=True, default=uuid.uuid4)
+    slug = models.SlugField(max_length=1024, unique=True,
+                            blank=True, default=uuid.uuid4)
     ls = models.CharField(max_length=2, verbose_name='Landesschlüssel',
                           help_text='Eindeutiger zweistelliger Schlüssel für das Bundesland - RLP: 07', default='07')
     ks = models.CharField(max_length=3, verbose_name='Kreisschlüssel',

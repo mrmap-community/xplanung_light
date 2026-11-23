@@ -8,7 +8,7 @@ from django.core.management.base import BaseCommand, CommandError, CommandParser
 from openpyxl import load_workbook
 from django.utils.text import slugify
 from xplanung_light.models import AdministrativeOrganization
-
+from django.conf import settings
 
 """
 PROXIES = {
@@ -16,7 +16,7 @@ PROXIES = {
     'https': 'http://xxx:8080',
 }
 """
-PROXIES = None
+PROXIES = settings.REQUESTS_PROXIES
 
 # Lokaler Testumgebungs-Fix: www.geoportal.rlp.de baut TLS-Verbindungen
 # intermittierend ab (SSLEOFError). Requests mit Timeout und Retry mit
@@ -35,10 +35,10 @@ class Command(BaseCommand):
         self.import_organisations(options["file"])
 
     def get_geometry(self, type: str, ags: str) -> str:
-        if type =='KR' or type =='KFS':
+        if type == 'KR' or type == 'KFS':
             base_uri = "https://www.geoportal.rlp.de/spatial-objects/314/collections/vermkv:landkreise_rlp"
             param_dict = {'f': 'json', 'kreissch': ags[:3]}
-        elif type =='VG' or type =='VFG':
+        elif type == 'VG' or type == 'VFG':
             base_uri = "https://www.geoportal.rlp.de/spatial-objects/314/collections/vermkv:verbandsgemeinde_rlp"
             param_dict = {'f': 'json', 'vgnr': ags[:5]}
         elif type == 'GE':
@@ -74,7 +74,8 @@ class Command(BaseCommand):
                     f"Pausiere {pause}s): {error.__class__.__name__}: {error}"
                 )
                 time.sleep(pause)
-        raise CommandError(f"Request nicht erfolgreich, auch nach Retries nicht: {url} ({last_error})")
+        raise CommandError(
+            f"Request nicht erfolgreich, auch nach Retries nicht: {url} ({last_error})")
 
     def import_organisations(self, excel_file: Path):
         wb = load_workbook(excel_file)
@@ -113,13 +114,16 @@ class Command(BaseCommand):
                     landkreis['address']['street'] = row[9]
                     landkreis['address']['postcode'] = row[10]
                     landkreis['address']['city'] = row[11]
-                    landkreis['address']['phone'] = str(row[12]) + '/' + str(row[13])
-                    landkreis['address']['facsimile'] = str(row[12]) + '/' + str(row[14])
+                    landkreis['address']['phone'] = str(
+                        row[12]) + '/' + str(row[13])
+                    landkreis['address']['facsimile'] = str(
+                        row[12]) + '/' + str(row[14])
                     landkreis['address']['email'] = str(row[15])
-                    landkreis['address']['homepage'] = "https://" + str(row[16])
+                    landkreis['address']['homepage'] = "https://" + \
+                        str(row[16])
                     landkreisebene[row[0] + row[2] + row[1]] = landkreis
                     count_landkreise = count_landkreise + 1
-        i = 0           
+        i = 0
         for row in table_nuts_3_2.iter_rows(values_only=True):
             i = i + 1
             if i > 2:
@@ -134,10 +138,13 @@ class Command(BaseCommand):
                     kreisfreie_stadt['address']['street'] = row[9]
                     kreisfreie_stadt['address']['postcode'] = row[10]
                     kreisfreie_stadt['address']['city'] = row[11]
-                    kreisfreie_stadt['address']['phone'] = str(row[12]) + '/' + str(row[13])
-                    kreisfreie_stadt['address']['facsimile'] = str(row[12]) + '/' + str(row[14])
+                    kreisfreie_stadt['address']['phone'] = str(
+                        row[12]) + '/' + str(row[13])
+                    kreisfreie_stadt['address']['facsimile'] = str(
+                        row[12]) + '/' + str(row[14])
                     kreisfreie_stadt['address']['email'] = str(row[15])
-                    kreisfreie_stadt['address']['homepage'] = "https://" + str(row[16])
+                    kreisfreie_stadt['address']['homepage'] = "https://" + \
+                        str(row[16])
                     landkreisebene[row[0] + row[2] + row[1]] = kreisfreie_stadt
                     count_kreisfreie_staedte = count_kreisfreie_staedte + 1
         # read verbandsgemeindeebene
@@ -158,7 +165,8 @@ class Command(BaseCommand):
                     vg['address']['postcode'] = row[10]
                     vg['address']['city'] = row[11]
                     vg['address']['phone'] = str(row[12]) + '/' + str(row[13])
-                    vg['address']['facsimile'] = str(row[12]) + '/' + str(row[14])
+                    vg['address']['facsimile'] = str(
+                        row[12]) + '/' + str(row[14])
                     vg['address']['email'] = str(row[15])
                     vg['address']['homepage'] = "https://" + str(row[16])
                     verbandsgemeindeebene[row[0] + row[2] + row[1]] = vg
@@ -179,7 +187,8 @@ class Command(BaseCommand):
                     vg['address']['postcode'] = row[10]
                     vg['address']['city'] = row[11]
                     vg['address']['phone'] = str(row[12]) + '/' + str(row[13])
-                    vg['address']['facsimile'] = str(row[12]) + '/' + str(row[14])
+                    vg['address']['facsimile'] = str(
+                        row[12]) + '/' + str(row[14])
                     vg['address']['email'] = str(row[15])
                     vg['address']['homepage'] = "https://" + str(row[16])
                     verbandsgemeindeebene[row[0] + row[2] + row[1]] = vg
@@ -196,33 +205,44 @@ class Command(BaseCommand):
                     admin_unit['vg'] = row[1]
                     admin_unit['ge'] = row[2]
                     admin_unit['name'] = row[3]
-                    admin_unit['slug'] = slugify(admin_unit['name'] + '-07' + str(admin_unit['kr']) + str(admin_unit['vg']) + str(admin_unit['ge']))
+                    admin_unit['slug'] = slugify(admin_unit['name'] + '-07' + str(
+                        admin_unit['kr']) + str(admin_unit['vg']) + str(admin_unit['ge']))
                     self.stdout.write(admin_unit['name'])
                     admin_unit['plz'] = row[4]
                     admin_unit['type'] = 'GE'
                     if row[1] == '00' and row[2] == '000':
-                        admin_unit['type'] = landkreisebene[row[0] + row[1] + row[2]]['type']
-                        admin_unit['address'] = landkreisebene[row[0] + row[1] + row[2]]['address']
+                        admin_unit['type'] = landkreisebene[row[0] +
+                                                            row[1] + row[2]]['type']
+                        admin_unit['address'] = landkreisebene[row[0] +
+                                                               row[1] + row[2]]['address']
                     if row[1] != '00' and row[2] == '000':
-                        admin_unit['type'] = verbandsgemeindeebene[row[0] + row[1] + row[2]]['type']
-                        admin_unit['address'] = verbandsgemeindeebene[row[0] + row[1] + row[2]]['address']
-                    admin_unit['geometry'] = self.get_geometry(admin_unit['type'], str(row[0]) + str(row[1]) + str(row[2]))
-                    all_admin_units[str(row[0]) + str(row[1]) +str(row[2])] = admin_unit   
+                        admin_unit['type'] = verbandsgemeindeebene[row[0] +
+                                                                   row[1] + row[2]]['type']
+                        admin_unit['address'] = verbandsgemeindeebene[row[0] +
+                                                                      row[1] + row[2]]['address']
+                    admin_unit['geometry'] = self.get_geometry(
+                        admin_unit['type'], str(row[0]) + str(row[1]) + str(row[2]))
+                    all_admin_units[str(row[0]) + str(row[1]) +
+                                    str(row[2])] = admin_unit
                     # save object to database
-                    obj, created = AdministrativeOrganization.objects.update_or_create(
-                        ks=admin_unit['kr'],
-                        vs=admin_unit['vg'],
-                        gs=admin_unit['ge'],
-                        defaults={
-                            "ks": admin_unit['kr'],
-                            "vs": admin_unit['vg'],
-                            "gs": admin_unit['ge'],
-                            "name": admin_unit['name'],
-                            "type": admin_unit['type'],
-                            "slug": admin_unit['slug'],
-                            "geometry": GEOSGeometry(admin_unit['geometry'])
-                        },
-                    )
+                    try:
+                        obj, created = AdministrativeOrganization.objects.update_or_create(
+                            ks=admin_unit['kr'],
+                            vs=admin_unit['vg'],
+                            gs=admin_unit['ge'],
+                            defaults={
+                                "ks": admin_unit['kr'],
+                                "vs": admin_unit['vg'],
+                                "gs": admin_unit['ge'],
+                                "name": admin_unit['name'],
+                                "type": admin_unit['type'],
+                                "slug": admin_unit['slug'],
+                                "geometry": GEOSGeometry(admin_unit['geometry'])
+                            },
+                        )
+                    except:
+                        print("AdministrativeUnit konnte nicht in Datenbank gespeichert werden: name: " +
+                              admin_unit['name'] + " - slug: " + admin_unit['slug'])
                     """
                     administration = AdministrativeOrganization()
                     administration.ks = admin_unit['kr']
@@ -237,5 +257,6 @@ class Command(BaseCommand):
         self.stdout.write("Landkreise:" + str(count_landkreise))
         self.stdout.write("Kreisfreie Städte:" + str(count_kreisfreie_staedte))
         self.stdout.write("Verbandsgemeinden:" + str(count_verbandsgemeinden))
-        self.stdout.write("Verbandsfreie Gemeinden:" + str(count_verbandsfreie_gemeinden))
+        self.stdout.write("Verbandsfreie Gemeinden:" +
+                          str(count_verbandsfreie_gemeinden))
         self.stdout.write(str(i))
