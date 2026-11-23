@@ -108,13 +108,13 @@ Verwendete Komponeten
 * gunicorn
 * python-venv
 
-Für den Betrieb nutzen wir verschiedene Komponeten aus den Standardpaketen von Debian. Die 
+Für den Betrieb nutzen wir verschiedene Komponenten aus den Standardpaketen von Debian. Die 
 werden einfach über apt installiert.
 
 .. code-block:: shell
 
-   apt install nginx git rsync binutils libproj-dev gdal-bin spatialite-bin \ 
-   libsqlite3-mod-spatialite python3-mapscript git \
+   apt install nginx git rsync binutils libproj-dev gdal-bin spatialite-bin \
+   libsqlite3-mod-spatialite python3-mapscript git clamav-daemon \
    python3.13-venv python3-dev libpq-dev build-essential libmagic-dev gunicorn \
    postgresql-17 postgresql-17-postgis-3 postgresql-server-dev-17 python3-psycopg2
 
@@ -138,14 +138,14 @@ Verzeichnisse
    mkdir -p /data/xplanung_light_db
    # Verzeichnis für log-files
    mkdir /data/xplanung_light_log
-   chown -R xplanung_light xplanung_light_log
+   chown -R xplanung_light /data/xplanung_light_log
    sudo chgrp -R www-data /data/xplanung_light_log
    # Verzeichnis für uploads
    mkdir /data/xplanung_light_upload
-   chown -R xplanung_light xplanung_light_upload
+   chown -R xplanung_light /data/xplanung_light_upload
    # Verzeichnis für Ablage der statischen files
    mkdir /data/xplanung_light_static
-   chown -R xplanung_light xplanung_light_static
+   chown -R xplanung_light /data/xplanung_light_static
    # Leseberechtigung für nginx
    sudo chgrp -R www-data /data/xplanung_light_static
    sudo find /data/xplanung_light_static -type d -exec chmod g+rx {} +
@@ -256,7 +256,7 @@ Basisinstallation
 .. code-block:: shell
 
    mkdir /data/xplanung_light/
-   chown -R xplanung_light xplanung_light
+   chown -R xplanung_light /data/xplanung_light
    su xplanung_light
    cd /data/
    git clone https://github.com/mrmap-community/xplanung_light.git
@@ -288,7 +288,7 @@ Die initiale Datei wird aus dem Template erstellt
 
    .. code-block:: bash
 
-      cp /data/xplanung_light/komserv/setings/prod.example.py /data/xplanung_light/komserv/setings/prod.py
+      cp /data/xplanung_light/komserv/settings/prod.example.py /data/xplanung_light/komserv/settings/prod.py
 
 Danach sind die Defaultwerte in der Datei anzupassen.
 
@@ -372,9 +372,15 @@ Datei mit den Umgebungsvariablen: /data/xplanung_light_config/env
    PGPASSFILE=/data/xplanung_light_config/.pgpass
    MAPSERVER_CONFIG_FILE=/data/xplanung_light_config/mapserver.conf
 
+Berechtigungen setzen (root Leserecht reicht aus, da systemd sie als root liest)
+
+.. code-block:: shell
+
+   chmod 0600 /data/xplanung_light_config/env
+
 **Der security_key wird später über den manage.py Wrapper erzeugt und in diese Datei eingetragen!**
 
-Datei mit den Vebindungsinformationen zur Postgres-DB: /data/xplanung_light_config/pg_service.conf
+Datei mit den Verbindungsinformationen zur Postgres-DB: /data/xplanung_light_config/pg_service.conf
 
 .. code-block:: ini
 
@@ -385,11 +391,23 @@ Datei mit den Vebindungsinformationen zur Postgres-DB: /data/xplanung_light_conf
    user=geodjango
    passfile=/data/xplanung_light_config/.pgpass
 
+Berechtigungen setzen
+
+.. code-block:: shell
+
+   chown xplanung_light /data/xplanung_light_config/pg_service.conf
+   chmod 0640 /data/xplanung_light_config/pg_service.conf
+
 Datei mit dem Passwortinformationen für die Postgres-DB: /data/xplanung_light_config/.pgpass
 
 .. code-block:: ini
 
    127.0.0.1:5432:xplanung_light:geodjango:{db-passwort}
+
+.. code-block:: shell
+
+   chown xplanung_light:xplanung_light /data/xplanung_light_config/.pgpass
+   chmod 0600 /data/xplanung_light_config/.pgpass
 
 Datei für die Mapserver Konfiguration: /data/xplanung_light_config/mapserver.conf
 
@@ -476,7 +494,8 @@ Der Prozess wird über systemd gesteuert - wir legen also eine Konfigurationsdat
       EnvironmentFile=/data/xplanung_light_config/env
       WorkingDirectory=/data/xplanung_light/
       ExecStart=/data/xplanung_light/.venv/bin/gunicorn \
-               --log-file /tmp/gunicorn.log \
+               --worker-class sync \
+               --timeout 60 \
                --workers 3 \
                --bind unix:/run/gunicorn.sock \
                komserv.wsgi:application
@@ -497,7 +516,7 @@ Ausserdem brauchen wir eine Socket-Datei **/etc/systemd/system/gunicorn.socket**
       [Install]
       WantedBy=sockets.target
 
-Danach müssen wir den Daemon installieren und starten.
+Danach müssen wir den Daemon installieren, starten und den socket aktivieren, damit er einen reboot übersteht.
 
    .. code-block:: shell
 
@@ -505,6 +524,7 @@ Danach müssen wir den Daemon installieren und starten.
       sudo systemctl status gunicorn
       sudo systemctl start gunicorn
       sudo systemctl status gunicorn
+      sudo systemctl enable gunicorn.socket gunicorn
 
 Initialisierung der Anwendung
 +++++++++++++++++++++++++++++
@@ -516,6 +536,12 @@ Security Key erzeugen:
       xplanung-light-manage shell -c "from django.core.management.utils import get_random_secret_key as g; print(g())"
 
 **Der Key muss in /data/xplanung_light_config/env eingefügt werden (da steht momentan noch ein Platzhalter).**
+
+Nach Ablage des Schlüssels muss der gunicorn neu gestartet werden (als root), sonst wird der zuvor definierte default-Wert angehalten.
+
+   .. code-block:: shell
+
+      systemctl restart gunicorn
 
 Die Anwendung kann jetzt über den Wrapper gesteuert werden. Zunächst testet man, ob alles für den Produktivbetrieb fertig ist:
 
@@ -543,7 +569,7 @@ Anlegen des superuser-Accounts:
 
 Verzeichnisstruktur
 +++++++++++++++++++
-Das Projekt ist jetzt in verschiedene Verzeichnisse aufgeteilt und die Zugangsdaten liegen sind sicher über Umgebungsvariablen eingebunden.
+Das Projekt ist jetzt in verschiedene Verzeichnisse aufgeteilt und die Zugangsdaten sind sicher über Umgebungsvariablen eingebunden.
 
 
 
