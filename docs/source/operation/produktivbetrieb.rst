@@ -70,7 +70,7 @@ https://docs.djangoproject.com/en/5.2/ref/databases/#postgresql-connection-setti
      - **Keine** (wird isoliert von ``libpq`` auf C-Ebene verarbeitet)
    * - **Auslesbar bei Django-RCE-Lücke**
      - **Ja** (einfach über ``settings.DATABASES`` abfragbar)
-     - **Nein** (Python-Prozess liest die Datei nicht direkt ein)
+     - **Ja** Die Datei muss für den Dienstnutzer lesbar sein; das Passwort steht aber nicht im Quelltext und läuft daher nicht über die logs.
    * - **Gefahr von Git-Leaks**
      - **Medium** (Trotz ``.env`` hohes Risiko durch Fehlkonfiguration)
      - **Sehr gering** (Liegt in Systempfaden weit ab vom Quellcode)
@@ -94,13 +94,16 @@ für Django in eigenen Konfigurationsfiles.
 Passwort in ``settings.DATABASES`` und ohne Dienst arbeitet
 (``xplanung_light.W004``).
 
+**Wichtig zu beachten**: Beim Bau der Mapserver-Mapfiles ist zu beachten, dass ein ``PG:``-Präfix und ein leeres ``password=`` nicht funktionieren: 
+Der Layer kann sich so nicht mit der DB verbinden. Die Anwendung läuft zwar, die Kartenbilder bleiben aber leer und das ohne Fehlermeldung. 
+Richtig ist nur ``CONNECTION "service=<name>"``.
 
 Konkrete Anleitung Debian 13 (netinstall)
 -----------------------------------------
 
 Wir gehen davon aus, dass wir auf der Maschine root-Rechte haben.
 
-Verwendete Komponeten
+Verwendete Komponenten
 +++++++++++++++++++++
 
 * nginx
@@ -114,8 +117,8 @@ werden einfach über apt installiert.
 .. code-block:: shell
 
    apt install nginx git rsync binutils libproj-dev gdal-bin spatialite-bin \
-   libsqlite3-mod-spatialite python3-mapscript git clamav-daemon \
-   python3.13-venv python3-dev libpq-dev build-essential libmagic-dev gunicorn \
+   libsqlite3-mod-spatialite python3-mapscript git clamav-daemon clamav-freshclam \
+   python3.13-venv python3-dev libpq-dev build-essential libmagic-dev \
    postgresql-17 postgresql-17-postgis-3 postgresql-server-dev-17 python3-psycopg2
 
 Nutzer
@@ -457,8 +460,8 @@ Wir brauchen eine neue Konfiguration: /etc/nginx/sites-available/django
          location = /favicon.ico { access_log off; log_not_found off; }
          client_max_body_size 250M;
 
-         location /static {
-               alias /data/xplanung_light_static;
+         location /static/ {
+               alias /data/xplanung_light_static/;
          expires 30d;
          }
 
@@ -537,7 +540,7 @@ Security Key erzeugen:
 
 **Der Key muss in /data/xplanung_light_config/env eingefügt werden (da steht momentan noch ein Platzhalter).**
 
-Nach Ablage des Schlüssels muss der gunicorn neu gestartet werden (als root), sonst wird der zuvor definierte default-Wert angehalten.
+Nach Ablage des Schlüssels muss der gunicorn neu gestartet werden (als root), sonst läuft der Dienst mit dem o.g. default-Wert weiter.
 
    .. code-block:: shell
 
@@ -566,6 +569,15 @@ Anlegen des superuser-Accounts:
    .. code-block:: shell
 
       xplanung-light-manage createsuperuser
+
+Virenscanner prüfen
++++++++++++++++++++
+
+   .. code-block:: shell
+
+      systemctl status clamav-daemon
+
+**Per Hand einen Upload starten, um zu sehen ob der Virenscanner tatsächlich läuft.**
 
 Verzeichnisstruktur
 +++++++++++++++++++
