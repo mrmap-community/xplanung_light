@@ -19,7 +19,7 @@ Produktivbetrieb
 
 .. _ClamAV: https://www.clamav.net/
 
-**Gunicorn (WSGI/ASGI)**
+**Gunicorn (WSGI)**
 
 `Gunicorn`_ wird so konfiguriert, dass es einen Unix-Domain-Socket verwendet. Es wird über pip in der venv-Umgebung installiert und über systemd gesteuert.
 
@@ -52,99 +52,11 @@ Produktivbetrieb
 
 Die Datenbankverbindungsparameter sollten aus Sicherheitsgründen nicht direkt in der settings.py abgelegt werden.
 Da sich unter Linux gunicorn anbietet, sollte man die notwendigen Umgebungsvariablen in der **/etc/systemd/system/gunicorn.service** setzen.
+Das Beispiel findet sich in der konkreten Anleitung weiter unten.
 
-.. code-block:: ini 
-
-   [Unit]
-   Description=gunicorn daemon
-   Requires=gunicorn.socket
-   After=network.target
-   [Service]
-   User=xplanung_light
-   Group=www-data
-   WorkingDirectory=/data/xplanung_light/
-
-   # Hier werden die Umgebungsvariablen optimalerweise gesetzt:
-   Environment=PGSERVICEFILE=/data/xplanung_light/config/pg_service.conf
-   Environment=PGPASSFILE=/data/xplanung_light/config/.pgpass
-   Environment=MAPSERVER_CONFIG_FILE=/data/xplanung_light/config/mapserver.conf
-
-   ExecStart=/data/xplanung_light/.venv/bin/gunicorn \
-            --log-file /tmp/gunicorn.log \
-            --workers 3 \
-            --bind unix:/run/gunicorn.sock \
-            komserv.wsgi:application
-
-   [Install]
-   WantedBy=multi-user.target
-
-https://docs.djangoproject.com/en/6.1/ref/databases/#postgresql-connection-settings
-
-**DB-Zugang der Kartenebenen: der Dienst erscheint direkt im Mapfile**
-
-Die Kartenebenen verbinden sich unabhängig von Django selbst zur Bank: MapServer öffnet
-pro Anfrage (und danach prozessweit cached) eine eigene libpq-Verbindung. Steht der
-Bankzugang allein in ``settings.DATABASES``, werden Rechner, DB, Benutzer, Passwort und
-Port in den Mapfile-Text geschrieben — und derselbe Text liegt
-``XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds']`` (Standard 20 Sekunden) lang im
-Cache. Ist ein libpq-Dienst aus der obigen ``pg_service.conf`` benannt, lautet die
-Verbindungsangabe der Ebene nur noch ``service=<name>``: Passwort und Benutzername kommen
-dann im Mapfile nirgends vor.
-
-Genügt eine der beiden Angaben:
-
-.. code-block:: python
-
-   # 1) Djangos eigene Angabe: die Anwendung ist selbst darüber verbunden, und die
-   #    Kartenebenen bekommen dieselbe. NAME und OPTIONS['service'] schließen sich
-   #    nicht aus, aber NAME darf leer bleiben — die Dienstdatei nennt die Bank.
-   DATABASES = {
-       'default': {
-           'ENGINE': 'django.contrib.gis.db.backends.postgis',
-           'NAME': '',
-           'OPTIONS': {'service': 'xplanung-light'},
-       }
-   }
-
-   # 2) Nur für die Kartenebenen, wenn die Anwendung die Bank selbst über Rechner
-   #    und Passwort erreicht. Diese Angabe hat Vorrang vor 1) und gilt allein für
-   #    die Mapfile-Ebenen:
-   XPLANUNG_LIGHT_CONFIG['postgis_pg_service'] = 'karten-lesen'
-
-   # dasselbe ohne Settings-Datei, in der Unit-Datei von Gunicorn:
-   # Environment=XPLANUNG_LIGHT_PG_SERVICE=karten-lesen
-
-So sieht ein Dienst in der Datei aus, die die Unit-Datei oben über ``PGSERVICEFILE``
-anhilft:
-
-.. code-block:: ini
-
-   # /data/xplanung_light/config/pg_service.conf — Rechte 0644
-   [xplanung-light]
-   host=/var/run/postgresql
-   port=5432
-   dbname=xplanung_light
-   user=xplanung_anwendung
-   # bewusst kein password-Wert: das Geheimnis steht in .pgpass
-
-.. code-block:: text
-
-   # /data/xplanung_light/config/.pgpass — Rechte 0600, Eigentum xplanung_light
-   /var/run/postgresql:5432:xplanung_light:xplanung_anwendung:GEHEIMNIS
-
-Zwei Formen der Verbindungsangabe funktionieren dagegen nicht — gemessen mit MapServer 8.4
-an PostgreSQL 17/PostGIS 3.5: Ein ``PG:``-Präfix, wie es der OGR-Treiber kennt, versteht
-der Verbindungstyp ``POSTGIS`` nicht, und ein ausdrücklich leeres ``password=``-Feld gilt
-libpq als Angabe mit leerem Wert und sperrt den Rückgriff auf die ``.pgpass`` aus. In beiden
-Fällen erreicht die Ebene die Bank nicht mehr, während die Anwendung selbst weiter läuft —
-die Karten bleiben dann leer, ohne dass ein Fehler fällt.
-
-``manage.py check --deploy`` erinnert daran, solange eine Produktionsinstallation mit
-Passwort in ``settings.DATABASES`` und ohne Dienst arbeitet
-(``xplanung_light.W004``).
+https://docs.djangoproject.com/en/5.2/ref/databases/#postgresql-connection-settings
 
 **Sicherheitsvergleich: Django Settings vs. Externe Konfigurationsdateien**
-(Gemini - 2026-10-07)
 
 .. list-table:: Direkter Sicherheitsvergleich
    :widths: 30 35 35
@@ -158,7 +70,7 @@ Passwort in ``settings.DATABASES`` und ohne Dienst arbeitet
      - **Keine** (wird isoliert von ``libpq`` auf C-Ebene verarbeitet)
    * - **Auslesbar bei Django-RCE-Lücke**
      - **Ja** (einfach über ``settings.DATABASES`` abfragbar)
-     - **Nein** (Python-Prozess liest die Datei nicht direkt ein)
+     - **Ja** Die Datei muss für den Dienstnutzer lesbar sein; das Passwort steht aber nicht im Quelltext und läuft daher nicht über die logs.
    * - **Gefahr von Git-Leaks**
      - **Medium** (Trotz ``.env`` hohes Risiko durch Fehlkonfiguration)
      - **Sehr gering** (Liegt in Systempfaden weit ab vom Quellcode)
@@ -166,12 +78,32 @@ Passwort in ``settings.DATABASES`` und ohne Dienst arbeitet
      - **Nein** (Django startet auch mit unsicheren Dateirechten wie ``0644``)
      - **Ja** (Datenbankverbindung schlägt bei falscher Permission sofort fehl)
 
+**DB-Zugang für Mapserver**
+
+Die Kartenebenen verbinden sich unabhängig von Django selbst mit der DB: MapServer öffnet
+pro Anfrage (und danach prozessweit cached) eine eigene libpq-Verbindung. Steht der
+Bankzugang allein in ``settings.DATABASES``, werden Rechner, DB, Benutzer, Passwort und
+Port in den Mapfile-Text geschrieben — und derselbe Text liegt
+``XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds']`` (Standard 20 Sekunden) lang im
+Cache. 
+
+Das kann zu einem Sicherheitsrisiko führen. Produktiv stehen sowohl die DB Verbindung für den Mapserver, als auch die
+für Django in eigenen Konfigurationsfiles. 
+
+``manage.py check --deploy`` erinnert daran, solange eine Produktionsinstallation mit
+Passwort in ``settings.DATABASES`` und ohne Dienst arbeitet
+(``xplanung_light.W004``).
+
+**Wichtig zu beachten**: Beim Bau der Mapserver-Mapfiles ist zu beachten, dass ein ``PG:``-Präfix und ein leeres ``password=`` nicht funktionieren: 
+Der Layer kann sich so nicht mit der DB verbinden. Die Anwendung läuft zwar, die Kartenbilder bleiben aber leer und das ohne Fehlermeldung. 
+Richtig ist nur ``CONNECTION "service=<name>"``.
+
 Konkrete Anleitung Debian 13 (netinstall)
 -----------------------------------------
 
 Wir gehen davon aus, dass wir auf der Maschine root-Rechte haben.
 
-Verwendete Komponeten
+Verwendete Komponenten
 +++++++++++++++++++++
 
 * nginx
@@ -179,14 +111,14 @@ Verwendete Komponeten
 * gunicorn
 * python-venv
 
-Für den Betrieb nutzen wir verschiedene Komponeten aus den Standardpaketen von Debian. Die 
+Für den Betrieb nutzen wir verschiedene Komponenten aus den Standardpaketen von Debian. Die 
 werden einfach über apt installiert.
 
 .. code-block:: shell
 
-   apt install nginx git rsync binutils libproj-dev gdal-bin spatialite-bin \ 
-   libsqlite3-mod-spatialite python3-mapscript git \
-   python3.13-venv python3-dev libpq-dev build-essential libmagic-dev gunicorn \
+   apt install nginx git rsync binutils libproj-dev gdal-bin spatialite-bin \
+   libsqlite3-mod-spatialite python3-mapscript git clamav-daemon clamav-freshclam \
+   python3.13-venv python3-dev libpq-dev build-essential libmagic-dev \
    postgresql-17 postgresql-17-postgis-3 postgresql-server-dev-17 python3-psycopg2
 
 Nutzer
@@ -198,17 +130,26 @@ Der App-Server gunicorn läuft unter dem neu anzulegenden Nutzer **xplanung_ligh
 
 .. code-block:: shell
 
-   udo useradd -M -s /bin/bash xplanung_light
+   sudo useradd -M -s /bin/bash xplanung_light
 
 Verzeichnisse
 +++++++++++++
 
 .. code-block:: shell
 
+   # Verzeichnis für Datenbank
    mkdir -p /data/xplanung_light_db
+   # Verzeichnis für log-files
    mkdir /data/xplanung_light_log
+   chown -R xplanung_light /data/xplanung_light_log
+   sudo chgrp -R www-data /data/xplanung_light_log
+   # Verzeichnis für uploads
+   mkdir /data/xplanung_light_upload
+   chown -R xplanung_light /data/xplanung_light_upload
+   # Verzeichnis für Ablage der statischen files
    mkdir /data/xplanung_light_static
-   chown -R xplanung_light xplanung_light_static
+   chown -R xplanung_light /data/xplanung_light_static
+   # Leseberechtigung für nginx
    sudo chgrp -R www-data /data/xplanung_light_static
    sudo find /data/xplanung_light_static -type d -exec chmod g+rx {} +
    sudo find /data/xplanung_light_static -type f -exec chmod g+r {} +
@@ -318,8 +259,9 @@ Basisinstallation
 .. code-block:: shell
 
    mkdir /data/xplanung_light/
-   chown -R xplanung_light xplanung_light
+   chown -R xplanung_light /data/xplanung_light
    su xplanung_light
+   cd /data/
    git clone https://github.com/mrmap-community/xplanung_light.git
    cd xplanung_light
    python3 -m venv .venv
@@ -349,7 +291,7 @@ Die initiale Datei wird aus dem Template erstellt
 
    .. code-block:: bash
 
-      cp /data/xplanung_light/komserv/setings/prod.example.py /data/xplanung_light/komserv/setings/prod.py
+      cp /data/xplanung_light/komserv/settings/prod.example.py /data/xplanung_light/komserv/settings/prod.py
 
 Danach sind die Defaultwerte in der Datei anzupassen.
 
@@ -433,9 +375,15 @@ Datei mit den Umgebungsvariablen: /data/xplanung_light_config/env
    PGPASSFILE=/data/xplanung_light_config/.pgpass
    MAPSERVER_CONFIG_FILE=/data/xplanung_light_config/mapserver.conf
 
+Berechtigungen setzen (root Leserecht reicht aus, da systemd sie als root liest)
+
+.. code-block:: shell
+
+   chmod 0600 /data/xplanung_light_config/env
+
 **Der security_key wird später über den manage.py Wrapper erzeugt und in diese Datei eingetragen!**
 
-Datei mit den Vebindungsinformationen zur Postgres-DB: /data/xplanung_light_config/pg_service.conf
+Datei mit den Verbindungsinformationen zur Postgres-DB: /data/xplanung_light_config/pg_service.conf
 
 .. code-block:: ini
 
@@ -446,11 +394,23 @@ Datei mit den Vebindungsinformationen zur Postgres-DB: /data/xplanung_light_conf
    user=geodjango
    passfile=/data/xplanung_light_config/.pgpass
 
+Berechtigungen setzen
+
+.. code-block:: shell
+
+   chown xplanung_light /data/xplanung_light_config/pg_service.conf
+   chmod 0640 /data/xplanung_light_config/pg_service.conf
+
 Datei mit dem Passwortinformationen für die Postgres-DB: /data/xplanung_light_config/.pgpass
 
 .. code-block:: ini
 
    127.0.0.1:5432:xplanung_light:geodjango:{db-passwort}
+
+.. code-block:: shell
+
+   chown xplanung_light:xplanung_light /data/xplanung_light_config/.pgpass
+   chmod 0600 /data/xplanung_light_config/.pgpass
 
 Datei für die Mapserver Konfiguration: /data/xplanung_light_config/mapserver.conf
 
@@ -500,8 +460,8 @@ Wir brauchen eine neue Konfiguration: /etc/nginx/sites-available/django
          location = /favicon.ico { access_log off; log_not_found off; }
          client_max_body_size 250M;
 
-         location /static {
-               alias /data/xplanung_light_static;
+         location /static/ {
+               alias /data/xplanung_light_static/;
          expires 30d;
          }
 
@@ -537,7 +497,8 @@ Der Prozess wird über systemd gesteuert - wir legen also eine Konfigurationsdat
       EnvironmentFile=/data/xplanung_light_config/env
       WorkingDirectory=/data/xplanung_light/
       ExecStart=/data/xplanung_light/.venv/bin/gunicorn \
-               --log-file /tmp/gunicorn.log \
+               --worker-class sync \
+               --timeout 60 \
                --workers 3 \
                --bind unix:/run/gunicorn.sock \
                komserv.wsgi:application
@@ -558,7 +519,7 @@ Ausserdem brauchen wir eine Socket-Datei **/etc/systemd/system/gunicorn.socket**
       [Install]
       WantedBy=sockets.target
 
-Danach müssen wir den Daemon installieren und starten.
+Danach müssen wir den Daemon installieren, starten und den socket aktivieren, damit er einen reboot übersteht.
 
    .. code-block:: shell
 
@@ -566,11 +527,26 @@ Danach müssen wir den Daemon installieren und starten.
       sudo systemctl status gunicorn
       sudo systemctl start gunicorn
       sudo systemctl status gunicorn
+      sudo systemctl enable gunicorn.socket gunicorn
 
 Initialisierung der Anwendung
 +++++++++++++++++++++++++++++
 
-Die Anwednung kann jetzt über den Wrapper gesteuert werden. Zunächst testet man, ob alles für den Produktivbetrieb fertig ist:
+Security Key erzeugen:
+
+   .. code-block:: shell
+
+      xplanung-light-manage shell -c "from django.core.management.utils import get_random_secret_key as g; print(g())"
+
+**Der Key muss in /data/xplanung_light_config/env eingefügt werden (da steht momentan noch ein Platzhalter).**
+
+Nach Ablage des Schlüssels muss der gunicorn neu gestartet werden (als root), sonst läuft der Dienst mit dem o.g. default-Wert weiter.
+
+   .. code-block:: shell
+
+      systemctl restart gunicorn
+
+Die Anwendung kann jetzt über den Wrapper gesteuert werden. Zunächst testet man, ob alles für den Produktivbetrieb fertig ist:
 
    .. code-block:: shell
 
@@ -594,17 +570,18 @@ Anlegen des superuser-Accounts:
 
       xplanung-light-manage createsuperuser
 
-Security Key erzeugen:
+Virenscanner prüfen
++++++++++++++++++++
 
    .. code-block:: shell
 
-      xplanung-light-manage shell -c "from django.core.management.utils import get_random_secret_key as g; print(g())"
+      systemctl status clamav-daemon
 
-**Der Key muss in /data/xplanung_light_config/env eingefügt werden (da steht momentan noch ein Platzhalter).**
+**Per Hand einen Upload starten, um zu sehen ob der Virenscanner tatsächlich läuft.**
 
 Verzeichnisstruktur
 +++++++++++++++++++
-Das Projekt ist jetzt in verschiedene Verzeichnisse aufgeteilt und die Zugangsdaten liegen sind sicher über Umgebungsvariablen eingebunden.
+Das Projekt ist jetzt in verschiedene Verzeichnisse aufgeteilt und die Zugangsdaten sind sicher über Umgebungsvariablen eingebunden.
 
 
 
