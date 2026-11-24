@@ -66,7 +66,7 @@ weil nirgends ein geteiltes ``CACHES`` genutzt wird.
 
 .. mermaid::
   :config: {"layout": "elk"}
-  
+
   flowchart TB
     subgraph CL["Wer ruft auf"]
       direction LR
@@ -231,7 +231,8 @@ einen Pfad, den die Anwendung beim Start selbst schreibt; wer das
 ändert, muss beide Stellen im Blick haben.
 
 .. mermaid::
-
+  :config: {"layout": "elk"}
+  
   flowchart LR
     subgraph SYS["systemd"]
       U1["gunicorn.socket<br/>Accept=/run/gunicorn.sock"]
