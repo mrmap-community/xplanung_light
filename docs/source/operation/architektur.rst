@@ -5,7 +5,7 @@ Diese Seite zeigt den Produktivbetrieb, so wie er im :doc:`produktivbetrieb`
 ausgeliefert wird: PostGIS und Gunicorn unter systemd hinter nginx mit
 ModSecurity. Alle Diagramme sind aus dem Stand des Repos abgeleitet — die
 Tafel unten nennt zu jedem Element die Stelle im Code. Die Diagramme selbst
-sind Text und werden von ``sphinxcontrib-mermaid`` gebaut (siehe
+liegen im Quellcode vor und werden von ``sphinxcontrib-mermaid`` gebaut (siehe
 ``docs/requirements.txt``), bleiben damit reviewbar und ändern sich mit dem
 Code, den sie beschreiben.
 
@@ -30,42 +30,43 @@ Wer ein Element der Diagramme nachschlagen oder ändern will:
    * - MapServer läuft **im** Django-Prozess, kein separates ``mapserv``-CGI
      - ``xplanung_light/views/views.py`` (``msLoadMapFromString``,
        ``OWSDispatch``), ``xplanung_light/apps.py`` (MapScript in ``ready()``)
-   * - Mapfiles zur Laufzeit aus Vorlagen, je Worker 20 s gecacht
+   * - Mapfiles zur Laufzeit aus Vorlagen, je Worker X s gecacht
      - ``xplanung_light/helper/mapfile.py`` (mappyfile, Vorlagen in
        ``xplanung_light/mapserver/mapfile_templates/``),
        ``XPLANUNG_LIGHT_CONFIG['mapfile_cache_duration_seconds']`` in
        ``komserv/settings/base.py``
-   * - MapServer verbindet sich selbst zur Bank — ohne Passwort im Mapfile
+   * - MapServer verbindet sich selbst mit der DB - ohne Passwort im Mapfile
      - ``xplanung_light/helper/mapfile.py`` (libpq-Dienst über
-       ``XPLANUNG_LIGHT_CONFIG['postgis_pg_service']``, Geheimnis aus
+       ``XPLANUNG_LIGHT_CONFIG['postgis_pg_service']``, PW aus
        ``PGPASSFILE``)
    * - Cache je Worker (LocMemCache), kein geteilten Cache eingerichtet
      - ``CACHES`` kommt in ``komserv/settings/`` nirgends vor
    * - Statische Dateien nur über nginx, ``/media/`` nie über die Platte
      - ``django.conf.urls.static.static()`` liefert bei ``DEBUG=False`` eine
-       leere Liste; Anhänge gehen über die Rights-Views in
-       ``xplanung_light/views/views.py``
-   * - Virenscan über clamd-Socket, ohne erreichbaren Daemon geht nichts hoch
+       leere Liste; Anhänge werden immer über die Rights-Views in
+       ``xplanung_light/views/views.py`` ausgeliefert
+   * - Virenscan über clamd-Socket, ohne erreichbaren Daemon geht nichts
      - ``komserv/settings/base.py`` (``CLAMD_SOCKET``,
        ``CLAMD_FAIL_BY_DEFAULT``)
    * - Ausgänge: SMTP-Relay, BKG-Geokodierung, Import der Gebietskörperschaften
      - ``komserv/settings/base.py`` (``EMAIL_BACKEND``,
        ``BKG_GEOCODER_CONFIG``, ``REQUESTS_PROXIES``),
        ``xplanung_light/management/commands/importorganisations.py``
-   * - Sicherung: Bank und Mediendateien in einem Durchlauf, ein Zeitstempel
+   * - Sicherung: DB und Mediendateien in einem Durchlauf, ein Zeitstempel
      - :doc:`sicherung`
 
 Hauptarchitektur
 ----------------
 
-Von außen bis zur Bank — und was auf dem Rechner dazugehört. Zwei Dinge sind es
+Von Außen bis zur DB-Ablage - und was auf dem Rechner dazugehört. Zwei Dinge sind es
 wert, vor dem Diagramm genannt zu werden, weil sie in keinem generischen
 Django-Bild stehen: MapServer läuft als Bibliothek **im** Django-Prozess (es
-gibt keinen eigenen Kartendienst), und jeder Worker hat seinen eigenen Cache,
-weil nirgends ein geteiltes ``CACHES`` gesetzt ist.
+gibt keinen eigenen Kartendienst über CGI), und jeder Worker hat seinen eigenen Cache,
+weil nirgends ein geteiltes ``CACHES`` genutzt wird.
 
 .. mermaid::
-
+  :config: {"layout": "elk"}
+  
   flowchart TB
     subgraph CL["Wer ruft auf"]
       direction LR
@@ -153,16 +154,16 @@ weil nirgends ein geteiltes ``CACHES`` gesetzt ist.
     class PG daten;
     class MED daten;
 
-Request-Pfad einer Kartenanfrage (WMS ``GetMap``)
--------------------------------------------------
+Beispiel Request-Pfad einer Kartenanfrage (WMS ``GetMap``)
+----------------------------------------------------------
 
-Karten zeichnet kein separater MapServer-Dienst: die Sicht baut das Mapfile aus
+Karten werden nicht durch separaten MapServer-Dienst erstellt: Der View baut das Mapfile aus
 der Vorlage, gibt es dem in den Worker geladenen libmapserver, und libmapserver
-öffnet eine **eigene** libpq-Sitzung zur Bank — getrennt von der
+öffnet eine **eigene** libpq-Sitzung zur DB — getrennt von der
 Django-Verbindung. Der Bildpuffer, über den MapServer antwortet
 (``msIO_installStdoutToBuffer``, ``views.py``), ist prozessweiter Zustand:
-legten zwei Threads in einem Worker gleichzeitig eine Kartenanfrage ab, läsen
-sie sich gegenseitig die Bildbytes aus dem Puffer. Darum läuft Gunicorn mit
+legten zwei Threads in einem Worker gleichzeitig eine Kartenanfrage ab, könnten
+sie sich gegenseitig die Bildbytes aus dem Puffer lesen. Darum läuft Gunicorn mit
 ``sync``-Workern — nie ``--threads``, nie ``--preload`` (MapScript wird in
 ``AppConfig.ready()`` initialisiert, ein Preload zöge das vor den Fork).
 
@@ -191,11 +192,11 @@ sie sich gegenseitig die Bildbytes aus dem Puffer. Darum läuft Gunicorn mit
 Request-Pfad eines Plans-Imports
 --------------------------------
 
-Der größte Request-Body im Haus ist das Planarchiv. nginx und ModSecurity sehen
+Der größte Request-Body ist ein Planarchiv. nginx und ModSecurity sehen
 ihn, bevor die Anwendung ihn sieht — darum ist dieser Pfad derjenige, an dem bei
 der Auslieferung am häufigsten etwas hakt: ``client_max_body_size`` unter der
 Archivgröße bedeutet 413, ein ``SecRequestBodyLimit`` unter der Uploadgröße
-bedeutet 403, beides **vor** jeder eigenen Validierung.
+bedeutet 403, beides **vor** jeder eigenen App-internen Validierung.
 
 .. mermaid::
 
@@ -223,11 +224,11 @@ bedeutet 403, beides **vor** jeder eigenen Validierung.
 Prozess-, Socket- und Dateisicht
 --------------------------------
 
-Für die Shell auf dem Zielrechner: was systemd stellt, was wo auf der Platte
+Für die Shell auf dem Zielrechner: Was über systemd läuft, was wo auf der Platte
 liegen sollte und mit welchen Rechten. Die MapServer-Konfiguration unter ``/tmp``
-ist orange markiert — die Unit-Datei deklariert ``MAPSERVER_CONFIG_FILE`` auf
+ist orange markiert — die Env-Datei deklariert ``MAPSERVER_CONFIG_FILE`` auf
 einen Pfad, den die Anwendung beim Start selbst schreibt; wer das
-Zusammenspiel ändert, muss beide Stellen im Blick haben.
+ändert, muss beide Stellen im Blick haben.
 
 .. mermaid::
 

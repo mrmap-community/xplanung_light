@@ -596,7 +596,7 @@ gemacht werden.
    .. code-block:: shell
 
       su xplanung_light
-      cs /data/xplanung_light/
+      cd /data/xplanung_light/
       git pull
 
 Im Anschluss müssen ausstehende Migrationen gemacht, die static-Files generiert und der gunicorn neu
