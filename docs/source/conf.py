@@ -75,7 +75,16 @@ except ImportError:
     pass
 else:
     extensions.append('sphinxcontrib.mermaid')
+    # Weitere Einstellungen, damit die Graphiken wie im Liveeditor aussehen - der Rest wird in Code slbest definiert
     mermaid_include_elk = True
+    mermaid_height = "auto"
+    mermaid_dark_theme = "default"
+    mermaid_init_config = {
+        "startOnLoad": False,
+        "flowchart": {"curve": "basis", "nodeSpacing": 45, "rankSpacing": 60, "padding": 12},
+        "sequence": {"actorMargin": 60, "messageMargin": 45, "boxMargin": 12},
+    }
+    mermaid_d3_zoom = True
 
 templates_path = ['_templates']
 exclude_patterns = []
