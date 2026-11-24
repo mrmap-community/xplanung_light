@@ -456,15 +456,19 @@ Wir brauchen eine neue Konfiguration: /etc/nginx/sites-available/django
 
       server {
          listen 80;
+         location = /favicon.ico { access_log off; log_not_found off; }
          server_name {servername/-ip};
          location = /favicon.ico { access_log off; log_not_found off; }
-         client_max_body_size 250M;
-
+         client_max_body_size 250M; #
+         proxy_read_timeout 90s; # länger als gunicorn timeout!
+         proxy_set_header X-Forwarded-Proto $scheme;
          location /static/ {
                alias /data/xplanung_light_static/;
+               access_log off;
          expires 30d;
          }
-
+         location /media/ { return 403; }
+         location /admin { allow 10.0.0.0/8; deny all; proxy_pass http://gunicorn; }
          location / {
                include proxy_params;
                proxy_pass http://unix:/run/gunicorn.sock;
@@ -583,7 +587,26 @@ Verzeichnisstruktur
 +++++++++++++++++++
 Das Projekt ist jetzt in verschiedene Verzeichnisse aufgeteilt und die Zugangsdaten sind sicher über Umgebungsvariablen eingebunden.
 
+Updates
++++++++
 
+Das Einspielen von Updates lässt sich sehr einfach über git pull realisieren. Das muss aber mit dem user **xplanung_light**
+gemacht werden.
+
+   .. code-block:: shell
+
+      su xplanung_light
+      cs /data/xplanung_light/
+      git pull
+
+Im Anschluss müssen ausstehende Migrationen gemacht, die static-Files generiert und der gunicorn neu
+gestartet werden (als **root**).
+
+   .. code-block:: shell
+
+      xplanung-light-manage migrate
+      xplanung-light-manage collectstatic
+      sudo systemctl restart gunicorn
 
 **Weitere Infos**
 
