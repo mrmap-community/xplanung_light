@@ -12,6 +12,14 @@ hierher. Das Verfahren steht in `RELEASING.md`.
 
 ### Added
 
+- Migrationspunkt `0004_repariere_spatiale_indizes`: Der Punkt `0003` (slug der
+  Gebietskörperschaft auf 1024 Zeichen) baut auf SQLite die Tabellen der
+  Gebietskörperschaft und ihrer Historie neu — dabei verliert die Geometriespalte
+  stillschweigend ihren räumlichen Index, und MapServer zeichnet leere Karten,
+  ohne dass ein Fehler fällt. Der neue Punkt stellt die Indizes nach `0003`
+  fertig. Regel für die Zukunft: jede Migration, die per AlterField eine Tabelle
+  mit Geometriespalte neu baut, braucht einen eigenen Reparaturschritt — die
+  Suite meldet ein Vergessen rot.
 - Kommando `manage.py versionsstand`: Softwarestand, Git-Revision, Datenbank,
   GDAL, GEOS und die MapServer-Fassung auf einen Blick, auch als `--json`.
 - Wächter in der Suite, dass `publiccode.yml` und die App dieselbe
