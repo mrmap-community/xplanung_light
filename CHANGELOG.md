@@ -12,6 +12,12 @@ hierher. Das Verfahren steht in `RELEASING.md`.
 
 ### Added
 
+- Doku-Seite „Architekturdiagramme" (`operation/architektur`): Hauptarchitektur,
+  Request-Pfade von Kartenanfrage und Planimport sowie Prozess-, Socket- und
+  Dateisicht des Produktivbetriebs, jeweils mit der Stelle im Repo, die das
+  gezeigte Verhalten festlegt. Gebaut werden die Diagramme mit
+  `sphinxcontrib-mermaid` (nur `docs/requirements.txt`, fehlt das Paket bleibt
+  der bekannte Doku-Bau) — die Diagramme bleiben Text und sind reviewbar.
 - Migrationspunkt `0004_repariere_spatiale_indizes`: Der Punkt `0003` (slug der
   Gebietskörperschaft auf 1024 Zeichen) baut auf SQLite die Tabellen der
   Gebietskörperschaft und ihrer Historie neu — dabei verliert die Geometriespalte

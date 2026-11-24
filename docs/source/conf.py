@@ -62,6 +62,19 @@ else:
     # Verzeichnis übernimmt docs/build-versionen.sh als Weiterleitung.
     smv_outputdir_format = '{ref.name}'
 
+# -- Mermaid ------------------------------------------------------------------
+# Mermaid-Blöcke (.. mermaid::) in den Seiten, derzeit in
+# operation/architektur.rst. Das Paket gehört nur in den Doku-Bau
+# (docs/requirements.txt), nicht in die Anwendungsumgebung. Darum die Abfrage
+# wie bei sphinx_multiversion: fehlt das Paket, läuft der bekannte Bau weiter —
+# die Blöcke erscheinen dann nur als Fehlermeldung auf der Seite.
+try:
+    import sphinxcontrib.mermaid  # noqa: F401
+except ImportError:
+    pass
+else:
+    extensions.append('sphinxcontrib.mermaid')
+
 templates_path = ['_templates']
 exclude_patterns = []
 
