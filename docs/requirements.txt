@@ -35,7 +35,16 @@ sphinx_rtd_theme==3.0.2
 # baut docs/build-versionen.sh die aktuelle Fassung wie bisher.
 sphinx-multiversion==0.2.4
 
-# Markdown gibt es in der Doku derzeit nicht (alle 14 Seiten sind .rst) und
+# Baut die Mermaid-Diagramme in source/operation/architektur.rst (conf.py bindet
+# sphinxcontrib.mermaid mit derselben try/except-Absicherung ein wie
+# sphinx_multiversion: fehlt das Paket, bleibt der bekannte Bau). Das Paket
+# braucht Python >= 3.10; auf Debian 11 (3.9) böte pip nur 1.2.3 an. Unter
+# Debian 11 wird nicht mehr ausgeliefert (README), der Runner hat 3.12. Die
+# Diagramm-Bibliothek selbst pinnt die Erweiterung auf eine feste Fassung, der
+# Bau bleibt dadurch reproduzierbar.
+sphinxcontrib-mermaid==2.1.1
+
+# Markdown gibt es in der Doku derzeit nicht (alle Seiten sind .rst) und
 # conf.py bindet die Erweiterung nicht ein. Die Doku-Workflow installierte das
 # Paket bisher trotzdem; es steht hier, damit der Umbau der pip-Zeile auf diese
 # Liste kein Paket verliert. Wer niemals Markdown-Seiten will, kann die Zeile

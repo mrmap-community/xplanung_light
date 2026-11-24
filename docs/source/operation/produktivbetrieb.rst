@@ -104,7 +104,7 @@ Konkrete Anleitung Debian 13 (netinstall)
 Wir gehen davon aus, dass wir auf der Maschine root-Rechte haben.
 
 Verwendete Komponenten
-+++++++++++++++++++++
+++++++++++++++++++++++
 
 * nginx
 * postgresql
