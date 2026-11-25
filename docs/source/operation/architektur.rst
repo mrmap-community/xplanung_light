@@ -2,8 +2,8 @@ Architekturdiagramme
 ====================
 
 Diese Seite zeigt den Produktivbetrieb, so wie er im :doc:`produktivbetrieb`
-ausgeliefert wird: PostGIS und Gunicorn unter systemd hinter nginx mit bei Bedarf mit 
-ModSecurity. Alle Diagramme sind aus dem Stand des Repos abgeleitet — die
+ausgeliefert wird: PostGIS und Gunicorn unter systemd hinter nginx - bei Bedarf mit 
+ModSecurity. Alle Diagramme sind aus dem Stand des Repos abgeleitet - die
 Tafel unten nennt zu jedem Element die Stelle im Code. Die Diagramme selbst
 liegen im Quellcode vor und werden von ``sphinxcontrib-mermaid`` gebaut (siehe
 ``docs/requirements.txt``), bleiben damit reviewbar und ändern sich mit dem

@@ -29,7 +29,7 @@ In Rheinland-Pfalz befindet sich die Software gerade in einer Testphase. Einige 
 Als root
 
 ```shell
-apt install binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite python3-mapscript python3.13-venv python3-dev libpq-dev build-essential
+apt install binutils libproj-dev gdal-bin libmagic1t64 spatialite-bin libsqlite3-mod-spatialite python3-mapscript python3.13-venv python3-dev libpq-dev build-essential
 ```
 
 Als normaler Nutzer
@@ -46,7 +46,7 @@ python3 -m pip install -r requirements.txt
 
 Kopieren der System so-Datei in venv Umgebung
 ```shell
-cd .venv/lib64/python3.13/site-packages/mapscript
+cd .venv/lib/python3.13/site-packages/mapscript
 cp /usr/lib/python3/dist-packages/mapscript/_mapscript.cpython-313-x86_64-linux-gnu.so _mapscript.so
 cd ../../../../../
 ```
