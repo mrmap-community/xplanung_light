@@ -138,12 +138,16 @@
                   <p>
                     Angemeldeter Benutzer: <b>{{ user.username }}</b><br>
                     {% if not user.is_superuser %}Rollen: {% if user_is_admin %}<b>admin</b>{% endif  %}{% if user_is_toeb_reporter %} <b>toeb-reporter</b>{% endif %}<br>{% endif %}
-                    <a class="btn btn-primary" role="button" href="{% url 'logout' %}">Abmelden</a>
+                    <button type="submit" form="xplanung-logout-form" class="btn btn-primary">Abmelden</button>
                     <a class="btn btn-primary" role="button" href="{% url 'password_change' %}">Passwort ändern</a>
                     {% if user.userprofile %}
                     <a class="btn btn-primary" role="button" href="{% url 'user_profile_update' pk=user.userprofile.id %}">Profil</a>
                     {% endif %}
                   </p>
+                  {# Django 5: LogoutView lehnt GET ab (405) - Abmeldung braucht POST. Das form-Element steht ausserhalb des Absatzes (form ist kein Phrasing-Element und wuerde das <p> implied schliessen); der Knopf oben ist ueber form= verknuepft. #}
+                  <form id="xplanung-logout-form" action="{% url 'logout' %}" method="post" class="d-none">
+                    {% csrf_token %}
+                  </form>
                 {% else %}
                 <a class="btn btn-primary" role="button" href="{% url 'login' %}">Anmelden</a>
                 {% endif %}
