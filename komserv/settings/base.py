@@ -424,7 +424,4 @@ BKG_GEOCODER_CONFIG = {
     'api_key': '{api-key}',
 }
 
-REQUESTS_PROXIES = {
-    'http': 'http://{proxy_ip}:{proxy_port}',
-    'https': 'http://{proxy_ip}:{proxy_port}',
-}
+REQUESTS_PROXIES = {}

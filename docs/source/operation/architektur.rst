@@ -2,8 +2,8 @@ Architekturdiagramme
 ====================
 
 Diese Seite zeigt den Produktivbetrieb, so wie er im :doc:`produktivbetrieb`
-ausgeliefert wird: PostGIS und Gunicorn unter systemd hinter nginx mit
-ModSecurity. Alle Diagramme sind aus dem Stand des Repos abgeleitet — die
+ausgeliefert wird: PostGIS und Gunicorn unter systemd hinter nginx - bei Bedarf mit 
+ModSecurity. Alle Diagramme sind aus dem Stand des Repos abgeleitet - die
 Tafel unten nennt zu jedem Element die Stelle im Code. Die Diagramme selbst
 liegen im Quellcode vor und werden von ``sphinxcontrib-mermaid`` gebaut (siehe
 ``docs/requirements.txt``), bleiben damit reviewbar und ändern sich mit dem
@@ -58,15 +58,15 @@ Wer ein Element der Diagramme nachschlagen oder ändern will:
 Hauptarchitektur
 ----------------
 
-Von Außen bis zur DB-Ablage - und was auf dem Rechner dazugehört. Zwei Dinge sind es
+Vom Frontend bis zur DB - und was auf dem Rechner dazugehört. Zwei Dinge sind es
 wert, vor dem Diagramm genannt zu werden, weil sie in keinem generischen
 Django-Bild stehen: MapServer läuft als Bibliothek **im** Django-Prozess (es
 gibt keinen eigenen Kartendienst über CGI), und jeder Worker hat seinen eigenen Cache,
 weil nirgends ein geteiltes ``CACHES`` genutzt wird.
 
 .. mermaid::
-  :config: {"layout": "elk"}
-  
+  :config: {"layout": "elk", "theme": "redux-color"}
+
   flowchart TB
     subgraph CL["Wer ruft auf"]
       direction LR
@@ -165,7 +165,10 @@ Django-Verbindung. Der Bildpuffer, über den MapServer antwortet
 legten zwei Threads in einem Worker gleichzeitig eine Kartenanfrage ab, könnten
 sie sich gegenseitig die Bildbytes aus dem Puffer lesen. Darum läuft Gunicorn mit
 ``sync``-Workern — nie ``--threads``, nie ``--preload`` (MapScript wird in
-``AppConfig.ready()`` initialisiert, ein Preload zöge das vor den Fork).
+``AppConfig.ready()`` initialisiert, ein Preload zöge das vor den Fork). 
+In einer Alternativarchitektur könnte man das so abändern, dass die Konfigurationsdateien
+für den Mapserver bei gewissen Events oder zeitgesteuert geschrieben werden und der
+Mapserver dann einfach eigenständige CGI Anwendung läuft. Da ist sehr viel skalierfähiger.
 
 .. mermaid::
 
@@ -192,10 +195,9 @@ sie sich gegenseitig die Bildbytes aus dem Puffer lesen. Darum läuft Gunicorn m
 Request-Pfad eines Plans-Imports
 --------------------------------
 
-Der größte Request-Body ist ein Planarchiv. nginx und ModSecurity sehen
-ihn, bevor die Anwendung ihn sieht — darum ist dieser Pfad derjenige, an dem bei
-der Auslieferung am häufigsten etwas hakt: ``client_max_body_size`` unter der
-Archivgröße bedeutet 413, ein ``SecRequestBodyLimit`` unter der Uploadgröße
+Der vom Volumen größte Request-Body ist ein Planarchiv (XPlan-ZIP-Archiv). Es läuft erst über
+nginx und ModSecurity bevor es an die Django-App weitergeleitet wird. Hier hakt es wahrscheinlich am
+ häufigsten: ``client_max_body_size`` unter der Archivgröße bedeutet 413, ein ``SecRequestBodyLimit`` unter der Uploadgröße
 bedeutet 403, beides **vor** jeder eigenen App-internen Validierung.
 
 .. mermaid::
@@ -231,6 +233,7 @@ einen Pfad, den die Anwendung beim Start selbst schreibt; wer das
 ändert, muss beide Stellen im Blick haben.
 
 .. mermaid::
+  :config: {"layout": "elk", "theme": "redux-color"}
 
   flowchart LR
     subgraph SYS["systemd"]

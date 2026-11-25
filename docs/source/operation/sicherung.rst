@@ -1,11 +1,11 @@
 Sicherung und Rücksicherung
 ===========================
 
-Die Anwendung kennt zwei Zustände, die zusammen gehören: die **Bank** (Plandaten, Beteiligungen,
+Die Anwendung kennt zwei zu sichernde Ressourcen, die zusammen gehören: Die **Datenbank** (Plandaten, Beteiligungen,
 Beiträge, Nutzerverwaltung, Historie und die XPlanung-GML-Dokumente selbst) und die
-**Dateien** auf der Festplatte (Hochladungen und Anhänge). Beides wird **hintereinander und mit
-demselben Zeitstempel** gesichert — eine Bank ohne ihre Dateien ergibt Pläne, deren Anhänge ins
-Leere zeigen, und der Plan bleibt dabei sichtbar und „in Ordnung".
+**Dateien** auf der Festplatte (Uploads und Anhänge). Beides sollte **hintereinander und mit
+demselben Zeitstempel** gesichert werden - eine Datenbank ohne die Dateien führt zu Plänen, deren Anhänge ins
+Leere zeigen, das Planobjekt selbst ist dabei sichtbar und „in Ordnung".
 
 .. contents::
    :local:
@@ -21,44 +21,43 @@ Was gesichert werden muss
    * - Was
      - Wo
      - Sicherung
-   * - Bank inkl. aller Historie
+   * - Datenbank inkl. der Historie
      - PostGIS-Datenbank oder Spatialite-Datei ``db.sqlite3``
-     - täglich **und** vor jedem Import
+     - täglich **und** vor jeder Rücksicherung
    * - XPlanung-GML-Dokumente
-     - **in der Bank** — ``xplan_gml`` ist ein ``TextField``, kein Dateifeld
-     - mit der Bank, kein eigener Schritt
-   * - Hochladungen und Anhänge
+     - **in der Datenbank** — ``xplan_gml`` ist ein ``TextField``, kein Dateifeld
+     - mit der Datenbank, kein eigener Schritt
+   * - Uploads und Anhänge
      - ``MEDIA_ROOT`` (drei ``FileField`` mit ``upload_to='uploads'``, siehe unten)
      - täglich
    * - Konfiguration
      - ``komserv/settings/prod.py``, ``komserv/.my_xplanung_light_env.json``,
        ``pg_service.conf``, ``.pgpass``, ``mapserver.conf``
-     - täglich, **verschlüsselt** — hier stehen Geheimnisse drin
+     - täglich, **verschlüsselt** — hier stehen Credentials drin
    * - Grunddaten der Gebietskörperschaften
-     - Bank, bezogen über ``manage.py importorganisations``
-     - nicht nötig (neu beziehbar, 15–30 Minuten und Netzabhängigkeit)
+     - Datenbank, bezogen über ``manage.py importorganisations``
+     - nicht nötig (neu beziehbar, 15-30 Minuten und Netzabhängigkeit)
    * - ``static_collected/``, Doku-Build, Caches
      - Repo bzw. flüchtig
      - nein, neu erstellbar
 
 Die Historie ist kein Ersatz für die Sicherung: ``simple_history`` schreibt zwar jede Änderung
 mit (21 Modelle sind so eingerichtet), aber ein Import, der mitten drin abbricht, hinterlässt
-einen Zustand, den die Historie nicht zurückdreht. Und ein Bedienfehler, der Zeilen löscht,
-hinterlässt genau das, was die Historie nicht kann: den fehlenden Bestand.
+einen Zustand, den die Historie nicht zurückdreht.
 
 Vorbereitung
 ------------
 
-**Ablageort der Hochladungen festlegen.** In den mitgeführten Einstellungen ist ``MEDIA_ROOT``
-bis auf Weiteres **nicht** gesetzt (gemessen: die Einstellung kommt nur in den Tests vor).
+**Ablageort der Uploads festlegen.** In den Standardeinstellungen ist ``MEDIA_ROOT``
+zunächst **nicht** gesetzt.
 Django benutzt dann seinen leeren Standard, die Ablage hängt also vom Arbeitsverzeichnis des
 Prozessstarters ab. Für die Sicherung ist das der entscheidende Punkt: ohne absolute Setzung
 weiß niemand, welche Dateien gemeint sind — auch das Sicherungsskript nicht. In ``prod.py``
-deshalb absolut, vorzugsweise außerhalb des Projektbaums:
+muss das deshalb absolut gesetzt sein, vorzugsweise außerhalb des Projektbaums:
 
 .. code-block:: python
 
-   MEDIA_ROOT = '/data/xplanung/uploads'
+   MEDIA_ROOT = '/data/xplanung_light_upload/'
 
 ``MEDIA_URL`` braucht es nicht: Ausgeliefert werden die Dateien über die Views, nicht über
 eine URL-Vorlage (siehe Hinweis unten).
@@ -71,70 +70,152 @@ eine URL-Vorlage (siehe Hinweis unten).
    **nicht** vom Webserver direkt ausgeliefert werden — nginx bekommt keinen ``location
    /uploads/``-Block. Das Sicherungskonto braucht Leserecht auf den Ordner, mehr nicht.
 
-**Eigenes Sicherungskonto und Bankzugang.** Ein eigenes Konto (hier ``xplanung``) mit Lesezugriff
-auf die Bank und auf die Ablagen; die Zugangsdaten stehen in ``pg_service.conf`` und ``.pgpass``
-wie auf der Seite :doc:`produktivbetrieb` beschrieben, nicht im Skript. Für die Bank genügt eine
-Rolle, die lesen darf; für das Anlegen der Rückspiel-Prüfbank braucht diese Rolle zusätzlich
-``CREATEDB`` (oder die Prüfbank wird vorher von einer anderen Rolle angelegt).
+**Eigenes Sicherungskonto und Datenbankzugang.** Ein eigenes Konto (hier ``xplanung``) mit Lesezugriff
+auf die Datenbank und auf die Ablagen; die Zugangsdaten stehen in ``pg_service.conf`` und ``.pgpass``
+wie auf der Seite :doc:`produktivbetrieb` beschrieben, nicht im Skript. Für die Datenbank genügt eine
+Rolle, die lesen darf; für das Anlegen der Rückspiel-Prüfdatenbank braucht diese Rolle zusätzlich
+``CREATEDB`` (oder die Prüfdatenbank wird vorher von einer anderen Rolle angelegt).
 
-**Ablage der Sicherungen** getrennt vom Anwendungslaufwerk, wenn möglich getrennter Rechner
-(siehe `Aufbewahrung und Ort`_). Die Beispiele rechnen mit ``/backup/xplanung``.
+Erstellen des Sicherungsnutzers
 
-Sicherung auf PostGIS
----------------------
+root-Shell:
 
-Das Skript bündelt Bank, Dateien und Konfiguration in einem Durchlauf mit gemeinsamem
-Zeitstempel, prüft jedes seiner Ergebnisse und beendet sich im Fehlerfall mit Exit-Code 1 —
-die Bedingung dafür, dass ein Timer oder ein Monitoringsystem überhaupt etwas meldet.
+.. code-block:: shell
+
+   sudo -u postgres psql -p 5432 -c "CREATE USER xplanung_light_sicherung;"
+
+Damit das Passwort nicht irgendwo in der history auftaucht öffnet man eine SQL-Shell und setzt es dort interaktiv.
+
+Postgres-Shell öffnen
+
+.. code-block:: shell
+
+   sudo -u postgres psql -p 5432
+
+Passwort setzen und shell verlassen
+
+.. code-block:: shell
+
+   password xplanung_light_sicherung
+   # ... eingeben - und notieren ;-)
+   exit
+
+Setzen der Lese-Berechtigungen
+
+.. code-block:: shell
+
+   sudo -u postgres psql -p 5432 -c "GRANT pg_read_all_data TO xplanung_light_sicherung;"
+
+.. code-block:: ini
+
+   # ...
+   # TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+   # "local" is for Unix domain socket connections only
+   # ...
+   # IPv4 local connections:
+   # ...
+   host    xplanung_light  xplanung_light_sicherung       127.0.0.1/32            scram-sha-256 
+   # ...
+   # IPv6 local connections:
+   # ...
+   host    xplanung_light  xplanung_light_sicherung       ::1/128                 scram-sha-256 
+   # ...
+
+Datenbank neustarten
+
+.. code-block:: shell
+
+   /etc/init.d/postgresql restart
+
+Um bei der Sicherung den reinen Leseaccount verwenden zu können, müssen wir die pg_service.conf und .pgpass um diese Einträge **erweitern**.
+
+.. code-block:: ini
+
+   ...
+   [xplanung_light_sicherung]
+   host=127.0.0.1
+   port=5432
+   dbname=xplanung_light
+   user=xplanung_light_sicherung
+   passfile=/data/xplanung_light_config/.pgpass
+
+Datei mit dem Passwortinformationen für die Postgres-DB: /data/xplanung_light_config/.pgpass
+
+.. code-block:: ini
+
+   ...
+   127.0.0.1:5432:xplanung_light:xplanung_light_sicherung:{db-passwort-fuer-sicherungsuser}
+
+
+
+**Ablage der Sicherungen** optimalerweise getrennt vom Anwendungslaufwerk, wenn möglich getrennter Rechner
+(siehe `Aufbewahrung und Ort`_). Die Beispiele rechnen aber mit ``/data/xplanung_light_backup``.
+
+Sicherung unter PostGIS
+-----------------------
+
+Das Skript bündelt die Sicherung von Datenbank, Dateien und Konfiguration in einem Durchlauf mit gemeinsamem
+Zeitstempel, prüft jedes seiner Ergebnisse und beendet sich im Fehlerfall mit Exit-Code 1 -
+die Voraussetzung dafür, dass ein Timer oder ein Monitoringsystem überhaupt etwas meldet.
+
+Wir brauchen aber zusätzlich zstd auf dem OPS
+
+.. code-block:: shell
+
+   apt install zstd
+   mkdir /data/xplanung_light_backup
+   chown -R xplanung_light /data/xplanung_light_backup/
 
 .. code-block:: shell
 
    #!/usr/bin/bash
-   # /usr/local/bin/xplanung-sicherung.sh taeglich|woechentlich|monatlich
-   set -euo pipefail
+   # /usr/local/bin/xplanung-light-sicherung.sh taeglich|woechentlich|monatlich
+   #set -euo pipefail
 
    ART=${1:?Takt angeben: taeglich|woechentlich|monatlich}
-   ZIEL=/backup/xplanung/$ART
-   ZIT=$(date -u +%Y-%m-%dT%H%M%SZ)
-   DBNAME=xplan_prod
-   export PGSERVICE=xplanung_dump      # siehe pg_service.conf, kein Passwort im Skript
-   MEDIA=/data/xplanung/uploads
-   APP=/data/xplanung_light
+   ZIEL=/data/xplanung_light_backup/$ART
+   ZEIT=$(date -u +%Y-%m-%dT%H%M%SZ)
+   DBNAME=xplanung_light
+   export PGSERVICEFILE=/data/xplanung_light_config/pg_service.conf      # siehe pg_service.conf, kein Passwort im Skript
+   export PGSERVICE=xplanung_light_sicherung
+   MEDIA=/data/xplanung_light_upload
+   APP=/data/xplanung_light/
    mkdir -p "$ZIEL"
    umask 077
 
-   # 1) Bank. Kompression im Rohr: -Z0 hält pg_dump unkomprimiert, zstd ist schneller
+   # 1) Datenbank. Kompression in der pipe: -Z0 hält pg_dump unkomprimiert, zstd ist schneller
    #    und kleiner als die pg_dump-eigene Kompression.
-   pg_dump -d "$DBNAME" -Fc -Z0 --no-owner | zstd -12 -T0 > "$ZIEL/db-$ZIT.dump"
-
+   pg_dump -d "$DBNAME" -Fc -Z0 --no-owner | zstd -12 -T0 > "$ZIEL/db-$ZEIT.dump"
+   echo "Datenbank Dump erzeugt"
    # Wächter: ein abgebrochener pg_dump schreibt eine Datei mit plausibler Größe
    # und halbem Inhalt. Eine Größenprüfung allein sieht das nicht.
-   zstd -d -c "$ZIEL/db-$ZIT.dump" | pg_restore --list > /dev/null
-
+   zstd -d -c "$ZIEL/db-$ZEIT.dump" | pg_restore --list > /dev/null
+   echo "Test des Dumps"
    # 2) Rollen und Passwörter sind im pg_dump NICHT enthalten — separat.
-   pg_dumpall --roles-only | zstd -12 > "$ZIEL/rollen-$ZIT.dump.zst"
+   #pg_dumpall --roles-only | zstd -12 > "$ZIEL/rollen-$ZEIT.dump.zst"
 
    # 3) Dateien. --anchored hindert das Paketieren an Auswegen über Symlinks.
    tar --create --anchored --directory="$(dirname "$MEDIA")" "$(basename "$MEDIA")" \
-       | zstd -12 -T0 > "$ZIEL/uploads-$ZIT.tar.zst"
-
+      | zstd -12 -T0 > "$ZIEL/uploads-$ZEIT.tar.zst"
+   echo "Uploads gesichert"
    # 4) Konfiguration — nur für den Notfallort, deshalb verschlüsselt.
-   tar -C "$APP" komserv/settings/prod.py komserv/.my_xplanung_light_env.json \
-       | zstd -12 | age -r "$ALTERS_SCHLUESSEL" -o "$ZIEL/config-$ZIT.tar.zst.age"
-
+   #tar -C "$APP" komserv/settings/prod.py komserv/.my_xplanung_light_env.json \
+   #    | zstd -12 | age -r "$ALTERS_SCHLUESSEL" -o "$ZIEL/config-$ZEIT.tar.zst.age"
+   #echo "Konfiguration gesichert"
    # 5) Prüfsummen und Stand der Anwendung ins Sicherungsprotokoll
-   ( cd "$ZIEL" && sha256sum ./*-"$ZIT".* >| "pruefsummen-$ZIT.sha256" )
-   "$APP/.venv/bin/python" "$APP/manage.py" versionsstand > "$ZIEL/stand-$ZIT.txt" 2>&1 || true
-
+   ( cd "$ZIEL" && sha256sum ./*-"$ZEIT".* >| "pruefsummen-$ZEIT.sha256" )
+   xplanung-light-manage versionsstand > "$ZIEL/stand-$ZEIT.txt" 2>&1 || true
+   echo "Sicherungsprotokoll geschrieben"
    # 6) Aufbewahrung: 7 Nächte, 5 Wochen, 12 Monate
    case "$ART" in
-       taeglich)     TAGE=7   ;;
-       woechentlich) TAGE=35  ;;
-       monatlich)    TAGE=365 ;;
+      taeglich)     TAGE=7   ;;
+      woechentlich) TAGE=35  ;;
+      monatlich)    TAGE=365 ;;
    esac
    find "$ZIEL" -maxdepth 1 -type f -mtime +"$TAGE" -delete
 
-   echo "Sicherung $ART $ZIT fertig"
+   echo "Sicherung $ART $ZEIT fertig"
 
 .. note::
 
@@ -147,15 +228,15 @@ die Bedingung dafür, dass ein Timer oder ein Monitoringsystem überhaupt etwas 
 Sicherung auf Spatialite
 ------------------------
 
-Ein ``cp`` auf eine offene Bank ist **kein** Sicherungsexemplar: Die Bibliothek schreibt an der
+Ein ``cp`` auf eine offene Datenbank ist **keine** Sicherung: Die Bibliothek schreibt an der
 Datei und an ihren Begleitdateien (``-journal`` bzw. ``-wal``), die Kopie kann mitten in einer
-Transaktion entstehen und beim Zurückspielen unbrauchbar sein.
+Transaktion entstehen und wird beim Zurückspielen unbrauchbar sein.
 
 .. code-block:: shell
 
-   ZIEL=/backup/xplanung/taeglich
-   ZIT=$(date -u +%Y-%m-%dT%H%M%SZ)
-   sqlite3 /data/xplanung_light/db.sqlite3 ".backup $ZIEL/db-$ZIT.sqlite"
+   ZIEL=/data/xplanung_light_backup/taeglich
+   ZEIT=$(date -u +%Y-%m-%dT%H%M%SZ)
+   sqlite3 /data/xplanung_light/db.sqlite3 ".backup $ZIEL/db-$ZEIT.sqlite"
    zstd -12 "$ZIEL/db-$ZIT.sqlite"
 
    # danach wie bei PostGIS: uploads, Konfiguration, Prüfsummen
@@ -164,7 +245,7 @@ Vor dem Zurückspielen prüft ein ``quick_check`` die Kopie:
 
 .. code-block:: shell
 
-   zstd -d -c db-$ZIT.sqlite.zst > /tmp/pruefung.sqlite
+   zstd -d -c db-$ZEIT.sqlite.zst > /tmp/pruefung.sqlite
    sqlite3 /tmp/pruefung.sqlite "PRAGMA quick_check;"   # muss "ok" sagen
 
 .. warning::
@@ -176,7 +257,7 @@ Vor dem Zurückspielen prüft ein ``quick_check`` die Kopie:
 
       .venv/bin/python manage.py repariere_spatiale_indizes --pruefen
 
-   Der räumliche Index einer Spatialite-Bank fällt bei einem Tabellen-Neubau unbemerkt auf
+   Der räumliche Index einer Spatialite-DB fällt bei einem Tabellen-Neubau unbemerkt auf
    „deaktiviert" zurück. Ein *leerer, aber als aktiv gemerkter* Index liefert **leere Karten
    ohne jede Fehlermeldung** — die Anwendung merkt es nicht, die Nutzerinnen und Nutzer aber.
    Ein Backup, das einen toten Index zurückbringt, ist eine Sicherung, die vorgibt, funktioniert
@@ -190,13 +271,13 @@ Exit-Code und Alarmierung an einer Stelle sind.
 
 .. code-block:: ini
 
-   # /etc/systemd/system/xplanung-sicherung.service
+   # /etc/systemd/system/xplanung-light-sicherung.service
    [Unit]
    Description=Sicherung xplanung_light
    [Service]
    Type=oneshot
-   ExecStart=/usr/local/bin/xplanung-sicherung.sh taeglich
-   User=xplanung
+   ExecStart=/usr/local/bin/xplanung-light-sicherung.sh taeglich
+   User=xplanung_light
    Nice=10
    IOSchedulingClass=idle
    [Install]
@@ -204,9 +285,9 @@ Exit-Code und Alarmierung an einer Stelle sind.
 
 .. code-block:: ini
 
-   # /etc/systemd/system/xplanung-sicherung.timer
+   # /etc/systemd/system/xplanung-light-sicherung.timer
    [Unit]
-   Description=Naechentliche Sicherung xplanung_light
+   Description=Naechtliche Sicherung xplanung_light
    [Timer]
    OnCalendar=*-*-* 02:30:00
    Persistent=true
@@ -217,11 +298,11 @@ Exit-Code und Alarmierung an einer Stelle sind.
 .. code-block:: shell
 
    sudo systemctl daemon-reload
-   sudo systemctl enable --now xplanung-sicherung.timer
-   systemctl list-timers xplanung-sicherung.timer
-   journalctl -u xplanung-sicherung.service -n 40
+   sudo systemctl enable --now xplanung-light-sicherung.timer
+   systemctl list-timers xplanung-light-sicherung.timer
+   journalctl -u xplanung-light-sicherung.service -n 40
    # einmal sofort und ohne den Timer zu verstellen:
-   sudo systemd-run --unit=sicherung-manuell /usr/local/bin/xplanung-sicherung.sh taeglich
+   sudo systemd-run --unit=sicherung-manuell /usr/local/bin/xplanung-light-sicherung.sh taeglich
 
 ``Persistent=true`` holt eine ausgefallene Nacht nach, ``RandomizedDelaySec`` verhindert, dass
 mehrere Installationen auf einem Rechner zur selben Minute loslegen. Die Wochen- und
@@ -238,19 +319,19 @@ Namen sagt, was danach passiert ist:
 .. code-block:: shell
 
    sudo systemd-run --unit=sicherung-vor-import \
-        /usr/local/bin/xplanung-sicherung.sh taeglich
-   mkdir -p /backup/xplanung/vor-import
-   mv "$(ls -t /backup/xplanung/taeglich/db-*.dump | head -1)" \
-      "/backup/xplanung/vor-import/vor-import-$(date +%F)-$KOMMUNE.dump"
+        /usr/local/bin/xplanung-light-sicherung.sh taeglich
+   mkdir -p /data/xplanung_light_backup/vor-import
+   mv "$(ls -t /data/xplanung_light_backup/taeglich/db-*.dump | head -1)" \
+      "/data/xplanung_light_backup/vor-import/vor-import-$(date +%F)-$KOMMUNE.dump"
 
 Der Grund ist der Import selbst: Er schreibt Pläne, Geometrien, Beteiligungen und Historie in
 einem Zug, und ein Abbruch hinterlässt einen teils gefüllten Bestand. Ein Import, der wegen
-einer Abweisung mitten in der Datei abbricht, ist kein theoretischer Fall.
+einer Abweisung mitten in der Datei abbricht, kann **immer** vorkommen.
 
 .. tip::
 
    Nach dem Import die zwei Fragen, die den Bestand bestätigen — bevor die nächste Nachtsicherung
-   diesen Zustand für den guten befindet:
+   diesen Zustand für gut befindet:
 
    .. code-block:: sql
 
@@ -267,14 +348,14 @@ Aufbewahrung und Ort
 * **Takt:** täglich (nachts), wöchentlich, monatlich — plus benannt vor jedem Import.
 * **Aufbewahrung:** 7 Nächte, 5 Wochen, 12 Monate.
 * **Eine Fassung im Monat zusätzlich offline** (Band, USB-Scheibe im Schrank, zweites
-  Rechenzentrum): eine Bank, in die geschrieben werden kann, ist keine Sicherung gegen
+  Rechenzentrum): eine DB, in die geschrieben werden kann, ist keine Sicherung gegen
   Verschlüsselung.
 * **3-2-1:** drei Exemplare auf zwei Medien, eines außer Haus. Für Dateien und Dumps passt
   `restic`_, das dedupliziert, verschlüsselt und auf ein SFTP-Ziel schreibt — die
   ``pg_dump``-Ausgaben wandern in dasselbe Lager. ``pg_dump`` sichert die Richtigkeit,
   ``restic`` Transport, Aufbewahrung und Verschlüsselung.
-* **Größe:** grob ein Zehntel bis Zwanzigstel der Bank, sobald ``zstd -12`` darüberläuft. Die
-  XPlanung-GML-Dokumente sind der Hauptanteil der Bank und komprimieren sehr gut.
+* **Größe:** grob ein Zehntel bis Zwanzigstel der DB, sobald ``zstd -12`` darüberläuft. Die
+  XPlanung-GML-Dokumente sind der Hauptanteil der DB und komprimieren sehr gut.
 
 .. _restic: https://restic.net/
 
@@ -294,35 +375,35 @@ der nirgends auffällt, fällt monatelang nicht auf.
 .. _healthchecks.io: https://healthchecks.io/
 
 **Stufe 3 — wöchentlich zurückspielen, automatisch.** Ein zweites Skript, das die jüngste
-Bank in eine Prüfbank spielt und den Bestand zählt. Das ist die einzige Prüfung, die ein
+DB in eine Prüfbank spielt und den Bestand zählt. Das ist die einzige Prüfung, die ein
 *lesbares* Exemplar von einem *benutzbaren* unterscheidet:
 
 .. code-block:: shell
 
    #!/usr/bin/bash
-   # /usr/local/bin/xplanung-rueckspiel-pruefung.sh
+   # /usr/local/bin/xplanung-restore-pruefung.sh
    set -euo pipefail
-   BANK=$(ls -t /backup/xplanung/taeglich/db-*.dump | head -1)
+   DB=$(ls -t /data/xplanung_light_backup/taeglich/db-*.dump | head -1)
    PRUEF=xplanung_rueckspiel
    export PGSERVICE=xplanung_admin          # darf anlegen und verwerfen
 
-   OBJEKTE=$(zstd -d -c "$BANK" | pg_restore --list | wc -l)
+   OBJEKTE=$(zstd -d -c "$DB" | pg_restore --list | wc -l)
 
    dropdb --if-exists "$PRUEF"
    createdb "$PRUEF" -T template_postgis
-   zstd -d -c "$BANK" | pg_restore -d "$PRUEF" --no-owner -j4
+   zstd -d -c "$DB" | pg_restore -d "$PRUEF" --no-owner -j4
    unset PGSERVICE
 
-   # Ein Rückspiel, das eine leere Bank ergibt, ist ein fehlgeschlagenes Rückspiel.
+   # Ein Restore, der eine leere DB ergibt, ist ein fehlgeschlagener Restore.
    ANZAHL=$(psql "service=xplanung_admin" -d "$PRUEF" -Atc \
                 "SELECT count(*) FROM xplanung_light_bplan")
    test "${ANZAHL:-0}" -gt 0
-   echo "Rückspielprüfung $BANK: $OBJEKTE Objekte, $ANZAHL Pläne"
+   echo "Rückspielprüfung $DB: $OBJEKTE Objekte, $ANZAHL Pläne"
 
 Ergänze die Zählung der FPlan-Tabelle, der Beteiligungen und der TÖB-Einheiten — und erwarte
 bei jedem Schritt dieselben Zahlen wie in der Produktivbank. Die Abweichung *ist* der Befund.
 
-**Und vierteljährlich mit der Hand und Stoppuhr:** ein voller Rückspiel auf eine leere
+**Und vierteljährlich mit der Hand und Stoppuhr:** ein voller Restore auf eine leere
 Maschine, inklusive Dateien, Konfiguration, ``MEDIA_ROOT``-Pfaden und der Prüfung der räumlichen
 Indizes. Aufschreiben, was gebraucht wird, und was dabei aufgefallen ist. Die gemessene Zeit
 ist die Zahl, mit der im Ernstfall gerechnet wird; eine ungeprüfte Sicherung ist eine Vermutung.
@@ -330,7 +411,7 @@ ist die Zahl, mit der im Ernstfall gerechnet wird; eine ungeprüfte Sicherung is
 Rücksicherung
 -------------
 
-**PostGIS** — Rollen, Bank, Dateien, dann der Stand. Die Reihenfolge zählt: ohne die Rollen
+**PostGIS** — Rollen, DB, Dateien, dann der Stand. Die Reihenfolge zählt: ohne die Rollen
 findet die Anwendung ihre Zugänge nicht.
 
 .. code-block:: shell
