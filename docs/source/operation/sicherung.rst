@@ -20,10 +20,11 @@ Installation der Komprimierungsbibliothek und Anlegen des Sicherungsverzeichniss
    chown -R postgres /data/xplanung_light_backup/postgres
 
    
-Beispiel - als root ausführen (komprimiert):
+Beispiel (als root ausführen - dump wird komprimiert):
 
 .. code-block:: shell
-   su - postgres -c "pg_dump -p 5432 -Fc --no-owner -Z0 -d xplanung_light  | zstd -12 -T0 > /data/xplanung_light_backup/postgres/xplanung_light_zstd_compressed.dump"
+
+   su - postgres -c "pg_dump -p 5432 -Fc --no-owner -Z0 -d xplanung_light | zstd -12 -T0 > /data/xplanung_light_backup/postgres/xplanung_light_zstd_compressed.dump"
 
 Umfassend
 ---------
