@@ -475,8 +475,18 @@ form[method="get"] > br { display: none; }
     transform: translateY(-0.3rem);
 }
 
-.navbar p .btn:nth-of-type(2) { top: calc(100% + 2.2rem); }
-.navbar p .btn:nth-of-type(3) { top: calc(100% + 4.4rem); }
+/* Menu items: Abmelden is a <button> (POST-Formular, Django 5), the rest are
+   <a> — nth-of-type zaehlt je Elementtyp, also hier nach Typ positionieren */
+.navbar p button.btn { top: 100%; }
+.navbar p a.btn:nth-of-type(1) { top: calc(100% + 2.2rem); }
+.navbar p a.btn:nth-of-type(2) { top: calc(100% + 4.4rem); }
+
+/* <button> erbt weder Schriftart noch Zeilenhoehe und hat keinen Zeiger */
+.navbar p button.btn {
+    font-family: inherit;
+    line-height: 1.5;
+    cursor: pointer;
+}
 
 /* Schliessen mit kurzem Verzug, Oeffnen sofort: die Punkte ueberlappen
    sich leicht, so bleibt beim Ueberfahren der Zeilengrenze kein
@@ -485,9 +495,10 @@ form[method="get"] > br { display: none; }
     transition: opacity 0.15s ease 0.18s, transform 0.15s ease 0.18s;
 }
 
-.navbar p .btn:first-of-type { border-radius: var(--radius) var(--radius) 0 0; }
-.navbar p .btn:last-of-type  { border-radius: 0 0 var(--radius) var(--radius); }
-.navbar p .btn:not(:first-of-type):not(:last-of-type) { border-radius: 0; }
+/* Eckig gestapelte Menuepunkte: oben der Knopf, unten der letzte Link */
+.navbar p button.btn { border-radius: var(--radius) var(--radius) 0 0; }
+.navbar p a.btn:last-of-type  { border-radius: 0 0 var(--radius) var(--radius); }
+.navbar p a.btn:not(:last-of-type) { border-radius: 0; }
 
 .navbar p:hover .btn,
 .navbar p:focus-within .btn {
