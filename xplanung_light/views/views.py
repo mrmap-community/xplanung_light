@@ -278,6 +278,22 @@ def ows_beteiligungen(request):
             map_file_string = map_file_string.replace(
                 '<wms_onlineresource>', request.build_absolute_uri(reverse('beteiligungen-map')))
             base_uri = 'http://' + str(get_current_site(request).domain)
+        # Überschreiben der Metadaten  - kommen aus den settings
+        mapping = {
+            'organization_name': '<ows_contactorganization>',
+            'person_name': '<ows_contactperson>',
+            'email': '<ows_contactelectronicmailaddress>',
+            'phone': '<ows_contactvoicetelephone>',
+            'facsimile': '<ows_contactfacsimiletelephone>',
+            # 'homepage': '<ows_onlineresource>',
+            'address': '<ows_address>',
+            'city': '<ows_city>',
+            'postcode': '<ows_postcode>',
+        }
+        for key, value in mapping.items():
+            if settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'][key]:
+                map_file_string = map_file_string.replace(
+                    value, settings.XPLANUNG_LIGHT_CONFIG['metadata_contact'][key])
         # Alternativer Versuch das SQL aus django generieren zu lassen
         #
         # offengelegte_plaene = BPlan.objects.filter(beteiligungen__end_datum__lte=timezone.now()).filter(beteiligungen__bekanntmachung_datum__gte=timezone.now()).only('geltungsbereich', 'name','id')

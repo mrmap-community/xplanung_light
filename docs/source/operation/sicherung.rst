@@ -1,6 +1,33 @@
 Sicherung und Rücksicherung
 ===========================
 
+Schnell und einfach
+-------------------
+
+Die Dateien liegen im Filesystem unter **/data/xplanung_light_upload/** - die werden einfach mit Standardverfahren gepackt
+und an einen sicheren Ort kopiert. Oft ist die Dateisicherung aber auch schon durch den Provider vorgesehen.
+Wichtig ist, dass der Sicherungszeitpunkt der Dateien mit dem Zeitpunkt des Dumps der Datenbank zusammenfällt.
+Die Datenbanksicherung lässt sich sehr einfach über einen Dump ausführen und sollte kurz vor der Sicherung des Filesystems
+durch den Provider erfolgen. Die Sicherung erfolgt über dem Datenbankadminuser **postgres**.
+
+Installation der Komprimierungsbibliothek und Anlegen des Sicherungsverzeichnisses
+
+.. code-block:: shell
+
+   apt install zstd
+   mkdir /data/xplanung_light_backup
+   mkdir /data/xplanung_light_backup/postgres
+   chown -R postgres /data/xplanung_light_backup/postgres
+
+   
+Beispiel - als root ausführen (komprimiert):
+
+.. code-block:: shell
+   su - postgres -c "pg_dump -p 5432 -Fc --no-owner -Z0 -d xplanung_light  | zstd -12 -T0 > /data/xplanung_light_backup/postgres/xplanung_light_zstd_compressed.dump"
+
+Umfassend
+---------
+
 Die Anwendung kennt zwei zu sichernde Ressourcen, die zusammen gehören: Die **Datenbank** (Plandaten, Beteiligungen,
 Beiträge, Nutzerverwaltung, Historie und die XPlanung-GML-Dokumente selbst) und die
 **Dateien** auf der Festplatte (Uploads und Anhänge). Beides sollte **hintereinander und mit
@@ -44,6 +71,7 @@ Was gesichert werden muss
 Die Historie ist kein Ersatz für die Sicherung: ``simple_history`` schreibt zwar jede Änderung
 mit (21 Modelle sind so eingerichtet), aber ein Import, der mitten drin abbricht, hinterlässt
 einen Zustand, den die Historie nicht zurückdreht.
+
 
 Vorbereitung
 ------------
