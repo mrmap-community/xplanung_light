@@ -22,7 +22,7 @@ jobs:
       run: |
         sudo apt-get update
         # python3-mapscript liefert die perfekt kompilierte, native Erweiterung für Python 3.12
-        sudo apt-get install -y binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite python3-mapscript
+        sudo apt-get install -y binutils libproj-dev gdal-bin spatialite-bin libsqlite3-mod-spatialite python3-mapscript ghostscript
 
     - name: Install Python Deps
       run: |
