@@ -1,5 +1,6 @@
 import logging
 import re
+import shutil
 import subprocess
 import threading
 from collections import deque
@@ -7,6 +8,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from django.conf import settings
+from django.core.files.storage import default_storage
 from django.utils import timezone
 
 from .models import PdfJob
@@ -121,7 +123,15 @@ def cleanup_old_jobs(hours=24):
     """Als django-q2-Schedule einplanen (z. B. stündlich)."""
     limit = timezone.now() - timedelta(hours=hours)
     for job in PdfJob.objects.filter(created__lt=limit):
-        if job.output_file and job.output_file.name != job.input_file.name:
-            job.output_file.delete(save=False)
-        job.input_file.delete(save=False)
+        # Jeder Job hat ein eigenes Verzeichnis: komplett entfernen, inklusive
+        # Resten eines abgebrochenen Workers. Schlägt das fehl, bleibt der
+        # Datensatz erhalten und der nächste Lauf versucht es erneut.
+        directory = default_storage.path(f"pdfcompress/{job.pk}")
+        try:
+            shutil.rmtree(directory)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            logger.exception("Aufräumen fehlgeschlagen: %s", directory)
+            continue
         job.delete()

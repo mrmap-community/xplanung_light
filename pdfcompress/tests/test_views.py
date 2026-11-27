@@ -33,7 +33,20 @@ class CompressViewTests(PdfTestCase):
         self.assertTemplateUsed(response, "pdfcompress/compress.html")
         self.assertTemplateUsed(response, "xplanung_light/layout.html")
         self.assertContains(response, 'id="pdf-form"')
-        self.assertContains(response, f'href="{self.url}"')  # Menüpunkt
+
+    def test_menu_entry_is_below_tools_for_logged_in_users(self):
+        self.client.force_login(self.user)  # ohne besondere Rolle
+        html = self.client.get(self.url).content.decode()
+        menu = html[html.index('aria-labelledby="navbarDropdownTools"') :]
+        menu = menu[: menu.index("</ul>")]
+        self.assertIn(f'href="{self.url}">PDF komprimieren</a>', menu)
+        self.assertEqual(html.count(f'href="{self.url}"'), 1)
+
+    def test_tools_menu_is_hidden_for_anonymous_users(self):
+        response = self.client.get(reverse("about"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "navbarDropdownTools")
+        self.assertNotContains(response, "PDF komprimieren")
 
     def test_upload_creates_job_and_queues_task_after_commit(self):
         self.client.force_login(self.user)

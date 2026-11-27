@@ -183,6 +183,34 @@ class CleanupTests(PdfTestCase):
         tasks.cleanup_old_jobs(hours=1)
         self.assertFalse(PdfJob.objects.exists())
 
+    def test_removes_job_directory_including_leftovers(self):
+        old, new = self.make_job(), self.make_job()
+        old_dir = Path(old.input_file.path).parent
+        # Rest eines abgebrochenen Workers, in keinem Feld vermerkt
+        (old_dir / "output.pdf").write_bytes(b"y")
+        self.age(old, 25)
+
+        tasks.cleanup_old_jobs()
+
+        self.assertFalse(old_dir.exists())
+        self.assertTrue(Path(new.input_file.path).exists())
+        self.assertTrue(old_dir.parent.exists())
+
+    def test_missing_directory(self):
+        job = self.make_job()
+        shutil.rmtree(Path(job.input_file.path).parent)
+        self.age(job, 25)
+        tasks.cleanup_old_jobs()
+        self.assertFalse(PdfJob.objects.exists())
+
+    def test_keeps_job_if_directory_cannot_be_removed(self):
+        job = self.make_job()
+        self.age(job, 25)
+        with patch.object(tasks.shutil, "rmtree", side_effect=PermissionError):
+            with self.assertLogs(LOGGER, "ERROR"):
+                tasks.cleanup_old_jobs()
+        self.assertTrue(PdfJob.objects.filter(pk=job.pk).exists())
+
     def test_migration_creates_hourly_schedule(self):
         schedule = Schedule.objects.get(name="pdfcompress-cleanup")
         self.assertEqual(schedule.func, "pdfcompress.tasks.cleanup_old_jobs")
