@@ -27,3 +27,4 @@ psycopg2
 reportlab
 pydantic
 defusedxml
+django-q2

@@ -72,6 +72,8 @@ INSTALLED_APPS = [
     'formset',
     'captcha',
     'django_clamd',
+    'django_q',
+    'pdfcompress',
 ]
 
 MIDDLEWARE = [
@@ -417,6 +419,20 @@ CLAMD_FAIL_BY_DEFAULT = True
 CLAMD_ENABLED = False
 
 CAPTCHA_AJAX = True
+
+# django-q2: Hintergrundaufgaben (Start: manage.py qcluster)
+Q_CLUSTER = {
+    'name': 'xplanung_light',
+    'orm': 'default',   # Datenbank als Broker, kein Redis nötig
+    'workers': 2,       # = maximal parallele Ghostscript-Prozesse
+    'timeout': 660,
+    'retry': 720,       # muss größer als timeout sein
+    'max_attempts': 1,
+}
+
+# PDF-Komprimierung (App pdfcompress)
+PDFCOMPRESS_TIMEOUT = 600                 # Sekunden pro Ghostscript-Lauf
+PDFCOMPRESS_MAX_SIZE = 100 * 1024 * 1024  # 100 MB
 
 # Geocoder BKG
 BKG_GEOCODER_CONFIG = {
