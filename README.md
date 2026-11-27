@@ -8,6 +8,17 @@ Die initiale Entwicklung des Systems ist in einem Tutorial dokumentiert, dass si
 
 [Dokumentation (github-pages)](https://mrmap-community.github.io/xplanung_light/)
 
+
+## Zusätzliche Tools
+
+### PDF Komprimierung
+
+Bei den zu veröffentlichenden Anhängen handelt es sich meist um PDF-Dokumente. Um es den Kommunen auf einfache Weise zu ermöglichen, die maximal zulässige Größe dieser Dokumente einzuhalten, wird zusätzlich eine PDF-Komprimierungs App bereitgestellt. Diese nutzt im Hintergrund **ghostscript**, das aus lizenztechnischen Gründen als subprocess integriert wird. Der Komprimierungsprozess erfolgt asynchron unter Verwendung von **django-q2**.  
+
+### Schwärzung 
+
+TBD
+
 # Testphase
 
 In Rheinland-Pfalz befindet sich die Software gerade in einer Testphase. Einige Kommunen haben schon einen Administrativen Zugriff auf das System. Falls Interesse besteht, kann man sich registrieren und einen Online-Antrag auf Freischaltung für eine Gebietskörperschaft stellen :wink: .
@@ -29,7 +40,7 @@ In Rheinland-Pfalz befindet sich die Software gerade in einer Testphase. Einige 
 Als root
 
 ```shell
-apt install binutils libproj-dev gdal-bin libmagic1t64 spatialite-bin libsqlite3-mod-spatialite python3-mapscript python3.13-venv python3-dev libpq-dev build-essential
+apt install binutils libproj-dev gdal-bin libmagic1t64 spatialite-bin libsqlite3-mod-spatialite python3-mapscript python3.13-venv python3-dev libpq-dev build-essential ghostscript
 ```
 
 Als normaler Nutzer
@@ -95,6 +106,12 @@ python3 manage.py migrate
 python3 manage.py collectstatic
 python3 manage.py createsuperuser
 python3 manage.py runserver
+```
+
+Initialisierung des QClusters in eigener shell (managed asynchrone Prozesse)
+
+```shell
+python3 manage.py qcluster
 ```
 
 ### Initiales Befüllen der Gebietskörperschaften
@@ -408,6 +425,18 @@ Da die neue Datenbank zunächst leer ist
 source .venv/bin/activate
 python3 manage.py migrate
 python3 manage.py createsuperuser
+```
+
+Starten des dev-Servers
+
+```shell
+python3 manage.py runserver
+```
+
+Starten des QClusters (neue shell)
+
+```shell
+python3 manage.py qcluster
 ```
 
 ### DB-Zugriff ohne Passwort im Mapfile (pg_service.conf)

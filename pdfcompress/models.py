@@ -21,12 +21,18 @@ class PdfJob(models.Model):
         PRINTER = "printer", "Druck (300 dpi)"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL,
+                              on_delete=models.CASCADE)
     original_name = models.CharField(max_length=255)
     input_file = models.FileField(upload_to=input_path)
     output_file = models.FileField(blank=True)
-    quality = models.CharField(max_length=10, choices=Quality, default=Quality.EBOOK)
-    status = models.CharField(max_length=10, choices=Status, default=Status.PENDING)
+    # Für django 4.2 und 5.x
+    quality = models.CharField(
+        max_length=10, choices=Quality.choices, default=Quality.EBOOK)
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.PENDING)
+    # quality = models.CharField(max_length=10, choices=Quality, default=Quality.EBOOK)
+    # status = models.CharField(max_length=10, choices=Status, default=Status.PENDING)
     progress = models.PositiveSmallIntegerField(default=0)
     error = models.TextField(blank=True)
     input_size = models.PositiveBigIntegerField(default=0)
