@@ -77,6 +77,17 @@
                 </ul>
               </li>
               {% endif %}
+              {% url 'pdfcompress:compress' as pdfcompress_url %}
+              {% if pdfcompress_url %}
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownTools" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  Tools
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdownTools">
+                  <li class="dropdown-item"><a class="nav-link" href="{{ pdfcompress_url }}">PDF komprimieren</a></li>
+                </ul>
+              </li>
+              {% endif %}
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                   Anträge

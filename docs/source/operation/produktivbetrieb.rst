@@ -533,6 +533,39 @@ Danach müssen wir den Daemon installieren, starten und den socket aktivieren, d
       sudo systemctl status gunicorn
       sudo systemctl enable gunicorn.socket gunicorn
 
+Für das Management der Aufgabenwarteschlange (task queue) wird ein eigener Prozess benötigt. Wir setzen hier **django-q2** ein.
+
+Die folgende sytemd-Datei liegt unter **/etc/systemd/system/xplanung-qcluster.service**:
+
+   .. code-block:: ini
+
+      [Unit]
+      Description=django-q2 cluster (xplanung_light)
+      After=network.target postgresql.service
+
+      [Service]
+      User=xplanung_light
+      Group=www-data
+      UMask=0027
+      EnvironmentFile=/data/xplanung_light_config/env
+      WorkingDirectory=/data/xplanung_light/
+      ExecStart=/data/xplanung_light/.venv/bin/python manage.py qcluster
+      Restart=on-failure
+      MemoryMax=2G
+      PrivateTmp=true
+      NoNewPrivileges=true
+
+      [Install]
+      WantedBy=multi-user.target
+
+Danach müssen wir den Daemon installieren und starten:
+
+   .. code-block:: shell
+
+      systemctl daemon-reload
+      sudo systemctl enable --now xplanung-qcluster
+      sudo systemctl status xplanung-qcluster
+
 Initialisierung der Anwendung
 +++++++++++++++++++++++++++++
 
@@ -607,6 +640,7 @@ gestartet werden (als **root**).
       xplanung-light-manage migrate
       xplanung-light-manage collectstatic
       sudo systemctl restart gunicorn
+      sudo systemctl restart xplanung-qcluster
 
 **Weitere Infos**
 

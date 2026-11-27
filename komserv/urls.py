@@ -33,6 +33,7 @@ else:
 urlpatterns = [
     url(r'^accounts/', include('organizations.urls')),
     url(r'^invitations/', include(invitation_backend().get_urls())),
+    path("pdf/", include("pdfcompress.urls")),
     path("", include("xplanung_light.urls")),
     path('admin/', admin.site.urls)
 ]

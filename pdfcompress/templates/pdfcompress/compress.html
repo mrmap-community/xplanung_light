@@ -1,0 +1,95 @@
+{% extends "xplanung_light/layout.html" %}
+{% load django_bootstrap5 %}
+
+{% block title %}PDF komprimieren{% endblock %}
+
+{% block content %}
+<div class="container py-3" style="max-width: 40rem;">
+  <h1>PDF komprimieren</h1>
+
+  <form id="pdf-form" method="post" action="{% url 'pdfcompress:compress' %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% bootstrap_form form %}
+    <button type="submit" class="btn btn-primary">Komprimieren</button>
+  </form>
+
+  <section id="pdf-state" class="mt-3" hidden>
+    <div id="pdf-progress" class="progress" role="progressbar" aria-label="Fortschritt"
+         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div id="pdf-bar" class="progress-bar" style="width: 0%"></div>
+    </div>
+    <p id="pdf-text" class="mt-2" aria-live="polite"></p>
+    <a id="pdf-download" class="btn btn-success" hidden>Komprimierte PDF herunterladen</a>
+  </section>
+</div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const form = $("pdf-form"), button = form.querySelector("button");
+    const mb = (bytes) => (bytes / 1048576).toLocaleString("de-DE", { maximumFractionDigits: 2 }) + " MB";
+
+    function show(text, percent, isError = false) {
+      $("pdf-state").hidden = false;
+      $("pdf-text").textContent = text;
+      $("pdf-text").className = isError ? "text-danger" : "";
+      if (percent !== undefined) {
+        $("pdf-bar").style.width = `${percent}%`;
+        $("pdf-progress").setAttribute("aria-valuenow", percent);
+      }
+    }
+
+    function fail(message) {
+      show(message, 0, true);
+      button.disabled = false;
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      button.disabled = true;
+      $("pdf-download").hidden = true;
+      show("Upload startet …", 0);
+
+      // XHR statt fetch, weil nur XHR den Upload-Fortschritt liefert
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", form.action);
+      xhr.responseType = "json";
+      xhr.upload.onprogress = (e) => {
+        if (!e.lengthComputable) return;
+        const p = Math.round((e.loaded / e.total) * 100);
+        show(`Upload: ${p} %`, p);
+      };
+      xhr.onload = () => {
+        if (xhr.status === 202) return poll(xhr.response.status_url);
+        fail(xhr.response?.errors?.join(" ") ?? `Upload fehlgeschlagen (${xhr.status}).`);
+      };
+      xhr.onerror = () => fail("Netzwerkfehler beim Upload.");
+      xhr.send(data);
+    });
+
+    async function poll(url, errors = 0) {
+      let job;
+      try {
+        const response = await fetch(url, { headers: { Accept: "application/json" } });
+        if (!response.ok) throw new Error(response.status);
+        job = await response.json();
+      } catch {
+        if (errors >= 4) return fail("Status konnte nicht abgefragt werden.");
+        return setTimeout(poll, 2000, url, errors + 1);
+      }
+      if (job.status === "failed") return fail(job.error);
+      if (job.status === "done") {
+        const saved = Math.round((1 - job.output_size / job.input_size) * 100);
+        show(saved > 0
+          ? `Fertig: ${mb(job.input_size)} → ${mb(job.output_size)} (−${saved} %)`
+          : "Die Datei ist bereits optimal; Download liefert das Original.", 100);
+        $("pdf-download").href = job.download_url;
+        $("pdf-download").hidden = false;
+        button.disabled = false;
+        return;
+      }
+      show(`${job.label}: ${job.progress} %`, job.progress);
+      setTimeout(poll, 1000, url);
+    }
+  </script>
+{% endblock %}
